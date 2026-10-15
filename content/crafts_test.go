@@ -26,7 +26,7 @@ func TestCraftsContent(t *testing.T) {
 	if !ok || w.GetTiles() != 27 || w.GetCapacity() != 12 || w.GetRecoverySeconds() != 600 {
 		t.Fatal("mill pond")
 	}
-	if bank, ok := BankFor(w, "race"); !ok || len(bank.GetTiles()) != 1 || bank.GetTiles()[0].GetTx() != 32 || bank.GetTiles()[0].GetTy() != 19 {
+	if bank, ok := BankFor(w, "race"); !ok || len(bank.GetTiles()) != 1 || bank.GetTiles()[0].GetTx() != 32 || bank.GetTiles()[0].GetTy() != 73 {
 		t.Fatal("race bank")
 	}
 	if BandAt(100).GetId() != "healthy" || BandAt(50).GetId() != "healthy" || BandAt(49).GetId() != "low" || BandAt(19).GetId() != "very-low" || BandAt(0).GetId() != "very-low" {

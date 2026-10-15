@@ -25,7 +25,7 @@ func legacySnapshotJSON(raw []byte) []byte {
 	if protojson.Unmarshal(fields["state"], &p) != nil {
 		return raw
 	}
-	s := store.Snapshot{Version: int64(p.Version), AccountID: p.Account.AccountId, DisplayName: p.Account.DisplayName, WorldID: p.Account.WorldId, ProfileSource: p.Account.ProfileSource, Flagged: p.Account.Flagged, VitalsSource: "imported", State: rules.NewState(), Pending: int(p.Glims.Pending), VerifiedXP: p.Glims.VerifiedXp}
+	s := store.Snapshot{Version: int64(p.Version), AccountID: p.Account.AccountId, DisplayName: p.Account.DisplayName, WorldID: p.Account.WorldId, ProfileSource: p.Account.ProfileSource, Flagged: p.Account.Flagged, VitalsSource: "imported", State: rules.NewTownState(), Pending: int(p.Glims.Pending), VerifiedXP: p.Glims.VerifiedXp}
 	if p.Account.PartyId != nil {
 		s.HabiticaPartyID = &p.Account.PartyId.Value
 	}

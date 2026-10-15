@@ -160,7 +160,7 @@
               "kind": "door",
               "at": "D",
               "side": "south",
-              "to": "village",
+              "to": "hearthwick",
               "outside": {
                 "tx": 29,
                 "ty": 22
@@ -1055,7 +1055,7 @@
               "kind": "door",
               "at": "D",
               "side": "south",
-              "to": "commons",
+              "to": "hearthwick",
               "outside": {
                 "tx": 53,
                 "ty": 17
@@ -1076,6 +1076,142 @@
             "to"
           ],
           "value": "in:commons:yard"
+        }
+      ]
+    },
+    {
+      "name": "indoor-spot-tx--1",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "spots",
+            "kitchen-hearth",
+            "tx"
+          ],
+          "value": -1
+        }
+      ]
+    },
+    {
+      "name": "indoor-spot-tx-128",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "spots",
+            "kitchen-hearth",
+            "tx"
+          ],
+          "value": 128
+        }
+      ]
+    },
+    {
+      "name": "indoor-spot-ty--1",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "spots",
+            "kitchen-hearth",
+            "ty"
+          ],
+          "value": -1
+        }
+      ]
+    },
+    {
+      "name": "indoor-spot-ty-128",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "spots",
+            "kitchen-hearth",
+            "ty"
+          ],
+          "value": 128
+        }
+      ]
+    },
+    {
+      "name": "indoor-light-tx--1",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "lights",
+            0,
+            "tx"
+          ],
+          "value": -1
+        }
+      ]
+    },
+    {
+      "name": "indoor-light-tx-128",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "lights",
+            0,
+            "tx"
+          ],
+          "value": 128
+        }
+      ]
+    },
+    {
+      "name": "indoor-light-ty--1",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "lights",
+            0,
+            "ty"
+          ],
+          "value": -1
+        }
+      ]
+    },
+    {
+      "name": "indoor-light-ty-128",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "lights",
+            0,
+            "ty"
+          ],
+          "value": 128
         }
       ]
     }
@@ -1228,7 +1364,7 @@
             "extra"
           ],
           "value": {
-            "area": "village",
+            "area": "hearthwick",
             "tx": 1,
             "ty": 1
           }
@@ -1248,7 +1384,7 @@
             "square"
           ],
           "value": {
-            "area": "village",
+            "area": "hearthwick",
             "tx": 12
           }
         }
@@ -1508,21 +1644,21 @@
   ],
   "parents": [
     {
-      "area": "village",
-      "parent": "village",
-      "root": "village",
+      "area": "hearthwick",
+      "parent": "hearthwick",
+      "root": "hearthwick",
       "known": false
     },
     {
       "area": "in:village:bakery",
-      "parent": "village",
-      "root": "village",
+      "parent": "hearthwick",
+      "root": "hearthwick",
       "known": true
     },
     {
       "area": "in:village:mill:2",
       "parent": "in:village:mill",
-      "root": "village",
+      "root": "hearthwick",
       "known": true
     },
     {
@@ -1558,7 +1694,7 @@
     {
       "area": "in:village:missing:2",
       "parent": "in:village:missing",
-      "root": "village",
+      "root": "hearthwick",
       "known": false
     },
     {
@@ -1570,13 +1706,13 @@
     {
       "area": "in:commons:yard:deeds",
       "parent": "in:commons:yard",
-      "root": "commons",
+      "root": "hearthwick",
       "known": true
     },
     {
       "area": "in:commons:yard:attic",
       "parent": "in:commons:yard",
-      "root": "commons",
+      "root": "hearthwick",
       "known": false
     },
     {

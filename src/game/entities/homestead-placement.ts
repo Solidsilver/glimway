@@ -1,3 +1,4 @@
+import { lotAtPixel } from '../../lib/lots'
 /**
  * Homesteads, arranged: placement mode for a member on their own land or in
  * their cottage. The tray (src/ui/HomeBar.svelte) and the keys move, turn,
@@ -53,6 +54,7 @@ export class HomesteadArranging {
   private readonly deps: HomesteadDeps
 
   placement: Placement | null = null
+  private reframeTimer: Phaser.Time.TimerEvent | null = null
   private arrange: ArrangeView = { available: false, scene: null, tier: 0 }
   private arrangeTimer = 0
   /** The tray's last view (playtests read the piece's spot from it). */
@@ -67,6 +69,9 @@ export class HomesteadArranging {
 
   /** A few times a second: is the hero somewhere they may arrange their own place? */
   update(dt: number): void {
+    if (this.placement && this.home.land && lotAtPixel(this.deps.hero().x,this.deps.hero().y) !== this.home.gate) {
+      this.endPlacement(false)
+    }
     this.arrangeTimer -= dt
     if (this.arrangeTimer > 0) return
     this.arrangeTimer = 0.25
@@ -74,7 +79,7 @@ export class HomesteadArranging {
     let next: ArrangeView = { available: false, scene: null, tier: home?.tier ?? 0 }
     if (home?.member && !this.placement) {
       if (this.deps.room) next = { available: true, scene: 'indoor', tier: home.tier }
-      else if (this.home.land) next = { available: true, scene: 'outdoor', tier: home.tier }
+      else if (this.home.land && lotAtPixel(this.deps.hero().x,this.deps.hero().y) === this.home.gate) next = { available: true, scene: 'outdoor', tier: home.tier }
     }
     if (next.available !== this.arrange.available || next.scene !== this.arrange.scene || next.tier !== this.arrange.tier) this.emitArrange(next)
   }
@@ -91,6 +96,7 @@ export class HomesteadArranging {
 
   startPlacement(): void {
     if (this.placement || !this.arrange.available || !this.arrange.scene) return
+    if (this.home.land && lotAtPixel(this.deps.hero().x,this.deps.hero().y) !== this.home.gate) return
     const scene = this.arrange.scene
     let ox = 0
     let oy = 0
@@ -103,6 +109,8 @@ export class HomesteadArranging {
       rows = HOMESTEAD_DATA.indoor.height
     } else {
       if (!this.home.land) return
+      ox = this.home.land.gridOrigin?.x ?? 0
+      oy = this.home.land.gridOrigin?.y ?? 0
       cols = this.home.land.width
       rows = this.home.land.height
     }
@@ -146,7 +154,8 @@ export class HomesteadArranging {
   /** The screen changed shape mid-arrange: frame the piece (or the grid) again. */
   private reframe(): void {
     // After this frame: the camera's own viewport and zoom update on resize too.
-    this.scene.time.delayedCall(0, () => this.reframeNow())
+    this.reframeTimer?.remove()
+    this.reframeTimer = this.scene.time.delayedCall(0, () => { this.reframeTimer = null; this.reframeNow() })
   }
 
   private reframeNow(): void {
@@ -179,6 +188,8 @@ export class HomesteadArranging {
   endPlacement(animate = true): void {
     const p = this.placement
     if (!p) return
+    this.reframeTimer?.remove()
+    this.reframeTimer = null
     p.overlay.destroy()
     p.ghost?.destroy()
     this.placement = null
@@ -186,9 +197,9 @@ export class HomesteadArranging {
     this.scene.input.off('pointerdown', this.onPointer, this)
     this.scene.scale.off('resize', this.reframe, this)
     bus.emit(EV.homePlacement, null)
+    const cam = this.scene.cameras.main
+    cam.startFollow(this.deps.hero(), true, 0.12, 0.12)
     if (animate) {
-      const cam = this.scene.cameras.main
-      cam.startFollow(this.deps.hero(), true, 0.12, 0.12)
       // A short grace so the key that closed the tray doesn't swing a sword.
       uiState.blockedUntil = performance.now() + 220
     }

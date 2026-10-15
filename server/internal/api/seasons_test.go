@@ -78,40 +78,57 @@ func (x *rig) jumpToPlainAs(id, kind, want string) *http.Cookie {
 }
 
 func TestSeasonalGatherSpots(t *testing.T) {
+
 	x := newRig(t)
 	c, s := x.ready("alice")
 	spade := x.instance(s.AccountID, "bench-spade", -1, "")
 	pick := x.instance(s.AccountID, "bench-pick", -1, "")
-	shore := [2]int{34, 18} // the freshet shore by the village pond
-	ice := [2]int{34, 19}   // the frozen pond itself
+	shore := [2]int{34, 72} // the freshet shore by the village pond
+	ice := [2]int{34, 73}   // the frozen pond itself
 
 	// Out of season, a stale client map is refused, not honoured.
 	c = x.jumpToAs("alice", "mark", "Carting")
-	if x.opRefreshing(c, &s, "gather", gatherIn(s, "village", shore, spade, "dig", "freshet-shore", "v1"), 409).Error.Code != "not-in-season" {
+	if x.opRefreshing(c, &s, "gather", gatherIn(s, "hearthwick", shore, spade, "dig", "freshet-shore", "v1"), 409).Error.Code != "not-in-season" {
 		t.Fatal("swept the shore out of Mudrise")
 	}
 	c = x.jumpToAs("alice", "wick", "Smoke")
-	if x.opRefreshing(c, &s, "gather", gatherIn(s, "village", [2]int{36, 18}, spade, "dig", "bloom-patch", "v1"), 409).Error.Code != "not-in-season" {
+	if x.opRefreshing(c, &s, "gather", gatherIn(s, "hearthwick", [2]int{11, 37}, spade, "dig", "bloom-patch", "v1"), 409).Error.Code != "not-in-season" {
 		t.Fatal("picked blooms out of the Bloom wick")
 	}
 
+	// Town offers a target only at its actual authored piece, within reach.
+	c = x.jumpToAs("alice", "mark", "Mudrise")
+	missing := gatherIn(s, "hearthwick", [2]int{4, 60}, spade, "dig", "freshet-shore", "wrong")
+	delete(missing, "tile")
+	if got := x.opRefreshing(c, &s, "gather", missing, 400).Error.Code; got != "tile-required" {
+		t.Fatal(got)
+	}
+	wrong := gatherIn(s, "hearthwick", [2]int{35, 72}, spade, "dig", "freshet-shore", "wrong")
+	if got := x.opRefreshing(c, &s, "gather", wrong, 409).Error.Code; got != "cannot-gather-here" {
+		t.Fatal(got)
+	}
+	far := gatherIn(s, "hearthwick", [2]int{4, 60}, spade, "dig", "freshet-shore", "wrong")
+	far["tile"] = shore
+	if got := x.opRefreshing(c, &s, "gather", far, 409).Error.Code; got != "too-far-away" {
+		t.Fatal(got)
+	}
 	// Mudrise: the freshet shore by the village water sweeps up walnut shells.
 	c = x.jumpToAs("alice", "mark", "Mudrise")
-	r := x.opRefreshing(c, &s, "gather", gatherIn(s, "village", shore, spade, "dig", "freshet-shore", "v1"), 200)
+	r := x.opRefreshing(c, &s, "gather", gatherIn(s, "hearthwick", shore, spade, "dig", "freshet-shore", "v1"), 200)
 	if n := stackQty(r.Result.Items, "walnut-shells"); n < 1 || n > 2 {
 		t.Fatalf("walnut shells %d", n)
 	}
 	// The Commons has no freshet shore; the village has no bloom patches.
-	if x.opRefreshing(c, &s, "gather", gatherIn(s, "commons", shore, spade, "dig", "freshet-shore", "v1"), 409).Error.Code != "cannot-gather-here" {
-		t.Fatal("swept the Commons")
+	if x.opRefreshing(c, &s, "gather", gatherIn(s, "woodland", shore, spade, "dig", "freshet-shore", "v1"), 409).Error.Code != "cannot-gather-here" {
+		t.Fatal("swept a shore outside town")
 	}
 
 	// Bloom-wick: bloom flowers, in the Commons...
 	c = x.jumpToAs("alice", "wick", "Bloom")
-	if x.opRefreshing(c, &s, "gather", gatherIn(s, "village", [2]int{36, 18}, spade, "dig", "bloom-patch", "v2"), 409).Error.Code != "cannot-gather-here" {
-		t.Fatal("the village offered blooms where none grow")
+	if x.opRefreshing(c, &s, "gather", gatherIn(s, "ruin", [2]int{11, 37}, spade, "dig", "bloom-patch", "v2"), 409).Error.Code != "cannot-gather-here" {
+		t.Fatal("the ruin offered town blooms")
 	}
-	r = x.opRefreshing(c, &s, "gather", gatherIn(s, "commons", [2]int{8, 19}, spade, "dig", "bloom-patch", "c1"), 200)
+	r = x.opRefreshing(c, &s, "gather", gatherIn(s, "hearthwick", [2]int{11, 37}, spade, "dig", "bloom-patch", "c1"), 200)
 	if n := stackQty(r.Result.Items, "bloom-flowers"); n < 1 || n > 2 {
 		t.Fatalf("bloom flowers %d", n)
 	}
@@ -127,12 +144,12 @@ func TestSeasonalGatherSpots(t *testing.T) {
 
 	// The Quiet: the pond freezes, and a pick breaks the ice for frost-glass.
 	c = x.jumpToAs("alice", "mark", "Quiet")
-	r = x.opRefreshing(c, &s, "gather", gatherIn(s, "village", ice, pick, "break", "pond-ice", "q1"), 200)
+	r = x.opRefreshing(c, &s, "gather", gatherIn(s, "hearthwick", ice, pick, "break", "pond-ice", "q1"), 200)
 	if n := stackQty(r.Result.Items, "frost-glass"); n < 1 || n > 2 {
 		t.Fatalf("frost-glass %d", n)
 	}
 	// A dig at the ice is not the work it wants.
-	if x.opRefreshing(c, &s, "gather", gatherIn(s, "village", ice, spade, "dig", "pond-ice", "q1"), 409).Error.Code != "wrong-tool" {
+	if x.opRefreshing(c, &s, "gather", gatherIn(s, "hearthwick", ice, spade, "dig", "pond-ice", "q1"), 409).Error.Code != "wrong-tool" {
 		t.Fatal("dug the ice")
 	}
 	x.conserved(s.AccountID)
@@ -411,6 +428,7 @@ func TestSilasYardBundlesCostGlims(t *testing.T) {
 // they sell near him, wherever his cycle has him, and nowhere on the
 // Commons while he's indoors.
 func TestSilasYardSellsFromTheShopAndBesideHim(t *testing.T) {
+
 	x := newRig(t)
 	c, s := x.ready("alice")
 	x.fundGlims(s.AccountID, 20)
@@ -429,7 +447,7 @@ func TestSilasYardSellsFromTheShopAndBesideHim(t *testing.T) {
 	if r := buy(corner, 200); r.Result.Bought == nil {
 		t.Fatal("the tin while he's out", r.Error.Code)
 	}
-	if r := buy(at("commons", yard.GetTx(), yard.GetTy()), 200); r.Result.Bought == nil {
+	if r := buy(at("hearthwick", yard.GetTx(), yard.GetTy()), 200); r.Result.Bought == nil {
 		t.Fatal("by him in the yard", r.Error.Code)
 	}
 	x.residentPhase("silas", "counter")
@@ -438,10 +456,10 @@ func TestSilasYardSellsFromTheShopAndBesideHim(t *testing.T) {
 	}
 	x.now.Add(86400) // a new day: the cap starts again
 	x.residentPhase("silas", "counter")
-	if buy(at("commons", yard.GetTx(), yard.GetTy()), 409).Error.Code != "too-far-away" {
+	if buy(at("hearthwick", yard.GetTx(), yard.GetTy()), 409).Error.Code != "too-far-away" {
 		t.Fatal("bought by the sawhorse while he's indoors")
 	}
-	if buy(at("commons", 51, 21), 409).Error.Code != "too-far-away" {
+	if buy(at("hearthwick", 4, 60), 409).Error.Code != "too-far-away" {
 		t.Fatal("bought on the Commons while he's indoors")
 	}
 	if buy(at("in:commons:yard:deeds", 2, 6), 409).Error.Code != "too-far-away" {

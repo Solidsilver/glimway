@@ -155,7 +155,7 @@ test('knockback never leaves an enemy on a wall, tree or water tile', async ({ p
 
 test('the warden: blows never settle it, speaking the naming does', async ({ page }) => {
   await freshPlayer(page)
-  await warp(page, 'village', 16, 14)
+  await warp(page, 'outdoors', 14, 62)
   await talkThrough(page, /Talk to Mara/)
   await warp(page, 'ruin', 15, 3)
   await talkThrough(page, /Copy the naming from the stone/)
@@ -193,7 +193,7 @@ test('the warden: blows never settle it, speaking the naming does', async ({ pag
   expect(await enemies(page)).toHaveLength(0)
 
   // Come back later: it is on its post, at rest.
-  await warp(page, 'village', 16, 14)
+  await warp(page, 'outdoors', 14, 62)
   await warp(page, 'ruin', 3, 13)
   g = await warden(page)
   expect(g.state).toBe('settled')

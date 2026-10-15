@@ -10,7 +10,7 @@ test('the whole quest can be played from a fresh start to the ending', async ({ 
   await freshPlayer(page)
 
   // Mara, just south of her spot by the well.
-  await warp(page, 'village', 16, 14)
+  await warp(page, 'outdoors', 14, 62)
   await talkThrough(page, /Talk to Mara/)
   await expectStage(page, 'accepted')
 
@@ -29,7 +29,7 @@ test('the whole quest can be played from a fresh start to the ending', async ({ 
   await expectStage(page, 'lantern-lit')
 
   // Home to Mara for the ending.
-  await warp(page, 'village', 16, 14)
+  await warp(page, 'outdoors', 14, 62)
   await talkThrough(page, /Talk to Mara/)
   await expectStage(page, 'complete')
   await expect(page.getByRole('dialog', { name: 'The Road Is Lit' })).toBeVisible({ timeout: 15_000 })
@@ -38,22 +38,21 @@ test('the whole quest can be played from a fresh start to the ending', async ({ 
 test('exits connect left-to-right and you come back the way you came', { tag: '@smoke' }, async ({ page }) => {
   await freshPlayer(page)
 
-  // Village east gate → arrive on Brackenwood's west side.
-  await warp(page, 'village', 38, 10)
-  await holdUntil(page, 'ArrowRight', async () => (await areaNow(page)) !== 'village')
+  // Brackenwood Arch → arrive on Brackenwood's west side.
+  await warp(page, 'outdoors', 42, 62)
+  await holdUntil(page, 'ArrowDown', async () => (await areaNow(page)) !== 'outdoors')
   await waitForArea(page, 'woodland')
   expect((await player(page)).x).toBeLessThan(6 * TILE)
 
-  // Brackenwood west edge → arrive on the village's east side.
+  // Brackenwood west edge → arrive at the Brackenwood Arch in Hearthwick.
   await holdUntil(page, 'ArrowLeft', async () => (await areaNow(page)) !== 'woodland')
-  await waitForArea(page, 'village')
-  const w = await world(page)
-  expect((await player(page)).x).toBeGreaterThan(w.widthPx - 6 * TILE)
+  await waitForArea(page, 'outdoors')
+  expect(Math.floor((await player(page)).x / TILE)).toBe(42)
 })
 
 test('the hero is confined to each map', async ({ page }) => {
   await freshPlayer(page)
-  for (const [area, tx, ty] of [['village', 20, 2], ['woodland', 30, 3], ['ruin', 20, 3]] as const) {
+  for (const [area, tx, ty] of [['woodland', 30, 3], ['ruin', 20, 3]] as const) {
     await warp(page, area, tx, ty)
     const w = await world(page)
     expect(w.bounds).toEqual({ x: 0, y: 0, w: w.widthPx, h: w.heightPx })
@@ -75,7 +74,7 @@ test('the hero is confined to each map', async ({ page }) => {
 test('the area title card always names the area you are in', async ({ page }) => {
   await freshPlayer(page, 'Tansy', undefined, { opening: true })
   // Leave while Hearthwick's card is still up, then again while Brackenwood's is.
-  await expectAreaCard(page, 'Hearthwick')
+  await expectAreaCard(page, 'Hearthwick Commons')
   await warp(page, 'woodland', 15, 20)
   await expectAreaCard(page, 'Brackenwood Path')
   await warp(page, 'ruin', 3, 13)

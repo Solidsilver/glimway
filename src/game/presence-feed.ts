@@ -124,6 +124,7 @@ export class PresenceFeed {
           if (p && p.leftAt === null && sharedRoom(p.area, this.area) && id !== this.client.self) this.bus.emit(EV.abilityCast, { accountId: id, ...cast } satisfies AbilityCastPayload)
         },
         gift: (g) => this.bus.emit(EV.gift, g),
+        homeChanged: (gate) => this.bus.emit(EV.homeInvalidated, { gate }),
         avatarChange: (id, avatar) => {
           const p = this.peers.get(id)
           // Their mount went out or came home: its stable's land re-reads the

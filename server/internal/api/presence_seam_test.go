@@ -61,7 +61,7 @@ func TestTogetherAcrossOutdoorChunkEdges(t *testing.T) {
 	if !h.together("world", "a", "b", 2) {
 		t.Fatal("horizontal chunk proximity")
 	}
-	q.area = "village"
+	q.area = "in:village:library"
 	if h.together("world", "a", "b", 2) {
 		t.Fatal("different coordinate frames together")
 	}
@@ -82,12 +82,12 @@ func TestFixedPresenceRoomsOnGrid(t *testing.T) {
 			t.Fatal("fixed room refused", room)
 		}
 	}
-	for _, room := range []string{"outdoors:0:3", "outdoors:2:1", "outdoors:01:1", "outdoors", "wilds:0:0"} {
+	for _, room := range []string{"outdoors:5:4", "outdoors:5:1", "outdoors:01:1", "outdoors", "wilds:0:0"} {
 		if validPresenceRoom(room) {
 			t.Fatal("off-grid or malformed room admitted", room)
 		}
 	}
-	if !positionInsideFrontier("world", 40, 392) || positionInsideFrontier("world", 40, 1200) {
+	if !positionInsideFrontier("world", 40, 392) || positionInsideFrontier("world", 2000, 3200) {
 		t.Fatal("presence grid ignores fixed footprint")
 	}
 }

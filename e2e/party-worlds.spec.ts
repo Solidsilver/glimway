@@ -90,7 +90,7 @@ test('a settled member is asked once, then moves into the party’s world', asyn
   await move.getByRole('button', { name: 'Stay here' }).click()
   await expect(move).toHaveCount(0)
 
-  await warp(other, 'village', 16, 14)
+  await warp(other, 'outdoors', 14, 62)
   await other.keyboard.press('Escape')
   // The Menu's world card draws the offer only once its GET /api/world has
   // landed (WorldCard refreshes on mount): wait for the reply's button before

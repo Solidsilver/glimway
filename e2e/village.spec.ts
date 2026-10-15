@@ -16,7 +16,7 @@ const village = (page: Page) => page.evaluate(() => (window as unknown as { __fs
 const EPOCH = Date.parse('2026-01-05T00:00:00Z') / 1000
 
 async function openBoard(page: Page): Promise<ReturnType<Page['getByRole']>> {
-  await go(page, 'village', 15, 10)
+  await go(page, 'outdoors', 12, 57)
   await expect(page.locator('.prompt')).toContainText('Read the notice board')
   await waitForLive(page)
   await page.keyboard.press('e')
@@ -44,17 +44,17 @@ test('calendar: the HUD shows today in Hearthwick, and festivals dress the Commo
   const c = calendarAt(EPOCH + (5 * 7 + 5) * 86400 + 3600)
   await expect(page.getByTestId('calendar-line')).toContainText(`${dateLine(c)} — ${c.mark}`)
   expect((await village(page)).source).toBe('local')
-  await go(page, 'commons', 9, 21)
+  await go(page, 'outdoors', -15, 45)
   await expect(page.getByTestId('calendar-line')).toContainText('Cart-wick, 6th day — Carting')
   await expect(page.getByTestId('calendar-line')).toContainText('Carting Day')
   await expectToast(page, 'Carting Day. Stalls on the Commons', { timeout: 8000 })
   await shot(page, 'festival-carting-day-desktop')
   await page.evaluate((t) => (window as unknown as { __fsDevCalendar: (t: number) => void }).__fsDevCalendar(t), EPOCH + (11 * 7 + 6) * 86400 + 3600)
-  await go(page, 'village', 14, 12)
+  await go(page, 'outdoors', 14, 60)
   await expect(page.getByTestId('calendar-line')).toContainText('Closure Night')
   await shot(page, 'festival-closure-night-desktop')
   await page.evaluate((t) => (window as unknown as { __fsDevCalendar: (t: number) => void }).__fsDevCalendar(t), EPOCH + 12 * 7 * 86400 + 3600)
-  await go(page, 'village', 34, 17)
+  await go(page, 'outdoors', 34, 65)
   await expect(page.getByTestId('calendar-line')).toContainText('The Breaking')
   await shot(page, 'festival-the-breaking-desktop')
 })
@@ -101,7 +101,7 @@ test('village projects: give materials, finish two, the village changes and a pa
   await bridge.locator('[data-give="north-bridge:timber"]').fill('9999')
   await expect(bridge.locator('[data-give="north-bridge:timber"]')).toHaveValue(/^(0|1?\d|[1-9]\d)$/)
   await page.keyboard.press('Escape')
-  await go(page, 'village', 13, 14)
+  await go(page, 'outdoors', 13, 62)
   await shot(page, 'village-changes-desktop')
 })
 
@@ -177,7 +177,7 @@ test('mailbox: send a neighbour materials, they collect it; sent mail is recalle
   await claim(other)
 
   // Tansy posts 3 timber from her own mailbox (by the path on her land).
-  await go(page, 'commons', 23, 19)
+  await go(page, 'outdoors', 34, 35)
   await expect.poll(async () => (await homes(page)).gates.filter((g) => g.names.length > 0).length).toBeGreaterThanOrEqual(2)
   await atMyMailbox(page)
   await expect(page.locator('.prompt')).toContainText('Check your mailbox')
@@ -209,7 +209,7 @@ test('mailbox: send a neighbour materials, they collect it; sent mail is recalle
   await page.keyboard.press('Escape')
 
   // Bram's flag is up; he collects the timber.
-  await go(other, 'commons', 23, 19)
+  await go(other, 'outdoors', 34, 35)
   await expect.poll(async () => (await homes(other)).status).toBe('ready')
   await atMyMailbox(other)
   await shot(other, 'mailbox-flag-desktop')

@@ -12,7 +12,7 @@
  */
 import { FLOWER_LINES, SIT_LINES, nextLine, signCopy } from '../../content/touches'
 import { bus, EV } from '../events'
-import { TERRAIN, tileBottom, tileMid } from '../../lib/tile'
+import { tileBottom, tileMid } from '../../lib/tile'
 import { sfx } from '../sfx'
 import type { ExitDef, InteractId, PropSpot, WorldData } from '../worlds'
 import type { Interactable, Interactables } from './interactables'
@@ -20,6 +20,7 @@ import type { Hero } from './hero'
 import type { Effects } from './fx'
 import { benchSeat } from '../seats'
 import { gateSignAt } from '../area/exits'
+import type { FixedObject } from '../wilds/fixed.ts'
 import { openDialogue } from '../dialogue'
 
 /** A touchable spot: what it is, where, and (for signs) what it says. */
@@ -28,6 +29,7 @@ interface TouchSpec {
   x: number
   y: number
   signKey?: string
+  text?: string
 }
 
 export interface TouchesDeps {
@@ -35,23 +37,6 @@ export interface TouchesDeps {
   interactables: Interactables
   hero: () => Hero
   fx: Effects
-}
-
-/** Clusters of one ground tile kind, grouping tiles within two of a member. */
-function clustersOf(world: WorldData, kind: number): { tx: number; ty: number }[] {
-  const tiles: { tx: number; ty: number }[] = []
-  for (let y = 0; y < world.height; y++)
-    for (let x = 0; x < world.width; x++) if (world.ground[y][x] === kind) tiles.push({ tx: x, ty: y })
-  const groups: { tx: number; ty: number }[][] = []
-  for (const t of tiles) {
-    const near = groups.find((g) => g.some((p) => Math.abs(p.tx - t.tx) <= 2 && Math.abs(p.ty - t.ty) <= 2))
-    if (near) near.push(t)
-    else groups.push([t])
-  }
-  return groups.map((g) => ({
-    tx: Math.round(g.reduce((s, p) => s + p.tx, 0) / g.length),
-    ty: Math.round(g.reduce((s, p) => s + p.ty, 0) / g.length)
-  }))
 }
 
 /** Small world touches: never marked; the prompt and keycap hint are enough. */
@@ -65,12 +50,35 @@ export class Touches {
   }
 
   /** A fixed exit's read belongs to its source chunk, even when the post leans across its edge. */
-  attachChunk(owner: object, exits: readonly ExitDef[], height: number, place: string): void {
+  attachChunk(owner: object, exits: readonly ExitDef[], height: number, place: string, objects: readonly FixedObject[] = []): void {
     const points = this.points
     this.points = []
     for (const e of exits) this.exit(e, height, place)
+    for (const o of objects) {
+      if (o.art && (o.variant === 'wildflowers' || (o.variant === 'tangle-decor' && o.frame?.startsWith('flowers-')))) {
+        this.flower(o.tx * 16 + o.art.ox, o.ty * 16 + o.art.oy)
+      }
+      if (o.prop) this.prop({ areaId: place } as WorldData, { tx: o.tx, ty: o.ty, frame: o.variant, h: o.prop.h, body: [o.prop.bodyW, o.prop.bodyH] })
+      if (o.id.startsWith('boundary:') && o.label) {
+        const x = tileMid(o.tx), y = tileBottom(o.ty)
+        this.add(`touch:sign:${o.id}` as InteractId, x, y, 'Read the sign', { kind: 'sign', x, y, text: o.label })
+      }
+    }
     this.deps.interactables.register(owner, this.points)
     this.points = points
+  }
+
+  /** Visible generated flower art follows its chunk's ownership and teardown. */
+  attachFlowers(owner: object, flowers: readonly { x: number; y: number }[]): void {
+    const points = this.points
+    this.points = []
+    for (const flower of flowers) this.flower(flower.x, flower.y)
+    this.deps.interactables.register(owner, this.points)
+    this.points = points
+  }
+
+  private flower(x: number, y: number): void {
+    this.add(`touch:flowers:${x},${y}` as InteractId, x, y, 'Smell the flowers', { kind: 'flowers', x, y })
   }
 
   detachChunk(owner: object): void {
@@ -81,7 +89,7 @@ export class Touches {
     const at = gateSignAt({ height }, e)
     if (!at) return
     const { x, y } = at
-    this.add(`touch:sign:gate:${e.tx},${e.ty}` as InteractId, x, y, 'Read the sign', { kind: 'sign', x, y, signKey: `gate:${place}:${e.to}` })
+    this.add(`touch:sign:gate:${e.tx},${e.ty}` as InteractId, x, y, 'Read the sign', { kind: 'sign', x, y, signKey: gateSignKey(place, String(e.to)) })
   }
 
   // ------------------------------------------------------------ the touches
@@ -105,7 +113,7 @@ export class Touches {
   }
 
   private useSign(id: InteractId, spec: TouchSpec): void {
-    const copy = signCopy(spec.signKey ?? 'sign:generic')
+    const copy = spec.text ? { speaker: 'Sign', lines: [spec.text] } : signCopy(spec.signKey ?? 'sign:generic')
     openDialogue({ id, speaker: copy.speaker, lines: [this.take(id, copy.lines)] })
   }
 
@@ -131,18 +139,6 @@ export class Touches {
 
   private build(w: WorldData): void {
     for (const p of w.props) this.prop(w, p)
-    // Flower beds: village ground tiles of flowers, one point per bed.
-    if (w.areaId === 'village') {
-      for (const bed of clustersOf(w, TERRAIN.flowers)) {
-        this.add(
-          `touch:flowers:${bed.tx},${bed.ty}` as InteractId,
-          tileMid(bed.tx),
-          tileMid(bed.ty),
-          'Smell the flowers',
-          { kind: 'flowers', x: tileMid(bed.tx), y: tileMid(bed.ty) }
-        )
-      }
-    }
     // Exit signs: the post each named edge exit's label stands on (../area/exits.ts),
     // inside the map edge so reading one doesn't walk you out (a room's doorway
     // and stairs have no sign to read).
@@ -166,7 +162,7 @@ export class Touches {
       })
     } else if (p.frame === 'trail-sign') {
       // The village signpost leans on purpose; the road's signs lean with it.
-      const post = w.areaId === 'village'
+      const post = (w.areaId === 'village' || w.areaId === 'hearthwick')
       this.add(`touch:sign:${post ? 'post' : 'route'}:${p.tx},${p.ty}` as InteractId, x, y, post ? 'Read the signpost' : 'Read the route sign', {
         kind: 'sign',
         x,
@@ -175,4 +171,11 @@ export class Touches {
       })
     }
   }
+}
+
+/** Historical lore keys remain stable while the outdoor place names change. */
+export function gateSignKey(place: string, to: string): string {
+  const origin = place === 'hearthwick' ? 'village' : place
+  const destination = origin === 'woodland' && (to === 'outdoors' || to === 'hearthwick') ? 'village' : to
+  return `gate:${origin}:${destination}`
 }

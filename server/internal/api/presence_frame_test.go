@@ -162,7 +162,7 @@ func TestPresenceFrameGolden(t *testing.T) {
 	}
 	frames := [][]proto.Message{
 		{&contract.PresenceReady{AccountId: "alice"}},
-		{&contract.PresenceRoom{Area: "village", Players: []*contract.PresencePlayer{}}, &contract.PresencePosition{AccountId: proto.String("bob"), X: proto.Float64(10), Y: proto.Float64(20), Facing: &contract.PresenceFacing{X: proto.Float64(0), Y: proto.Float64(1)}, Moving: proto.Bool(true)}, &contract.PresenceLeave{AccountId: "carol"}},
+		{&contract.PresenceRoom{Area: "in:village:library", Players: []*contract.PresencePlayer{}}, &contract.PresencePosition{AccountId: proto.String("bob"), X: proto.Float64(10), Y: proto.Float64(20), Facing: &contract.PresenceFacing{X: proto.Float64(0), Y: proto.Float64(1)}, Moving: proto.Bool(true)}, &contract.PresenceLeave{AccountId: "carol"}},
 	}
 	var want []golden
 	for _, events := range frames {
@@ -211,7 +211,7 @@ func TestPresenceSocketBatchesQueuedEvents(t *testing.T) {
 	c, s := x.ready("alice")
 	ts := startPresence(t, x, presenceTestConfig())
 	w := wsBinaryConnect(t, ts, c, s.Lease)
-	w.join("village")
+	w.join("in:village:library")
 	conn, _, err := dialPresence(t, ts, c, ts.URL)
 	if err != nil {
 		t.Fatal(err)

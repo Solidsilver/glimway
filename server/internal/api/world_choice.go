@@ -115,7 +115,7 @@ func createPlayer(ctx context.Context, tx *sql.Tx, id string, p rules.Profile, w
 	if _, err := tx.ExecContext(ctx, "INSERT INTO sign_ins(account_id,method,subject,created_at) VALUES(?,'habitica',?,?)", id, p.ID, now); err != nil {
 		return err
 	}
-	state := rules.NewState()
+	state := rules.NewTownState()
 	state.HP = min(p.HP, p.MaxHP)
 	state.Mana = min(p.MP, p.MaxMP)
 

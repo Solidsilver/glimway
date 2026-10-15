@@ -1,9 +1,11 @@
+import { goLot } from './home-helpers'
 import { expect, test, type Page } from './fixtures'
 import type { Browser, BrowserContext } from '@playwright/test'
 import { allow, CONTRACT, newUser, openTitleGuide, pasteAndConnect, pastOpening, reenter, routeHabitica, setHabitica, sql, waitForWorld } from './connected'
 import { claimDeed, earnPlenty, fund, go, homes, landOf, myHome, silasSays, throughGate, type Home, bySilas } from './home-helpers'
 import { SERVER_ANSWER_MS, frames, waitForArea, waitForLive } from './helpers'
 import { HOMESTEAD_DATA, checkPlacement } from '../src/lib/homestead.ts'
+import { lotOrigin } from '../src/lib/lots.ts'
 import { buildableKind, clearable, clearedSet, effectiveKind, homeLights, isLit, type Land } from '../src/lib/homestead-land.ts'
 
 /**
@@ -165,7 +167,7 @@ test('a friend\'s pet follows them on your screen, and you can pet it', async ({
   await page.getByTestId('companions-pick-none').click()
   await expect(page.getByTestId('companions-follower-name')).toHaveText('No pet')
   await closePanel(page)
-  await go(other, 'commons', 23, 21)
+  await go(other, 'outdoors', 34, 36)
   await expect.poll(async () => (await remotes(other)).map((r) => [r.name, r.pet]), { timeout: 15_000 }).toEqual([['Ash', null]])
   await ctx.close()
 })
@@ -295,7 +297,7 @@ test('the stable: build it, stall a mount, Saddle up, V down and up, Go home, an
   if (lit.spot.clear.length) sql(lit.spot.clear.map(([cx, cy]) => `INSERT OR IGNORE INTO homestead_cleared(homestead_id,x,y) VALUES('${mine.id}',${cx},${cy});`).join('\n'))
   const spot = lit.spot
   await throughGate(page, gate)
-  await go(page, `home:${gate}`, spot.x + 1, spot.y + 4)
+  await goLot(page, gate, spot.x + 1, spot.y + 4)
   await page.getByTestId('arrange').click()
   await carryTo(page, 'stable', spot.x, spot.y)
   const tray = page.getByTestId('placement-tray')
@@ -307,7 +309,7 @@ test('the stable: build it, stall a mount, Saddle up, V down and up, Go home, an
   expect([stable.scene, stable.x, stable.y]).toEqual(['outdoor', spot.x, spot.y])
 
   // An empty stall: Choose a mount opens Companions at the stable.
-  await go(page, `home:${gate}`, spot.x + 3, spot.y + 3)
+  await goLot(page, gate, spot.x + 3, spot.y + 3)
   await expect(page.locator('.prompt')).toContainText('Choose a mount')
   await waitForLive(page)
   await page.keyboard.press('e')
@@ -333,9 +335,9 @@ test('the stable: build it, stall a mount, Saddle up, V down and up, Go home, an
   await openTitleGuide(visitor)
   await pasteAndConnect(visitor, rowan, { invite: invite.code })
   await waitForWorld(visitor)
-  await go(visitor, 'commons', 23, 21)
+  await go(visitor, 'outdoors', -1, 45)
   await throughGate(visitor, gate)
-  await go(visitor, `home:${gate}`, spot.x + 2, spot.y + 5)
+  await goLot(visitor, gate, spot.x + 2, spot.y + 5)
   await waitForLive(visitor)
   await expect.poll(async () => (await homes(visitor)).stalled, { timeout: SERVER_ANSWER_MS }).toEqual(['Wolf-Base'])
 
@@ -372,7 +374,7 @@ test('the stable: build it, stall a mount, Saddle up, V down and up, Go home, an
   await page.keyboard.press('v')
   await expect.poll(async () => (await debug(page)).riding).toBe(false)
   // At the east end, just past the last bay.
-  await go(page, `home:${gate}`, spot.x + 4, spot.y + 3)
+  await goLot(page, gate, spot.x + 4, spot.y + 3)
   await expect(page.locator('.prompt')).toContainText('Build a stall', { timeout: 10_000 })
   await waitForLive(page)
   await page.keyboard.press('e')
@@ -382,8 +384,8 @@ test('the stable: build it, stall a mount, Saddle up, V down and up, Go home, an
   await waitForLive(page)
   await page.keyboard.press('v')
   await expect.poll(async () => (await debug(page)).riding).toBe(true)
-  await go(page, 'village', 16, 19)
-  await waitForArea(page, 'village')
+  await go(page, 'outdoors', 16, 67)
+  await waitForArea(page, 'outdoors')
   await expect.poll(async () => (await debug(page)).riding).toBe(false)
   await expect.poll(async () => (await debug(page)).led?.key ?? null).toBe('Wolf-Base')
   await waitForLive(page)
@@ -401,12 +403,12 @@ test('the stable: build it, stall a mount, Saddle up, V down and up, Go home, an
   // Home from the village, far from the stable: the visitor sees it back in its bay.
   await expect.poll(async () => (await homes(visitor)).stalled, { timeout: SERVER_ANSWER_MS }).toEqual(['Wolf-Base'])
   // And so do you, once you're back.
-  await go(page, `home:${gate}`, spot.x + 2, spot.y + 5)
+  await goLot(page, gate, spot.x + 2, spot.y + 5)
   await expect.poll(async () => (await homes(page)).stalled, { timeout: SERVER_ANSWER_MS }).toEqual(['Wolf-Base'])
 
   // Go home on your own land (the owner's request, review F6): it walks back
   // into its bay, the bay empty until it steps in, then it stands in its stall.
-  await go(page, `home:${gate}`, spot.x + 3, spot.y + 3)
+  await goLot(page, gate, spot.x + 3, spot.y + 3)
   await expect(page.locator('.prompt')).toContainText('Saddle up')
   await waitForLive(page)
   await page.keyboard.press('e')
@@ -419,10 +421,11 @@ test('the stable: build it, stall a mount, Saddle up, V down and up, Go home, an
   await expect.poll(async () => (await debug(page)).mountOut).toBe('')
   await expect.poll(async () => (await debug(page)).walkingHome?.bay ?? null, { message: 'walking to its bay, not off the screen' }).not.toBeNull()
   const bay = (await debug(page)).walkingHome!.bay!
+  const origin = lotOrigin(gate)
   // Stall 1's floor, inside the footprint: x within its tiles, its feet above the bottom edge.
-  expect(bay.x).toBeGreaterThan(spot.x * 16)
-  expect(bay.x).toBeLessThan((spot.x + 4) * 16)
-  expect(bay.y).toBeLessThan((spot.y + 3) * 16)
+  expect(bay.x).toBeGreaterThan((origin.tx + spot.x) * 16)
+  expect(bay.x).toBeLessThan((origin.tx + spot.x + 4) * 16)
+  expect(bay.y).toBeLessThan((origin.ty + spot.y + 3) * 16)
   // It gets there, and the stable draws it standing in its stall.
   await expect.poll(async () => (await debug(page)).walkingHome?.done, { timeout: 10_000 }).toBe(true)
   expect((await debug(page)).walkingHome).toMatchObject({ x: Math.round(bay.x), y: Math.round(bay.y) })

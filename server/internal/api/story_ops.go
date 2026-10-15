@@ -139,7 +139,7 @@ func (a *Server) mark(w http.ResponseWriter, r *http.Request) error {
 			}
 		}
 		// A mark's area holds in its rooms too: Silas is met at his counter in the Yard as well as on the Commons.
-		if area := content.StoryRules.GetAreas()[req.Mark]; area != "" && !(area == "home" && rules.HomeGate(s.State.Area) >= 0) && placeID(*s) != area && content.RootArea(s.State.Area) != area {
+		if area := content.StoryRules.GetAreas()[req.Mark]; area != "" && !(area == "home" && homeGateAt(s) >= 0) && placeID(*s) != area && content.RootArea(s.State.Area) != area {
 			return nil, fail(409, "wrong-area")
 		}
 		added := false
@@ -199,8 +199,7 @@ func (a *Server) fall(w http.ResponseWriter, r *http.Request) error {
 		s.State.HP = math.Min(hp, math.Ceil(s.State.MaxHP*content.VitalsRules.GetFallHpFraction()))
 		s.State.Mana = math.Min(mp, math.Ceil(s.State.MaxMana*content.VitalsRules.GetFallManaFraction()))
 		s.VitalsWritten = true
-		s.State.Area = "village"
-		s.State.Position = rules.NewState().Position
+		s.State.Area, s.State.Position = rules.TownAnchor("well")
 		out := &contract.FallResult{Vitals: &contract.Vitals{Hp: s.State.HP, Mana: s.State.Mana, MaxHp: s.State.MaxHP, MaxMana: s.State.MaxMana}, Place: &contract.Place{Area: s.State.Area, X: s.State.Position.X, Y: s.State.Position.Y}, Lantern: "none", Reason: "not-wilds"}
 		if generatedPlace(req.Where.Area, req.Where.X, req.Where.Y) {
 			out.Reason = "epoch-missing"

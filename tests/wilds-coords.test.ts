@@ -1,3 +1,4 @@
+import { PLACES } from '../src/lib/places.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vectors from '../content/vectors/wilds-coords.json' with { type: 'json' };
@@ -30,9 +31,7 @@ test('footprints, tiers, epochs, rings, cells and the frontier (shared vectors)'
   let fresh = 0;
   for (let cy = y0 - 5; cy <= y1 + 5; cy++) {
     for (let cx = x0 - 5; cx <= x1 + 5; cx++) {
-      const inRect = cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1;
-      assert.equal(insideFrontier(cx, cy), inRect, `chunk ${cx},${cy}`);
-      if (inRect) { inside++; if (!footprintAt(cx, cy)) fresh++; }
+      if (insideFrontier(cx, cy)) { inside++; if (!footprintAt(cx, cy) && !PLACES.fixed.some(p => cx >= p.cx && cx < p.cx + p.width && cy >= p.cy && cy < p.cy + p.height)) fresh++; }
     }
   }
   assert.deepEqual([inside, fresh], [vectors.frontier.chunks, vectors.frontier.new]);

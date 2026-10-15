@@ -588,15 +588,10 @@
                 "boulder"
               ]
             },
-            "village": {
+            "hearthwick": {
               "targets": [
                 "freshet-shore",
                 "pond-ice"
-              ]
-            },
-            "commons": {
-              "targets": [
-                "bloom-patch"
               ]
             }
           }

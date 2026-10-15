@@ -173,13 +173,12 @@ func (x *PlaceRules) GetRest() string {
 	return ""
 }
 
-// The curated spaces not yet on the grid. `home` covers every `home:<g>`.
+// Curated outdoor spaces not yet on the grid. Home and town rooms inherit
+// rules from their indoor root; legacy outdoor spaces retire in T5.
 type SpaceRules struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Village       *PlaceRules            `protobuf:"bytes,1,opt,name=village,proto3" json:"village,omitempty"`
 	Woodland      *PlaceRules            `protobuf:"bytes,2,opt,name=woodland,proto3" json:"woodland,omitempty"`
 	Ruin          *PlaceRules            `protobuf:"bytes,3,opt,name=ruin,proto3" json:"ruin,omitempty"`
-	Home          *PlaceRules            `protobuf:"bytes,4,opt,name=home,proto3" json:"home,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -214,13 +213,6 @@ func (*SpaceRules) Descriptor() ([]byte, []int) {
 	return file_glimway_content_v1_places_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *SpaceRules) GetVillage() *PlaceRules {
-	if x != nil {
-		return x.Village
-	}
-	return nil
-}
-
 func (x *SpaceRules) GetWoodland() *PlaceRules {
 	if x != nil {
 		return x.Woodland
@@ -235,19 +227,13 @@ func (x *SpaceRules) GetRuin() *PlaceRules {
 	return nil
 }
 
-func (x *SpaceRules) GetHome() *PlaceRules {
-	if x != nil {
-		return x.Home
-	}
-	return nil
-}
-
 // A fixed footprint: a layout (its id and revision name the served chunks'
 // pseudo-epoch `fixed:<layout>@<revision>`) laid on the grid with its tile
 // (0, 0) at world tile `origin`. The footprint is the chunk rectangle with
 // north-west chunk (cx, cy), `width` chunks east and `height` south; every
 // chunk in it is fixed. Zones and anchors are in layout tiles (world tile
-// minus origin) and lie inside the footprint (code rules).
+// minus origin). Zones lie inside their footprint. Anchors may name tiles
+// on another declared fixed footprint (town lot anchors).
 type FixedPlace struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -266,9 +252,11 @@ type FixedPlace struct {
 	// Ids unique in the place (code rule).
 	Zones []*PlaceZone `protobuf:"bytes,11,rep,name=zones,proto3" json:"zones,omitempty"`
 	// Stable positions doors, arrivals and recovery refer to, as
-	// `<place>:<anchor>` ("commons:arch", "commons:gate:3"). Ids unique in the
+	// `<place>:<anchor>` ("hearthwick:spawn", "hearthwick:lot:3"). Ids unique in the
 	// place (code rule).
-	Anchors       []*PlaceAnchor `protobuf:"bytes,12,rep,name=anchors,proto3" json:"anchors,omitempty"`
+	Anchors []*PlaceAnchor `protobuf:"bytes,12,rep,name=anchors,proto3" json:"anchors,omitempty"`
+	// Plots use a lane-only placeholder until the lot composer lands in T4.
+	Kind          string `protobuf:"bytes,13,opt,name=kind,proto3" json:"kind,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -385,6 +373,13 @@ func (x *FixedPlace) GetAnchors() []*PlaceAnchor {
 		return x.Anchors
 	}
 	return nil
+}
+
+func (x *FixedPlace) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
 }
 
 // A world tile.
@@ -611,13 +606,11 @@ const file_glimway_content_v1_places_proto_rawDesc = "" +
 	"\x04ride\x18\x02 \x01(\bR\x04ride\x12\x12\n" +
 	"\x04sync\x18\x03 \x01(\bR\x04sync\x12.\n" +
 	"\x04rest\x18\x04 \x01(\tB\x1a\xbaH\x17r\x15R\x04noneR\avillageR\x04homeR\x04rest:M\xbaHJ\x1aH\n" +
-	"\x15place_rules.sync_safe\x12\x16sync needs safe ground\x1a\x17!this.sync || this.safe\"\x8a\x02\n" +
+	"\x15place_rules.sync_safe\x12\x16sync needs safe ground\x1a\x17!this.sync || this.safe\"\xa7\x01\n" +
 	"\n" +
-	"SpaceRules\x12@\n" +
-	"\avillage\x18\x01 \x01(\v2\x1e.glimway.content.v1.PlaceRulesB\x06\xbaH\x03\xc8\x01\x01R\avillage\x12B\n" +
+	"SpaceRules\x12B\n" +
 	"\bwoodland\x18\x02 \x01(\v2\x1e.glimway.content.v1.PlaceRulesB\x06\xbaH\x03\xc8\x01\x01R\bwoodland\x12:\n" +
-	"\x04ruin\x18\x03 \x01(\v2\x1e.glimway.content.v1.PlaceRulesB\x06\xbaH\x03\xc8\x01\x01R\x04ruin\x12:\n" +
-	"\x04home\x18\x04 \x01(\v2\x1e.glimway.content.v1.PlaceRulesB\x06\xbaH\x03\xc8\x01\x01R\x04home\"\xbb\x04\n" +
+	"\x04ruin\x18\x03 \x01(\v2\x1e.glimway.content.v1.PlaceRulesB\x06\xbaH\x03\xc8\x01\x01R\x04ruinJ\x04\b\x01\x10\x02J\x04\b\x04\x10\x05R\avillageR\x04home\"\xe7\x04\n" +
 	"\n" +
 	"FixedPlace\x12)\n" +
 	"\x02id\x18\x01 \x01(\tB\x19\xbaH\x16r\x142\x12^[a-z0-9-]{1,100}$R\x02id\x12\x1d\n" +
@@ -632,17 +625,18 @@ const file_glimway_content_v1_places_proto_rawDesc = "" +
 	"\x05rules\x18\n" +
 	" \x01(\v2\x1e.glimway.content.v1.PlaceRulesB\x06\xbaH\x03\xc8\x01\x01R\x05rules\x123\n" +
 	"\x05zones\x18\v \x03(\v2\x1d.glimway.content.v1.PlaceZoneR\x05zones\x129\n" +
-	"\aanchors\x18\f \x03(\v2\x1f.glimway.content.v1.PlaceAnchorR\aanchorsB\x05\n" +
+	"\aanchors\x18\f \x03(\v2\x1f.glimway.content.v1.PlaceAnchorR\aanchors\x12*\n" +
+	"\x04kind\x18\r \x01(\tB\x16\xbaH\x13r\x11R\x00R\x06layoutR\x05plotsR\x04kindB\x05\n" +
 	"\x03_cxB\x05\n" +
 	"\x03_cy\"i\n" +
 	"\tPlaceTile\x12&\n" +
 	"\x02tx\x18\x01 \x01(\x11B\x11\xbaH\x0e\xc8\x01\x01:\t\x18\x80\x80\x80\x01(\xff\xff\x7fH\x00R\x02tx\x88\x01\x01\x12&\n" +
 	"\x02ty\x18\x02 \x01(\x11B\x11\xbaH\x0e\xc8\x01\x01:\t\x18\x80\x80\x80\x01(\xff\xff\x7fH\x01R\x02ty\x88\x01\x01B\x05\n" +
 	"\x03_txB\x05\n" +
-	"\x03_ty\"\xb7\x02\n" +
+	"\x03_ty\"\xbb\x02\n" +
 	"\tPlaceZone\x12)\n" +
-	"\x02id\x18\x01 \x01(\tB\x19\xbaH\x16r\x142\x12^[a-z0-9-]{1,100}$R\x02id\x12/\n" +
-	"\x05place\x18\x02 \x01(\tB\x19\xbaH\x16r\x142\x12^[a-z0-9-]{1,100}$R\x05place\x12&\n" +
+	"\x02id\x18\x01 \x01(\tB\x19\xbaH\x16r\x142\x12^[a-z0-9-]{1,100}$R\x02id\x123\n" +
+	"\x05place\x18\x02 \x01(\tB\x1d\xbaH\x1ar\x182\x16^[a-z0-9-]+(:[0-9]+)?$R\x05place\x12&\n" +
 	"\x02tx\x18\x03 \x01(\x11B\x11\xbaH\x0e\xc8\x01\x01:\t\x18\x80\x80\x80\x01(\xff\xff\x7fH\x00R\x02tx\x88\x01\x01\x12&\n" +
 	"\x02ty\x18\x04 \x01(\x11B\x11\xbaH\x0e\xc8\x01\x01:\t\x18\x80\x80\x80\x01(\xff\xff\x7fH\x01R\x02ty\x88\x01\x01\x12\x18\n" +
 	"\x01w\x18\x05 \x01(\x05B\n" +
@@ -685,20 +679,18 @@ var file_glimway_content_v1_places_proto_depIdxs = []int32{
 	3,  // 0: glimway.content.v1.Places.fixed:type_name -> glimway.content.v1.FixedPlace
 	1,  // 1: glimway.content.v1.Places.generated:type_name -> glimway.content.v1.PlaceRules
 	2,  // 2: glimway.content.v1.Places.spaces:type_name -> glimway.content.v1.SpaceRules
-	1,  // 3: glimway.content.v1.SpaceRules.village:type_name -> glimway.content.v1.PlaceRules
-	1,  // 4: glimway.content.v1.SpaceRules.woodland:type_name -> glimway.content.v1.PlaceRules
-	1,  // 5: glimway.content.v1.SpaceRules.ruin:type_name -> glimway.content.v1.PlaceRules
-	1,  // 6: glimway.content.v1.SpaceRules.home:type_name -> glimway.content.v1.PlaceRules
-	4,  // 7: glimway.content.v1.FixedPlace.origin:type_name -> glimway.content.v1.PlaceTile
-	1,  // 8: glimway.content.v1.FixedPlace.rules:type_name -> glimway.content.v1.PlaceRules
-	5,  // 9: glimway.content.v1.FixedPlace.zones:type_name -> glimway.content.v1.PlaceZone
-	6,  // 10: glimway.content.v1.FixedPlace.anchors:type_name -> glimway.content.v1.PlaceAnchor
-	1,  // 11: glimway.content.v1.PlaceZone.rules:type_name -> glimway.content.v1.PlaceRules
-	12, // [12:12] is the sub-list for method output_type
-	12, // [12:12] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	1,  // 3: glimway.content.v1.SpaceRules.woodland:type_name -> glimway.content.v1.PlaceRules
+	1,  // 4: glimway.content.v1.SpaceRules.ruin:type_name -> glimway.content.v1.PlaceRules
+	4,  // 5: glimway.content.v1.FixedPlace.origin:type_name -> glimway.content.v1.PlaceTile
+	1,  // 6: glimway.content.v1.FixedPlace.rules:type_name -> glimway.content.v1.PlaceRules
+	5,  // 7: glimway.content.v1.FixedPlace.zones:type_name -> glimway.content.v1.PlaceZone
+	6,  // 8: glimway.content.v1.FixedPlace.anchors:type_name -> glimway.content.v1.PlaceAnchor
+	1,  // 9: glimway.content.v1.PlaceZone.rules:type_name -> glimway.content.v1.PlaceRules
+	10, // [10:10] is the sub-list for method output_type
+	10, // [10:10] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_glimway_content_v1_places_proto_init() }

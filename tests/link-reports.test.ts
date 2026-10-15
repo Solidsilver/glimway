@@ -35,7 +35,7 @@ test('an uncommitted offline fall survives a reload: the recovery and what happe
 
   const record = await store.load('fixture-account', 'dev');
   const next = await rig(t, { store, record, state: S({ hp: 40 }) });
-  assert.deepEqual([next.session.state.area, next.session.state.hp], ['village', 9], 'no reload heals or moves the hero');
+  assert.deepEqual([next.session.state.area, next.session.state.hp], ['outdoors', 9], 'no reload heals or moves the hero');
   next.server.on('POST /api/fall', fallAnswer(3));
   next.server.on('POST /api/report', keeper(next));
   await online(next, S({ hp: 40 }));
@@ -192,8 +192,8 @@ test('the ten-second deadline reports even an idle hero at full vitals, every ti
 // ---------------------------------------------------------------- 13. area and region reports
 
 test('arriving on the open map reports it; walking on from the Commons across the open map does not (one area)', async (t) => {
-  const r = await rig(t, { state: S({ area: 'village', x: 100, y: 100 }) });
-  await online(r, S({ area: 'village', x: 100, y: 100 }));
+  const r = await rig(t, { state: S({ area: 'in:village:bakery', x: 100, y: 100 }) });
+  await online(r, S({ area: 'in:village:bakery', x: 100, y: 100 }));
   r.server.on('POST /api/report', keeper(r));
   const settle = async () => {
     for (let i = 0; i < 5; i++) await tick();
@@ -211,7 +211,7 @@ test('arriving on the open map reports it; walking on from the Commons across th
   r.session.state.position = { x: 40, y: -1200 };
   r.link.arrived();
   await settle();
-  assert.deepEqual(reports(r).map((b) => b.place.area), ['village', 'outdoors']);
+  assert.deepEqual(reports(r).map((b) => b.place.area), ['in:village:bakery', 'outdoors']);
   assert.deepEqual(reports(r)[1]!.place, { area: 'outdoors', x: 40, y: 424 });
 });
 
@@ -262,4 +262,18 @@ test('the level mark: told on load without news, and a crossing of 20 names the 
   (r.link as any).adopt(player(mage(20, { version: 61 })), { read: true });
   assert.equal(toasts(r).filter((x) => x.startsWith('New at')).length, 1, 'said once');
   assert.deepEqual(r.link.magic, { levelMark: 20, classMark: 'mage' });
+});
+
+test('the first durable fall boundary reloads at the authored well before noteLive rewrites it', async (t) => {
+ const store = memoryOutboxStore();
+ const save = store.save.bind(store);
+ const captured: import('../src/lib/api/outbox.ts').OutboxRecord[] = [];
+ store.save = (record) => { if (record.entries.some((e) => e.kind === 'fall')) captured.push(structuredClone(record)); return save(record); };
+ const first = await rig(t, { store, state: S({ hp: 40 }) });
+ first.session.state.area = 'woodland'; first.session.state.hp = 0;
+ await first.link.fall(); first.link.stop();
+ assert.ok(captured.length);
+ assert.deepEqual(captured[0]!.reports!.next.place, { area: 'outdoors', x: 184, y: 1000 });
+ const next = await rig(t, { store, record: captured[0]!, state: S({ hp: 40 }) });
+ assert.deepEqual({ area: next.session.state.area, ...next.session.state.position }, { area: 'outdoors', x: 184, y: 1000 });
 });

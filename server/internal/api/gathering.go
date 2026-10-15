@@ -10,7 +10,6 @@ import (
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/land"
 	"glimway/server/internal/location"
-	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
 	"glimway/server/internal/wilds"
 	"slices"
@@ -33,8 +32,8 @@ func gatherCaps(action string) (visit, day int) {
 // ownLand: the caller's homestead when `area` is its land (nil, refused,
 // for anyone else's: visiting is read-only).
 func ownLand(ctx context.Context, tx *sql.Tx, s *store.Snapshot, area string, now int64, refusal string) (*homeView, error) {
-	gate := rules.HomeGate(area)
-	if gate < 0 {
+	gate := homeGateAt(s)
+	if gate < 0 || !onPrivateLot(s, gate) {
 		return nil, fail(409, refusal)
 	}
 	id, ok, err := memberOf(ctx, tx, s.AccountID)
@@ -186,10 +185,35 @@ func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req 
 			return fail(409, "cannot-gather-here")
 		}
 	}
+	// Authored town pieces are as tile-specific as generated decor.
+	if area == outdoorsArea && place.Source.Kind == location.SourceFixed && homeGateAt(s) < 0 {
+		if len(req.Tile) != 2 {
+			return fail(400, "tile-required")
+		}
+		x, y := int(req.Tile[0]), int(req.Tile[1])
+		if !nearPiece(s, area, x, y) {
+			return fail(409, "too-far-away")
+		}
+		cx, cy := wilds.FloorDiv(x, chunkSize()), wilds.FloorDiv(y, chunkSize())
+		source := location.SourceOf(cx, cy)
+		if source.Kind != location.SourceFixed || source.Layout != place.Source.Layout {
+			return fail(409, "cannot-gather-here")
+		}
+		chunk, err := a.Config.Chunks.Chunk(ctx, tx, s.WorldID, chunks.FixedEpoch(source.Layout, source.Revision), 0, int32(cx), int32(cy))
+		if err != nil {
+			return chunkError(err)
+		}
+		if !fixedGatherAt(s, chunk, req.Target, x, y) {
+			return fail(409, "cannot-gather-here")
+		}
+	}
+	if g := homeGateAt(s); area == outdoorsArea && g >= 0 && !onPrivateLot(s, g) {
+		return fail(409, "cannot-gather-here")
+	}
 	var home *homeView
 	var tile [2]int
 	lit := false
-	if rules.HomeGate(area) >= 0 {
+	if homeGateAt(s) >= 0 && area == outdoorsArea {
 		var err error
 		if home, err = ownLand(ctx, tx, s, area, now, "cannot-gather-here"); err != nil {
 			return chunkError(err)
@@ -201,6 +225,7 @@ func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req 
 		if !nearPiece(s, area, tile[0], tile[1]) {
 			return fail(409, "too-far-away")
 		}
+		tile[0], tile[1] = localHomeTile(s, tile[0], tile[1])
 		lit = land.Lit(connectedLights(placedItems(*home), ""), tile[0], tile[1])
 		if !homeTarget(landKind(*home, tile[0], tile[1]), req.Target, req.Action, lit) {
 			return fail(409, "cannot-gather-here")
@@ -348,4 +373,14 @@ func gatherDecor(target, kind string) bool {
 	default:
 		return false
 	}
+}
+
+// fixedGatherAt validates the served object and the same foot-distance as the client.
+func fixedGatherAt(s *store.Snapshot, chunk *contract.WorldChunk, target string, x, y int) bool {
+	if chunk == nil || !nearPiece(s, outdoorsArea, x, y) {
+		return false
+	}
+	return slices.ContainsFunc(chunk.Objects, func(o *contract.Placed) bool {
+		return o.Kind == "gather" && o.Target == target && int(chunk.Cx)*chunkSize()+int(o.Tx) == x && int(chunk.Cy)*chunkSize()+int(o.Ty) == y
+	})
 }

@@ -18,7 +18,7 @@ type Tile = { tx: number; ty: number };
 type Edge = 'west' | 'east' | 'north' | 'south';
 
 /** Every curated area this build draws: the quest areas and the lands behind the Commons' eight gates (the Commons is fixed ground on the open map). */
-const BUILT: AreaId[] = [...AREAS, ...Array.from({ length: 8 }, (_, g) => `home:${g}` as AreaId)];
+const BUILT: AreaId[] = [...AREAS];
 
 /** A homestead gate in a Commons fence is a door in the map, not an edge (and so is its way back). */
 const isGateDoor = (from: string, e: ExitDef) => /^home:/.test(e.to) || /^home:/.test(from);
@@ -136,7 +136,8 @@ test('every exit has a way back, and you arrive beside it', () => {
     for (const e of worlds[area].exits) {
       if (EXTERNAL.includes(e.to)) continue;
       const dest = worlds[e.to];
-      const back = dest.exits.find((x) => x.to === area);
+      const back = dest.exits.find((x) => x.to === area || (area === 'village' && e.to === 'woodland' && x.to === 'outdoors'));
+      if (area === 'village' && e.to === 'woodland') assert.deepEqual(back?.entry, { tx: 42, ty: 62 }, 'legacy builder’s return now enters the outdoor town');
       if (!back) assert.fail(`${e.to} has no exit back to ${area}`);
       const blocked = blockedTiles(dest);
       assert.ok(!blocked.has(key(e.entry)), `${area}→${e.to} entry ${key(e.entry)} is blocked`);
@@ -174,14 +175,14 @@ test('every glim spot sits on its prop and the three road lanterns are in Bracke
     }
   }
   assert.deepEqual(worlds.woodland.glimSpots.map((e) => e.id), ['road-1', 'road-2', 'road-3']);
-  assert.deepEqual(worlds.village.glimSpots.map((e) => e.id), ['hearth']);
+  assert.ok(!Object.hasOwn(worlds, 'village'));
   assert.deepEqual(worlds.ruin.glimSpots.map((e) => e.id), ['chest']);
 });
 
-test('the journey reads in one direction: village → woodland → ruin', () => {
+test('the woodland journey keeps its east/west direction and returns to the outdoor town', () => {
   const edgeTo = (from: AreaId, to: AreaId) => edgeOf(worlds[from], worlds[from].exits.find((e) => e.to === to)!);
-  assert.equal(edgeTo('village', 'woodland'), 'east');
+  assert.equal(buildArea('woodland').exits.find((e) => e.to === 'outdoors')?.label, 'Hearthwick');
   assert.equal(edgeTo('woodland', 'ruin'), 'east');
-  assert.equal(edgeTo('woodland', 'village'), 'west');
+  assert.equal(edgeTo('woodland', 'outdoors'), 'west');
   assert.equal(edgeTo('ruin', 'woodland'), 'west');
 });

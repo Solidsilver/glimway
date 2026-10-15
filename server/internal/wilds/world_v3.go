@@ -119,28 +119,40 @@ func weighted(rng *Rng, weights []int) int {
 	return len(weights) - 1
 }
 
-// frontierChunks is the 0.8 frontier rectangle from content (the same rule
-// as frontier.Inside and frontier.Rect, which import this package): every
-// chunk within frontier.reach of a footprint, none south of southLimit.
-func frontierChunks() (minCx, minCy, maxCx, maxCy int) {
-	f := contentRules().GetFrontier()
-	r := int(f.GetReach())
-	for i, p := range contentRules().Places {
-		x0, y0 := int(p.GetCx())-r, int(p.GetCy())-r
-		x1, y1 := int(p.GetCx()+p.GetWidth())-1+r, int(p.GetCy()+p.GetHeight())-1+r
-		if i == 0 {
+// FrontierRect bounds the union of reach around generated and fixed places.
+// InsideReach is the membership test; the union has clipped outer corners.
+func FrontierRect() (minCx, minCy, maxCx, maxCy int) {
+	r := int(contentRules().GetFrontier().GetReach())
+	first := true
+	add := func(x0, y0, x1, y1 int) {
+		x0, y0, x1, y1 = x0-r, y0-r, x1+r, y1+r
+		if first {
 			minCx, minCy, maxCx, maxCy = x0, y0, x1, y1
-			continue
+			first = false
+			return
 		}
 		minCx, minCy, maxCx, maxCy = min(minCx, x0), min(minCy, y0), max(maxCx, x1), max(maxCy, y1)
 	}
-	return minCx, minCy, maxCx, min(maxCy, int(f.GetSouthLimit()))
+	for _, p := range contentRules().Places {
+		add(int(p.GetCx()), int(p.GetCy()), int(p.GetCx()+p.GetWidth()-1), int(p.GetCy()+p.GetHeight()-1))
+	}
+	for _, p := range content.PlacesRules.GetFixed() {
+		add(content.FixedChunks(p))
+	}
+	return minCx, minCy, maxCx, min(maxCy, int(contentRules().GetFrontier().GetSouthLimit()))
 }
+func frontierChunks() (int, int, int, int) { return FrontierRect() }
 
-// insideReach is frontier.Inside for 0.8 (content's reach and south limit).
-func insideReach(cx, cy int) bool {
+func InsideReach(cx, cy int) bool {
 	f := contentRules().GetFrontier()
 	return cy <= int(f.GetSouthLimit()) && NearestFootprint(cx, cy) <= int(f.GetReach())
+}
+func insideReach(cx, cy int) bool { return InsideReach(cx, cy) }
+
+func fixedBox(p *content.FixedPlace) box {
+	S := chunkSize()
+	x0, y0, x1, y1 := content.FixedChunks(p)
+	return tileBox(x0*S, y0*S, (x1+1)*S-1, (y1+1)*S-1)
 }
 
 // footprintBox is a footprint's tiles in fp.

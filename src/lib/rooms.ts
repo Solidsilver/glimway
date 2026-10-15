@@ -37,14 +37,17 @@ const int = (n: unknown): n is number => Number.isSafeInteger(n) && (n as number
 export function roomParent(area: string): string {
   if (HOME_ROOM_ID.test(area)) return area.slice(3);
   const m = ROOM_ID.exec(area);
-  return m ? m[3] ? `in:${m[1]}:${m[2]}` : m[1]! : area;
+  return m ? m[3] ? `in:${m[1]}:${m[2]}` : ['village', 'commons'].includes(m[1]!) ? 'hearthwick' : m[1]! : area;
 }
 /** The building a room or one of its floors or side rooms is in. */
 function roomBuilding(area: string): string { const m = ROOM_ID.exec(area); return m ? `in:${m[1]}:${m[2]}` : area; }
-export function rootArea(area: string): string { return HOME_ROOM_ID.test(area) ? area.slice(3) : ROOM_ID.exec(area)?.[1] ?? area; }
+export function rootArea(area: string): string {
+  const root = HOME_ROOM_ID.test(area) ? area.slice(3) : ROOM_ID.exec(area)?.[1] ?? area;
+  return area.startsWith('in:') && ['village', 'commons'].includes(root) ? 'hearthwick' : root;
+}
 export function roomFor(area: string): Room | null { return ROOMS.rooms.find(r => r.id === area) ?? null; }
 export function knownRoom(area: string): boolean { return HOME_ROOM_ID.test(area) || roomFor(area) !== null; }
-export function knownContentArea(area: string): boolean { return ['village', 'woodland', 'ruin', 'commons'].includes(area) || knownRoom(area); }
+export function knownContentArea(area: string): boolean { return ['hearthwick', 'woodland', 'ruin'].includes(area) || knownRoom(area); }
 export function roomContainsTile(room: Room, tx: number, ty: number): boolean { return int(tx) && int(ty) && ty < room.map.length && tx < room.map[ty]!.length; }
 export function roomWalkable(room: Room, tx: number, ty: number): boolean {
   if (!roomContainsTile(room, tx, ty)) return false;

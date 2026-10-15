@@ -142,16 +142,12 @@ export declare type PlaceRulesValid = PlaceRules;
 export declare const PlaceRulesSchema: GenMessage<PlaceRules, {validType: PlaceRulesValid}>;
 
 /**
- * The curated spaces not yet on the grid. `home` covers every `home:<g>`.
+ * Curated outdoor spaces not yet on the grid. Home and town rooms inherit
+ * rules from their indoor root; legacy outdoor spaces retire in T5.
  *
  * @generated from message glimway.content.v1.SpaceRules
  */
 export declare type SpaceRules = Message<"glimway.content.v1.SpaceRules"> & {
-  /**
-   * @generated from field: glimway.content.v1.PlaceRules village = 1;
-   */
-  village?: PlaceRules | undefined;
-
   /**
    * @generated from field: glimway.content.v1.PlaceRules woodland = 2;
    */
@@ -161,24 +157,15 @@ export declare type SpaceRules = Message<"glimway.content.v1.SpaceRules"> & {
    * @generated from field: glimway.content.v1.PlaceRules ruin = 3;
    */
   ruin?: PlaceRules | undefined;
-
-  /**
-   * @generated from field: glimway.content.v1.PlaceRules home = 4;
-   */
-  home?: PlaceRules | undefined;
 };
 
 /**
- * The curated spaces not yet on the grid. `home` covers every `home:<g>`.
+ * Curated outdoor spaces not yet on the grid. Home and town rooms inherit
+ * rules from their indoor root; legacy outdoor spaces retire in T5.
  *
  * @generated from message glimway.content.v1.SpaceRules
  */
 export declare type SpaceRulesValid = Message<"glimway.content.v1.SpaceRules"> & {
-  /**
-   * @generated from field: glimway.content.v1.PlaceRules village = 1;
-   */
-  village: PlaceRulesValid;
-
   /**
    * @generated from field: glimway.content.v1.PlaceRules woodland = 2;
    */
@@ -188,11 +175,6 @@ export declare type SpaceRulesValid = Message<"glimway.content.v1.SpaceRules"> &
    * @generated from field: glimway.content.v1.PlaceRules ruin = 3;
    */
   ruin: PlaceRulesValid;
-
-  /**
-   * @generated from field: glimway.content.v1.PlaceRules home = 4;
-   */
-  home: PlaceRulesValid;
 };
 
 /**
@@ -207,7 +189,8 @@ export declare const SpaceRulesSchema: GenMessage<SpaceRules, {validType: SpaceR
  * (0, 0) at world tile `origin`. The footprint is the chunk rectangle with
  * north-west chunk (cx, cy), `width` chunks east and `height` south; every
  * chunk in it is fixed. Zones and anchors are in layout tiles (world tile
- * minus origin) and lie inside the footprint (code rules).
+ * minus origin). Zones lie inside their footprint. Anchors may name tiles
+ * on another declared fixed footprint (town lot anchors).
  *
  * @generated from message glimway.content.v1.FixedPlace
  */
@@ -276,12 +259,19 @@ export declare type FixedPlace = Message<"glimway.content.v1.FixedPlace"> & {
 
   /**
    * Stable positions doors, arrivals and recovery refer to, as
-   * `<place>:<anchor>` ("commons:arch", "commons:gate:3"). Ids unique in the
+   * `<place>:<anchor>` ("hearthwick:spawn", "hearthwick:lot:3"). Ids unique in the
    * place (code rule).
    *
    * @generated from field: repeated glimway.content.v1.PlaceAnchor anchors = 12;
    */
   anchors: PlaceAnchor[];
+
+  /**
+   * Plots use a lane-only placeholder until the lot composer lands in T4.
+   *
+   * @generated from field: string kind = 13;
+   */
+  kind: string;
 };
 
 /**
@@ -290,7 +280,8 @@ export declare type FixedPlace = Message<"glimway.content.v1.FixedPlace"> & {
  * (0, 0) at world tile `origin`. The footprint is the chunk rectangle with
  * north-west chunk (cx, cy), `width` chunks east and `height` south; every
  * chunk in it is fixed. Zones and anchors are in layout tiles (world tile
- * minus origin) and lie inside the footprint (code rules).
+ * minus origin). Zones lie inside their footprint. Anchors may name tiles
+ * on another declared fixed footprint (town lot anchors).
  *
  * @generated from message glimway.content.v1.FixedPlace
  */
@@ -359,12 +350,19 @@ export declare type FixedPlaceValid = Message<"glimway.content.v1.FixedPlace"> &
 
   /**
    * Stable positions doors, arrivals and recovery refer to, as
-   * `<place>:<anchor>` ("commons:arch", "commons:gate:3"). Ids unique in the
+   * `<place>:<anchor>` ("hearthwick:spawn", "hearthwick:lot:3"). Ids unique in the
    * place (code rule).
    *
    * @generated from field: repeated glimway.content.v1.PlaceAnchor anchors = 12;
    */
   anchors: PlaceAnchorValid[];
+
+  /**
+   * Plots use a lane-only placeholder until the lot composer lands in T4.
+   *
+   * @generated from field: string kind = 13;
+   */
+  kind: string;
 };
 
 /**

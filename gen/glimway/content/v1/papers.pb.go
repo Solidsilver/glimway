@@ -337,7 +337,7 @@ const file_glimway_content_v1_papers_proto_rawDesc = "" +
 	"\n" +
 	"\x1fglimway/content/v1/papers.proto\x12\x12glimway.content.v1\x1a\x1bbuf/validate/validate.proto\"E\n" +
 	"\x06Papers\x12;\n" +
-	"\x06papers\x18\x01 \x03(\v2\x19.glimway.content.v1.PaperB\b\xbaH\x05\x92\x01\x02\b\x01R\x06papers\"\xa6\v\n" +
+	"\x06papers\x18\x01 \x03(\v2\x19.glimway.content.v1.PaperB\b\xbaH\x05\x92\x01\x02\b\x01R\x06papers\"\xeb\v\n" +
 	"\x05Paper\x12\x19\n" +
 	"\x02id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18zR\x02id\x12'\n" +
 	"\n" +
@@ -345,10 +345,10 @@ const file_glimway_content_v1_papers_proto_rawDesc = "" +
 	"collection\x12\x82\x01\n" +
 	"\x06source\x18\x03 \x01(\tBj\xbaHgreR\rlibrary-startR\x06placedR\x05questR\x04giftR\acommonsR\twilds-poiR\vwilds-chestR\x0fvillage-projectR\aturningR\x04echoR\x06source\x12I\n" +
 	"\asection\x18\x04 \x01(\tB/\xbaH,r*R\astoriesR\thistoriesR\arecipesR\vfield-notesR\asection\x129\n" +
-	"\x04rule\x18\x05 \x01(\v2\x1d.glimway.content.v1.PaperRuleB\x06\xbaH\x03\xc8\x01\x01R\x04rule:\xcd\b\xbaH\xc9\b\x1aM\n" +
+	"\x04rule\x18\x05 \x01(\v2\x1d.glimway.content.v1.PaperRuleB\x06\xbaH\x03\xc8\x01\x01R\x04rule:\x92\t\xbaH\x8e\t\x1aM\n" +
 	"\n" +
-	"paper.kind\x12 a find rule's kind is its source\x1a\x1dthis.rule.kind == this.source\x1a\x9a\x01\n" +
-	"\fpaper.placed\x12-a placed paper names an area and a tile on it\x1a[this.source != \"placed\" || (this.rule.area != \"\" && this.rule.tx >= 0 && this.rule.ty >= 0)\x1a~\n" +
+	"paper.kind\x12 a find rule's kind is its source\x1a\x1dthis.rule.kind == this.source\x1a\xdf\x01\n" +
+	"\fpaper.placed\x12-a placed paper names an area and a tile on it\x1a\x9f\x01this.source != \"placed\" || (this.rule.area != \"\" && this.rule.tx >= -1048576 && this.rule.tx <= 1048576 && this.rule.ty >= -1048576 && this.rule.ty <= 1048576)\x1a~\n" +
 	"\vpaper.stage\x121a quest or gift paper names the stage it comes at\x1a<!(this.source in [\"quest\", \"gift\"]) || this.rule.stage != \"\"\x1aw\n" +
 	"\rpaper.project\x12)a village-project paper names its project\x1a;this.source != \"village-project\" || this.rule.project != \"\"\x1a^\n" +
 	"\n" +
@@ -357,12 +357,12 @@ const file_glimway_content_v1_papers_proto_rawDesc = "" +
 	"\n" +
 	"paper.tier\x12/a wilds-chest paper comes from the tier-3 chest\x1a3this.source != \"wilds-chest\" || this.rule.tier == 3\x1a_\n" +
 	"\fpaper.member\x12\x1ean echo paper names its member\x1a/this.source != \"echo\" || this.rule.member != \"\"\x1a\xa8\x01\n" +
-	"\rpaper.turning\x126a turning paper is declared: unbuilt, a fact or a site\x1a_this.source != \"turning\" || (this.rule.unbuilt || this.rule.fact != \"\" || this.rule.site != \"\")\"\x86\x03\n" +
+	"\rpaper.turning\x126a turning paper is declared: unbuilt, a fact or a site\x1a_this.source != \"turning\" || (this.rule.unbuilt || this.rule.fact != \"\" || this.rule.site != \"\")\"\xb2\x03\n" +
 	"\tPaperRule\x12\x12\n" +
 	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x12\n" +
-	"\x04area\x18\x02 \x01(\tR\x04area\x12\x0e\n" +
-	"\x02tx\x18\x03 \x01(\x05R\x02tx\x12\x0e\n" +
-	"\x02ty\x18\x04 \x01(\x05R\x02ty\x12\x14\n" +
+	"\x04area\x18\x02 \x01(\tR\x04area\x12$\n" +
+	"\x02tx\x18\x03 \x01(\x05B\x14\xbaH\x11\x1a\x0f\x18\x80\x80@(\x80\x80\xc0\xff\xff\xff\xff\xff\xff\x01R\x02tx\x12$\n" +
+	"\x02ty\x18\x04 \x01(\x05B\x14\xbaH\x11\x1a\x0f\x18\x80\x80@(\x80\x80\xc0\xff\xff\xff\xff\xff\xff\x01R\x02ty\x12\x14\n" +
 	"\x05after\x18\x05 \x01(\tR\x05after\x12\x14\n" +
 	"\x05stage\x18\x06 \x01(\tR\x05stage\x12\x12\n" +
 	"\x04from\x18\a \x01(\tR\x04from\x12\x18\n" +

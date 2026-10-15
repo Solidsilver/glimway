@@ -81,6 +81,7 @@ export interface PresenceHandlers {
   /** Someone standing near you reached a story beat (the server says who and which). */
   witness?(w: { beat: string; accountId: string; name: string }): void;
   /** Someone's look changed: their follower, or the mount that's out (crafts.md 2.4, 3.4). */
+  homeChanged?(gate: number): void;
   avatarChange?(accountId: string, avatar: PresenceAvatar): void;
 }
 
@@ -139,7 +140,7 @@ export function closeAction(code: number, reason = ''): 'retry' | 'superseded' |
  * map's chunk rooms `outdoors:<cx>:<cy>` (signed; rooms are checked against the
  * content).
  */
-const AREA_RE = /^(village|woodland|ruin|home:(0|[1-9]\d{0,3})|outdoors:(0|-?[1-9]\d*):(0|-?[1-9]\d*))$/;
+const AREA_RE = /^(woodland|ruin|outdoors:(0|-?[1-9]\d*):(0|-?[1-9]\d*))$/;
 
 export function isPresenceArea(area: string): boolean {
   if (area.startsWith('outdoors:')) { const c = roomChunk(area); return !!c && Number.isSafeInteger(c.cx) && Number.isSafeInteger(c.cy) && onGrid(c.cx, c.cy); }
@@ -499,6 +500,7 @@ export class PresenceClient {
           ...(m.pose ? { pose: m.pose } : {}),
         });
         break;
+      case 'homeChanged': this.handlers.homeChanged?.(m.gate); break;
       case 'avatarChange':
         this.handlers.avatarChange?.(m.accountId, m.avatar);
         break;

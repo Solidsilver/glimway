@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"glimway/content"
+	"glimway/server/internal/chunks"
 	"glimway/server/internal/chunks/fakegen"
 	"glimway/server/internal/habitica"
 	"glimway/server/internal/location"
@@ -483,6 +484,18 @@ func body(s response, key string, fields map[string]any) map[string]any {
 			out["action"] = v
 			continue
 		}
+		if k == "tile" {
+			doc := s.State
+			if p, ok := fields["progress"].(rules.State); ok {
+				doc = p
+			}
+			if gate := rules.HomeGate(doc.Area); gate >= 0 && gate < 8 {
+				if tile, ok := v.([2]int); ok {
+					ox, oy := chunks.LotOrigin(gate)
+					v = [2]int{tile[0] + ox, tile[1] + oy}
+				}
+			}
+		}
 		out[k] = v
 	}
 	return out
@@ -683,9 +696,36 @@ func (x *rig) cacheAccounts() {
 	}
 }
 
+// testWhere adapts remaining legacy village/home scenario fixtures. Room fixtures
+// only substitute the new-player outdoor spawn; other coordinates stay literal.
 func testWhere(s rules.State) map[string]any {
-	area := s.Area
-	return map[string]any{"area": area, "x": s.Position.X, "y": s.Position.Y}
+	area := string(location.ContentSpace(s.Area))
+	x, y := s.Position.X, s.Position.Y
+	if content.KnownRoom(area) && (x == 72 && y == 968) {
+		x, y = 80, 80
+	}
+	if area == "village" {
+		area = "outdoors"
+		x, y = 72, 968
+	}
+	if gate := rules.HomeGate(area); gate >= 0 {
+		area = "outdoors"
+		if gate < 8 {
+			ox, oy := chunks.LotOrigin(gate)
+			if x >= float64(ox*16) && x < float64((ox+24)*16) && y >= float64(oy*16) && y < float64((oy+24)*16) {
+				// Already standing in this lot's world frame.
+			} else if x >= 0 && x < 384 && y >= 0 && y < 384 {
+				x += float64(ox * 16)
+				y += float64(oy * 16)
+			} else {
+				x = float64((ox+11)*16 + 8)
+				y = float64((oy+8)*16 + 8)
+			}
+		} else {
+			x, y = 40, 424
+		}
+	}
+	return map[string]any{"area": area, "x": x, "y": y}
 }
 
 // decodeLegacyDomainHTTP combines a legacy wire projection with SQL-seeded pack items.
@@ -723,14 +763,21 @@ func decodeLegacyDomainHTTP[T any](x *rig, w *httptest.ResponseRecorder) T {
 
 func testContract() string { return strconv.Itoa(content.ContractNumber) }
 
-// commonsPx is a Commons layout pixel on the outdoors grid: the fixed
-// footprint's origin tile is (-21, 24), so (x-336, y+384).
-func commonsPx(x, y float64) rules.Position {
-	space, tx, ty := location.Resolve("commons", 0, 0)
-	if space != location.Outdoors {
-		panic("the Commons left the outdoors")
+// atAnchor places a scenario at a named outdoor anchor. New town tests use
+// anchors instead of duplicating layout coordinates.
+func atAnchor(s rules.State, id string) rules.State {
+	space, x, y, ok := location.Anchor(id)
+	if !ok {
+		panic("unknown test anchor: " + id)
 	}
-	return rules.Position{X: x + float64(tx*16), Y: y + float64(ty*16)}
+	s.Area, s.Position = string(space), rules.Position{X: x, Y: y}
+	return s
+}
+
+// commonsPx preserves old scenario offsets until T3 replaces those fixtures.
+// It is deliberately not a production origin-adding bridge.
+func commonsPx(x, y float64) rules.Position {
+	return rules.Position{X: x - 336, Y: y + 384}
 }
 
 // onCommons is a state standing at a Commons layout pixel.
@@ -752,11 +799,10 @@ func (x *rig) standOnCommons(id, world string, lx, ly float64) {
 	x.stand(id, world, outdoorsRoom(p), p.X, p.Y)
 }
 
-// atContentTile stands a state on an area-local content tile, footDy px
-// down into it: Commons tiles resolve onto the outdoors grid, other areas
-// are their own frame.
+// atContentTile stands a state on a content world tile, footDy px down
+// into it. Place labels map to outdoors; coordinates stay unchanged.
 func atContentTile(s rules.State, area string, tx, ty int, footDy float64) rules.State {
-	space, wx, wy := location.Resolve(area, tx, ty)
-	s.Area, s.Position = string(space), rules.Position{X: float64(wx*16 + 8), Y: float64(wy*16) + footDy}
+	space, wx, wy := contentTile(area, tx, ty)
+	s.Area, s.Position = space, rules.Position{X: float64(wx*16 + 8), Y: float64(wy*16) + footDy}
 	return s
 }

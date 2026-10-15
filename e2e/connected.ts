@@ -273,7 +273,7 @@ export async function openTitleGuide(page: Page): Promise<void> {
  * (`'outdoors'`: the open map; `'commons'`: the same, on the Commons' fixed
  * ground since the join).
  */
-export async function waitForWorld(page: Page, area: string = 'village'): Promise<void> {
+export async function waitForWorld(page: Page, area: string = 'outdoors'): Promise<void> {
   await page.waitForFunction((a) => {
     const s = (window as unknown as { __fsSafety?: () => { areaId: string; transitioning: boolean } | null }).__fsSafety?.()
     return !!s && !s.transitioning && s.areaId === a
@@ -287,7 +287,7 @@ export async function waitForWorld(page: Page, area: string = 'village'): Promis
  * `savedToDisk`: this tab's revision is the world's, so everything this tab
  * did has been uploaded.
  */
-export async function reenter(page: Page, area: string = 'village'): Promise<void> {
+export async function reenter(page: Page, area: string = 'outdoors'): Promise<void> {
   await expect
     .poll(async () => {
       const mine = await linkRev(page)
@@ -305,7 +305,7 @@ export async function reenter(page: Page, area: string = 'village'): Promise<voi
  * state, like `reenter`). Unlike a reload, this keeps the Habitica link:
  * the details live only in the page's memory, and the Menu's Sync needs them.
  */
-export async function signInAgain(page: Page, id: string, area: string = 'village'): Promise<void> {
+export async function signInAgain(page: Page, id: string, area: string = 'outdoors'): Promise<void> {
   await expect
     .poll(async () => {
       const mine = await linkRev(page)

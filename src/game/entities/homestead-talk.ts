@@ -1,3 +1,4 @@
+import { lotAtPixel } from '../../lib/lots'
 /**
  * Homesteads, talked to: everything you can use on the Commons, at Silas's
  * Yard, on a homestead's land and in a cottage (each point with its own
@@ -27,7 +28,6 @@ import { grantPaper } from '../papers'
 import { itemsFor } from '../items'
 import { keepsakeAsk } from '../keepsakes'
 import type { VillagePanel } from '../village'
-import { openBoard } from './village-life'
 import { HOME_FLAGS, PAPERS, SILAS, lotName } from '../homestead'
 import type { Interactable, MarkerKind } from './interactables'
 import { DialogueHold } from '../dialogue-hold'
@@ -180,8 +180,8 @@ export class HomesteadTalk {
       if (!home) {
         out.push({
           id: 'home:stake',
-          x: (L.site.x + L.site.w / 2) * TILE,
-          y: (L.site.y + L.site.h - 1) * TILE + 2,
+          x: (L.gridOrigin?.x ?? 0) + (L.site.x + L.site.w / 2) * TILE,
+          y: (L.gridOrigin?.y ?? 0) + (L.site.y + L.site.h - 1) * TILE + 2,
           label: 'Read the sign',
           verb: 'Read',
           markerOffset: 16,
@@ -220,8 +220,8 @@ export class HomesteadTalk {
         if (it.itemDef !== POST || it.scene !== 'outdoor' || it.x === null || it.y === null) continue
         out.push({
           id: `home:post:${it.id}`,
-          x: tileMid(it.x),
-          y: tileBottom(it.y) + 2,
+          x: (L.gridOrigin?.x ?? 0) + tileMid(it.x),
+          y: (L.gridOrigin?.y ?? 0) + tileBottom(it.y) + 2,
           label: `Read the lamp${it.name ? `: ${short(it.name, 20)}` : ''}`,
           verb: 'Read',
           markerOffset: 36,
@@ -265,7 +265,6 @@ export class HomesteadTalk {
         CARTING_DAY_NOTICE
       ])
     })
-    out.push({ id: 'home:board', ...at(f.board, 2), label: 'Read the notice board', verb: 'Look', marker: () => this.home.village.calendar.notice ? 'talk' : null, markerOffset: 32, activate: openBoard })
     out.push({
       id: 'home:well',
       ...at({ tx: f.well.tx, ty: f.well.ty }, 4),
@@ -281,10 +280,16 @@ export class HomesteadTalk {
       const info = this.home.homes.gateInfo(slot.gate)
       if (info?.shelf) {
         out.push({ id: `home:shelf:${slot.gate}`, ...at(slot.shelf, 2), label: 'Look at the gift shelf', verb: 'Look', markerOffset: 16, activate: panel('shelf', slot.gate) })
+        if (info.mine) {
+          // Management needs private presence: reach it from the gate opening,
+          // ahead of the mailbox, while travellers keep the public shelf point.
+          out.push({ id: `home:manage-shelf:${slot.gate}`, ...at(slot.shelf, 2), label: 'Look at the gift shelf', verb: 'Look', markerOffset: 16, rank: 1, reach: 52, clickReach: 52, available: () => this.insideGate(slot.gate), activate: panel('shelf', slot.gate) })
+        }
       } else if (info?.mine) {
         const unplaced = this.home.homes.mine?.items.find((i) => i.itemDef === 'gate-shelf' && i.scene === null)
         if (unplaced) {
-          out.push({ id: `home:place-shelf:${unplaced.id}`, ...at(slot.shelf, 2), label: 'Set out your gate shelf', verb: 'Place', markerOffset: 16, activate: () => void this.placeGateShelf(unplaced.id) })
+          // Beat the nearer mailbox while the owner is inside the gate.
+          out.push({ id: `home:place-shelf:${unplaced.id}`, rank: 1, ...at(slot.shelf, 2), label: 'Set out your gate shelf', verb: 'Place', markerOffset: 16, reach: 52, clickReach: 52, available: () => this.insideGate(slot.gate), activate: () => void this.placeGateShelf(unplaced.id) })
         }
       }
     }
@@ -368,7 +373,7 @@ export class HomesteadTalk {
       } else {
         const unplaced = this.home.homes.mine?.items.find((i) => i.itemDef === 'gate-shelf' && i.scene === null)
         if (unplaced) {
-          choices.push({ text: 'Set out your gate shelf', action: `home:place-shelf:${unplaced.id}` })
+          choices.push({ text: 'Set out your gate shelf', action: `home:place-shelf:${unplaced.id}`, disabled: !this.insideGate(gate), ...(!this.insideGate(gate) ? { note: 'Step inside your gate' } : {}) })
         }
       }
     }
@@ -544,7 +549,18 @@ export class HomesteadTalk {
     if (action === MANAGE_DEED) return openDeedPanel()
   }
 
+  private insideGate(gate: number): boolean {
+    const p = this.deps.hero()
+    return this.deps.world.areaId === 'outdoors' && lotAtPixel(p.x,p.y) === gate
+  }
+
   private async placeGateShelf(itemId: string): Promise<void> {
+    const gate = this.home.homes.myGate
+    if (gate === null || !this.insideGate(gate)) {
+      this.say({ speaker: 'Gate Shelf', lines: ['Step inside your gate to set out the shelf.'] })
+      return
+    }
+    bus.emit(EV.notePosition)
     const r = await this.home.homes.act({ op: 'place', itemId, scene: 'gate', x: 0, y: 0, rotation: 0 })
     if (r.ok) {
       sfx('pop')

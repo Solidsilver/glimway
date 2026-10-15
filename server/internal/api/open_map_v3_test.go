@@ -28,12 +28,19 @@ func TestOpenMapWithGeneratorV3(t *testing.T) {
 	if gate.Still.GeneratorVersion != 3 || gate.Wick.GeneratorVersion != 3 || len(gate.Entities) == 0 {
 		t.Fatal("gate window", gate.Still, len(gate.Entities))
 	}
-	for _, at := range [][2]int{{-4, -8}, {4, -8}, {-4, 0}, {4, 0}, {2, -1}, {-2, -2}, {0, -6}, {-3, -4}, {3, -4}} {
-		x.near(c, at[0], at[1], 200)
-	}
 	x0, y0, x1, y1 := frontier.Rect("")
-	if n := count(t, x.db, "SELECT count(*) FROM wilds_chunks"); n != (x1-x0+1)*(y1-y0+1) {
-		t.Fatalf("%d chunks made", n)
+	expected := 0
+	for cy := y0; cy <= y1; cy++ {
+		for cx := x0; cx <= x1; cx++ {
+			if !frontier.Inside("", cx, cy) || wilds.FixedFootprintAt(cx, cy) != nil {
+				continue
+			}
+			x.near(c, cx, cy, 200)
+			expected++
+		}
+	}
+	if n := count(t, x.db, "SELECT count(*) FROM wilds_chunks"); n != expected {
+		t.Fatalf("%d chunks made; want %d", n, expected)
 	}
 	rows, err := x.db.DB.Query("SELECT epoch_id,cx,cy,length(blob),blob FROM wilds_chunks")
 	if err != nil {
@@ -65,7 +72,7 @@ func TestOpenMapWithGeneratorV3(t *testing.T) {
 	if largest > 6*1024 {
 		t.Fatalf("a stored chunk of %d bytes", largest)
 	}
-	t.Logf("81 stored chunks: %d bytes, the largest %d", total, largest)
+	t.Logf("expanded frontier stored chunks: %d bytes, the largest %d", total, largest)
 
 	// The rumour: in the state, and its find in the chunk it names.
 	r := x.rumourState(c)

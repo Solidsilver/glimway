@@ -31,7 +31,7 @@ func TestTypeScriptParity(t *testing.T) {
 		t.Fatal(err)
 	}
 	defaults := tree["stateDefaults"].(map[string]any)
-	same(t, "state defaults", defaults, rules.NewState())
+	same(t, "state defaults", defaults, rules.NewTownState())
 	var expand func(any) any
 	expand = func(v any) any {
 		switch v := v.(type) {

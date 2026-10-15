@@ -11,7 +11,7 @@ test.skip(!process.env.SCREENS, 'screenshots only (SCREENS=1)')
 const OUT = '.agent/screens'
 
 async function toTheStone(page: Page, prefix: string): Promise<void> {
-  await warp(page, 'village', 16, 14)
+  await warp(page, 'outdoors', 14, 62)
   await talkThrough(page, /Talk to Mara/)
   await warp(page, 'ruin', 15, 3)
   await expect(page.locator('.prompt')).toContainText('Copy the naming from the stone')

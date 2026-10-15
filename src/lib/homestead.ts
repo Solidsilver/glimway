@@ -1,3 +1,4 @@
+import { lotOrigin } from './lots.ts';
 import raw from '../../content/homestead.json' with { type: 'json' };
 import { ITEMS_SHAPE } from './items-shape.ts';
 import { decodeContent } from './content-proto.ts';
@@ -154,23 +155,10 @@ function landGrid(data: HomesteadData = HOMESTEAD_DATA): HomeGrid {
  * the lane side it opens from (west fence: the land lies west). The server
  * reads the same rule from the same content.
  */
-export function gateTile(gate: number, data: HomesteadData = HOMESTEAD_DATA): { tx: number; ty: number; side: 'west' | 'east' } {
-  const c = data.commons;
-  const side = gate % 2 === 0 ? 'west' : 'east';
-  const row = Math.floor(gate / 2);
-  const last = c.gateRows.length - 1;
-  return { tx: c.fenceX[gate % 2], ty: row <= last ? c.gateRows[row] : c.gateRows[last] + (row - last) * c.rowPitch, side };
-}
-
-/** The area id of gate g's homestead map. */
-export function homeArea(gate: number): string {
-  return `home:${gate}`;
-}
-
-/** Gate number of a `home:<g>` area id (null for anything else). */
-export function parseHomeArea(area: string): number | null {
-  const m = /^home:(0|[1-9]\d{0,3})$/.exec(area);
-  return m ? Number(m[1]) : null;
+export function gateTile(gate: number, _data: HomesteadData = HOMESTEAD_DATA): { tx: number; ty: number; side: 'west' | 'east' } {
+  if (!Number.isInteger(gate) || gate < 0 || gate >= 8) throw new Error('invalid lot');
+  const o = lotOrigin(gate);
+  return { tx: o.tx + 11, ty: o.ty + 19, side: gate % 2 ? 'east' : 'west' };
 }
 
 export function homeItem(id: string): HomeItem | undefined {

@@ -18,7 +18,7 @@ func BenchmarkPresenceBroadcast(b *testing.B) {
 		defer cancel()
 		peers := make([]*presencePeer, 32)
 		for i := range peers {
-			p := &presencePeer{identity: presenceIdentity{ID: strconv.Itoa(i), World: "world"}, area: "village", ctx: ctx, cancel: cancel, queue: make(chan []byte, 1)}
+			p := &presencePeer{identity: presenceIdentity{ID: strconv.Itoa(i), World: "world"}, area: "in:village:library", ctx: ctx, cancel: cancel, queue: make(chan []byte, 1)}
 			peers[i] = p
 			h.admit(p)
 		}

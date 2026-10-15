@@ -162,9 +162,9 @@
       ]
     },
     {
-      "name": "negative-pos",
+      "name": "out-of-range-pos",
       "valid": false,
-      "rule": "int32.gte",
+      "rule": "int32.gte_lte",
       "edits": [
         {
           "path": [
@@ -173,7 +173,7 @@
             "pos",
             "tx"
           ],
-          "value": -1
+          "value": -1048577
         }
       ]
     },

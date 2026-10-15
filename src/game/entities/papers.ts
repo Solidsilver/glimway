@@ -1,3 +1,4 @@
+import { onSceneEnd } from '../scene-end.ts'
 /**
  * Papers in the world: the found-text pickups lying in an area (a folded
  * page, a tied scroll, a child's slate — code-drawn in the game's pixel
@@ -56,6 +57,8 @@ export function papersGlintBright(session: Session): boolean {
 }
 
 export class PaperPickups {
+  private stopped = false
+  private beatTimers: Phaser.Time.TimerEvent[] = []
   private scope: FixedScope
 
   attachChunk(key: string): void {
@@ -85,12 +88,16 @@ export class PaperPickups {
     bus.on(EV.dialogueClosed, this.onDialogueClosed, this)
     bus.on(EV.quest, this.onQuest, this)
     bus.on(EV.worldRefresh, this.onWorldRefresh, this)
-    scene.events.once('shutdown', () => {
+    onSceneEnd(scene, () => {
       bus.off(EV.dialogueClosed, this.onDialogueClosed, this)
       bus.off(EV.quest, this.onQuest, this)
       bus.off(EV.worldRefresh, this.onWorldRefresh, this)
-      for (const p of this.pickups.values()) p.timer?.remove()
-      this.pickups.clear()
+      this.stopped = true
+      this.scope.keys.clear()
+      for (const t of this.beatTimers) t.remove()
+      this.beatTimers = []
+      this.pendingHandover = null
+      this.onWorldRefresh()
     })
     this.publish()
     emitPapers(deps.session)
@@ -170,7 +177,7 @@ export class PaperPickups {
     if (!p) return
     p.timer?.remove()
     this.scene.tweens.killTweensOf(p.twinkle)
-    if (this.deps.reducedMotion || this.deps.world.open) {
+    if (this.stopped || this.deps.reducedMotion || this.deps.world.open) {
       this.scene.tweens.killTweensOf(p.image)
       p.image.destroy()
       p.twinkle.destroy()
@@ -194,14 +201,14 @@ export class PaperPickups {
   private grantBeats(stage: QuestStage, delayMs: number): void {
     // Connected, the quest step itself grants its beat papers (content/quests.json):
     // a take would be refused as not due, and taken again at every scene build.
-    if (this.deps.session.link) return
+    if (this.stopped || this.deps.session.link) return
     const due = beatsDue(stage, this.deps.session.state.flags)
     if (due.length === 0) return
     const grant = () => {
       for (const p of due) if (paperById(p.id)) grantPaper(this.deps.session, p.id)
     }
     if (delayMs <= 0) grant()
-    else this.scene.time.delayedCall(delayMs, grant)
+    else this.beatTimers.push(this.scene.time.delayedCall(delayMs, grant))
   }
 
   /**
@@ -209,7 +216,7 @@ export class PaperPickups {
    * refused a take this one predicted, and the paper lies here again.
    */
   private onWorldRefresh(): void {
-    const due = placedPapersIn(this.deps.world.areaId, this.deps.session.questStage, this.deps.session.state.flags).filter((p) => this.scope.has(p.source.tx, p.source.ty))
+    const due = this.stopped ? [] : placedPapersIn(this.deps.world.areaId, this.deps.session.questStage, this.deps.session.state.flags).filter((p) => this.scope.has(p.source.tx, p.source.ty))
     const { add, remove } = pickupChanges(this.pickups.keys(), due.map((p) => p.id))
     for (const id of remove) this.removePickup(id)
     for (const p of due) if (add.includes(p.id)) this.addPickup(p)

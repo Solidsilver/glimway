@@ -23,9 +23,9 @@ export function vectors() {
   xp.push({ level: 2, mark: 10, total: null, next: xpToNextLevel(2), result: { ...creditXp(10, { level: 2 }), mark: 10 } });
   const sync = [];
   const saveOf = (state: GameState, imported = true, baseline: HabiticaProfile | undefined = base): SyncedSave => ({ state: validateSave(state), vitalsSource: imported ? 'imported' : 'demo', ...(baseline ? { importedProfile: baseline } : {}) });
-  // The Commons is outdoors since the join (location-seam.md 3): the new game's spot moved onto it; the plain outdoors spot is the Tangle's.
-  const commons = { x: 400 - 336, y: 300 + 384 };
-  for (const [area, position] of [['village'], ['woodland'], ['ruin'], ['outdoors', commons], ['outdoors']] as const) {
+  // Town safety and the Tangle's unsafe ground share the outdoors saved space.
+  const town = createNewGame().position;
+  for (const [area, position] of [['outdoors', town], ['woodland'], ['ruin'], ['outdoors', town], ['outdoors', { x: 8, y: -376 }]] as const) {
     for (const hp of [0, 4.5, base.hp, base.maxHp]) {
       for (const mode of ['same', 'heal', 'fall', 'max-up', 'cosmetic', 'account', 'no-exp', 'no-baseline', 'first', 'restricted']) {
         const state = { ...createNewGame(), area, ...(position ? { position } : {}), hp, maxHp: base.maxHp, mana: 2, maxMana: base.maxMp, glimXp: lifetimeXp(base.level, base.exp ?? 0) };
@@ -71,7 +71,7 @@ export function vectors() {
  */
 function legacyState(s: Record<string, unknown>): Record<string, unknown> {
   if (!('quests' in s)) return s;
-  return Object.fromEntries(Object.entries(s).filter(([k]) => k !== 'questGateAt').map(([k, v]) => (k === 'quests' ? ['quest', (v as Record<string, string>)['lantern-road'] ?? 'new'] : [k, v])));
+  return Object.fromEntries(Object.entries(s).filter(([k]) => k !== 'questGateAt' && k !== 'layout').map(([k, v]) => (k === 'quests' ? ['quest', (v as Record<string, string>)['lantern-road'] ?? 'new'] : [k, v])));
 }
 /** Deduplicate immutable state fields while retaining self-contained JSON. */
 export const serializeVectors = () => {

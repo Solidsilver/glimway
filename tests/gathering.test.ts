@@ -6,7 +6,7 @@ import { chunkGather, chunkOrigin, chunkScenery, GATHER_OF } from '../src/game/w
 import { fixtureTerrain } from './wilds-fixture.ts';
 import { DECOR_ART } from '../src/game/wilds/decor.ts';
 import { buildArea } from '../src/game/worlds.ts';
-import { plantScenery, setLandSource } from '../src/game/homeland.ts';
+import { buildLand, plantScenery, setLandSource } from '../src/game/lot-land.ts';
 import { HOMESTEAD_DATA, checkPlacement, plantable, plantTileNear } from '../src/lib/homestead.ts';
 import { LAND, homeLights, isLit } from '../src/lib/homestead-land.ts';
 import { FIXTURE_LAND, serveFixtureLand } from './land-fixture.ts';
@@ -109,7 +109,7 @@ test('every woods kind that can be worked maps to a target with yields', () => {
 });
 
 test('homestead land: work stands on solid ground, clear of the home site, and stumps are kept', () => {
-  const w = buildArea('home:0');
+  const w = buildLand(0);
   const site = HOMESTEAD_DATA.land.site;
   for (const spot of w.gathering ?? []) {
     assert.ok(gatheringTarget(spot.target), `spot target ${spot.target} is in content/gathering.json`);
@@ -119,7 +119,7 @@ test('homestead land: work stands on solid ground, clear of the home site, and s
   }
   assert.ok((w.gathering?.length ?? 0) > 10, 'the land has woods to work');
   // The drift: what you leave comes back the same (the land is the served land).
-  const again = buildArea('home:0');
+  const again = buildLand(0);
   assert.deepEqual(again.gathering, w.gathering, 'regrowth rebuilds the same land');
 });
 
@@ -132,7 +132,7 @@ test('a kept stump (inside lamplight) is workable ground; a planted piece is not
         : null
   });
   try {
-    const w = buildArea('home:0');
+    const w = buildLand(0);
     const stump = (w.gathering ?? []).find((s) => s.tx === 20 && s.ty === 11);
     assert.ok(stump, 'the kept stump offers work');
     assert.equal(stump?.target, 'stump');
@@ -157,10 +157,10 @@ test('a tool’s feel: Bite takes a swing off, Heft quickens, a dull warden-set 
 });
 
 test('the drift: only your land inside lamplight keeps what you work; everywhere else regrows', () => {
-  for (const area of ['outdoors', 'woodland', 'home:0', 'village', 'commons']) assert.ok(gatherArea(area), `${area} offers work`);
-  for (const area of ['ruin', 'cottage']) assert.ok(!gatherArea(area), `${area} offers none`);
-  assert.equal(keepsWork('home:3', true), true, 'inside lamplight: a stump stays a stump');
-  assert.equal(keepsWork('home:3', false), false, 'the unlit edge regrows like the Tangle');
+  for (const [area, pos] of [['outdoors', { x: 0, y: 0 }], ['woodland', { x: 0, y: 0 }], ['outdoors', { x: -968, y: 520 }]] as const) assert.ok(gatherArea(area, pos), `${area} offers work`);
+  for (const area of ['ruin', 'cottage', 'home:0', 'village']) assert.ok(!gatherArea(area), `${area} offers none`);
+  assert.equal(keepsWork('lot:3', true), true, 'inside lamplight: a stump stays a stump');
+  assert.equal(keepsWork('lot:3', false), false, 'the unlit edge regrows like the Tangle');
   assert.equal(keepsWork('outdoors', true), false, 'the Tangle always comes back');
   assert.equal(keepsWork('woodland', false), false);
 });
@@ -172,7 +172,7 @@ test('the woods by the village offer trees and boulders; the ruin and the villag
   for (const s of spots) assert.ok(gatheringTarget(s.target), s.target);
   assert.equal(new Set(spots.map((s) => `${s.tx},${s.ty}`)).size, spots.length, 'one piece of work to a tile');
   assert.equal((buildArea('ruin').gathering ?? []).length, 0);
-  assert.equal((buildArea('village').gathering ?? []).length, 0);
+  assert.equal((buildArea('outdoors').gathering ?? []).length, 0);
 });
 
 test('the land rebuilt after leaving: lit stumps stay, unlit felled trees stand again, open ground stays open', () => {
@@ -191,7 +191,7 @@ test('the land rebuilt after leaving: lit stumps stay, unlit felled trees stand 
   // What the server keeps: only the lit stump (the dark chop is never stored).
   setLandSource({ worldId: () => 'w', state: () => ({ cleared: [], stumps: [[lit.x, lit.y]], plants: [], desolate: false }) });
   try {
-    const w = buildArea('home:0');
+    const w = buildLand(0);
     const at = (x: number, y: number) => (w.gathering ?? []).find((s) => s.tx === x && s.ty === y)?.target;
     assert.equal(at(lit.x, lit.y), 'stump', 'the lit stump stays');
     assert.ok(['tree', 'iron-oak'].includes(at(dark.x, dark.y) ?? ''), 'the dark tree stands again');
@@ -201,7 +201,7 @@ test('the land rebuilt after leaving: lit stumps stay, unlit felled trees stand 
   }
   setLandSource({ worldId: () => 'w', state: () => ({ cleared: [[lit.x, lit.y]], stumps: [], plants: [], desolate: false }) });
   try {
-    const w = buildArea('home:0');
+    const w = buildLand(0);
     assert.ok(!(w.gathering ?? []).some((s) => s.tx === lit.x && s.ty === lit.y), 'a dug stump leaves nothing to work');
     assert.ok(!w.solid[lit.y][lit.x], 'and open ground');
   } finally {
@@ -293,7 +293,8 @@ test('each place offers only the pieces the server allows there', () => {
   }
   for (const s of Object.values(GATHER_OF)) assert.ok(gatheringOffered("outdoors", s!.target), `wilds kind: ${s!.target}`);
   for (const s of buildArea('woodland').gathering ?? []) assert.ok(gatheringOffered('woodland', s.target), `woodland: ${s.target}`);
-  for (const s of buildArea('home:0').gathering ?? []) assert.ok(gatheringOffered('home:0', s.target), `home: ${s.target}`);
+  for (const s of buildLand(0).gathering ?? []) assert.ok(gatheringOffered('outdoors', s.target, { x: -968, y: 520 }), `home: ${s.target}`);
+  assert.ok(!gatheringOffered('home:0', 'tree'));
   assert.ok(!gatheringOffered('woodland', 'hollow-tree'));
   assert.ok(!gatheringOffered('village', 'tree'));
   assert.ok(GATHERING_DATA.plantsPerHome > 0);

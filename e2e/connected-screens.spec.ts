@@ -112,7 +112,8 @@ for (const [name, vp] of sizes) {
       await new Promise((r) => setTimeout(r, 1500))
       await route.continue()
     })
-    await warp(page, 'village', 11, 13)
+    // One tile off the well's rank-1 chore so the lantern is the nearest in reach.
+    await warp(page, 'outdoors', 10, 62)
     await openTalk(page, 'Rest by the lantern')
     await untilChoices(page)
     await expect(page.locator('.choice', { hasText: 'Rest by the flame' })).toBeVisible()
@@ -130,7 +131,7 @@ for (const [name, vp] of sizes) {
     await expect(page.getByTestId('net-offline')).toBeVisible({ timeout: 15_000 })
     await fits(page, vp)
     await shot(page, '10-hud-offline')
-    await warp(page, 'village', 16, 14)
+    await warp(page, 'outdoors', 14, 62)
     await talkThrough(page, /Talk to Mara/)
 
     // Another device plays meanwhile; back online this one is asked to take over.

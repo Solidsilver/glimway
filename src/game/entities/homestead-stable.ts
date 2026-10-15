@@ -115,7 +115,7 @@ export interface StableHost {
   stallsHere(): StallView[]
   readonly homes: { readonly myId: string | null; readonly connected: boolean; adoptHomeAnswer(home: HomeView | null): void; materials: Record<string, number> }
   readonly deps: { session: Session; hero: () => { x: number; y: number } }
-  readonly land: unknown
+  readonly land: { gridOrigin?: { x: number; y: number } } | null
 }
 
 /**
@@ -133,8 +133,8 @@ export function stablePoints(host: StableHost, say: (speaker: string, lines: str
     if (it.itemDef !== HOMESTEAD_DATA.stable.item || it.scene !== 'outdoor' || it.x === null || it.y === null) continue
     const count = it.stalls ?? 1
     const [, fh] = stableFootprint(count)
-    const bx = it.x * TILE
-    const by = (it.y + fh) * TILE
+    const bx = (host.land?.gridOrigin?.x ?? 0) + it.x * TILE
+    const by = (host.land?.gridOrigin?.y ?? 0) + (it.y + fh) * TILE
     for (let stall = 1; stall <= count; stall++) {
       const at = bayFront(bx, by, count, stall)
       const st = () => host.stallsHere().find((s) => s.stall === stall) ?? null

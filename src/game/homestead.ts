@@ -16,7 +16,7 @@ import type { CommonsLaneView } from './link.ts'
 import type { Refusal } from '../lib/api/errors.ts'
 import { homeErrorText } from '../content/errors.ts'
 import { BUILDER_NPC_DATA, SIGN_FORMAT } from '../content/expansion-writing.ts'
-import { setLandSource } from './homeland.ts'
+import { setLandSource } from './lot-land.ts'
 import { villageFor } from './village.ts'
 import { bus, EV, type MutationResolvedPayload } from './events.ts'
 import { grantPaper } from './papers.ts'
@@ -260,6 +260,7 @@ export class Homesteads {
       this.laneSeq = mark
       contradicted = this.adoptLane(lane.value, mark)
     }
+    for (const home of lane.value.homes ?? []) this.adoptHomeRead(home, mark)
     this.status = 'ready'
     // Only a lane that changed is redrawn (Silas and Pell re-read it every conversation).
     if (JSON.stringify([this.gates, this.gateCount, this.invites, this.myGateValue, this.status]) !== before) this.emit('roster')

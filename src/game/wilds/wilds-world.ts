@@ -12,7 +12,7 @@ import type { WorldData } from '../worlds.ts'
 import { CHUNK_PX, CHUNK_TILES, OUTDOORS_AREA } from './coords.ts'
 import { groundAt, solidAt } from './ground-view.ts'
 import { wildsFrontier } from './store.ts'
-import { loadWilds } from '../../lib/wilds/data.ts'
+import { frontierRect } from '../../lib/wilds/coords.ts'
 import { PLACES, fixedChunks } from '../../lib/places.ts'
 import { anchorTile, fixedGroundAt, fixedPlaceOf, fixedSolidAt, fixedStand, footprintAt } from './fixed.ts'
 import { nearestOpen } from './window-plan.ts'
@@ -28,11 +28,7 @@ export function frontierBounds(): { x: number; y: number; w: number; h: number }
 
 /** The 0.8 frontier from content (within `reach` of a footprint, no further south than `southLimit`). */
 function contentFrontier(): { minCx: number; minCy: number; maxCx: number; maxCy: number } {
-  const w = loadWilds()
-  const reach = w.frontier.reach
-  const xs = w.places.flatMap((p) => [p.cx - reach, p.cx + p.width - 1 + reach])
-  const ys = w.places.flatMap((p) => [p.cy - reach, p.cy + p.height - 1 + reach])
-  return { minCx: Math.min(...xs), minCy: Math.min(...ys), maxCx: Math.max(...xs), maxCy: Math.min(Math.max(...ys), w.frontier.southLimit) }
+  return frontierRect()
 }
 
 /** The grid in world px: the frontier and every fixed footprint (the Commons south of the gate). */
@@ -118,7 +114,7 @@ export function buildWildsWorld(): WorldData {
     villageLantern: null,
     glimSpots: [],
     // Nowhere else to stand: just inside the Commons' north arch.
-    spawn: anchorTile('commons:arch'),
+    spawn: anchorTile('hearthwick:spawn'),
     scenery: [],
     gathering: [],
     open: {

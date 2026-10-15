@@ -1,48 +1,10 @@
 {
-  "comment": "The location lookup (docs/design/location-seam.md 1.2), replayed by server/internal/location/location_test.go and tests/location.test.ts. Worked from the design (Commons origin tile -21,24; footprint chunks cx -1..1, cy 1..2; the Tangle gate's opening at x 1..3 on y 23), not from either implementation. Positions are world pixels; tiles are 16 px, chunks 24 tiles. `resolve` rows with a `source` are every content position in Commons tiles (the tests walk content/*.json and refuse one missing here); `stand` rows must be open ground in the Commons, `target` rows (an object you face: the hame, the board, the Yard's door) may be solid but must border open ground.",
+  "comment": "One town §1 world-tile contract. Shared Go/TS vectors; positions enumerate content and served layout targets. The expanded generated frontier surrounds fixed places; fixed plots exist now as a T4 placeholder.",
   "at": [
     {
-      "name": "mouth, Tangle side (tile 2,23)",
+      "name": "north unsafe",
       "space": "outdoors",
       "x": 40,
-      "y": 383.99,
-      "place": {
-        "id": "tangle",
-        "safe": false,
-        "ride": true,
-        "sync": false,
-        "rest": "none",
-        "source": {
-          "kind": "generated",
-          "layout": "",
-          "revision": 0,
-          "epochKind": "still"
-        }
-      }
-    },
-    {
-      "name": "mouth, Commons side (tile 2,24)",
-      "space": "outdoors",
-      "x": 40,
-      "y": 384,
-      "place": {
-        "id": "commons",
-        "safe": true,
-        "ride": true,
-        "sync": true,
-        "rest": "none",
-        "source": {
-          "kind": "fixed",
-          "layout": "commons",
-          "revision": 3,
-          "epochKind": ""
-        }
-      }
-    },
-    {
-      "name": "mouth west tile 1,23",
-      "space": "outdoors",
-      "x": 24,
       "y": 376,
       "place": {
         "id": "tangle",
@@ -59,181 +21,162 @@
       }
     },
     {
-      "name": "mouth east tile 3,24",
+      "name": "north safe",
       "space": "outdoors",
-      "x": 56,
+      "x": 40,
       "y": 392,
       "place": {
-        "id": "commons",
+        "id": "hearthwick",
         "safe": true,
         "ride": true,
         "sync": true,
-        "rest": "none",
+        "rest": "village",
         "source": {
           "kind": "fixed",
-          "layout": "commons",
-          "revision": 3,
+          "layout": "hearthwick",
+          "revision": 1,
           "epochKind": ""
         }
       }
     },
     {
-      "name": "lane tile 4,24 (outside the Tangle opening, still fixed)",
+      "name": "apron riding",
+      "space": "outdoors",
+      "x": 40,
+      "y": 696,
+      "place": {
+        "id": "hearthwick",
+        "safe": true,
+        "ride": true,
+        "sync": true,
+        "rest": "village",
+        "source": {
+          "kind": "fixed",
+          "layout": "hearthwick",
+          "revision": 1,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "Hame on foot",
+      "space": "outdoors",
+      "x": 40,
+      "y": 712,
+      "place": {
+        "id": "hearthwick",
+        "safe": true,
+        "ride": false,
+        "sync": true,
+        "rest": "village",
+        "source": {
+          "kind": "fixed",
+          "layout": "hearthwick",
+          "revision": 1,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "spawn",
       "space": "outdoors",
       "x": 72,
-      "y": 392,
+      "y": 968,
       "place": {
-        "id": "commons",
+        "id": "hearthwick",
         "safe": true,
-        "ride": true,
+        "ride": false,
         "sync": true,
-        "rest": "none",
+        "rest": "village",
         "source": {
           "kind": "fixed",
-          "layout": "commons",
-          "revision": 3,
+          "layout": "hearthwick",
+          "revision": 1,
           "epochKind": ""
         }
       }
     },
     {
-      "name": "footprint west margin tile -24,30",
-      "space": "outdoors",
-      "x": -384,
-      "y": 488,
-      "place": {
-        "id": "commons",
-        "safe": true,
-        "ride": true,
-        "sync": true,
-        "rest": "none",
-        "source": {
-          "kind": "fixed",
-          "layout": "commons",
-          "revision": 3,
-          "epochKind": ""
-        }
-      }
-    },
-    {
-      "name": "west of the footprint tile -25,30",
-      "space": "outdoors",
-      "x": -385,
-      "y": 488,
-      "place": {
-        "id": "beyond",
-        "safe": false,
-        "ride": true,
-        "sync": false,
-        "rest": "none",
-        "source": {
-          "kind": "generated",
-          "layout": "",
-          "revision": 0,
-          "epochKind": "wick"
-        }
-      }
-    },
-    {
-      "name": "footprint east margin tile 47,30",
-      "space": "outdoors",
-      "x": 760,
-      "y": 488,
-      "place": {
-        "id": "commons",
-        "safe": true,
-        "ride": true,
-        "sync": true,
-        "rest": "none",
-        "source": {
-          "kind": "fixed",
-          "layout": "commons",
-          "revision": 3,
-          "epochKind": ""
-        }
-      }
-    },
-    {
-      "name": "east of the footprint tile 48,30",
-      "space": "outdoors",
-      "x": 776,
-      "y": 488,
-      "place": {
-        "id": "beyond",
-        "safe": false,
-        "ride": true,
-        "sync": false,
-        "rest": "none",
-        "source": {
-          "kind": "generated",
-          "layout": "",
-          "revision": 0,
-          "epochKind": "wick"
-        }
-      }
-    },
-    {
-      "name": "footprint south margin tile 10,71",
-      "space": "outdoors",
-      "x": 168,
-      "y": 1144,
-      "place": {
-        "id": "commons",
-        "safe": true,
-        "ride": true,
-        "sync": true,
-        "rest": "none",
-        "source": {
-          "kind": "fixed",
-          "layout": "commons",
-          "revision": 3,
-          "epochKind": ""
-        }
-      }
-    },
-    {
-      "name": "south of the footprint tile 10,72",
-      "space": "outdoors",
-      "x": 168,
-      "y": 1160,
-      "place": {
-        "id": "beyond",
-        "safe": false,
-        "ride": true,
-        "sync": false,
-        "rest": "none",
-        "source": {
-          "kind": "generated",
-          "layout": "",
-          "revision": 0,
-          "epochKind": "wick"
-        }
-      }
-    },
-    {
-      "name": "footprint north-west corner tile -24,24",
+      "name": "west town edge",
       "space": "outdoors",
       "x": -376,
-      "y": 392,
+      "y": 1112,
       "place": {
-        "id": "commons",
+        "id": "hearthwick",
         "safe": true,
-        "ride": true,
+        "ride": false,
         "sync": true,
-        "rest": "none",
+        "rest": "village",
         "source": {
           "kind": "fixed",
-          "layout": "commons",
-          "revision": 3,
+          "layout": "hearthwick",
+          "revision": 1,
           "epochKind": ""
         }
       }
     },
     {
-      "name": "diagonally out of the corner tile -25,23",
+      "name": "east on foot",
       "space": "outdoors",
-      "x": -392,
-      "y": 376,
+      "x": 712,
+      "y": 952,
+      "place": {
+        "id": "hearthwick",
+        "safe": true,
+        "ride": false,
+        "sync": true,
+        "rest": "village",
+        "source": {
+          "kind": "fixed",
+          "layout": "hearthwick",
+          "revision": 1,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "east riding",
+      "space": "outdoors",
+      "x": 728,
+      "y": 952,
+      "place": {
+        "id": "hearthwick",
+        "safe": true,
+        "ride": true,
+        "sync": true,
+        "rest": "village",
+        "source": {
+          "kind": "fixed",
+          "layout": "hearthwick",
+          "revision": 1,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "east edge",
+      "space": "outdoors",
+      "x": 760,
+      "y": 952,
+      "place": {
+        "id": "hearthwick",
+        "safe": true,
+        "ride": true,
+        "sync": true,
+        "rest": "village",
+        "source": {
+          "kind": "fixed",
+          "layout": "hearthwick",
+          "revision": 1,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "east unsafe",
+      "space": "outdoors",
+      "x": 776,
+      "y": 952,
       "place": {
         "id": "beyond",
         "safe": false,
@@ -249,12 +192,69 @@
       }
     },
     {
-      "name": "negative pixel to chunk -1,-1",
+      "name": "south foot",
       "space": "outdoors",
-      "x": -0.5,
-      "y": -0.25,
+      "x": 152,
+      "y": 1480,
       "place": {
-        "id": "tangle",
+        "id": "hearthwick",
+        "safe": true,
+        "ride": false,
+        "sync": true,
+        "rest": "village",
+        "source": {
+          "kind": "fixed",
+          "layout": "hearthwick",
+          "revision": 1,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "south riding",
+      "space": "outdoors",
+      "x": 152,
+      "y": 1496,
+      "place": {
+        "id": "hearthwick",
+        "safe": true,
+        "ride": true,
+        "sync": true,
+        "rest": "village",
+        "source": {
+          "kind": "fixed",
+          "layout": "hearthwick",
+          "revision": 1,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "south edge",
+      "space": "outdoors",
+      "x": 152,
+      "y": 1528,
+      "place": {
+        "id": "hearthwick",
+        "safe": true,
+        "ride": true,
+        "sync": true,
+        "rest": "village",
+        "source": {
+          "kind": "fixed",
+          "layout": "hearthwick",
+          "revision": 1,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "south unsafe",
+      "space": "outdoors",
+      "x": 152,
+      "y": 1544,
+      "place": {
+        "id": "beyond",
         "safe": false,
         "ride": true,
         "sync": false,
@@ -263,17 +263,17 @@
           "kind": "generated",
           "layout": "",
           "revision": 0,
-          "epochKind": "still"
+          "epochKind": "wick"
         }
       }
     },
     {
-      "name": "the Tangle's north row tile 0,-48",
+      "name": "lot west unsafe",
       "space": "outdoors",
-      "x": 8,
-      "y": -760,
+      "x": -1160,
+      "y": 1112,
       "place": {
-        "id": "tangle",
+        "id": "beyond",
         "safe": false,
         "ride": true,
         "sync": false,
@@ -282,15 +282,34 @@
           "kind": "generated",
           "layout": "",
           "revision": 0,
-          "epochKind": "still"
+          "epochKind": "wick"
         }
       }
     },
     {
-      "name": "the Whitequiet tile 0,-100",
+      "name": "lot west gate",
       "space": "outdoors",
-      "x": 8,
-      "y": -1592,
+      "x": -1144,
+      "y": 1112,
+      "place": {
+        "id": "lot:2",
+        "safe": true,
+        "ride": true,
+        "sync": true,
+        "rest": "home",
+        "source": {
+          "kind": "fixed",
+          "layout": "homestead-lots",
+          "revision": 2,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "whitequiet",
+      "space": "outdoors",
+      "x": 40,
+      "y": -776,
       "place": {
         "id": "whitequiet",
         "safe": false,
@@ -306,69 +325,164 @@
       }
     },
     {
-      "name": "far Beyond tile 500,-500",
+      "name": "lot:0",
       "space": "outdoors",
-      "x": 8008,
-      "y": -7992,
+      "x": -968,
+      "y": 520,
       "place": {
-        "id": "beyond",
-        "safe": false,
-        "ride": true,
-        "sync": false,
-        "rest": "none",
-        "source": {
-          "kind": "generated",
-          "layout": "",
-          "revision": 0,
-          "epochKind": "wick"
-        }
-      }
-    },
-    {
-      "name": "the Commons before the join: layout tile 23,2 is world 2,26",
-      "space": "commons",
-      "x": 376,
-      "y": 40,
-      "place": {
-        "id": "commons",
+        "id": "lot:0",
         "safe": true,
         "ride": true,
         "sync": true,
-        "rest": "none",
+        "rest": "home",
         "source": {
           "kind": "fixed",
-          "layout": "commons",
-          "revision": 3,
+          "layout": "homestead-lots",
+          "revision": 2,
           "epochKind": ""
         }
       }
     },
     {
-      "name": "the Commons before the join: layout tile -1,-1 is world -22,23, in the Tangle",
-      "space": "commons",
-      "x": -8,
-      "y": -8,
+      "name": "lot:1",
+      "space": "outdoors",
+      "x": -584,
+      "y": 520,
       "place": {
-        "id": "tangle",
-        "safe": false,
+        "id": "lot:1",
+        "safe": true,
         "ride": true,
-        "sync": false,
-        "rest": "none",
+        "sync": true,
+        "rest": "home",
         "source": {
-          "kind": "generated",
-          "layout": "",
-          "revision": 0,
-          "epochKind": "still"
+          "kind": "fixed",
+          "layout": "homestead-lots",
+          "revision": 2,
+          "epochKind": ""
         }
       }
     },
     {
-      "name": "village",
-      "space": "village",
-      "x": 100,
-      "y": 100,
+      "name": "lot:2",
+      "space": "outdoors",
+      "x": -968,
+      "y": 904,
       "place": {
-        "id": "village",
+        "id": "lot:2",
+        "safe": true,
+        "ride": true,
+        "sync": true,
+        "rest": "home",
+        "source": {
+          "kind": "fixed",
+          "layout": "homestead-lots",
+          "revision": 2,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "lot:3",
+      "space": "outdoors",
+      "x": -584,
+      "y": 904,
+      "place": {
+        "id": "lot:3",
+        "safe": true,
+        "ride": true,
+        "sync": true,
+        "rest": "home",
+        "source": {
+          "kind": "fixed",
+          "layout": "homestead-lots",
+          "revision": 2,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "lot:4",
+      "space": "outdoors",
+      "x": -968,
+      "y": 1288,
+      "place": {
+        "id": "lot:4",
+        "safe": true,
+        "ride": true,
+        "sync": true,
+        "rest": "home",
+        "source": {
+          "kind": "fixed",
+          "layout": "homestead-lots",
+          "revision": 2,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "lot:5",
+      "space": "outdoors",
+      "x": -584,
+      "y": 1288,
+      "place": {
+        "id": "lot:5",
+        "safe": true,
+        "ride": true,
+        "sync": true,
+        "rest": "home",
+        "source": {
+          "kind": "fixed",
+          "layout": "homestead-lots",
+          "revision": 2,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "lot:6",
+      "space": "outdoors",
+      "x": -968,
+      "y": 1672,
+      "place": {
+        "id": "lot:6",
+        "safe": true,
+        "ride": true,
+        "sync": true,
+        "rest": "home",
+        "source": {
+          "kind": "fixed",
+          "layout": "homestead-lots",
+          "revision": 2,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "lot:7",
+      "space": "outdoors",
+      "x": -584,
+      "y": 1672,
+      "place": {
+        "id": "lot:7",
+        "safe": true,
+        "ride": true,
+        "sync": true,
+        "rest": "home",
+        "source": {
+          "kind": "fixed",
+          "layout": "homestead-lots",
+          "revision": 2,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "in:village:bakery",
+      "space": "in:village:bakery",
+      "x": 72,
+      "y": 104,
+      "place": {
+        "id": "in:village:bakery",
         "safe": true,
         "ride": false,
         "sync": true,
@@ -382,10 +496,48 @@
       }
     },
     {
+      "name": "in:commons:yard",
+      "space": "in:commons:yard",
+      "x": 72,
+      "y": 104,
+      "place": {
+        "id": "in:commons:yard",
+        "safe": true,
+        "ride": false,
+        "sync": true,
+        "rest": "village",
+        "source": {
+          "kind": "none",
+          "layout": "",
+          "revision": 0,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "in:home:0",
+      "space": "in:home:0",
+      "x": 72,
+      "y": 104,
+      "place": {
+        "id": "in:home:0",
+        "safe": true,
+        "ride": false,
+        "sync": true,
+        "rest": "home",
+        "source": {
+          "kind": "none",
+          "layout": "",
+          "revision": 0,
+          "epochKind": ""
+        }
+      }
+    },
+    {
       "name": "woodland",
       "space": "woodland",
-      "x": 100,
-      "y": 100,
+      "x": 72,
+      "y": 104,
       "place": {
         "id": "woodland",
         "safe": false,
@@ -403,8 +555,8 @@
     {
       "name": "ruin",
       "space": "ruin",
-      "x": 100,
-      "y": 100,
+      "x": 72,
+      "y": 104,
       "place": {
         "id": "ruin",
         "safe": false,
@@ -420,221 +572,12 @@
       }
     },
     {
-      "name": "a home",
-      "space": "home:3",
-      "x": 100,
-      "y": 100,
+      "name": "missing",
+      "space": "missing",
+      "x": 72,
+      "y": 104,
       "place": {
-        "id": "home:3",
-        "safe": true,
-        "ride": true,
-        "sync": true,
-        "rest": "home",
-        "source": {
-          "kind": "none",
-          "layout": "",
-          "revision": 0,
-          "epochKind": ""
-        }
-      }
-    },
-    {
-      "name": "not a canonical home",
-      "space": "home:03",
-      "x": 100,
-      "y": 100,
-      "place": {
-        "id": "home:03",
-        "safe": false,
-        "ride": false,
-        "sync": false,
-        "rest": "none",
-        "source": {
-          "kind": "none",
-          "layout": "",
-          "revision": 0,
-          "epochKind": ""
-        }
-      }
-    },
-    {
-      "name": "not a canonical home",
-      "space": "home:+1",
-      "x": 100,
-      "y": 100,
-      "place": {
-        "id": "home:+1",
-        "safe": false,
-        "ride": false,
-        "sync": false,
-        "rest": "none",
-        "source": {
-          "kind": "none",
-          "layout": "",
-          "revision": 0,
-          "epochKind": ""
-        }
-      }
-    },
-    {
-      "name": "not a canonical home",
-      "space": "home:-1",
-      "x": 100,
-      "y": 100,
-      "place": {
-        "id": "home:-1",
-        "safe": false,
-        "ride": false,
-        "sync": false,
-        "rest": "none",
-        "source": {
-          "kind": "none",
-          "layout": "",
-          "revision": 0,
-          "epochKind": ""
-        }
-      }
-    },
-    {
-      "name": "not a canonical home",
-      "space": "home:10000",
-      "x": 100,
-      "y": 100,
-      "place": {
-        "id": "home:10000",
-        "safe": false,
-        "ride": false,
-        "sync": false,
-        "rest": "none",
-        "source": {
-          "kind": "none",
-          "layout": "",
-          "revision": 0,
-          "epochKind": ""
-        }
-      }
-    },
-    {
-      "name": "the last canonical home",
-      "space": "home:9999",
-      "x": 100,
-      "y": 100,
-      "place": {
-        "id": "home:9999",
-        "safe": true,
-        "ride": true,
-        "sync": true,
-        "rest": "home",
-        "source": {
-          "kind": "none",
-          "layout": "",
-          "revision": 0,
-          "epochKind": ""
-        }
-      }
-    },
-    {
-      "name": "a village room",
-      "space": "in:village:bakery",
-      "x": 50,
-      "y": 50,
-      "place": {
-        "id": "in:village:bakery",
-        "safe": true,
-        "ride": false,
-        "sync": true,
-        "rest": "village",
-        "source": {
-          "kind": "none",
-          "layout": "",
-          "revision": 0,
-          "epochKind": ""
-        }
-      }
-    },
-    {
-      "name": "a Commons room",
-      "space": "in:commons:yard",
-      "x": 50,
-      "y": 50,
-      "place": {
-        "id": "in:commons:yard",
-        "safe": true,
-        "ride": false,
-        "sync": true,
-        "rest": "none",
-        "source": {
-          "kind": "none",
-          "layout": "",
-          "revision": 0,
-          "epochKind": ""
-        }
-      }
-    },
-    {
-      "name": "a home's room",
-      "space": "in:home:2",
-      "x": 50,
-      "y": 50,
-      "place": {
-        "id": "in:home:2",
-        "safe": true,
-        "ride": false,
-        "sync": true,
-        "rest": "home",
-        "source": {
-          "kind": "none",
-          "layout": "",
-          "revision": 0,
-          "epochKind": ""
-        }
-      }
-    },
-    {
-      "name": "a ruin room",
-      "space": "in:ruin:vault",
-      "x": 50,
-      "y": 50,
-      "place": {
-        "id": "in:ruin:vault",
-        "safe": false,
-        "ride": false,
-        "sync": false,
-        "rest": "none",
-        "source": {
-          "kind": "none",
-          "layout": "",
-          "revision": 0,
-          "epochKind": ""
-        }
-      }
-    },
-    {
-      "name": "a room nothing names",
-      "space": "in:attic",
-      "x": 50,
-      "y": 50,
-      "place": {
-        "id": "in:attic",
-        "safe": false,
-        "ride": false,
-        "sync": false,
-        "rest": "none",
-        "source": {
-          "kind": "none",
-          "layout": "",
-          "revision": 0,
-          "epochKind": ""
-        }
-      }
-    },
-    {
-      "name": "a space nothing names",
-      "space": "unknown",
-      "x": 0,
-      "y": 0,
-      "place": {
-        "id": "unknown",
+        "id": "missing",
         "safe": false,
         "ride": false,
         "sync": false,
@@ -651,6 +594,114 @@
   "sourceOf": [
     {
       "chunk": [
+        -1,
+        1
+      ],
+      "source": {
+        "kind": "fixed",
+        "layout": "hearthwick",
+        "revision": 1,
+        "epochKind": ""
+      }
+    },
+    {
+      "chunk": [
+        0,
+        2
+      ],
+      "source": {
+        "kind": "fixed",
+        "layout": "hearthwick",
+        "revision": 1,
+        "epochKind": ""
+      }
+    },
+    {
+      "chunk": [
+        1,
+        3
+      ],
+      "source": {
+        "kind": "fixed",
+        "layout": "hearthwick",
+        "revision": 1,
+        "epochKind": ""
+      }
+    },
+    {
+      "chunk": [
+        -3,
+        1
+      ],
+      "source": {
+        "kind": "fixed",
+        "layout": "homestead-lots",
+        "revision": 2,
+        "epochKind": ""
+      }
+    },
+    {
+      "chunk": [
+        -2,
+        4
+      ],
+      "source": {
+        "kind": "fixed",
+        "layout": "homestead-lots",
+        "revision": 2,
+        "epochKind": ""
+      }
+    },
+    {
+      "chunk": [
+        -4,
+        2
+      ],
+      "source": {
+        "kind": "generated",
+        "layout": "",
+        "revision": 0,
+        "epochKind": "wick"
+      }
+    },
+    {
+      "chunk": [
+        2,
+        2
+      ],
+      "source": {
+        "kind": "generated",
+        "layout": "",
+        "revision": 0,
+        "epochKind": "wick"
+      }
+    },
+    {
+      "chunk": [
+        0,
+        4
+      ],
+      "source": {
+        "kind": "generated",
+        "layout": "",
+        "revision": 0,
+        "epochKind": "wick"
+      }
+    },
+    {
+      "chunk": [
+        -3,
+        5
+      ],
+      "source": {
+        "kind": "generated",
+        "layout": "",
+        "revision": 0,
+        "epochKind": "wick"
+      }
+    },
+    {
+      "chunk": [
         0,
         0
       ],
@@ -659,78 +710,6 @@
         "layout": "",
         "revision": 0,
         "epochKind": "still"
-      }
-    },
-    {
-      "chunk": [
-        0,
-        1
-      ],
-      "source": {
-        "kind": "fixed",
-        "layout": "commons",
-        "revision": 3,
-        "epochKind": ""
-      }
-    },
-    {
-      "chunk": [
-        -1,
-        1
-      ],
-      "source": {
-        "kind": "fixed",
-        "layout": "commons",
-        "revision": 3,
-        "epochKind": ""
-      }
-    },
-    {
-      "chunk": [
-        -1,
-        2
-      ],
-      "source": {
-        "kind": "fixed",
-        "layout": "commons",
-        "revision": 3,
-        "epochKind": ""
-      }
-    },
-    {
-      "chunk": [
-        1,
-        2
-      ],
-      "source": {
-        "kind": "fixed",
-        "layout": "commons",
-        "revision": 3,
-        "epochKind": ""
-      }
-    },
-    {
-      "chunk": [
-        2,
-        1
-      ],
-      "source": {
-        "kind": "generated",
-        "layout": "",
-        "revision": 0,
-        "epochKind": "wick"
-      }
-    },
-    {
-      "chunk": [
-        0,
-        3
-      ],
-      "source": {
-        "kind": "generated",
-        "layout": "",
-        "revision": 0,
-        "epochKind": "wick"
       }
     },
     {
@@ -747,20 +726,20 @@
     },
     {
       "chunk": [
-        -1,
-        -2
+        -4,
+        -8
       ],
       "source": {
         "kind": "generated",
         "layout": "",
         "revision": 0,
-        "epochKind": "still"
+        "epochKind": "wick"
       }
     },
     {
       "chunk": [
         5,
-        5
+        0
       ],
       "source": {
         "kind": "generated",
@@ -773,85 +752,85 @@
   "onGrid": [
     {
       "chunk": [
-        0,
-        0
-      ],
-      "onGrid": true
-    },
-    {
-      "chunk": [
-        0,
-        1
-      ],
-      "onGrid": true
-    },
-    {
-      "chunk": [
         -1,
         1
+      ],
+      "onGrid": true
+    },
+    {
+      "chunk": [
+        0,
+        2
       ],
       "onGrid": true
     },
     {
       "chunk": [
         1,
-        2
+        3
       ],
       "onGrid": true
     },
     {
       "chunk": [
-        -1,
-        2
-      ],
-      "onGrid": true
-    },
-    {
-      "chunk": [
-        2,
+        -3,
         1
       ],
-      "onGrid": false
+      "onGrid": true
     },
     {
       "chunk": [
         -2,
-        1
+        4
       ],
-      "onGrid": false
+      "onGrid": true
     },
     {
       "chunk": [
-        0,
-        3
+        -4,
+        2
       ],
-      "onGrid": false
+      "onGrid": true
     },
     {
       "chunk": [
         2,
         2
       ],
-      "onGrid": false
+      "onGrid": true
     },
     {
       "chunk": [
-        -4,
+        0,
+        4
+      ],
+      "onGrid": true
+    },
+    {
+      "chunk": [
+        -3,
+        5
+      ],
+      "onGrid": true
+    },
+    {
+      "chunk": [
+        0,
         0
       ],
       "onGrid": true
     },
     {
       "chunk": [
-        -5,
-        0
+        0,
+        -4
       ],
-      "onGrid": false
+      "onGrid": true
     },
     {
       "chunk": [
-        4,
-        0
+        -4,
+        -8
       ],
       "onGrid": true
     },
@@ -861,46 +840,29 @@
         0
       ],
       "onGrid": false
-    },
-    {
-      "chunk": [
-        0,
-        -8
-      ],
-      "onGrid": true
-    },
-    {
-      "chunk": [
-        0,
-        -9
-      ],
-      "onGrid": false
-    },
-    {
-      "chunk": [
-        4,
-        -8
-      ],
-      "onGrid": true
-    },
-    {
-      "chunk": [
-        2,
-        0
-      ],
-      "onGrid": true
-    },
-    {
-      "chunk": [
-        -2,
-        0
-      ],
-      "onGrid": true
     }
   ],
   "anchors": [
     {
-      "id": "commons:arch",
+      "id": "hearthwick:spawn",
+      "ok": true,
+      "space": "outdoors",
+      "at": [
+        72,
+        968
+      ]
+    },
+    {
+      "id": "hearthwick:well",
+      "ok": true,
+      "space": "outdoors",
+      "at": [
+        184,
+        1000
+      ]
+    },
+    {
+      "id": "hearthwick:arch",
       "ok": true,
       "space": "outdoors",
       "at": [
@@ -909,97 +871,142 @@
       ]
     },
     {
-      "id": "commons:west-path",
+      "id": "hearthwick:east-road",
       "ok": true,
       "space": "outdoors",
       "at": [
-        -296,
-        728
+        680,
+        1000
       ]
     },
     {
-      "id": "commons:yard-door",
+      "id": "hearthwick:south-gate",
       "ok": true,
       "space": "outdoors",
       "at": [
-        520,
-        680
+        152,
+        1480
       ]
     },
     {
-      "id": "commons:gate:0",
+      "id": "hearthwick:west-gate",
       "ok": true,
       "space": "outdoors",
       "at": [
-        -8,
-        536
+        -344,
+        1112
       ]
     },
     {
-      "id": "commons:gate:1",
+      "id": "hearthwick:bakery-door",
       "ok": true,
       "space": "outdoors",
       "at": [
-        104,
-        536
+        -168,
+        952
       ]
     },
     {
-      "id": "commons:gate:2",
+      "id": "hearthwick:library-door",
       "ok": true,
       "space": "outdoors",
       "at": [
-        -8,
-        600
+        -168,
+        1240
       ]
     },
     {
-      "id": "commons:gate:3",
+      "id": "hearthwick:yard-door",
       "ok": true,
       "space": "outdoors",
       "at": [
-        104,
-        600
+        552,
+        568
       ]
     },
     {
-      "id": "commons:gate:4",
+      "id": "hearthwick:mill-door",
       "ok": true,
       "space": "outdoors",
       "at": [
-        -8,
-        840
+        472,
+        1240
       ]
     },
     {
-      "id": "commons:gate:5",
+      "id": "hearthwick:lot:0",
       "ok": true,
       "space": "outdoors",
       "at": [
-        104,
-        840
+        -952,
+        712
       ]
     },
     {
-      "id": "commons:gate:6",
+      "id": "hearthwick:lot:1",
       "ok": true,
       "space": "outdoors",
       "at": [
-        -8,
-        920
+        -568,
+        712
       ]
     },
     {
-      "id": "commons:gate:7",
+      "id": "hearthwick:lot:2",
       "ok": true,
       "space": "outdoors",
       "at": [
-        104,
-        920
+        -952,
+        1096
       ]
     },
     {
-      "id": "commons:gate:8",
+      "id": "hearthwick:lot:3",
+      "ok": true,
+      "space": "outdoors",
+      "at": [
+        -568,
+        1096
+      ]
+    },
+    {
+      "id": "hearthwick:lot:4",
+      "ok": true,
+      "space": "outdoors",
+      "at": [
+        -952,
+        1480
+      ]
+    },
+    {
+      "id": "hearthwick:lot:5",
+      "ok": true,
+      "space": "outdoors",
+      "at": [
+        -568,
+        1480
+      ]
+    },
+    {
+      "id": "hearthwick:lot:6",
+      "ok": true,
+      "space": "outdoors",
+      "at": [
+        -952,
+        1864
+      ]
+    },
+    {
+      "id": "hearthwick:lot:7",
+      "ok": true,
+      "space": "outdoors",
+      "at": [
+        -568,
+        1864
+      ]
+    },
+    {
+      "id": "hearthwick:nope",
       "ok": false,
       "space": "",
       "at": [
@@ -1008,7 +1015,7 @@
       ]
     },
     {
-      "id": "commons:gate:10",
+      "id": "commons:arch",
       "ok": false,
       "space": "",
       "at": [
@@ -1017,7 +1024,7 @@
       ]
     },
     {
-      "id": "commons:nope",
+      "id": "hearthwick:lot:8",
       "ok": false,
       "space": "",
       "at": [
@@ -1026,43 +1033,7 @@
       ]
     },
     {
-      "id": "tangle:arch",
-      "ok": false,
-      "space": "",
-      "at": [
-        0,
-        0
-      ]
-    },
-    {
-      "id": "arch",
-      "ok": false,
-      "space": "",
-      "at": [
-        0,
-        0
-      ]
-    },
-    {
-      "id": "",
-      "ok": false,
-      "space": "",
-      "at": [
-        0,
-        0
-      ]
-    },
-    {
-      "id": "commons:",
-      "ok": false,
-      "space": "",
-      "at": [
-        0,
-        0
-      ]
-    },
-    {
-      "id": "village:west-path",
+      "id": "missing",
       "ok": false,
       "space": "",
       "at": [
@@ -1071,360 +1042,559 @@
       ]
     }
   ],
-  "resolve": [
+  "positions": [
+    {
+      "source": "fishing.waters.water:village:mill-pond.banks.east.tiles.0",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        39,
+        73
+      ]
+    },
+    {
+      "source": "fishing.waters.water:village:mill-pond.banks.east.tiles.1",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        39,
+        74
+      ]
+    },
+    {
+      "source": "fishing.waters.water:village:mill-pond.banks.east.tiles.2",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        39,
+        75
+      ]
+    },
+    {
+      "source": "fishing.waters.water:village:mill-pond.banks.east.tiles.3",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        39,
+        76
+      ]
+    },
+    {
+      "source": "fishing.waters.water:village:mill-pond.banks.north.tiles.0",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        34,
+        72
+      ]
+    },
+    {
+      "source": "fishing.waters.water:village:mill-pond.banks.north.tiles.1",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        35,
+        72
+      ]
+    },
+    {
+      "source": "fishing.waters.water:village:mill-pond.banks.north.tiles.2",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        36,
+        72
+      ]
+    },
+    {
+      "source": "fishing.waters.water:village:mill-pond.banks.north.tiles.3",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        37,
+        72
+      ]
+    },
+    {
+      "source": "fishing.waters.water:village:mill-pond.banks.north.tiles.4",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        38,
+        72
+      ]
+    },
+    {
+      "source": "fishing.waters.water:village:mill-pond.banks.race.tiles.0",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        32,
+        73
+      ]
+    },
     {
       "source": "items.pickups.lane-glove",
       "kind": "stand",
-      "area": "commons",
+      "area": "hearthwick",
       "tile": [
-        30,
-        22
-      ],
-      "space": "outdoors",
-      "at": [
+        8,
+        36
+      ]
+    },
+    {
+      "source": "items.pickups.oatcake-parcel",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        29,
+        55
+      ]
+    },
+    {
+      "source": "items.pickups.well-rope-coil",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
         9,
-        46
+        57
+      ]
+    },
+    {
+      "source": "items.rules.menders.1",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        17,
+        57
       ]
     },
     {
       "source": "items.sellers.madder-stall",
       "kind": "stand",
-      "area": "commons",
+      "area": "hearthwick",
+      "tile": [
+        -5,
+        35
+      ]
+    },
+    {
+      "source": "layout.exit:woodland",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        41,
+        64
+      ]
+    },
+    {
+      "source": "layout.gather:bloom-patch:0",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        11,
+        37
+      ]
+    },
+    {
+      "source": "layout.gather:bloom-patch:1",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        12,
+        37
+      ]
+    },
+    {
+      "source": "layout.gather:bloom-patch:2",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        13,
+        37
+      ]
+    },
+    {
+      "source": "layout.gather:bloom-patch:3",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        11,
+        38
+      ]
+    },
+    {
+      "source": "layout.gather:bloom-patch:4",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        12,
+        38
+      ]
+    },
+    {
+      "source": "layout.gather:freshet-shore:0",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        34,
+        72
+      ]
+    },
+    {
+      "source": "layout.gather:freshet-shore:1",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        36,
+        72
+      ]
+    },
+    {
+      "source": "layout.gather:freshet-shore:2",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        38,
+        72
+      ]
+    },
+    {
+      "source": "layout.gather:pond-ice:0",
+      "kind": "target",
+      "area": "hearthwick",
+      "tile": [
+        34,
+        73
+      ]
+    },
+    {
+      "source": "layout.gather:pond-ice:1",
+      "kind": "target",
+      "area": "hearthwick",
+      "tile": [
+        37,
+        73
+      ]
+    },
+    {
+      "source": "layout.gather:pond-ice:2",
+      "kind": "target",
+      "area": "hearthwick",
+      "tile": [
+        38,
+        75
+      ]
+    },
+    {
+      "source": "layout.npc:ada",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        32,
+        55
+      ]
+    },
+    {
+      "source": "layout.npc:elara",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        6,
+        27
+      ]
+    },
+    {
+      "source": "layout.npc:finn",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        30,
+        77
+      ]
+    },
+    {
+      "source": "layout.npc:hazel",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        11,
+        63
+      ]
+    },
+    {
+      "source": "layout.npc:mara",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        14,
+        61
+      ]
+    },
+    {
+      "source": "layout.npc:orrin",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        17,
+        57
+      ]
+    },
+    {
+      "source": "layout.npc:pip",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        10,
+        75
+      ]
+    },
+    {
+      "source": "layout.npc:silas",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        29,
+        36
+      ]
+    },
+    {
+      "source": "papers.36,49",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        36,
+        49
+      ]
+    },
+    {
+      "source": "papers.40,76",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        40,
+        76
+      ]
+    },
+    {
+      "source": "papers.7,72",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        7,
+        72
+      ]
+    },
+    {
+      "source": "papers.papers.elaras-note-in-pips-copybook.rule",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        40,
+        76
+      ]
+    },
+    {
+      "source": "papers.papers.pip-copybook-warden-corrections.rule",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        7,
+        72
+      ]
+    },
+    {
+      "source": "papers.papers.why-the-tide-fox-has-one-long-ear.rule",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        36,
+        49
+      ]
+    },
+    {
+      "source": "repairs.repairs.bench-slat.pos",
+      "kind": "target",
+      "area": "hearthwick",
       "tile": [
         8,
-        18
-      ],
-      "space": "outdoors",
-      "at": [
-        -13,
-        42
+        61
+      ]
+    },
+    {
+      "source": "repairs.repairs.fence-rail.pos",
+      "kind": "target",
+      "area": "hearthwick",
+      "tile": [
+        9,
+        76
       ]
     },
     {
       "source": "repairs.repairs.gate-hame.pos",
       "kind": "target",
-      "area": "commons",
+      "area": "hearthwick",
       "tile": [
-        3,
-        18
-      ],
-      "space": "outdoors",
-      "at": [
-        -18,
-        42
+        0,
+        43
+      ]
+    },
+    {
+      "source": "repairs.repairs.library-roof.pos",
+      "kind": "target",
+      "area": "hearthwick",
+      "tile": [
+        -11,
+        76
+      ]
+    },
+    {
+      "source": "repairs.repairs.village-lamp.pos",
+      "kind": "target",
+      "area": "hearthwick",
+      "tile": [
+        10,
+        60
+      ]
+    },
+    {
+      "source": "repairs.repairs.well-rope.pos",
+      "kind": "target",
+      "area": "hearthwick",
+      "tile": [
+        12,
+        60
+      ]
+    },
+    {
+      "source": "residents.residents.ada.spots.window",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        32,
+        55
       ]
     },
     {
       "source": "residents.residents.elara.spots.camp",
       "kind": "stand",
-      "area": "commons",
+      "area": "hearthwick",
       "tile": [
-        26,
-        5
-      ],
-      "space": "outdoors",
-      "at": [
-        5,
-        29
+        6,
+        27
+      ]
+    },
+    {
+      "source": "residents.residents.finn.spots.door",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        30,
+        77
+      ]
+    },
+    {
+      "source": "residents.residents.hazel.spots.square",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        11,
+        63
       ]
     },
     {
       "source": "residents.residents.silas.spots.yard",
       "kind": "stand",
-      "area": "commons",
+      "area": "hearthwick",
       "tile": [
-        48,
-        19
-      ],
-      "space": "outdoors",
-      "at": [
-        27,
-        43
+        29,
+        36
       ]
     },
     {
       "source": "rooms.rooms.in:commons:yard.doors.front.entry",
       "kind": "stand",
-      "area": "commons",
+      "area": "hearthwick",
       "tile": [
-        53,
-        18
-      ],
-      "space": "outdoors",
-      "at": [
-        32,
-        42
+        34,
+        35
       ]
     },
     {
       "source": "rooms.rooms.in:commons:yard.doors.front.outside",
       "kind": "target",
-      "area": "commons",
+      "area": "hearthwick",
       "tile": [
-        53,
-        17
-      ],
-      "space": "outdoors",
-      "at": [
-        32,
-        41
+        34,
+        34
       ]
     },
     {
-      "source": "story.boards.commons",
+      "source": "rooms.rooms.in:village:bakery.doors.front.entry",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        -11,
+        59
+      ]
+    },
+    {
+      "source": "rooms.rooms.in:village:bakery.doors.front.outside",
       "kind": "target",
-      "area": "commons",
+      "area": "hearthwick",
       "tile": [
-        26,
-        17
-      ],
-      "space": "outdoors",
-      "at": [
-        5,
-        41
+        -11,
+        58
       ]
     },
     {
-      "source": "",
-      "kind": "",
-      "area": "commons",
+      "source": "rooms.rooms.in:village:library.doors.front.entry",
+      "kind": "stand",
+      "area": "hearthwick",
       "tile": [
-        0,
-        0
-      ],
-      "space": "outdoors",
-      "at": [
-        -21,
-        24
+        -11,
+        77
       ]
     },
     {
-      "source": "",
-      "kind": "",
-      "area": "commons",
+      "source": "rooms.rooms.in:village:library.doors.front.outside",
+      "kind": "target",
+      "area": "hearthwick",
       "tile": [
-        61,
-        46
-      ],
-      "space": "outdoors",
-      "at": [
-        40,
-        70
+        -11,
+        76
       ]
     },
     {
-      "source": "",
-      "kind": "",
-      "area": "village",
+      "source": "rooms.rooms.in:village:mill.doors.front.entry",
+      "kind": "stand",
+      "area": "hearthwick",
       "tile": [
-        7,
-        11
-      ],
-      "space": "village",
-      "at": [
-        7,
-        11
+        29,
+        77
       ]
     },
     {
-      "source": "",
-      "kind": "",
-      "area": "in:commons:yard",
+      "source": "rooms.rooms.in:village:mill.doors.front.outside",
+      "kind": "target",
+      "area": "hearthwick",
       "tile": [
-        7,
-        2
-      ],
-      "space": "in:commons:yard",
-      "at": [
-        7,
-        2
+        29,
+        76
       ]
     },
     {
-      "source": "",
-      "kind": "",
-      "area": "home:4",
+      "source": "story.boards.hearthwick",
+      "kind": "target",
+      "area": "hearthwick",
       "tile": [
-        10,
-        10
-      ],
-      "space": "home:4",
-      "at": [
-        10,
-        10
+        12,
+        56
       ]
     }
   ],
-  "zones": {
-    "comment": "The shipped places with these zones laid over the Commons (layout tiles; the first zone holding a tile wins), then At.",
-    "zones": [
-      {
-        "id": "mouth",
-        "place": "commons-mouth",
-        "tx": 21,
-        "ty": 0,
-        "w": 6,
-        "h": 3,
-        "rules": {
-          "safe": false,
-          "ride": true,
-          "sync": false,
-          "rest": "none"
-        }
-      },
-      {
-        "id": "apron",
-        "place": "commons-apron",
-        "tx": 18,
-        "ty": 0,
-        "w": 12,
-        "h": 6,
-        "rules": {
-          "safe": true,
-          "ride": false,
-          "sync": true,
-          "rest": "none"
-        }
-      }
-    ],
-    "at": [
-      {
-        "name": "world 2,24 is in both zones: the first wins",
-        "space": "outdoors",
-        "x": 40,
-        "y": 392,
-        "place": {
-          "id": "commons-mouth",
-          "safe": false,
-          "ride": true,
-          "sync": false,
-          "rest": "none",
-          "source": {
-            "kind": "fixed",
-            "layout": "commons",
-            "revision": 3,
-            "epochKind": ""
-          }
-        }
-      },
-      {
-        "name": "world -2,24 is only in the apron",
-        "space": "outdoors",
-        "x": -24,
-        "y": 392,
-        "place": {
-          "id": "commons-apron",
-          "safe": true,
-          "ride": false,
-          "sync": true,
-          "rest": "none",
-          "source": {
-            "kind": "fixed",
-            "layout": "commons",
-            "revision": 3,
-            "epochKind": ""
-          }
-        }
-      },
-      {
-        "name": "world 5,26 is the mouth's last tile",
-        "space": "outdoors",
-        "x": 88,
-        "y": 424,
-        "place": {
-          "id": "commons-mouth",
-          "safe": false,
-          "ride": true,
-          "sync": false,
-          "rest": "none",
-          "source": {
-            "kind": "fixed",
-            "layout": "commons",
-            "revision": 3,
-            "epochKind": ""
-          }
-        }
-      },
-      {
-        "name": "world 6,26 is past the mouth, in the apron",
-        "space": "outdoors",
-        "x": 104,
-        "y": 424,
-        "place": {
-          "id": "commons-apron",
-          "safe": true,
-          "ride": false,
-          "sync": true,
-          "rest": "none",
-          "source": {
-            "kind": "fixed",
-            "layout": "commons",
-            "revision": 3,
-            "epochKind": ""
-          }
-        }
-      },
-      {
-        "name": "world 2,30 is past both: the footprint's rules",
-        "space": "outdoors",
-        "x": 40,
-        "y": 488,
-        "place": {
-          "id": "commons",
-          "safe": true,
-          "ride": true,
-          "sync": true,
-          "rest": "none",
-          "source": {
-            "kind": "fixed",
-            "layout": "commons",
-            "revision": 3,
-            "epochKind": ""
-          }
-        }
-      },
-      {
-        "name": "the Commons before the join reads the zones too (layout 23,1)",
-        "space": "commons",
-        "x": 376,
-        "y": 24,
-        "place": {
-          "id": "commons-mouth",
-          "safe": false,
-          "ride": true,
-          "sync": false,
-          "rest": "none",
-          "source": {
-            "kind": "fixed",
-            "layout": "commons",
-            "revision": 3,
-            "epochKind": ""
-          }
-        }
-      },
-      {
-        "name": "a Commons room keeps the footprint's rules",
-        "space": "in:commons:yard",
-        "x": 40,
-        "y": 24,
-        "place": {
-          "id": "in:commons:yard",
-          "safe": true,
-          "ride": false,
-          "sync": true,
-          "rest": "none",
-          "source": {
-            "kind": "none",
-            "layout": "",
-            "revision": 0,
-            "epochKind": ""
-          }
-        }
-      }
-    ]
-  },
   "bounds": {
-    "comment": "Two places laid at the schema's bounds (places.proto: chunks \u00b132768, tiles \u00b12^20) beside the shipped Commons, through the loader, then every lookup near them. Worked with big integers, so a runtime that wraps int32 disagrees (the S1 review's P2).",
+    "comment": "Two places laid at the schema's bounds (places.proto: chunks ±32768, tiles ±2^20) beside the shipped Commons, through the loader, then every lookup near them. Worked with big integers, so a runtime that wraps int32 disagrees (the S1 review's P2).",
     "fixed": [
       {
         "id": "edge-east",
@@ -1639,10 +1809,10 @@
         }
       },
       {
-        "name": "edge-east as its own space: layout pixels through the origin",
+        "name": "edge-east as its own space: world pixels unchanged",
         "space": "edge-east",
-        "x": -4194296,
-        "y": -4194296,
+        "x": 12582920,
+        "y": 12582920,
         "place": {
           "id": "edge-east-far",
           "safe": false,
@@ -1772,10 +1942,10 @@
         }
       },
       {
-        "name": "edge-west as its own space: layout pixels through the origin",
+        "name": "edge-west as its own space: world pixels unchanged",
         "space": "edge-west",
-        "x": 4194680,
-        "y": 4194680,
+        "x": -12582536,
+        "y": -12582536,
         "place": {
           "id": "edge-west-far",
           "safe": false,
@@ -1868,7 +2038,7 @@
           -32769,
           -32768
         ],
-        "onGrid": false
+        "onGrid": true
       }
     ],
     "anchors": [
@@ -1908,77 +2078,58 @@
           -12582536
         ]
       }
+    ]
+  },
+  "zones": {
+    "zones": [
+      {
+        "id": "first",
+        "place": "apron",
+        "tx": 24,
+        "ty": 3,
+        "w": 8,
+        "h": 8,
+        "rules": {
+          "safe": true,
+          "ride": false,
+          "sync": true,
+          "rest": "village"
+        }
+      },
+      {
+        "id": "second",
+        "place": "camp",
+        "tx": 25,
+        "ty": 4,
+        "w": 8,
+        "h": 8,
+        "rules": {
+          "safe": true,
+          "ride": true,
+          "sync": true,
+          "rest": "none"
+        }
+      }
     ],
-    "resolve": [
+    "at": [
       {
-        "source": "",
-        "kind": "",
-        "area": "edge-east",
-        "tile": [
-          -262144,
-          -262144
-        ],
+        "name": "first holding zone wins",
         "space": "outdoors",
-        "at": [
-          786432,
-          786432
-        ]
-      },
-      {
-        "source": "",
-        "kind": "",
-        "area": "edge-east",
-        "tile": [
-          -262121,
-          -262121
-        ],
-        "space": "outdoors",
-        "at": [
-          786455,
-          786455
-        ]
-      },
-      {
-        "source": "",
-        "kind": "",
-        "area": "edge-west",
-        "tile": [
-          262144,
-          262144
-        ],
-        "space": "outdoors",
-        "at": [
-          -786432,
-          -786432
-        ]
-      },
-      {
-        "source": "",
-        "kind": "",
-        "area": "edge-west",
-        "tile": [
-          262167,
-          262167
-        ],
-        "space": "outdoors",
-        "at": [
-          -786409,
-          -786409
-        ]
-      },
-      {
-        "source": "",
-        "kind": "",
-        "area": "edge-east",
-        "tile": [
-          1048576,
-          -1048576
-        ],
-        "space": "outdoors",
-        "at": [
-          2097152,
-          0
-        ]
+        "x": 40,
+        "y": 472,
+        "place": {
+          "id": "apron",
+          "safe": true,
+          "ride": false,
+          "sync": true,
+          "rest": "village",
+          "source": {
+            "kind": "fixed",
+            "layout": "hearthwick",
+            "revision": 1,
+            "epochKind": ""
+          }
+        }
       }
     ]
   }

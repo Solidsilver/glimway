@@ -26,7 +26,7 @@ func (x *rig) reportSetup() (*http.Cookie, *contract.PlayResponse) {
 }
 func (x *rig) sendReport(c *http.Cookie, p *contract.PlayResponse, seq, basis, hp, mana, casts float64, area string) *contract.Envelope {
 	x.t.Helper()
-	req := &contract.ReportRequest{Lease: p.Lease, Client: "tab-a", Generation: p.ReportGeneration, Seq: seq, Basis: basis, Hp: hp, Mana: mana, Casts: casts, Place: &contract.Where{Area: area, X: 400, Y: 300}}
+	req := &contract.ReportRequest{Lease: p.Lease, Client: "tab-a", Generation: p.ReportGeneration, Seq: seq, Basis: basis, Hp: hp, Mana: mana, Casts: casts, Place: &contract.Where{Area: area, X: 80, Y: 80}}
 	raw, _ := protojson.Marshal(req)
 	w := x.rawHTTP("POST", "/api/report", json.RawMessage(raw), c)
 	var out contract.Envelope
@@ -62,20 +62,20 @@ func TestReportPersistentManaCooldownAndReplay(t *testing.T) {
 	if _, e = x.db.DB.Exec("UPDATE sync_baselines SET level_mark=10 WHERE account_id=?", x.account("alice")); e != nil {
 		t.Fatal(e)
 	}
-	first := x.sendReport(c, p, 1, float64(s.Version), 50, 18, 1, "village")
+	first := x.sendReport(c, p, 1, float64(s.Version), 50, 18, 1, "in:village:library")
 	if first.GetReport().Casts != 1 || first.State.Vitals.Mana != 0 || first.State.Vitals.Hp != 16 {
 		t.Fatal(first)
 	}
-	second := x.sendReport(c, p, 2, first.State.Version, 50, 18, 1, "village")
+	second := x.sendReport(c, p, 2, first.State.Version, 50, 18, 1, "in:village:library")
 	if second.GetReport().Casts != 0 || second.State.Vitals.Mana != 0 || second.State.Vitals.Hp != 16 {
 		t.Fatal(second)
 	}
-	replay := x.sendReport(c, p, 2, first.State.Version, 50, 18, 1, "village")
+	replay := x.sendReport(c, p, 2, first.State.Version, 50, 18, 1, "in:village:library")
 	if replay.State.Version != second.State.Version || replay.GetReport().Casts != 0 {
 		t.Fatal(replay)
 	}
 	x.now.Add(1)
-	third := x.sendReport(c, p, 3, second.State.Version, 50, 50, 100, "village")
+	third := x.sendReport(c, p, 3, second.State.Version, 50, 50, 100, "in:village:library")
 	if third.GetReport().Casts != 0 || third.State.Vitals.Mana != 16 {
 		t.Fatal(third)
 	}
@@ -94,7 +94,7 @@ func TestReportOlderBasisPreservesServerPlace(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s.State.Area = "village"
+	s.State.Area = "in:village:library"
 	s.State.Position.X, s.State.Position.Y = 2, 3
 	s.PlaceWritten = true
 	if err = store.Persist(context.Background(), tx, &s, x.now.Load()); err != nil {
@@ -107,7 +107,7 @@ func TestReportOlderBasisPreservesServerPlace(t *testing.T) {
 	if !out.GetReport().Accepted || out.GetReport().StaleBasis || !out.GetReport().PlaceIgnored {
 		t.Fatal(out)
 	}
-	if out.State.Place.Area != "village" || out.State.Place.X != 2 || out.State.Place.Y != 3 {
+	if out.State.Place.Area != "in:village:library" || out.State.Place.X != 2 || out.State.Place.Y != 3 {
 		t.Fatal("stale report overwrote the server-set place", out.State.Place)
 	}
 	var area string
@@ -115,7 +115,7 @@ func TestReportOlderBasisPreservesServerPlace(t *testing.T) {
 	if err = x.db.DB.QueryRow("SELECT area,x,y FROM player_place WHERE account_id=?", x.account("alice")).Scan(&area, &px, &py); err != nil {
 		t.Fatal(err)
 	}
-	if area != "village" || px != 2 || py != 3 {
+	if area != "in:village:library" || px != 2 || py != 3 {
 		t.Fatal("stored place changed", area, px, py)
 	}
 }
@@ -124,13 +124,13 @@ func TestReportWatermarksAndBarrier(t *testing.T) {
 	x := newRig(t)
 	c, p := x.reportSetup()
 	first := x.sendReport(c, p, 1, p.State.Version, 10, 0, 0, "woodland")
-	raw := map[string]any{"op": map[string]any{"lease": p.Lease, "key": "m"}, "mark": "seen:test", "where": map[string]any{"area": "village", "x": 2, "y": 3}}
+	raw := map[string]any{"op": map[string]any{"lease": p.Lease, "key": "m"}, "mark": "seen:test", "where": map[string]any{"area": "in:village:library", "x": 2, "y": 3}}
 	w := x.rawHTTP("POST", "/api/story/mark", raw, c)
 	if w.Code != 200 {
 		t.Fatal(w.Body.String())
 	}
 	placed := x.sendReport(c, p, 2, first.State.Version, 5, 0, 0, "ruin")
-	if !placed.GetReport().Accepted || !placed.GetReport().PlaceIgnored || placed.State.Place.Area != "village" || placed.State.Vitals.Hp != 5 {
+	if !placed.GetReport().Accepted || !placed.GetReport().PlaceIgnored || placed.State.Place.Area != "in:village:library" || placed.State.Vitals.Hp != 5 {
 		t.Fatal(placed)
 	}
 	tx, _ := x.db.DB.Begin()
@@ -153,7 +153,7 @@ func TestReportWatermarksAndBarrier(t *testing.T) {
 		t.Fatal("stale basis satisfied barrier")
 	}
 	tx.Rollback()
-	accepted := x.sendReport(c, p, 4, stale.State.Version, 20, 0, 0, "village")
+	accepted := x.sendReport(c, p, 4, stale.State.Version, 20, 0, 0, "in:village:library")
 	tx, _ = x.db.DB.Begin()
 	if e = requireReportBarrier(context.Background(), tx, s.AccountID, &contract.ReportBarrier{Client: "tab-a", Generation: p.ReportGeneration, Seq: 4}); e != nil {
 		t.Fatal(e)
@@ -167,7 +167,7 @@ func TestReportPartitionBudget(t *testing.T) {
 	class := "healer"
 	p := profile("hero", 1, 0, 50)
 	p.Class = &class
-	s := store.Snapshot{State: rules.NewState(), ImportedProfile: &p, LevelMark: 10}
+	s := store.Snapshot{State: rules.NewTownState(), ImportedProfile: &p, LevelMark: 10}
 	s.State.HP = 10
 	s.State.MaxMana = 200
 	s.State.Mana = 100
@@ -188,13 +188,26 @@ func TestReportPartitionBudget(t *testing.T) {
 	}
 }
 func TestQuestOperationsMarksAndPaperRules(t *testing.T) {
+
 	x := newRig(t)
 	c, p := x.reportSetup()
 	x.seedOpeningDone(p.State.Account.AccountId)
 	request := func(path, key string, fields map[string]any, area string, status int) *contract.Envelope {
 		t.Helper()
 		fields["op"] = map[string]any{"lease": p.Lease, "key": key}
-		fields["where"] = map[string]any{"area": area, "x": 25*16 + 8, "y": 14*16 + 8}
+		doc := rules.NewTownState()
+		if area == "in:village:library" || area == "hearthwick" {
+			doc.Area, doc.Position = rules.TownAnchor("spawn")
+		} else {
+			doc.Area = area
+			doc.Position = rules.Position{X: 408, Y: 232}
+		}
+		if paper, ok := fields["paper"].(string); ok {
+			if p, ok := content.PapersByID[paper]; ok && p.Source == "placed" && p.Rule.Area == "hearthwick" {
+				doc = atContentTile(doc, p.Rule.Area, int(p.Rule.GetTx()), int(p.Rule.GetTy()), 8)
+			}
+		}
+		fields["where"] = testWhere(doc)
 		w := x.rawHTTP("POST", path, fields, c)
 		if w.Code != status {
 			t.Fatal(w.Code, w.Body.String())
@@ -207,7 +220,7 @@ func TestQuestOperationsMarksAndPaperRules(t *testing.T) {
 		}
 		return &out
 	}
-	request("/api/quest/step", "skip", map[string]any{"quest": "lantern-road", "to": "complete"}, "village", 409)
+	request("/api/quest/step", "skip", map[string]any{"quest": "lantern-road", "to": "complete"}, "in:village:library", 409)
 	road, ok := content.QuestFor("lantern-road")
 	if !ok {
 		t.Fatal("missing lantern road")
@@ -224,11 +237,11 @@ func TestQuestOperationsMarksAndPaperRules(t *testing.T) {
 	if count(t, x.db, "SELECT SUM(delta) FROM ledger WHERE reason='quest'") != 5 {
 		t.Fatal("quest gift sum")
 	}
-	request("/api/story/mark", "forged", map[string]any{"mark": "paper:eleven-days"}, "village", 409)
+	request("/api/story/mark", "forged", map[string]any{"mark": "paper:eleven-days"}, "in:village:library", 409)
 	request("/api/story/mark", "unknown", map[string]any{"mark": "found:unknown"}, "ruin", 409)
-	request("/api/story/mark", "area", map[string]any{"mark": "defeated:wisp-a"}, "village", 409)
-	request("/api/papers/take", "unbuilt", map[string]any{"paper": "joss-penhallow-letter-map-case"}, "village", 409)
-	out := request("/api/papers/take", "placed", map[string]any{"paper": "pip-copybook-warden-corrections"}, "village", 200)
+	request("/api/story/mark", "area", map[string]any{"mark": "defeated:wisp-a"}, "in:village:library", 409)
+	request("/api/papers/take", "unbuilt", map[string]any{"paper": "joss-penhallow-letter-map-case"}, "in:village:library", 409)
+	out := request("/api/papers/take", "placed", map[string]any{"paper": "pip-copybook-warden-corrections"}, "in:village:library", 200)
 	if !out.GetTakePaper().Added {
 		t.Fatal(out)
 	}

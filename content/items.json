@@ -51,9 +51,9 @@
       {
         "npc": "orrin",
         "name": "Orrin",
-        "area": "village",
-        "tx": 21,
-        "ty": 9,
+        "area": "hearthwick",
+        "tx": 17,
+        "ty": 57,
         "radiusTiles": 4
       }
     ]
@@ -1155,9 +1155,9 @@
       "id": "well-rope-coil",
       "item": "fibre-rope",
       "qty": 1,
-      "area": "village",
-      "tx": 10,
-      "ty": 9,
+      "area": "hearthwick",
+      "tx": 9,
+      "ty": 57,
       "label": "Pick up the coil of rope",
       "found": "A coil of rope, left by the well. Someone meant to mend it."
     },
@@ -1165,9 +1165,9 @@
       "id": "lane-glove",
       "item": "work-glove",
       "qty": 1,
-      "area": "commons",
-      "tx": 30,
-      "ty": 22,
+      "area": "hearthwick",
+      "tx": 8,
+      "ty": 36,
       "label": "Pick up the lost glove",
       "found": "A work glove on the lane, still holding the shape of a hand."
     },
@@ -1186,9 +1186,9 @@
       "id": "oatcake-parcel",
       "item": "oatcakes",
       "qty": 5,
-      "area": "village",
-      "tx": 31,
-      "ty": 8,
+      "area": "hearthwick",
+      "tx": 29,
+      "ty": 55,
       "label": "Pick up the paper parcel",
       "found": "Five of Finn's oatcakes, wrapped in paper. Five, of course."
     }
@@ -1234,9 +1234,9 @@
     {
       "id": "madder-stall",
       "npc": "The madder stall",
-      "area": "commons",
-      "tx": 8,
-      "ty": 18,
+      "area": "hearthwick",
+      "tx": -5,
+      "ty": 35,
       "radiusTiles": 4,
       "festival": "Carting Day",
       "goods": [

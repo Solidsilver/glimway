@@ -19,7 +19,7 @@ import (
 
 func (x *rig) abilityReport(c *http.Cookie, p *contract.PlayResponse, seq, basis, hp, mana, casts float64, moves map[string]float64) *contract.Envelope {
 	x.t.Helper()
-	req := &contract.ReportRequest{Lease: p.Lease, Client: "tab-a", Generation: p.ReportGeneration, Seq: seq, Basis: basis, Hp: hp, Mana: mana, Casts: casts, AbilityCasts: moves, Place: &contract.Where{Area: "village", X: 400, Y: 300}}
+	req := &contract.ReportRequest{Lease: p.Lease, Client: "tab-a", Generation: p.ReportGeneration, Seq: seq, Basis: basis, Hp: hp, Mana: mana, Casts: casts, AbilityCasts: moves, Place: &contract.Where{Area: "in:village:library", X: 80, Y: 80}}
 	raw, _ := protojson.Marshal(req)
 	w := x.rawHTTP("POST", "/api/report", json.RawMessage(raw), c)
 	var out contract.Envelope

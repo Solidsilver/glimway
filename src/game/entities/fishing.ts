@@ -1,3 +1,4 @@
+import { onSceneEnd } from '../scene-end.ts'
 /**
  * Fishing at the mill pond (docs/design/crafts.md 5): the banks, the line,
  * the float and the fish, on the interactions path like gathering.
@@ -21,6 +22,8 @@
  * Reel. Sound goes through the bus (src/game/sound.ts).
  */
 import Phaser from 'phaser'
+import { FixedScope } from '../wilds/fixed-scope.ts'
+import { nearBank } from '../../lib/fishing.ts'
 import { calendarAt } from '../../lib/calendar'
 import { LET_GO_KEY } from '../../content/controls'
 import {
@@ -107,6 +110,9 @@ export function fishingPose(): 'fishing' | null {
 export class Fishing {
   /** The build of the area that's up now (an answer may outlive the build that asked). */
   private static live: Fishing | null = null
+  private scope: FixedScope
+  private effects: Phaser.GameObjects.GameObject[] = []
+  private timers: Phaser.Time.TimerEvent[] = []
   private readonly waters: FishWater[]
   /** Each water's band, as the server last said (absent: not read yet). */
   private bands = new Map<string, string>()
@@ -114,6 +120,7 @@ export class Fishing {
   /** A fish on the bank: Keep or Let it go. */
   private landed: Line | null = null
   private busy = false
+  private stopped = false
   /** The hero has stood within reach of the line's bank this build (leaving it then pulls the line in). */
   private atBank = false
   private bitten = false
@@ -129,6 +136,7 @@ export class Fishing {
   private floatAt: { x: number; y: number } | null = null
 
   constructor(private scene: Phaser.Scene, private deps: FishingDeps) {
+    this.scope = new FixedScope(!!deps.world.open)
     this.waters = watersForArea(deps.world.areaId)
     if (this.waters.length === 0) return
     registerFishingLoops(scene)
@@ -150,18 +158,38 @@ export class Fishing {
       void this.settle(false)
     }
     scene.input.keyboard?.on('keydown', onKey)
-    scene.events.once('shutdown', () => {
+    const cleanup = () => {
+      if (this.stopped) return
+      this.stopped = true
       bus.off(EV.link, onState)
       scene.input.keyboard?.off('keydown', onKey)
       this.leaving()
-      this.clearDrawing()
+      this.dropLine()
       hideContextButtons('fish-')
-      posing = false
+      if (Fishing.live === this) posing = false
+      this.scope.keys.clear()
+      this.deps.interactables.register(this, [])
       if (Fishing.live === this) Fishing.live = null
-    })
+    }
+    onSceneEnd(scene, cleanup)
   }
 
   // ------------------------------------------------------------ the points
+
+  attachChunk(key: string): void {
+    this.scope.keys.add(key)
+    this.publish()
+    if (!this.line && !this.landed) this.adoptServerLine()
+  }
+
+  detachChunk(key: string): void {
+    this.scope.keys.delete(key)
+    const l = this.landed ?? this.line
+    const bank = l ? bankFor(waterFor(l.water)!, l.bank) : undefined
+    if (bank && !bank.tiles.some((t) => this.scope.has(t.tx, t.ty))) { this.leaving(); this.dropLine(); posing = false }
+    if (!this.scope.keys.size && this.deps.world.open) this.clearDrawing()
+    this.publish()
+  }
 
   /** Connected (the pond is the world's), in this area. */
   private live(): boolean {
@@ -178,6 +206,7 @@ export class Fishing {
     for (const water of this.waters) {
       for (const bank of water.banks) {
         for (const t of bank.tiles) {
+          if (!this.scope.has(t.tx, t.ty)) continue
           points.push({
             id: `fish:${water.id}:${bank.id}:${t.tx},${t.ty}`,
             x: tileMid(t.tx),
@@ -189,7 +218,7 @@ export class Fishing {
             verb: FISHING_VERBS.cast,
             tool: 'fish',
             // The point's marker sits under the tile; the offer follows the server's measure (where to the tile's middle).
-            available: () => !this.busy && !this.line && !this.landed && heldNow().kind === 'fish' && bankOpen(bank, this.mark()) && this.live() && this.heroWithin(bank, castReachPx()),
+            available: () => !this.busy && !this.line && !this.landed && heldNow().kind === 'fish' && bankOpen(bank, this.mark()) && this.live() && this.heroWithin(water, bank, castReachPx()),
             activate: () => void this.cast(water, bank)
           })
           // While a line is out from this bank: pull it in, or reel once the float dips.
@@ -206,7 +235,7 @@ export class Fishing {
             verb: () => (this.landed ? FISHING_VERBS.keep : this.phase() === 'ready' ? FISHING_VERBS.reel : FISHING_VERBS.pull),
             // Landed: the prompt names both choices and their keys (Keep on E, Let it go on Q).
             alt: () => (this.landed ? { key: LET_GO_KEY, label: FISHING_VERBS.release } : null),
-            available: () => !this.busy && this.lineFrom(water, bank) && this.heroWithin(bank, leaveReachPx()),
+            available: () => !this.busy && this.lineFrom(water, bank) && this.heroWithin(water, bank, leaveReachPx()),
             activate: () => {
               if (this.landed) void this.settle(true)
               else if (this.phase() === 'ready') this.reel()
@@ -220,9 +249,9 @@ export class Fishing {
   }
 
   /** The hero's feet within `px` of the bank, measured as the server measures `where` (to a bank tile's middle). */
-  private heroWithin(bank: FishBank, px: number): boolean {
+  private heroWithin(water: FishWater, bank: FishBank, px: number): boolean {
     const hero = this.deps.hero().sprite
-    return bankDistance(bank, hero.x, hero.y) <= px
+    return nearBank(this.deps.world.areaId, hero.x, hero.y, water, bank, px)
   }
 
   private lineFrom(water: FishWater, bank: FishBank): boolean {
@@ -251,20 +280,22 @@ export class Fishing {
     const link = this.deps.session.link
     if (!link) return
     const r = await link.readWaters(this.deps.world.areaId)
-    if (!r.ok) return
+    if (!r.ok || Fishing.live !== this) return
     for (const w of r.value) this.bands.set(w.id, bandFrom(w.band))
     this.deps.interactables.invalidatePrompt()
   }
 
   /** Put back the line `PlayerState.fishing.cast` holds (a reload, another device), or take ours in when it's gone. */
   private adoptServerLine(): void {
-    const cast = this.deps.session.link?.server.fishing?.cast
+    const cast = this.deps.session.link?.server?.fishing?.cast
     if (!cast) {
       // The world says no line is out (a settle elsewhere, a lapse): ours goes, unless it's still being asked.
       if (this.line && !this.line.predicted && !this.busy) this.dropLine()
       return
     }
     if (!waterFor(cast.water) || !this.waters.some((w) => w.id === cast.water)) return
+    const bank = bankFor(waterFor(cast.water)!, cast.bank)
+    if (!bank?.tiles.some((t) => this.scope.has(t.tx, t.ty))) return
     if (this.line?.id === cast.id) return
     if (castPhase(cast, serverNow()) === 'lapsed') return
     this.line = { id: cast.id, water: cast.water, bank: cast.bank, species: cast.species, readyAt: cast.readyAt, holdUntil: cast.holdUntil, band: cast.band, predicted: false }
@@ -324,7 +355,13 @@ export class Fishing {
       }
       const c = r.result.cast!
       this.bands.set(water.id, bandFrom(r.result.band || c.band))
-      if (!live) return
+      if (!live || !bank.tiles.some((t) => this.scope.has(t.tx, t.ty))) {
+        // A reply can arrive after this bank streamed out. Close its reservation
+        // instead of restoring a line into a chunk that no longer owns it.
+        void link.fishCancel(c.id)
+        if (live) live.dropLine()
+        return
+      }
       live.last = 'cast'
       live.line = { id: c.id, water: c.water, bank: c.bank, species: c.species, readyAt: c.readyAt, holdUntil: c.holdUntil, band: c.band, predicted: false }
     } finally {
@@ -497,7 +534,7 @@ export class Fishing {
     if (!bank) return null
     const hero = this.deps.hero().sprite
     const w = this.deps.world
-    const isWater = (tx: number, ty: number) => ty >= 0 && ty < w.height && tx >= 0 && tx < w.width && WATER.has(w.ground[ty][tx])
+    const isWater = (tx: number, ty: number) => w.open ? WATER.has(w.open.groundAt(tx, ty) ?? -1) : ty >= 0 && ty < w.height && tx >= 0 && tx < w.width && WATER.has(w.ground[ty][tx])
     const t = floatTile(bank, hero.x, hero.y, isWater)
     return t ? { x: tileMid(t.tx), y: tileBottom(t.ty) - 5 } : null
   }
@@ -620,13 +657,15 @@ export class Fishing {
     const splash = has(this.scene, 'landing-splash-0')
     if (splash) {
       const img = this.scene.add.sprite(at.x, at.y + 2, splash).setOrigin(0.5, 60 / 64).setDepth(at.y)
-      if (this.deps.reducedMotion || !this.scene.anims.exists(crArt('fish-splash'))) this.scene.time.delayedCall(400, () => img.destroy())
+      this.effects.push(img)
+      if (this.deps.reducedMotion || !this.scene.anims.exists(crArt('fish-splash'))) this.timers.push(this.scene.time.delayedCall(400, () => img.destroy()))
       else img.play(crArt('fish-splash')).once('animationcomplete', () => img.destroy())
     }
     // The fish as the crafts pass draws it (its frame is the item's id), else its inventory icon.
     const fishKey = has(this.scene, species) ?? itemsArtKey(`item-${species}`)
     if (!this.scene.textures.exists(fishKey)) return
     const fish = this.scene.add.image(at.x, at.y - 4, fishKey).setOrigin(0.5, 0.5).setDepth(hero.y + 30).setScale(0.75)
+    this.effects.push(fish)
     const to = { x: hero.x + (at.x < hero.x ? -6 : 6), y: hero.y - 22 }
     if (this.deps.reducedMotion) {
       fish.setPosition(to.x, to.y)
@@ -635,14 +674,15 @@ export class Fishing {
       this.scene.tweens.add({ targets: fish, y: Math.min(at.y, to.y) - 14, duration: 190, ease: 'Sine.easeOut', yoyo: false, onComplete: () => fish.active && this.scene.tweens.add({ targets: fish, y: to.y, duration: 190, ease: 'Sine.easeIn' }) })
       this.scene.tweens.add({ targets: fish, angle: at.x < hero.x ? -300 : 300, duration: 380 })
     }
-    this.scene.time.delayedCall(this.deps.reducedMotion ? 900 : 1200, () => {
+    this.timers.push(this.scene.time.delayedCall(this.deps.reducedMotion ? 900 : 1200, () => {
       if (!fish.active) return
       if (this.deps.reducedMotion) fish.destroy()
       else this.scene.tweens.add({ targets: fish, alpha: 0, duration: 200, onComplete: () => fish.destroy() })
-    })
+    }))
   }
 
   private clearFloat(): void {
+    for (const o of [this.float, this.rings, this.cord, this.word]) if (o) this.scene.tweens.killTweensOf(o)
     this.float?.destroy()
     this.rings?.destroy()
     this.cord?.destroy()
@@ -655,6 +695,11 @@ export class Fishing {
 
   private clearDrawing(): void {
     this.clearFloat()
+    for (const t of this.timers) t.remove()
+    this.timers = []
+    for (const o of this.effects) { this.scene.tweens.killTweensOf(o); o.destroy() }
+    this.effects = []
+    if (this.rod) this.scene.tweens.killTweensOf(this.rod)
     this.rod?.destroy()
     this.rod = null
     this.floatAt = null

@@ -6,14 +6,10 @@
  * the cottages), and the open map, `outdoors` (./wilds/wilds-world.ts)).
  */
 import type { AreaId } from '../lib/state.ts'
-import { repairFor } from '../lib/repairs.ts'
-import { calendarAt } from '../lib/calendar.ts'
-import { TERRAIN, TILE, tileBottom, tileMid } from '../lib/tile.ts'
+import { TERRAIN, TILE } from '../lib/tile.ts'
 import { anchorTile } from './wilds/fixed.ts'
 import { OUTDOORS_AREA } from './wilds/coords.ts'
-import { homeLandKind } from './homeland.ts'
-import { residentSpotsIn, roomKind, type RoomScene } from './room-kind.ts'
-import { gameNow } from './clock.ts'
+import { roomKind, type RoomScene } from './room-kind.ts'
 import { rng01 } from '../lib/hash.ts'
 import { buildWildsWorld } from './wilds/wilds-world.ts'
 
@@ -32,6 +28,7 @@ export type GlimSpotId = 'hearth' | 'road-1' | 'road-2' | 'road-3' | 'chest'
  * `wilds:<id>` a claim in a Wilds chunk, 'warden' the naming spoken to it.
  */
 export type InteractId =
+  | `lot:${number}:${string}`
   | NpcId
   | 'clue'
   | 'lantern'
@@ -291,12 +288,6 @@ class Grid {
 }
 
 /** The village's three homes (4 tiles deep), and the building art each is drawn with (src/game/buildings.ts). */
-export const VILLAGE_HOUSES = [
-  { tx: 5, ty: 4, w: 6, frame: 'house-west' },
-  { tx: 17, ty: 3, w: 7, frame: 'house-middle' },
-  { tx: 31, ty: 4, w: 6, frame: 'house-ada' }
-] as const
-
 function isGrassLike(tile: number): boolean {
   return tile === TERRAIN.grass_a || tile === TERRAIN.grass_b || tile === TERRAIN.grass_c
 }
@@ -323,223 +314,6 @@ function scatter(grid: Grid, rng: () => number, count: number, kept: Array<{ tx:
 }
 
 // ---------------------------------------------------------------- village
-
-function buildVillage(): WorldData {
-  const W = 42
-  const H = 26
-  const rng = rng01(20261002)
-  const g = new Grid(W, H, TERRAIN.grass_a)
-  for (let y = 0; y < H; y++)
-    for (let x = 0; x < W; x++) {
-      const r = rng()
-      g.ground[y][x] = r < 0.55 ? TERRAIN.grass_a : r < 0.85 ? TERRAIN.grass_b : TERRAIN.grass_c
-    }
-
-  // Flower patches
-  g.rect(28, 15, 5, 3, TERRAIN.flowers)
-  g.rect(7, 18, 4, 3, TERRAIN.flowers)
-  g.set(24, 8, TERRAIN.flowers)
-  g.set(36, 14, TERRAIN.flowers)
-
-  // Pond with sandy rim
-  g.rect(33, 19, 6, 4, TERRAIN.water_a, true)
-  g.col(33, 19, 4, TERRAIN.water_b, true)
-  g.row(33, 18, 6, TERRAIN.sand)
-  g.col(32, 19, 4, TERRAIN.sand)
-
-  // Houses: tile houses, each drawn by its delivered building when that art
-  // loaded (scenery below, `groundUnder`): the footprint stays solid, the
-  // door on its bottom row, the window above (Ada's is the east one,
-  // village-life.ts ADA_HOUSE_WINDOW).
-  for (const h of VILLAGE_HOUSES) g.house(h.tx, h.ty, h.w)
-
-  // Paths
-  g.row(3, 10, W - 3, TERRAIN.path_a)
-  g.col(8, 7, 3, TERRAIN.path_a)
-  g.col(20, 7, 3, TERRAIN.path_a)
-  g.col(33, 8, 2, TERRAIN.path_a)
-  g.col(13, 10, 3, TERRAIN.path_a)
-  // A lane off the road down to the Commons gate (east edge, below the road).
-  g.col(39, 11, 5, TERRAIN.path_a)
-  g.row(39, 15, 3, TERRAIN.path_a)
-
-  // Garden fence with a gap: solid tiles on grass, drawn as fence runs from
-  // the Commons pass's pieces (as round Silas's yard), not plank tiles.
-  const gardenFence: ScenerySpot[] = []
-  const fenceH = (x0: number, x1: number, y: number) => {
-    for (let x = x0; x <= x1; x++) g.set(x, y, TERRAIN.grass_a, true)
-    gardenFence.push({ key: `fence-h-${x1 - x0 + 1}`, x: x0 * TILE, y: tileBottom(y), originX: 0 })
-  }
-  const fenceV = (x: number, y0: number, y1: number) => {
-    for (let y = y0; y <= y1; y++) g.set(x, y, TERRAIN.grass_a, true)
-    gardenFence.push({ key: `fence-v-${y1 - y0 + 1}`, x: x * TILE, y: tileBottom(y1), originX: 0 })
-  }
-  fenceH(24, 30, 13)
-  fenceV(24, 14, 17)
-  fenceV(30, 14, 17)
-  // The gap at 27,18 (a rail fallen out of it: content/repairs.json fence-rail).
-  fenceH(24, 26, 18)
-  fenceH(28, 30, 18)
-
-  // Unbroken border trees, with one gap on the east edge to the woodland
-  // (the journey reads left to right: village → woodland → ruin).
-  for (let x = 0; x < W; x++) {
-    scatterOne(g, x, 0)
-    scatterOne(g, x, H - 1)
-  }
-  for (let y = 0; y < H; y++) {
-    scatterOne(g, 0, y)
-    if ((y < 9 || y > 11) && (y < 14 || y > 16)) scatterOne(g, W - 1, y)
-  }
-
-  // The well stands where the repairs data puts it (shared with the
-  // server's draw-water and mend checks); the village lantern beside it.
-  const wellPos = repairFor('well-rope')?.pos ?? { tx: 13, ty: 12 }
-  const well = { tx: wellPos.tx, ty: wellPos.ty }
-  const villageLantern = { tx: 11, ty: 12 }
-
-  const npcs: NpcSpot[] = [
-    { id: 'mara', tx: 16, ty: 13 },
-    { id: 'orrin', tx: 21, ty: 9 },
-    { id: 'pip', tx: 28, ty: 17 }
-  ]
-
-  const villageExits: ExitDef[] = [
-    { tx: W - 1, ty: 9, tw: 1, th: 3, to: 'woodland', entry: { tx: 2, ty: 15 } },
-    // Into the Commons on the open map, just inside its west gate (the anchor `commons:west-path`).
-    { tx: W - 1, ty: 14, tw: 1, th: 3, to: OUTDOORS_AREA, entry: anchorTile('commons:west-path'), label: 'Hearthwick Commons' }
-  ]
-  const trees = collectTrees(g)
-  const scatteredBushes = scatter(g, rng, 6, [...npcs, well, villageLantern]).filter((b) => !nearExit({ exits: villageExits }, b.tx, b.ty))
-  const scatteredRocks = scatter(g, rng, 3, [...npcs, well, villageLantern]).filter((r) => !nearExit({ exits: villageExits }, r.tx, r.ty))
-
-  // The Hearthwick Library: a small reading house on the square's quiet
-  // south-west corner, off the quest route. Raised after the scatter so the
-  // rest of the village keeps its seeded layout; nothing may crowd its door.
-  const libraryAt = { tx: 2, ty: 14, w: 5 }
-  g.house(libraryAt.tx, libraryAt.ty, libraryAt.w)
-  // The door in the middle, under the open-book gable (where the delivered
-  // building has it).
-  const library = { tx: libraryAt.tx + Math.floor(libraryAt.w / 2), ty: libraryAt.ty + 3 }
-  g.set(library.tx - 1, library.ty, TERRAIN.wall_house, true)
-  g.set(library.tx, library.ty, TERRAIN.door, true)
-  const clearOfLibrary = (p: { tx: number; ty: number }) =>
-    !(p.tx >= libraryAt.tx - 1 && p.tx <= libraryAt.tx + libraryAt.w && p.ty >= libraryAt.ty - 1 && p.ty <= libraryAt.ty + 5)
-  // The village notice board, by the road at the square: raised after the
-  // scatter too, so the seeded layout stays as it was.
-  const board = { tx: 15, ty: 9 }
-  g.solid[board.ty][board.tx] = true
-  const clearOfBoard = (p: { tx: number; ty: number }) => Math.abs(p.tx - board.tx) > 1 || Math.abs(p.ty - board.ty) > 1
-  const bushes = scatteredBushes.filter(clearOfLibrary).filter(clearOfBoard)
-  const rocks = scatteredRocks.filter(clearOfLibrary).filter(clearOfBoard)
-  // The Tolley mill: a small watermill on the pond's west edge, below the
-  // garden fence (its gap at 27,18 still opens onto the grass), its wheel
-  // on the east wall dipping into the pond the Wend feeds. Raised after the
-  // scatter too, so the seeded layout stays; its art is the items pass's (src/game/items-pass.ts).
-  const millAt = { tx: 28, ty: 19, tw: 4, th: 4 }
-  g.rect(millAt.tx, millAt.ty, millAt.tw, millAt.th, TERRAIN.grass_a, true)
-  // The wheel turns in a short mill-race cut through the pond's sandy rim.
-  for (let y = 20; y <= 22; y++) g.set(32, y, TERRAIN.water_b, true)
-  const millHopper = { tx: 27, ty: 22 }
-  g.solid[millHopper.ty][millHopper.tx] = true
-  const mill = {
-    ...millAt,
-    door: { tx: 29, ty: 22 },
-    // The wheel's stone support (the west edge of its art) against the mill's east wall.
-    wheel: { x: 32 * TILE + 7, y: 21 * TILE + 4 },
-    hopper: millHopper
-  }
-  // The residents' outdoor spots, placed after the scatter too (the seeded
-  // layout stays): Hazel in the square below the well with her basket, Finn
-  // at his mill door, Ada under her window on the east house (village-life.ts
-  // ADA_HOUSE_WINDOW). All off the quest route. Each stands there only while
-  // their cycle says so (the residents data; the server checks against it).
-  npcs.push(...residentSpotsIn('village'))
-
-  // Supplied atlas props, consistent small-world display heights
-  const props: PropSpot[] = [
-    { frame: 'lantern-post', tx: 11, ty: 12, h: 32, body: [8, 6], light: 'village' },
-    { frame: 'patched-bench', tx: 9, ty: 13, h: 18, body: [16, 6] },
-    { frame: 'bread-basket', tx: 6, ty: 8, h: 12, body: [12, 6] },
-    { frame: 'flower-planter', tx: 22, ty: 7, h: 16, body: [14, 6] },
-    { frame: 'tool-crate', tx: 24, ty: 8, h: 16, body: [12, 8] },
-    { frame: 'stone-milestone', tx: 38, ty: 12, h: 18, body: [10, 6] },
-    // The square's signpost: Orrin resets it every spring to the same lean.
-    { frame: 'trail-sign', tx: 15, ty: 11, h: 24, body: [10, 6] }
-  ]
-
-  // The seasons at the village water — the pond the Wend feeds
-  // (docs/items/crafting-and-repair.md, "Seasonal materials"). In Mudrise
-  // the freshet leaves walnut shells on the shore; in the Quiet the pond
-  // freezes over and carries frost-glass. The spots stay all season (the
-  // day's caps hold you); the server re-checks the season from its own
-  // clock and calendar, so a stale map can only be refused.
-  const mark = calendarAt(gameNow()).mark
-  const seasonalScenery: ScenerySpot[] = []
-  const gathering: GatherSpot[] = []
-  if (mark === 'Mudrise') {
-    for (const [tx, ty, v] of [[34, 18, 0], [36, 18, 1], [38, 18, 2]] as const) {
-      const frame = `pebbles-${v}`
-      seasonalScenery.push({ key: 'tangle-decor', frame, x: tileMid(tx), y: tileBottom(ty), tx, ty })
-      gathering.push({ target: 'freshet-shore', label: 'Sweep the freshet shore', tx, ty, art: { key: 'tangle-decor', frame } })
-    }
-  }
-  if (mark === 'Quiet') {
-    for (const [tx, ty] of [[34, 19], [37, 19], [38, 21]] as const) {
-      seasonalScenery.push({ key: 'pond-ice', x: tileMid(tx), y: tileBottom(ty), tx, ty })
-      gathering.push({ target: 'pond-ice', label: 'Break the pond ice', tx, ty, art: { key: 'pond-ice' } })
-    }
-  }
-
-  return {
-    areaId: 'village',
-    width: W,
-    height: H,
-    widthPx: W * TILE,
-    heightPx: H * TILE,
-    ground: g.ground,
-    solid: g.solid,
-    trees,
-    bushes,
-    rocks,
-    npcs,
-    enemies: [],
-    exits: villageExits,
-    props,
-    discoverySpots: [],
-    well,
-    mural: null,
-    shrine: null,
-    villageLantern,
-    glimSpots: [{ id: 'hearth', tx: villageLantern.tx, ty: villageLantern.ty }],
-    spawn: { tx: 7, ty: 11 },
-    library,
-    board,
-    mill,
-    scenery: [
-      ...seasonalScenery,
-      ...gardenFence,
-      ...VILLAGE_HOUSES.map((h) => ({
-        key: `p1:${h.frame}`,
-        x: (h.tx + h.w / 2) * TILE,
-        y: (h.ty + 4) * TILE,
-        groundUnder: { tx: h.tx, ty: h.ty, tw: h.w, th: 4, tile: TERRAIN.grass_a }
-      })),
-      { key: 'notice-board', x: tileMid(board.tx), y: tileBottom(board.ty) },
-      { key: 'mill-house', x: (millAt.tx + millAt.tw / 2) * TILE, y: (millAt.ty + millAt.th) * TILE },
-      { key: 'mill-hopper', x: tileMid(millHopper.tx), y: tileBottom(millHopper.ty) },
-      {
-        key: 'commons-art:hearthwick-library',
-        x: (libraryAt.tx + libraryAt.w / 2) * TILE,
-        y: (libraryAt.ty + 4) * TILE,
-        groundUnder: { tx: libraryAt.tx, ty: libraryAt.ty, tw: libraryAt.w, th: 4, tile: TERRAIN.grass_a }
-      }
-    ],
-    gathering
-  }
-}
-
-// ---------------------------------------------------------------- woodland
 
 function buildWoodland(): WorldData {
   const W = 56
@@ -617,7 +391,7 @@ function buildWoodland(): WorldData {
   ]
 
   const woodlandExits: ExitDef[] = [
-    { tx: 0, ty: 14, tw: 1, th: 3, to: 'village', entry: { tx: 39, ty: 10 } },
+    { tx: 0, ty: 14, tw: 1, th: 3, to: OUTDOORS_AREA, entry: anchorTile('hearthwick:east-road'), label: 'Hearthwick' },
     { tx: W - 1, ty: 21, tw: 1, th: 3, to: 'ruin', entry: { tx: 2, ty: 13 } }
   ]
   const trees = collectTrees(g)
@@ -798,13 +572,6 @@ export interface AreaKind {
   foreground(world: WorldData): ForegroundSpot[]
 }
 
-function villageForeground(): ForegroundSpot[] {
-  return [
-    { frame: 'leafy-arch', tx: 1, ty: 12, w: 44 },
-    { frame: 'fern-cluster', tx: 7, ty: 17, w: 26 }
-  ]
-}
-
 function woodlandForeground(world: WorldData): ForegroundSpot[] {
   // Canopies over every 9th existing tree base (collisions stay the trees').
   const spots: ForegroundSpot[] = []
@@ -827,7 +594,6 @@ function ruinForeground(): ForegroundSpot[] {
 }
 
 const AREA_KINDS: Record<string, AreaKind> = {
-  village: { build: buildVillage, foreground: villageForeground },
   woodland: { build: buildWoodland, foreground: woodlandForeground },
   ruin: { build: buildRuin, foreground: ruinForeground },
   // The open map: one area, its chunks attached as you walk (src/game/wilds/window.ts),
@@ -838,7 +604,7 @@ const AREA_KINDS: Record<string, AreaKind> = {
 /** Registered kinds, then families resolved by id (a homestead's land behind each gate: `home:<gate>`; the rooms: `in:…`). */
 function resolveKind(id: string): AreaKind | null {
   if (Object.prototype.hasOwnProperty.call(AREA_KINDS, id)) return AREA_KINDS[id]
-  return homeLandKind(id) ?? roomKind(id)
+  return roomKind(id)
 }
 
 /** Look up an area kind (its data builder plus kind-specific decor). */

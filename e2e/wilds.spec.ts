@@ -64,7 +64,7 @@ async function connectedWorld(page: Page, context: BrowserContext): Promise<void
 // store a Commons spot as a Wilds position; sampling every frame catches it).
 test('connected: the Commons arch walks into the Tangle (the gate on chunk 0,0), in one scene', async ({ page, context }) => {
   await connectedWorld(page, context)
-  await warp(page, 'commons', 23, 2)
+  await warp(page, 'outdoors', 2, 26)
   await parkCreatures(page)
   const before = (await wilds(page)).chunk
   expect(before).toEqual({ cx: 0, cy: 1 })
@@ -182,7 +182,10 @@ test('connected: harvest, clear a camp, chest, POI, reload in place, the fallen 
   const hurtAt = reloaded.position
   await page.evaluate((n) => (window as unknown as { __fsDevHurt: (n: number) => void }).__fsDevHurt(n), 999)
   // Defeat wakes the hero in the village; walk back in and find the lantern.
-  await page.waitForFunction(() => (window as unknown as { __fsSafety?: () => { areaId: string } | null }).__fsSafety?.()?.areaId === 'village', undefined, { timeout: 20_000 })
+  await page.waitForFunction(() => {
+    const s = (window as unknown as { __fsSafety?: () => { areaId: string; transitioning: boolean; position?: { x: number; y: number } } | null }).__fsSafety?.()
+    return !!s && !s.transitioning && s.areaId === 'outdoors' && (s.position?.y ?? 0) > 900
+  }, undefined, { timeout: 20_000 })
   await warp(page, 'outdoors', Math.floor(hurtAt.x / TILE), Math.floor(hurtAt.y / TILE))
   await waitForWilds(page)
   await expect.poll(async () => (await wilds(page)).lanterns.some((l) => l.own && !l.lit)).toBe(true)

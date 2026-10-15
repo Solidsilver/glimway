@@ -73,7 +73,7 @@ for (const [name, viewport] of phones) {
     const errors: string[] = []
     page.on('pageerror', (e) => errors.push(e.message))
     await freshPlayer(page)
-    await warp(page, 'village', 16, 14)
+    await warp(page, 'woodland', 14, 15)
     await expect(page.locator('.controls')).toBeVisible()
     // The App writes the insets itself once it measures the HUD and controls.
     const appMeasures = await page.evaluate(() => {
@@ -86,16 +86,16 @@ for (const [name, viewport] of phones) {
     const cols = Math.floor(map.widthPx / 16)
     const rows = Math.floor(map.heightPx / 16)
     const spots: [string, number, number][] = [
-      ['village', 1, 1],
-      ['village', cols - 2, 1],
-      ['village', 1, rows - 2],
-      ['village', cols - 2, rows - 2],
+      ['woodland', 1, 1],
+      ['woodland', cols - 2, 1],
+      ['woodland', 1, rows - 2],
+      ['woodland', cols - 2, rows - 2],
       ['ruin', 15, 3],
-      // The Commons on the open map (Commons tiles): the camera frames the joined bounds, the arch and the far corners.
-      ['commons', 2, 21],
-      ['commons', 23, 3],
-      ['commons', 23, 38],
-      ['commons', 56, 22]
+      // Hearthwick on the open map: the camera frames the joined bounds, the arch and the corners.
+      ['outdoors', -19, 45],
+      ['outdoors', 2, 27],
+      ['outdoors', 2, 62],
+      ['outdoors', 35, 46]
     ]
     for (const [area, tx, ty] of spots) {
       await warp(page, area, tx, ty)
@@ -120,7 +120,7 @@ for (const [name, viewport] of phones) {
     await freshPlayer(page)
     // Mara, by the well: the conversation hides the touch controls (and, under
     // the old measuring, dropped their insets and slid the world aside).
-    await warp(page, 'village', 16, 14)
+    await warp(page, 'outdoors', 14, 62)
     await page.waitForFunction(() => (window as unknown as { __fsBanners: () => { current: unknown } }).__fsBanners().current === null, undefined, { timeout: 15_000 })
     await frames(page, 60)
     const insets = () => page.evaluate(() => (window as unknown as { __fsDevInsets: () => { top: number; bottom: number; left: number; right: number; rev: number } }).__fsDevInsets())
@@ -150,7 +150,7 @@ test('phone at 3×: the canvas has every device pixel and frames the world as at
     const context = await browser.newContext({ baseURL, viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor })
     const page = await context.newPage()
     await freshPlayer(page)
-    await warp(page, 'village', 16, 14)
+    await warp(page, 'outdoors', 14, 62)
     await page.waitForFunction(() => (window as unknown as { __fsBanners: () => { current: unknown } }).__fsBanners().current === null, undefined, { timeout: 15_000 })
     await frames(page, 60)
     const canvas = await page.evaluate(() => {
@@ -179,7 +179,8 @@ test('desktop at 2×: the pointer lands on the world point under it', async ({ b
   const px = await page.evaluate(() => document.querySelector<HTMLCanvasElement>('.stage canvas')!.width)
   expect(px, 'the canvas at 2×').toBe(2560)
   const box = (await page.locator('.stage canvas').boundingBox())!
-  for (const [wx, wy] of [[16 * 16 + 8, 14 * 16 + 8], [20 * 16, 12 * 16]] as const) {
+  const p = await player(page)
+  for (const [wx, wy] of [[p.x + 24, p.y - 16], [p.x - 32, p.y + 20]] as const) {
     const at = await page.evaluate(([x, y]) => (window as unknown as { __fsDevToScreen: (x: number, y: number) => { x: number; y: number } }).__fsDevToScreen(x, y), [wx, wy] as const)
     await page.mouse.move(box.x + at.x, box.y + at.y)
     await frames(page, 2)
@@ -198,7 +199,7 @@ async function phonePlayer(browser: import('@playwright/test').Browser, baseURL:
   page.on('pageerror', (e) => errors.push(e.message))
   if (stick) await page.addInitScript((s) => localStorage.setItem('fingersnap:settings', JSON.stringify({ stick: s })), stick)
   await freshPlayer(page)
-  await warp(page, 'village', 16, 14)
+  await warp(page, 'outdoors', 14, 62)
   await page.waitForFunction(() => (window as unknown as { __fsBanners: () => { current: unknown } }).__fsBanners().current === null, undefined, { timeout: 15_000 })
   await waitForLive(page)
   await frames(page, 60)
@@ -295,7 +296,7 @@ test('a 1× screen: the camera pans on whole canvas pixels, so the pixel art hol
   const context = await browser.newContext({ baseURL, viewport: { width: 1200, height: 760 }, deviceScaleFactor: 1 })
   const page = await context.newPage()
   await freshPlayer(page)
-  await warp(page, 'village', 16, 18)
+  await warp(page, 'outdoors', 16, 66)
   await waitForLive(page)
   const camera = () => page.evaluate(() => (window as unknown as { __fsDevCamera: () => { scrollX: number; scrollY: number; zoom: number; originX: number; originY: number } }).__fsDevCamera())
   const samples: Awaited<ReturnType<typeof camera>>[] = []

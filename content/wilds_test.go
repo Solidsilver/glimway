@@ -40,7 +40,7 @@ func TestWildsOpenMapCatalogue(t *testing.T) {
 	if quiet.GetCx() != -1 || quiet.GetCy() != -5 || quiet.GetEpochKind() != "wick" || quiet.GetTier() != 2 {
 		t.Fatal("the Whitequiet is the wick 3x3 at cx -1..1, cy -5..-3, tier 2")
 	}
-	if f := w.GetFrontier(); f.GetReach() != 3 || f.GetSouthLimit() != 0 {
+	if f := w.GetFrontier(); f.GetReach() != 3 || f.GetSouthLimit() != 7 {
 		t.Fatal("frontier reach 3, south limit 0")
 	}
 	for _, id := range []string{"discovery", "rumour"} {

@@ -124,6 +124,14 @@ func (a *Server) commons(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	out := &contract.CommonsResult{Gates: make([]*contract.GateView, 0, len(gates)), GateCount: int32(n), Invites: make([]*contract.DeedInvite, 0, len(invites))}
+	publicHomes, err := commonsHomes(ctx, tx, s.WorldID, s.AccountID, now)
+	if err != nil {
+		return err
+	}
+	for _, h := range publicHomes {
+		out.Homes = append(out.Homes, homeViewProto(h))
+	}
+
 	for i := range gates {
 		out.Gates = append(out.Gates, gateViewProto(gates[i]))
 	}

@@ -5,8 +5,8 @@
  */
 import type { WildsChunkKey, WildsNearResult, WorldTile } from '../gen/glimway/v1/wilds_pb.js';
 import { loadWilds } from '../wilds/data.ts';
-import { epochKindAt } from '../wilds/coords.ts';
-import { onGrid } from '../location.ts';
+import { epochKindAt, insideFrontier } from '../wilds/coords.ts';
+import { onGrid, sourceOf } from '../location.ts';
 
 /** The near read always answers the 5×5 chunks around the asked one. */
 export const NEAR_RADIUS = 2;
@@ -23,7 +23,7 @@ export function validateNear(out: WildsNearResult, cx: number, cy: number): Wild
   if (!c || c.realm !== w.realm || c.layer !== 0 || c.cx !== cx || c.cy !== cy || out.radius !== NEAR_RADIUS) throw new Error('invalid near window');
   const f = out.frontier?.rect;
   if (!f || f.minCx > f.maxCx || f.minCy > f.maxCy) throw new Error('invalid frontier');
-  const inFrontier = (k: { cx: number; cy: number }) => k.cx >= f.minCx && k.cx <= f.maxCx && k.cy >= f.minCy && k.cy <= f.maxCy;
+  const inFrontier = (k: { cx: number; cy: number }) => k.cx >= f.minCx && k.cx <= f.maxCx && k.cy >= f.minCy && k.cy <= f.maxCy && insideFrontier(k.cx, k.cy);
   // A centre on the grid: inside the frontier, or on a fixed footprint (the Commons: location-seam.md 1.4).
   if (!inFrontier(c) && !onGrid(c.cx, c.cy)) throw new Error('invalid near window');
   const keyed = (k: WildsChunkKey | undefined): k is WildsChunkKey => !!k && k.realm === w.realm && k.layer === 0;
@@ -40,7 +40,7 @@ export function validateNear(out: WildsNearResult, cx: number, cy: number): Wild
   const chunks = new Set<string>();
   for (const g of out.ground) {
     const k = g.chunk;
-    if (!keyed(k) || !inWindow(k) || !inFrontier(k) || g.epoch !== epochOf(k)) throw new Error('invalid ground chunk');
+    if (!keyed(k) || !inWindow(k) || !inFrontier(k) || sourceOf(k.cx, k.cy).kind !== 'generated' || g.epoch !== epochOf(k)) throw new Error('invalid ground chunk');
     const id = `${k.cx}:${k.cy}`;
     if (chunks.has(id)) throw new Error('invalid ground chunk');
     chunks.add(id);

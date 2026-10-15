@@ -101,7 +101,7 @@ INSERT INTO players(account_id,display_name,world_id,created_at,last_seen_at,ver
 			for _, query := range checks {
 				query = currentSchemaSQL(query)
 				if tt.migration == "025" {
-					query = strings.ReplaceAll(query, "version=7", "version=9")
+					query = strings.ReplaceAll(query, "version=7", "version=10")
 				}
 				var got int
 				if err := upgraded.DB.QueryRow(query).Scan(&got); err != nil || got != 1 {

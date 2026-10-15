@@ -3,6 +3,8 @@ package wilds
 import (
 	"slices"
 
+	"glimway/content"
+
 	contract "glimway/server/internal/gen/glimway/v1"
 )
 
@@ -30,8 +32,6 @@ import (
 //     (edgeOpen), so neither chunk is left with open ground it may not
 //     carve to.
 //
-// Then the south limit's last two rows are shut, but for the gate and a
-// kept edge: nothing lies south of it.
 
 type baseKind uint8
 
@@ -79,11 +79,12 @@ func (k *keptReader) tile(tx, ty int) (bool, Ground) {
 		i := ly*S + lx
 		g := Ground(0)
 		if p := int(m.Ground[i/2] >> (4 * (i % 2)) & 15); p < len(m.Palette) {
-			if v, ok := groundByTerrain[m.Palette[p]]; ok {
-				g = v
-			}
+			g = fixedGround(m.Palette[p], Walkable(m, lx, ly))
 		}
 		return Walkable(m, lx, ly), g
+	}
+	if p := FixedFootprintAt(c[0], c[1]); p != nil {
+		return fixedTile(p, tx, ty)
 	}
 	tiles, ok := k.made[c]
 	if !ok {
@@ -92,6 +93,30 @@ func (k *keptReader) tile(tx, ty int) (bool, Ground) {
 	}
 	t := tiles[ly*S+lx]
 	return t.walk, t.ground
+}
+
+// fixedTile is the authored fallback for a kept fixed neighbour. T4's
+// world-specific plot base is supplied by the store; its public mouths keep
+// this same geometry. Never regenerate a fixed coordinate as a still chunk.
+func fixedTile(p *content.FixedPlace, tx, ty int) (bool, Ground) {
+	l := content.Layouts[p.GetLayout()]
+	x, y := tx-int(p.GetOrigin().GetTx())-int(l.GetTx()), ty-int(p.GetOrigin().GetTy())-int(l.GetTy())
+	walk := l.GetSolid()[y][x] == '.'
+	terrain := l.GetPalette()[l.GetGround()[y][x:x+1]]
+	return walk, fixedGround(terrain, walk)
+}
+func fixedGround(terrain string, walk bool) Ground {
+	if g, ok := groundByTerrain[terrain]; ok {
+		return g
+	}
+	if terrain == "water_a" || terrain == "water_b" {
+		return groundRiverWater
+	}
+	g := landGround[landIndex("woods")]
+	if walk {
+		return g.trodden
+	}
+	return g.floor
 }
 
 // openingTiles are the footprints' fixed openings: the opening's tiles on
@@ -122,9 +147,8 @@ func openingTiles(kind string) map[[2]int]Ground {
 
 // fill computes the base of the tiles x0..x1, y0..y1 (inclusive), row-major:
 // the raw base over the area and a margin, then the edge rule for open land
-// among the edge tiles, then the south limit shut.
+// among the edge tiles.
 func (w *world) fill(x0, y0, x1, y1 int, kept *keptReader) []baseTile {
-	S := chunkSize()
 	if kept == nil {
 		kept = &keptReader{w: w.still(), made: map[[2]int][]baseTile{}}
 	}
@@ -148,19 +172,6 @@ func (w *world) fill(x0, y0, x1, y1 int, kept *keptReader) []baseTile {
 				}
 			}
 			out[(ty-y0)*W+tx-x0] = t
-		}
-	}
-	// Nothing lies south of the south limit: the limit's last two rows are
-	// shut (but for the gate and a kept edge), as the frontier is there.
-	south := int(contentRules().GetFrontier().GetSouthLimit())
-	for ty := max(y0, (south+1)*S-band); ty <= min(y1, (south+1)*S-1); ty++ {
-		for tx := x0; tx <= x1; tx++ {
-			t := &out[(ty-y0)*W+tx-x0]
-			if t.kind == bKept || t.kind == bSeam || t.kind == bOpening || t.kind == bWater || !t.walk {
-				continue
-			}
-			t.walk, t.kind = false, bField
-			t.ground = landGround[max(int(t.land), 0)].floor
 		}
 	}
 	return out
@@ -236,7 +247,7 @@ func (w *world) fillRaw(x0, y0, x1, y1 int, kept *keptReader) []baseTile {
 		for tx := x0; tx <= x1; tx++ {
 			t := &out[(ty-y0)*W+tx-x0]
 			cx, cy := floorDiv(tx, S), floorDiv(ty, S)
-			if EpochKindAt(cx, cy) != w.e.Kind {
+			if FixedFootprintAt(cx, cy) != nil || EpochKindAt(cx, cy) != w.e.Kind {
 				if !w.wick {
 					// The kept side can't know a newer epoch's land: left
 					// solid and unknown (only tests look this far).
@@ -415,7 +426,7 @@ func (w *world) columnOpen(tx, ty int, at func(tx, ty int) baseTile) bool {
 	if at(tx-ox, ty-oy).walk {
 		return true
 	}
-	if EpochKindAt(cx+ox, cy+oy) != w.e.Kind {
+	if FixedFootprintAt(cx+ox, cy+oy) != nil || EpochKindAt(cx+ox, cy+oy) != w.e.Kind {
 		return false
 	}
 	return at(tx+ox, ty+oy).walk && at(tx+2*ox, ty+2*oy).walk
@@ -525,7 +536,7 @@ func (w *world) seamMirror(tx, ty int) (int, int, bool) {
 	cx, cy := floorDiv(tx, S), floorDiv(ty, S)
 	lx, ly := tx-cx*S, ty-cy*S
 	for _, d := range seamOrder {
-		if EpochKindAt(cx+d[0], cy+d[1]) == w.e.Kind {
+		if FixedFootprintAt(cx+d[0], cy+d[1]) == nil && EpochKindAt(cx+d[0], cy+d[1]) == w.e.Kind {
 			continue
 		}
 		mx, my := tx, ty

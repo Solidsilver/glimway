@@ -77,7 +77,7 @@ test('finding 2: a 200 with a truncated body is replayed with the same key, neve
 test('finding 3: giving to a project updates the board’s carried balance at once', async ({ page }) => {
   const id = await freshPlayer(page)
   fund(id, { materials: { timber: 10 } })
-  await go(page, 'village', 15, 10)
+  await go(page, 'outdoors', 12, 57)
   await expect(page.locator('.prompt')).toContainText('Read the notice board')
   await waitForLive(page)
   await page.keyboard.press('e')
@@ -113,7 +113,7 @@ test('finding 4: a lost parcel send of a piece leaves Arrange showing it gone on
   await claimDeed(other)
   await ctx.close()
 
-  await go(page, 'commons', 23, 19)
+  await go(page, 'outdoors', 34, 35)
   await expect.poll(async () => (await homes(page)).gates.filter((g) => g.names.length > 0).length).toBeGreaterThanOrEqual(2)
   await expect.poll(async () => (await homes(page)).mine?.items.length).toBe(1)
   await atMyMailbox(page)

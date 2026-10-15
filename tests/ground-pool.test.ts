@@ -4,7 +4,7 @@ import { PaintPool, paintSlices, refreshWhenPainted, startWorkers, type PaintedC
 import { edgeRefNames, paintEdgeJobs, type EdgeJob } from '../src/game/area/ground-paint.ts'
 import { edgeKey, type GroundClass } from '../src/game/area/ground-field.ts'
 import { artIdentity, baseBlocksKey, tilesetSignature } from '../src/game/area/terrain.ts'
-import { buildArea } from '../src/game/worlds.ts'
+import { servedTownFixture } from './commons-fixture.ts'
 
 /**
  * The ground painters' failure paths (review findings 1–3): a failed or
@@ -148,7 +148,7 @@ test('the paint caches key on the art’s content: a redeployed image with the s
   assert.notEqual(before, newGround)
   assert.notEqual(before, newTerrain)
   const m = manifest('g1', 't1')
-  const w = buildArea('village')
+  const w = servedTownFixture()
   const sig = (art: string) => tilesetSignature(w, new Map(), 4, ['a'], null, m.ground, art)
   assert.notEqual(sig(before), sig(newGround))
   assert.notEqual(baseBlocksKey(64, before, m.ground, null), baseBlocksKey(64, newTerrain, m.ground, null))

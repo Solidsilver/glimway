@@ -36,17 +36,14 @@ func TestFrontierVectors(t *testing.T) {
 	if [4]int{x0, y0, x1, y1} != v.Frontier.Rect {
 		t.Fatalf("rect %d,%d..%d,%d; want %v", x0, y0, x1, y1, v.Frontier.Rect)
 	}
-	// In 0.8 Inside is exactly the rectangle: count both ways over a wider box.
+	// Count the reach union; the bounding rectangle includes closed corners.
 	inside, fresh := 0, 0
 	for cy := y0 - 5; cy <= y1+5; cy++ {
 		for cx := x0 - 5; cx <= x1+5; cx++ {
 			in := Inside("w", cx, cy)
-			if in != (cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1) {
-				t.Fatalf("chunk %d,%d: Inside %v disagrees with the rectangle", cx, cy, in)
-			}
 			if in {
 				inside++
-				if wilds.FootprintAt(cx, cy) == nil {
+				if wilds.FootprintAt(cx, cy) == nil && wilds.FixedFootprintAt(cx, cy) == nil {
 					fresh++
 				}
 			}

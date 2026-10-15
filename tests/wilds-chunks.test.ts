@@ -120,7 +120,7 @@ test('a near read loads its window, each chunk in its epoch, and merges bodies w
   assert.equal(await refreshNear(session, CENTER.cx, CENTER.cy), true);
   assert.equal(wildsEpoch('still').id, NEAR.still.id);
   assert.equal(wildsEpoch('wick').id, NEAR.wick.id);
-  assert.deepEqual(wildsFrontier(), { minCx: -4, minCy: -8, maxCx: 4, maxCy: 0 });
+  assert.deepEqual(wildsFrontier(), { minCx: -6, minCy: -8, maxCx: 4, maxCy: 7 });
   // The window is 5×5; all of it lies inside the frontier here. The Tangle's
   // chunks come in the still epoch, the rest in the wick's.
   const fetched = ops.calls.filter((c) => c.path.startsWith('/api/wilds/chunk/')).map((c) => c.path)

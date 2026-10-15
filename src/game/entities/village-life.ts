@@ -1,3 +1,4 @@
+import { onSceneEnd } from '../scene-end.ts'
 /**
  * Village life in the scene: the notice boards, festival touches on their
  * days, and the village changing when the world finishes a project. Light
@@ -23,11 +24,11 @@ import { millHopperLines } from '../../content/residents'
 import type { Session } from '../session'
 import { TERRAIN, TILE, tileBottom, tileMid } from '../../lib/tile'
 import type { WorldData } from '../worlds'
-import { chunkOfTile, footprintAt, commonsLane } from '../wilds/fixed'
+import { chunkOfTile, footprintAt, footprint, commonsLane } from '../wilds/fixed'
 import { CHUNK_TILES } from '../wilds/coords'
 import type { Buildable } from '../wilds/window-chunk'
 import { FixedScope } from '../wilds/fixed-scope'
-import { resolve } from '../../lib/location'
+import { contentPosition } from '../../lib/location'
 import { villageFor, type Village } from '../village'
 import { calendarFind } from '../../lib/wilds/stories'
 import { sellerFor } from '../../lib/items'
@@ -59,7 +60,9 @@ export class VillageLayer {
   private readonly village: Village
   private drawn: Phaser.GameObjects.GameObject[] = []
   private scope: FixedScope
-  private chunks = new Map<string, { drawn: Phaser.GameObjects.GameObject[]; job: Buildable | null }>()
+  private chunks = new Map<string, { drawn: Phaser.GameObjects.GameObject[]; job: Buildable | null; timers: Phaser.Time.TimerEvent[] }>()
+  private drawingChunk: string | null = null
+  private greetingTimer: Phaser.Time.TimerEvent | null = null
   private drawing: Phaser.GameObjects.GameObject[] | null = null
 
   private festivalDrawn: string | null | undefined
@@ -82,13 +85,17 @@ export class VillageLayer {
   attachChunk(key: string): (() => void)[] {
     this.detachChunk(key)
     this.scope.keys.add(key)
-    const chunk = { drawn: [] as Phaser.GameObjects.GameObject[], job: null as Buildable | null }
+    const chunk = { drawn: [] as Phaser.GameObjects.GameObject[], job: null as Buildable | null, timers: [] as Phaser.Time.TimerEvent[] }
     this.chunks.set(key, chunk)
     this.syncShade()
+    const [cx, cy] = key.split(',').map(Number)
+    const festival = this.village.calendar.festival
+    if (festival && footprintAt(cx!, cy!)?.place.id === 'hearthwick') this.greet(festival)
     const steps = this.festivalSteps(key).map((step) => () => {
       if (this.chunks.get(key) !== chunk) return
+      this.drawingChunk = key
       this.drawing = chunk.drawn
-      try { step() } finally { this.drawing = null }
+      try { step() } finally { this.drawing = null; this.drawingChunk = null }
     })
     this.syncInteractions()
     return steps
@@ -97,11 +104,14 @@ export class VillageLayer {
   detachChunk(key: string): void {
     const chunk = this.chunks.get(key)
     if (chunk?.job) this.deps.unschedule?.(chunk.job)
+    if (chunk) for (const timer of chunk.timers) timer.remove()
+    if (key === this.millOwner) { this.millView = null; this.millOwner = null; this.millTimer = null }
     if (chunk) for (const o of chunk.drawn) {
       this.scene.tweens.killTweensOf(o)
       o.destroy()
     }
     this.chunks.delete(key)
+    if (!this.chunks.size) { this.greetingTimer?.remove(); this.greetingTimer = null }
     this.syncShade()
     this.scope.keys.delete(key)
     this.syncInteractions()
@@ -126,22 +136,25 @@ export class VillageLayer {
     const [cx, cy] = key.split(',').map(Number) as [number, number]
     const fp = footprintAt(cx, cy)
     const name = this.village.calendar.festival
-    if (!fp || !name) return []
+    if (!fp) return []
     const steps: (() => void)[] = []
     const at = (tx: number, ty: number, draw: () => void) => {
       if (chunkOfTile(tx, ty) === key) steps.push(draw)
     }
+    const town = this.townFeatures()
+    if (fp.place.id === 'hearthwick' && town) {
+      at(town.mill.wheel.tx, town.mill.wheel.ty, () => this.millWheel())
+      if (this.village.hasWorldFlag('project:well-canopy:complete')) at(town.well.tx, town.well.ty, () => {
+        const x = (town.well.tx + 1) * TILE, y = tileBottom(town.well.ty) + 2
+        this.add(this.scene.add.image(x, y, 'well-canopy').setOrigin(0.5, 1).setDepth(y + 1))
+      })
+      if (this.village.hasWorldFlag('project:cooley-window-fund:complete')) at(town.window.tx, town.window.ty, () => {
+        const x = tileMid(town.window.tx), y = town.window.ty * TILE + 6
+        this.glow(x, y, 0.9, 0.95)
+        this.add(this.scene.add.image(x, y + 4, 'spark').setDepth(4002).setTint(0xffd24a))
+      })
+    }
     if (name === 'Carting Day') {
-      const madder = sellerFor('madder-stall')
-      for (const [art, tx, ty] of [['stall-a', madder?.tx ?? 8, madder?.ty ?? 18], ['stall-b', 13, 18], ['stall-c', 10, 24]] as const) {
-        const t = resolve('commons', tx, ty)
-        at(t.tx, t.ty, () => {
-          const y = tileBottom(t.ty)
-          this.add(this.scene.add.image(tileMid(t.tx), y, art).setOrigin(0.5, 1).setDepth(y))
-        })
-      }
-      const square = resolve('commons', 23, 17)
-      at(square.tx, square.ty, () => this.add(this.scene.add.image(tileMid(square.tx), square.ty * TILE - 18, 'bunting-96').setOrigin(0.5, 0).setDepth(5000)))
       const h = commonsLane()?.features.hame
       if (h) at(h.tx, h.ty, () => this.glow(tileMid(h.tx), tileBottom(h.ty) - 24, 0.6, 0.9))
     }
@@ -170,12 +183,14 @@ export class VillageLayer {
     if (deps.world.open) {
       scene.events.on('prerender', this.syncShade)
       const cleanup = () => {
+        if (this.stopped) return
         this.stopped = true
+        this.greetingTimer?.remove()
+        this.greetingTimer = null
         scene.events.off('prerender', this.syncShade)
         for (const key of [...this.chunks.keys()]) this.detachChunk(key)
       }
-      scene.events.once('shutdown', cleanup)
-      scene.events.once('destroy', cleanup)
+      onSceneEnd(scene, cleanup)
     }
     this.village = villageFor(deps.session)
     // A destroyed game (a session swap) never shuts its scene down: drop the
@@ -184,8 +199,7 @@ export class VillageLayer {
       if (this.scene.sys?.isActive()) this.redraw()
     }
     bus.on(EV.villageChanged, onChange)
-    scene.events.once('shutdown', () => bus.off(EV.villageChanged, onChange))
-    scene.events.once('destroy', () => bus.off(EV.villageChanged, onChange))
+    onSceneEnd(scene, () => bus.off(EV.villageChanged, onChange))
     this.syncInteractions()
     expose('__fsDevCalendar', (unix) => this.village.setDevNow(unix), scene)
     // Pretend the world has finished something (a project's flag): the village redraws.
@@ -242,11 +256,14 @@ export class VillageLayer {
     const list: Interactable[] = []
     // The notices: "…" while the calendar has something posted.
     const notice = () => (this.village.calendar.notice ? 'talk' : null)
-    if (w.board && w.areaId === 'village') {
-      list.push({ id: 'village:board', x: tileMid(w.board.tx), y: tileBottom(w.board.ty) + 2, label: 'Read the notice board', verb: 'Read', marker: notice, markerOffset: 32, activate: openBoard })
+    const town = w.open ? this.townFeatures() : null
+    const board = town?.board ?? w.board
+    const mill = town?.mill ?? w.mill
+    if (board && (w.open || w.areaId === 'village')) {
+      list.push({ id: 'village:board', x: tileMid(board.tx), y: tileBottom(board.ty) + 2, label: 'Read the notice board', verb: 'Read', marker: notice, markerOffset: 32, activate: openBoard })
     }
-    if (w.mill && w.areaId === 'village') {
-      const h = w.mill.hopper
+    if (mill && (w.open || w.areaId === 'village')) {
+      const h = mill.hopper
       list.push({ id: 'village:hopper', x: tileMid(h.tx), y: tileBottom(h.ty) + 2, label: 'Look at the hopper', verb: 'Look', markerOffset: 24, activate: () => this.lookAtHopper() })
     }
     const lane = this.lane()
@@ -259,7 +276,7 @@ export class VillageLayer {
     // the square on the day, and not otherwise.
     if (lane && this.village.calendar.festival === 'Carting Day' && sellerFor('madder-stall')) {
       const stall = sellerFor('madder-stall')!
-      const at = resolve(stall.area, stall.tx, stall.ty)
+      const at = contentPosition(stall.area, stall.tx, stall.ty)
       list.push({ id: 'village:stall', x: tileMid(at.tx), y: tileBottom(at.ty) + 2, label: stall.goods[0]?.label ?? 'Visit the madder stall', verb: 'Buy', marker: notice, markerOffset: 32, activate: () => this.visitStall() })
     }
     // Only when it changed: replacing the list rebuilds its markers.
@@ -297,12 +314,13 @@ export class VillageLayer {
     if (this.deps.world.open) {
       this.syncInteractions()
       const festival = this.village.calendar.festival
-      if (festival !== this.festivalDrawn) {
-        this.festivalDrawn = festival
+      const signature = JSON.stringify([festival, [...this.village.worldFlags].sort()])
+      if (signature !== this.festivalDrawn) {
+        this.festivalDrawn = signature
         this.refreshChunks()
         this.syncShade()
       }
-      if (festival && this.lane()) this.greet(festival)
+      if (festival && this.lane() && this.chunks.size) this.greet(festival)
       return
     }
     for (const o of this.drawn) {
@@ -348,6 +366,20 @@ export class VillageLayer {
     return out
   }
 
+  private townFeatures() {
+    const fp = footprint('hearthwick')
+    if (!fp) return null
+    const objects = [...fp.objects.values()].flat()
+    const find = (id: string) => objects.find((o) => o.id === id)!
+    const mill = find('mill'), ada = find('house-ada')
+    if (!mill || !ada) return null
+    const wheel = { tx: mill.tx + mill.tw, ty: mill.ty }
+    let window = { tx: ada.tx, ty: ada.ty - ada.th + 1 }
+    for (let ty = ada.ty - ada.th + 1; ty <= ada.ty; ty++) for (let tx = ada.tx; tx < ada.tx + ada.tw; tx++) if (fp.ground[ty - fp.ty]?.[tx - fp.tx] === TERRAIN.window) window = { tx, ty }
+    return { board: find('town-board'), well: find('town-well'), window, mill: { hopper: find('mill-hopper'), wheel: { ...wheel, x: wheel.tx * TILE + 7, y: wheel.ty * TILE + 4 } } }
+  }
+
+  private millOwner: string | null = null
   private millTimer: Phaser.Time.TimerEvent | null = null
   private millView: { mended: boolean; frame: number; turns: number; x: number; y: number } | null = null
 
@@ -358,7 +390,7 @@ export class VillageLayer {
    * lashings, an iron band) and turns smooth and a little quicker.
    */
   private millWheel(): void {
-    const m = this.deps.world.mill
+    const m = this.deps.world.open ? this.townFeatures()?.mill : this.deps.world.mill
     if (!m) return
     const mended = this.village.hasWorldFlag('project:mill-wheel:complete')
     const keys = millWheelKeys(mended)
@@ -367,6 +399,7 @@ export class VillageLayer {
     const froth = this.add(this.scene.add.image(m.wheel.x + 6, m.wheel.y + 12, 'mill-froth-0').setDepth(depth + 1).setAlpha(0.85))
     const view = { mended, frame: 0, turns: 0, x: m.wheel.x, y: m.wheel.y }
     this.millView = view
+    this.millOwner = this.drawingChunk
     if (this.deps.reducedMotion) return
     let step = 0
     let hold = 0
@@ -377,6 +410,7 @@ export class VillageLayer {
         if (!wheel.active) return
         if (hold > 0) {
           hold--
+          if (!hold) wheel.setY(m.wheel.y)
           return
         }
         step++
@@ -388,10 +422,14 @@ export class VillageLayer {
         if (!mended && step % 6 === 0) {
           hold = 3
           wheel.setY(m.wheel.y + 1)
-          this.scene.time.delayedCall(570, () => wheel.active && wheel.setY(m.wheel.y))
         }
       }
     })
+    this.trackTimer(this.millTimer)
+  }
+
+  private trackTimer(timer: Phaser.Time.TimerEvent): void {
+    if (this.drawingChunk) this.chunks.get(this.drawingChunk)?.timers.push(timer)
   }
 
   private villageChanges(): void {
@@ -481,9 +519,11 @@ export class VillageLayer {
     const d = this.village.calendar
     const key = `${d.wickNumber}:${d.day}:${this.deps.world.areaId}`
     if (greeted.has(key)) return
-    greeted.add(key)
-    this.scene.time.delayedCall(1800, () => {
-      if (!this.scene.sys.isActive()) return
+    this.greetingTimer?.remove()
+    this.greetingTimer = this.scene.time.delayedCall(1800, () => {
+      this.greetingTimer = null
+      if (!this.scene.sys.isActive() || greeted.has(key)) return
+      greeted.add(key)
       bus.emit(EV.toast, { text: `${name}. ${FESTIVAL_NOTES[name] ?? ''}`.trim(), icon: 'lantern' })
     })
   }

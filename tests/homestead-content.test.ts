@@ -58,14 +58,14 @@ test('Commons and homesteads are safe, Wilds is unsafe, and home rest retains ea
   // The Commons is outdoors since the join: the arch's spot (anchor commons:arch).
   const state = { ...createNewGame(), area: 'outdoors', position: { x: 40, y: 424 }, hp: 0, glims: 4, xpGlims: 0 };
   assert.ok(isSafeBoundary(state));
-  assert.ok(isSafeBoundary({ ...state, area: 'home:3' }));
+  assert.ok(isSafeBoundary({ ...state, area: 'outdoors', position: { x: -584, y: 904 } }));
   assert.ok(!isSafeBoundary({ ...state, position: { x: 40, y: 360 } }), 'the Tangle, over the mouth');
   assert.ok(!isSafeBoundary({ ...state, area: 'home:03' }));
   assert.equal(validateSave(state).area, 'outdoors');
   // A save from before the join, in the Commons' own pixels, is read onto the grid at the same spot.
   assert.deepEqual(validateSave({ ...state, area: 'commons', position: { x: 376, y: 40 } }).position, { x: 40, y: 424 });
   assert.equal(validateSave({ ...state, area: 'commons', position: { x: 376, y: 40 } }).area, 'outdoors');
-  assert.equal(validateSave({ ...state, area: 'home:12' }).area, 'home:12');
+  assert.equal(validateSave({ ...state, area: 'home:12' }).area, 'outdoors');
   assert.throws(() => validateSave({ ...state, area: 'home:-1' }));
   const refused = checkSpend(state, { kind: 'home-rest' }, { imported: true });
   assert.equal(refused.ok, false);
@@ -75,7 +75,7 @@ test('Commons and homesteads are safe, Wilds is unsafe, and home rest retains ea
 });
 
 test('gate tiles are where the Commons map draws them (same table as the Go test)', () => {
-  const want = [[19, 9], [28, 9], [19, 13], [28, 13], [19, 28], [28, 28], [19, 33], [28, 33], [19, 38], [28, 38], [19, 43]];
+  const want = [[-61,43],[-37,43],[-61,67],[-37,67],[-61,91],[-37,91],[-61,115],[-37,115]];
   want.forEach(([tx, ty], g) => assert.deepEqual([gateTile(g).tx, gateTile(g).ty], [tx, ty], `gate ${g}`));
   assert.equal(HOMESTEAD_DATA.commons.tileSize, 16);
 });
@@ -100,7 +100,7 @@ test('the local placement check mirrors the server rules', () => {
   assert.equal(checkPlacement(home, fern, 'outdoor', s.x - 3, s.y + 3, 0), null);
   assert.equal(checkPlacement(home, fern, 'outdoor', HOMESTEAD_DATA.land.width, 0, 0), 'out-of-bounds');
   assert.equal(checkPlacement(home, fern, 'outdoor', s.x, s.y, 0), 'placement-overlap'); // the home site
-  assert.equal(checkPlacement(home, fern, 'outdoor', 2, 2, 0), 'unlit');
+  assert.equal(checkPlacement(home, fern, 'outdoor', 2, 2, 0), 'placement-overlap');
   assert.equal(checkPlacement(home, fern, 'indoor', 0, 1, 0), 'placement-overlap'); // the chair
   assert.equal(checkPlacement(home, fern, 'indoor', 5, 9, 0), 'placement-overlap'); // the doorway
   assert.equal(checkPlacement(home, chair, 'outdoor', 0, 0, 0), 'invalid-placement');
@@ -122,4 +122,21 @@ test('Silas’s Yard: buildings come from the content flag, in a section of thei
   // A flag on another row moves it, and a building the bench makes isn't sold.
   const data = { ...HOMESTEAD_DATA, items: HOMESTEAD_DATA.items.map((i) => (i.id === 'wooden-stool' ? { ...i, building: true } : i.id === HOMESTEAD_DATA.stable.item ? { ...i, craftOnly: true } : i)) };
   assert.deepEqual(shopSections(data).buildings.map((i) => i.id), ['wooden-stool']);
+});
+
+test('lot geometry agrees with authored footprint and the public lane is outside private services', async () => {
+  const { PLACES } = await import('../src/lib/places.ts');
+  const { lotOrigin, lotAt, lotAtPixel } = await import('../src/lib/lots.ts');
+  const place = PLACES.fixed.find((p) => p.id === 'homestead-lots')!;
+  assert.deepEqual({ tx: place.origin.tx, ty: place.origin.ty }, { tx: -72, ty: 24 });
+  assert.equal(place.revision, 2);
+  assert.equal(place.width, 2);
+  assert.equal(place.height, 4);
+  for (let gate=0;gate<8;gate++) {
+    const o=lotOrigin(gate);
+    assert.equal(lotAt(o.tx/24,o.ty/24),gate);
+    for (const [x,y,want] of [[11,19,gate],[12,19,gate],[3,18,gate],[20,2,gate],[11,20,null],[22,10,null],[3,19,null],[2,10,null]]) {
+      assert.equal(lotAtPixel((o.tx+x!)*16+8,(o.ty+y!)*16+8),want);
+    }
+  }
 });

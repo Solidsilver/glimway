@@ -1,4 +1,5 @@
-import { anchor, at, resolve } from '../../lib/location.ts'
+import { onSceneEnd } from '../scene-end.ts'
+import { anchor, at, contentPosition } from '../../lib/location.ts'
 /**
  * Where the quest goal is, shown rather than told: the HUD's needle turns
  * toward it (EV.goalDir), and when it's off screen a small lantern glint
@@ -10,7 +11,7 @@ import { anchor, at, resolve } from '../../lib/location.ts'
  * `where` (docs/design/indoors.md 5.5). In the goal's own area the guide
  * points at the goal itself (Mara, the route stone, the warden, the sponge
  * bowl). Anywhere else it points at the way out that leads toward it, by
- * the road's areas: Hearthwick sits between Brackenwood and the Commons,
+ * the road's areas: Hearthwick links Brackenwood, the lots and the Tangle,
  * Brackenwood leads to the ruin, and each room opens off its parent (the
  * mill loft is two steps from the square). A resident's place is the
  * cycle's: the needle points at the mill door while Finn is in.
@@ -42,15 +43,14 @@ import { questPlace, questPointHere } from '../goal-route'
  * came. The Wilds are one place, through the Commons arch.
  */
 const ROAD: Record<string, string[]> = {
-  village: ['woodland', 'commons'],
-  woodland: ['village', 'ruin'],
+  hearthwick: ['woodland', 'home', 'other-home', 'tangle'],
+  woodland: ['hearthwick', 'ruin'],
   ruin: ['woodland'],
-  commons: ['village', 'home', 'tangle'],
-  home: ['commons', 'cottage'],
+  home: ['hearthwick', 'cottage'],
   cottage: ['home'],
-  'other-home': ['commons', 'other-cottage'],
+  'other-home': ['hearthwick', 'other-cottage'],
   'other-cottage': ['other-home'],
-  tangle: ['commons', 'whitequiet', 'beyond'],
+  tangle: ['hearthwick', 'whitequiet', 'beyond'],
   whitequiet: ['tangle', 'beyond'],
   beyond: ['tangle', 'whitequiet']
 }
@@ -64,9 +64,9 @@ for (const { id } of ROOMS.rooms) {
 
 /** Where each "How do I…?" step's place is (src/content/guides.ts GuideWhere); a person's is their hour's (WHERE_PERSON). */
 const WHERE_PLACE: Record<GuideWhere, string> = {
-  silas: 'commons',
+  silas: 'hearthwick',
   pell: 'in:commons:yard:deeds',
-  gate: 'commons',
+  gate: 'hearthwick',
   door: 'home',
   mailbox: 'home',
   bench: 'cottage',
@@ -117,7 +117,7 @@ export interface GoalGuideDeps {
   marked: (id: string) => boolean
   /** Whose homestead this is (null: not a homestead), and a guide step's point here. */
   placeKind: () => 'home' | 'cottage' | 'other-home' | 'other-cottage' | null
-  guidePoint: (where: GuideWhere) => { x: number; y: number } | null
+  guidePoint: (where: GuideWhere | 'lane') => { x: number; y: number } | null
   reducedMotion: boolean
 }
 
@@ -141,7 +141,7 @@ export class GoalGuide {
     this.mark = scene.add.image(0, 0, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffc860).setVisible(false)
     // Read-only, for playtests: what the guide points at, whether the edge glint shows, and what glows.
     expose('__fsGoal', () => ({ target: this.target(), dir: this.last, glint: this.glow.visible, glow: this.mark.visible ? this.marking : null }), scene)
-    scene.events.once('shutdown', () => {
+    onSceneEnd(scene, () => {
       this.glow.destroy()
       this.chevron.destroy()
       this.mark.destroy()
@@ -154,7 +154,8 @@ export class GoalGuide {
     const id = String(this.deps.world.areaId)
     if (id === 'outdoors') {
       const p = this.deps.position?.() ?? { x: 0, y: 0 }
-      return at(id, p.x, p.y).id
+      const place = at(id, p.x, p.y).id
+      return place.startsWith('lot:') ? this.deps.placeKind() ?? 'hearthwick' : place
     }
     if (id.startsWith('chunk:')) return 'tangle'
     return this.deps.placeKind() ?? id
@@ -194,8 +195,12 @@ export class GoalGuide {
   /** The way out of this place that gets closest to `goal`. */
   private wayToward(goal: string): { x: number; y: number; here: false } | null {
     const from = this.place()
+    if ((from === 'home' || from === 'other-home') && steps('hearthwick', goal) < steps(from, goal)) {
+      const lane = this.deps.guidePoint('lane')
+      if (lane) return { ...lane, here: false }
+    }
     // Out of the Commons to your own land: your gate on the lane, not an exit.
-    if (from === 'commons' && steps('home', goal) < steps('commons', goal)) {
+    if (from === 'hearthwick' && steps('home', goal) < steps('hearthwick', goal)) {
       const g = this.deps.guidePoint('gate')
       if (g) return { ...g, here: false }
     }
@@ -214,7 +219,7 @@ export class GoalGuide {
       const door = room.doors.find((d) => d.kind === 'door' && d.to === space && d.outside)
       if (!door?.outside) continue
       const n = steps(room.id, goal)
-      const t = resolve(space, door.outside.tx, door.outside.ty)
+      const t = contentPosition(space, door.outside.tx, door.outside.ty)
       if (n < bestSteps) {
         bestSteps = n
         best = { x: (t.tx + 0.5) * TILE, y: (t.ty + 0.5) * TILE }
@@ -222,9 +227,13 @@ export class GoalGuide {
     }
     // On the open map the Commons and the Tangle meet at the arch: walked, not an exit.
     if (here === 'outdoors') {
-      const arch = anchor('commons:arch')
+      if (from === 'hearthwick' && steps('woodland', goal) < steps(from, goal)) {
+        const east = anchor('hearthwick:east-road')!
+        return { x: east.x, y: east.y, here: false }
+      }
+      const arch = anchor('hearthwick:arch')
       const mouth = gateTiles()
-      for (const [node, x, y] of [['commons', arch?.x, arch?.y], ['tangle', (mouth.tx + mouth.tw / 2) * TILE, mouth.ty * TILE]] as const) {
+      for (const [node, x, y] of [['hearthwick', arch?.x, arch?.y], ['tangle', (mouth.tx + mouth.tw / 2) * TILE, mouth.ty * TILE]] as const) {
         if (node === from || x === undefined || y === undefined) continue
         const n = steps(node, goal)
         if (n < bestSteps) {

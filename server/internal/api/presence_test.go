@@ -47,7 +47,7 @@ func TestPresenceLogsExcludeSecrets(t *testing.T) {
 	x.api.Config.Logger = log.New(logs, "", 0)
 	ts := startPresence(t, x, presenceTestConfig())
 	w := wsConnect(t, ts, c, s.Lease)
-	w.join("village")
+	w.join("in:village:library")
 	h := http.Header{"Origin": []string{ts.URL}, "Cookie": []string{c.String()}}
 	conn, _, err := websocket.Dial(context.Background(), "ws"+strings.TrimPrefix(ts.URL, "http")+"/ws?lease="+s.Lease, &websocket.DialOptions{HTTPHeader: h, Subprotocols: []string{presenceProtocol}})
 	if conn != nil {
@@ -319,11 +319,11 @@ func TestPresenceRoomsAvatarsAndMemoryOnly(t *testing.T) {
 	before := s.Snapshot
 	ledger := count(t, x.db, "SELECT count(*) FROM ledger")
 	a := wsConnect(t, ts, c, s.Lease)
-	if len(a.join("village").Players) != 0 {
+	if len(a.join("in:village:library").Players) != 0 {
 		t.Fatal("nonempty room")
 	}
 	bob := wsConnect(t, ts, bc, b.Lease)
-	roster := bob.join("village")
+	roster := bob.join("in:village:library")
 	if len(roster.Players) != 1 || roster.Players[0].AccountID != x.account("alice") || roster.Players[0].DisplayName != "Hero" || roster.Players[0].Avatar == nil {
 		t.Fatal("roster metadata", roster.Raw)
 	}
@@ -335,7 +335,7 @@ func TestPresenceRoomsAvatarsAndMemoryOnly(t *testing.T) {
 		t.Fatal("private data relayed")
 	}
 	outsider := wsConnect(t, ts, oc, o.Lease)
-	if len(outsider.join("village").Players) != 0 {
+	if len(outsider.join("in:village:library").Players) != 0 {
 		t.Fatal("cross-world roster")
 	}
 	a.none()
@@ -405,9 +405,9 @@ func TestPresenceTakeoverReplacementAndGrace(t *testing.T) {
 	bc, b := x.member("bob", s.WorldID)
 	ts := startPresence(t, x, presenceTestConfig())
 	a := wsConnect(t, ts, c, s.Lease)
-	a.join("village")
+	a.join("in:village:library")
 	bob := wsConnect(t, ts, bc, b.Lease)
-	bob.join("village")
+	bob.join("in:village:library")
 	a.expect("join")
 	replacement := wsConnect(t, ts, c, s.Lease)
 	replacement.expect("room")
@@ -431,7 +431,7 @@ func TestPresenceTakeoverReplacementAndGrace(t *testing.T) {
 	stale := wsAuthenticate(t, ts, c, s.Lease)
 	stale.closeStatus(presenceSuperseded)
 	next := wsConnect(t, ts, c, taken.Lease)
-	if len(next.join("village").Players) != 1 {
+	if len(next.join("in:village:library").Players) != 1 {
 		t.Fatal("new lease room")
 	}
 	bob.expect("join")
@@ -446,9 +446,9 @@ func TestPresenceRateLimitsAndEmotes(t *testing.T) {
 	bc, b := x.member("bob", s.WorldID)
 	ts := startPresence(t, x, presenceTestConfig())
 	a := wsConnect(t, ts, c, s.Lease)
-	a.join("village")
+	a.join("in:village:library")
 	bob := wsConnect(t, ts, bc, b.Lease)
-	bob.join("village")
+	bob.join("in:village:library")
 	a.expect("join")
 	start := time.Now()
 	for i := 0; i < 40; i++ {
@@ -497,7 +497,7 @@ func TestPresenceJoinInsideTheCooldownWaitsForItsEnd(t *testing.T) {
 	a := wsConnect(t, ts, c, s.Lease)
 	a.join("in:commons:yard:deeds")
 	bob := wsConnect(t, ts, bc, b.Lease)
-	bob.join("village")
+	bob.join("in:village:library")
 	joined := time.Now()
 	// Straight on, inside the cooldown: the Commons, then the deeds room.
 	bob.send(map[string]any{"type": "join", "area": "outdoors:0:1"})
@@ -518,7 +518,7 @@ func TestPresenceJoinInsideTheCooldownWaitsForItsEnd(t *testing.T) {
 	bob.none()
 	a.none()
 	// After the cooldown a join is made at once, as before.
-	bob.send(map[string]any{"type": "join", "area": "village"})
+	bob.send(map[string]any{"type": "join", "area": "in:village:library"})
 	bob.expect("room")
 	a.expect("leave")
 }
@@ -573,7 +573,7 @@ func TestPresenceAuthentication(t *testing.T) {
 		}
 	})
 	for _, message := range []any{
-		map[string]any{"type": "join", "area": "village"},
+		map[string]any{"type": "join", "area": "in:village:library"},
 		map[string]any{"type": "auth", "lease": "short"}} {
 		conn, _, err := dialPresence(t, ts, c, ts.URL)
 		if err != nil {
@@ -605,7 +605,7 @@ func TestPresenceMessageValidation(t *testing.T) {
 		{"region-room", map[string]any{"type": "join", "area": "wilds:inner-1:0:0"}, false},
 		{"bare-wilds", map[string]any{"type": "join", "area": "outdoors"}, false},
 		{"beyond-frontier", map[string]any{"type": "join", "area": "outdoors:5:0"}, false},
-		{"south-of-the-gate", map[string]any{"type": "join", "area": "outdoors:0:3"}, false},
+		{"south-of-the-gate", map[string]any{"type": "join", "area": "outdoors:5:4"}, false},
 		{"chunk-canonical", map[string]any{"type": "join", "area": "outdoors:00:-1"}, false},
 		{"position-without-room", positionMessage(0), false},
 		{"position-bounds", positionMessage(1e7), true},
@@ -617,7 +617,7 @@ func TestPresenceMessageValidation(t *testing.T) {
 			ts := startPresence(t, x, presenceTestConfig())
 			w := wsConnect(t, ts, c, s.Lease)
 			if tc.join {
-				w.join("village")
+				w.join("in:village:library")
 			}
 			w.send(tc.message)
 			w.closeStatus(websocket.StatusPolicyViolation)
@@ -672,9 +672,9 @@ func TestPresenceConnectionAndRoomBounds(t *testing.T) {
 		cfg.MaxRoomPlayers = 1
 		ts := startPresence(t, x, cfg)
 		a := wsConnect(t, ts, c, s.Lease)
-		a.join("village")
+		a.join("in:village:library")
 		bob := wsConnect(t, ts, bc, b.Lease)
-		bob.send(map[string]any{"type": "join", "area": "village"})
+		bob.send(map[string]any{"type": "join", "area": "in:village:library"})
 		bob.closeStatus(websocket.StatusTryAgainLater)
 		a.none()
 	})
@@ -697,7 +697,7 @@ func TestPresenceIdleAndHeartbeat(t *testing.T) {
 		active.send(map[string]any{"type": "heartbeat"})
 		time.Sleep(40 * time.Millisecond)
 	}
-	active.join("village")
+	active.join("in:village:library")
 }
 
 func TestPresencePongTimeout(t *testing.T) {
@@ -789,7 +789,7 @@ func TestPresenceAuthDeadlineAndHTTPDeadlines(t *testing.T) {
 		t.Cleanup(func() { x.api.ClosePresence(); ts.Close() })
 		w := wsConnect(t, ts, c, s.Lease)
 		time.Sleep(100 * time.Millisecond)
-		w.join("village")
+		w.join("in:village:library")
 	})
 	t.Run("origin-required", func(t *testing.T) {
 		x := newRig(t)
@@ -826,9 +826,9 @@ func TestPresenceWildsPositionsStayInsideTheFrontier(t *testing.T) {
 	const chunk = 24 * 16
 	for name, p := range map[string][2]float64{
 		"east":  {5*chunk + 8, -chunk + 8},
-		"west":  {-4*chunk - 8, -chunk + 8},
+		"west":  {-6*chunk - 8, -chunk + 8},
 		"north": {8, -8*chunk - 8},
-		"south": {8, 3*chunk + 8},
+		"south": {2*chunk + 8, 8*chunk + 8},
 	} {
 		a.send(at(p[0], p[1]))
 		select {
@@ -853,7 +853,7 @@ func TestPresenceExpiredTimerMustNotConsumeNewPendingJoin(t *testing.T) {
 	h := newPresenceHub(nil, nil)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	p := &presencePeer{identity: presenceIdentity{ID: "alice", World: "world"}, ctx: ctx, cancel: cancel, queue: make(chan []byte, 64), area: "village", clientJoined: true, lastJoin: time.Now()}
+	p := &presencePeer{identity: presenceIdentity{ID: "alice", World: "world"}, ctx: ctx, cancel: cancel, queue: make(chan []byte, 64), area: "in:village:library", clientJoined: true, lastJoin: time.Now()}
 	h.admit(p)
 	a := &Server{presence: h}
 	h.mu.Lock()
@@ -861,7 +861,7 @@ func TestPresenceExpiredTimerMustNotConsumeNewPendingJoin(t *testing.T) {
 	// Hold the hub lock past the cooldown: callback is due but cannot run.
 	time.Sleep(520 * time.Millisecond)
 	a.presenceJoin(p, "in:commons:yard:deeds", time.Now())
-	a.deferPresenceJoin(p, "village", 500*time.Millisecond)
+	a.deferPresenceJoin(p, "in:village:library", 500*time.Millisecond)
 	h.mu.Unlock()
 	time.Sleep(40 * time.Millisecond)
 	h.mu.Lock()
@@ -869,7 +869,7 @@ func TestPresenceExpiredTimerMustNotConsumeNewPendingJoin(t *testing.T) {
 	timer := p.joinTimer
 	pending := p.pendingJoin
 	h.mu.Unlock()
-	if got != "in:commons:yard:deeds" || timer == nil || pending != "village" {
+	if got != "in:commons:yard:deeds" || timer == nil || pending != "in:village:library" {
 		t.Fatalf("old timer consumed new pending join before its 500ms cooldown: area=%s", got)
 	}
 	// The stale callback must not clear the new timer: it still joins later.
@@ -879,7 +879,7 @@ func TestPresenceExpiredTimerMustNotConsumeNewPendingJoin(t *testing.T) {
 		area := p.area
 		timer := p.joinTimer
 		h.mu.Unlock()
-		if area == "village" && timer == nil {
+		if area == "in:village:library" && timer == nil {
 			break
 		}
 		if time.Now().After(deadline) {
@@ -899,16 +899,16 @@ func TestPresenceDeferredAreaJoinKeepsFinalPosition(t *testing.T) {
 	cfg.JoinCooldownMs = 500
 	ts := startPresence(t, x, cfg)
 	oldRoom := wsConnect(t, ts, bc, b.Lease)
-	oldRoom.join("village")
+	oldRoom.join("in:village:library")
 	destination := wsConnect(t, ts, cc, carol.Lease)
 	destination.join("outdoors:0:1")
 	w := wsConnect(t, ts, c, s.Lease)
-	w.join("village")
+	w.join("in:village:library")
 	oldRoom.expect("join")
 	// A fresh client after a fast reload has a fresh pacing clock; the server
 	// inherits lastJoin from the replaced same-lease socket.
 	w = wsConnect(t, ts, c, s.Lease)
-	if inherited := w.expect("room"); inherited.Area != "village" {
+	if inherited := w.expect("room"); inherited.Area != "in:village:library" {
 		t.Fatal(inherited.Raw)
 	}
 	oldRoom.expect("join")
@@ -947,7 +947,7 @@ func TestPresencePendingJoinDoesNotResurrectAfterImmediateJoin(t *testing.T) {
 	h := newPresenceHub(nil, nil)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	p := &presencePeer{identity: presenceIdentity{ID: "alice", World: "world"}, ctx: ctx, cancel: cancel, queue: make(chan []byte, 64), area: "village", clientJoined: true}
+	p := &presencePeer{identity: presenceIdentity{ID: "alice", World: "world"}, ctx: ctx, cancel: cancel, queue: make(chan []byte, 64), area: "in:village:library", clientJoined: true}
 	h.admit(p)
 	a := &Server{presence: h}
 	h.mu.Lock()
@@ -971,7 +971,7 @@ func TestPresencePendingJoinSkipsStoppedOrReplacedPeer(t *testing.T) {
 			h := newPresenceHub(nil, nil)
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			p := &presencePeer{identity: presenceIdentity{ID: "alice", World: "world"}, ctx: ctx, cancel: cancel, queue: make(chan []byte, 64), area: "village", clientJoined: true}
+			p := &presencePeer{identity: presenceIdentity{ID: "alice", World: "world"}, ctx: ctx, cancel: cancel, queue: make(chan []byte, 64), area: "in:village:library", clientJoined: true}
 			h.admit(p)
 			a := &Server{presence: h}
 			h.mu.Lock()
@@ -993,7 +993,7 @@ func TestPresencePendingJoinSkipsStoppedOrReplacedPeer(t *testing.T) {
 			pending := p.pendingJoin
 			pos := p.pendingJoinPos
 			h.mu.Unlock()
-			if got != "village" || timer != nil || pending != "" || pos != nil {
+			if got != "in:village:library" || timer != nil || pending != "" || pos != nil {
 				t.Fatalf("inactive peer joined: %s timer=%v", got, timer)
 			}
 		})
@@ -1004,8 +1004,8 @@ func TestPresenceDeferredRoomFullDoesNotLeaveOrJoin(t *testing.T) {
 	h := newPresenceHub(nil, nil)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	p := &presencePeer{identity: presenceIdentity{ID: "alice", World: "world"}, ctx: ctx, cancel: cancel, queue: make(chan []byte, 64), area: "village", clientJoined: true}
-	observer := &presencePeer{identity: presenceIdentity{ID: "observer", World: "world"}, ctx: ctx, queue: make(chan []byte, 64), area: "village"}
+	p := &presencePeer{identity: presenceIdentity{ID: "alice", World: "world"}, ctx: ctx, cancel: cancel, queue: make(chan []byte, 64), area: "in:village:library", clientJoined: true}
+	observer := &presencePeer{identity: presenceIdentity{ID: "observer", World: "world"}, ctx: ctx, queue: make(chan []byte, 64), area: "in:village:library"}
 	h.admit(p)
 	h.admit(observer)
 	for i := 0; i < int(h.config.GetMaxRoomPlayers()); i++ {
@@ -1022,7 +1022,7 @@ func TestPresenceDeferredRoomFullDoesNotLeaveOrJoin(t *testing.T) {
 	cancelled := p.ctx.Err() != nil
 	events := len(observer.queue)
 	h.mu.Unlock()
-	if area != "village" || code != websocket.StatusTryAgainLater || !cancelled || events != 0 {
+	if area != "in:village:library" || code != websocket.StatusTryAgainLater || !cancelled || events != 0 {
 		t.Fatalf("room-full: area=%s code=%v cancelled=%v observer events=%d", area, code, cancelled, events)
 	}
 }
@@ -1068,12 +1068,12 @@ func TestPresenceDeferredFirstSameRoomJoinReannouncesFights(t *testing.T) {
 }
 
 func TestPresenceReplacingPendingAreaDiscardsItsPosition(t *testing.T) {
-	for _, replace := range []string{"same-pending", "deeds", "village"} {
+	for _, replace := range []string{"same-pending", "deeds", "in:village:library"} {
 		t.Run(replace, func(t *testing.T) {
 			h := newPresenceHub(nil, nil)
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			p := &presencePeer{identity: presenceIdentity{ID: "alice", World: "world"}, ctx: ctx, cancel: cancel, queue: make(chan []byte, 64), area: "village", clientJoined: true}
+			p := &presencePeer{identity: presenceIdentity{ID: "alice", World: "world"}, ctx: ctx, cancel: cancel, queue: make(chan []byte, 64), area: "in:village:library", clientJoined: true}
 			h.admit(p)
 			a := &Server{presence: h}
 			h.mu.Lock()

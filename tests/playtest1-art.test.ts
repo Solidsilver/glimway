@@ -7,7 +7,7 @@ import { tileFeet } from '../src/lib/tile.ts'
 import { facingOf } from '../src/game/people.ts'
 import { buildArea } from '../src/game/worlds.ts'
 import { TERRAIN } from '../src/lib/tile.ts'
-import { servedCommonsFixture } from './commons-fixture.ts'
+import { servedCommonsFixture, servedTownFixture } from './commons-fixture.ts'
 
 // The Commons is the server's: these tests stand on its served chunks.
 
@@ -82,7 +82,7 @@ test('flatten: evens out broad shading, keeps detail', () => {
 })
 
 test('ground: base tiles are stable by position, accents sparse', () => {
-  const w = buildArea('village')
+  const w = servedTownFixture()
   const grid = classGrid(w.ground)
   const pick = () => w.ground.map((row, y) => row.map((id, x) => baseTile(id, grid[y][x], x, y)))
   assert.deepEqual(pick(), pick(), 'the same tiles every time')
@@ -114,9 +114,9 @@ test('ground: the Commons square is flagstones, stray cobbles on the lane are ro
 })
 
 test('ground: neighbouring edge tiles agree on the texels at their shared border', () => {
-  for (const area of ['village', 'commons'] as const) {
+  for (const area of ['hearthwick', 'commons'] as const) {
     // The Commons is fixed ground on the open map: its served layout.
-    const w = area === 'commons' ? servedCommonsFixture() : buildArea(area)
+    const w = area === 'commons' ? servedCommonsFixture() : servedCommonsFixture()
     const g = classGrid(w.ground)
     const k = 2
     const m = 3
@@ -180,7 +180,8 @@ function routeTiles(home: { tx: number; ty: number }, steps: readonly Step[]): {
 
 test('routines: every leg crosses open ground (no walls, props, trees or people) and comes home', () => {
   for (const [area, routines] of Object.entries(ROUTINES)) {
-    const w = buildArea(area as 'village')
+    if (area === 'village') continue // Legacy builder stays until T5; outdoor content posts moved to town.
+    const w = area === 'hearthwick' ? servedTownFixture() : buildArea(area as 'village')
     const blocked = new Set<string>()
     for (const t of [...w.trees, ...w.bushes, ...w.rocks, ...w.props]) blocked.add(`${t.tx},${t.ty}`)
     for (const [id, steps] of Object.entries(routines)) {
@@ -198,8 +199,8 @@ test('routines: every leg crosses open ground (no walls, props, trees or people)
 })
 
 test('routines: a resident strolls when you are away and is home by the time you are near', () => {
-  const home = tileFeet(12, 15)
-  const routine = ROUTINES.village.hazel
+  const home = tileFeet(11, 63)
+  const routine = ROUTINES.hearthwick.hazel
   const w = newWalker(home)
   const far = { x: home.x + 300, y: home.y }
   const seen = new Set<string>()

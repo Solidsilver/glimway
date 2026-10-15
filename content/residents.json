@@ -13,9 +13,9 @@
           "ty": 6
         },
         "square": {
-          "area": "village",
-          "tx": 12,
-          "ty": 15
+          "area": "hearthwick",
+          "tx": 11,
+          "ty": 63
         }
       },
       "cycle": [
@@ -45,9 +45,9 @@
           "ty": 5
         },
         "door": {
-          "area": "village",
+          "area": "hearthwick",
           "tx": 30,
-          "ty": 23
+          "ty": 77
         }
       },
       "cycle": [
@@ -69,9 +69,9 @@
       "id": "ada",
       "spots": {
         "window": {
-          "area": "village",
-          "tx": 35,
-          "ty": 8
+          "area": "hearthwick",
+          "tx": 32,
+          "ty": 55
         }
       },
       "cycle": [
@@ -93,9 +93,9 @@
           "seated": true
         },
         "camp": {
-          "area": "commons",
-          "tx": 26,
-          "ty": 5
+          "area": "hearthwick",
+          "tx": 6,
+          "ty": 27
         }
       },
       "cycle": [
@@ -120,9 +120,9 @@
           "ty": 2
         },
         "yard": {
-          "area": "commons",
-          "tx": 48,
-          "ty": 19
+          "area": "hearthwick",
+          "tx": 29,
+          "ty": 36
         }
       },
       "cycle": [

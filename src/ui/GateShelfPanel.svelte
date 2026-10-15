@@ -16,6 +16,7 @@
   import { ui } from './store.svelte'
   import { glimsCount, shelfCopy } from '../content/purse'
   import { parseAmount } from '../lib/purse'
+  import { lotAtPixel } from '../lib/lots'
 
   let { session, gate = 0, onClose }: { session: Session; gate?: number; onClose: () => void } = $props()
 
@@ -189,6 +190,11 @@
 
   async function removeShelf(): Promise<void> {
     if (!shelfItem) return
+    const { area, position } = session.state
+    if (area !== 'outdoors' || lotAtPixel(position.x, position.y) !== gate) {
+      action.say('Step inside your gate to put the shelf away.', 'error')
+      return
+    }
     const itemId = shelfItem.id
     const r = await action.run('remove', () => homes.act({ op: 'remove', itemId }), 'Gift shelf put away.')
     if (r?.ok) setTimeout(onClose, 800)

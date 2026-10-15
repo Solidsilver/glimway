@@ -157,7 +157,9 @@ func (a *Server) shelfMutation(w http.ResponseWriter, r *http.Request) error {
 	if err := decodeOp(w, r, &req); err != nil {
 		return err
 	}
+	var changedWorld string
 	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+		changedWorld = s.WorldID
 		if err := settleHomes(ctx, tx, s.WorldID, now); err != nil {
 			return nil, err
 		}
@@ -404,5 +406,5 @@ func (a *Server) shelfMutation(w http.ResponseWriter, r *http.Request) error {
 		default:
 			return nil, fail(400, "invalid-operation")
 		}
-	})
+	}, func() { a.homeChanged(changedWorld, int(req.Gate)) })
 }

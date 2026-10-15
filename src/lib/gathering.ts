@@ -1,3 +1,4 @@
+import { lotAtPixel } from './lots.ts';
 import { at } from './location.ts';
 /**
  * Gathering rules, caps, targets and yields (content/gathering.json; docs/items/).
@@ -51,7 +52,8 @@ export function gatheringTarget(id: string): GatheringTarget | undefined {
 /** Whether a place (a progress area) has pieces of a target at all (the server checks the same). */
 export function gatheringOffered(area: string, target: string, position = { x: 0, y: 0 }): boolean {
   const place = at(area, position.x, position.y);
-  const kind = area.startsWith('home:') ? 'home' : area === 'outdoors' ? (place.source.kind === 'generated' ? 'wilds' : place.id) : place.id;
+  if (place.id.startsWith('lot:') && lotAtPixel(position.x, position.y) === null) return false;
+  const kind = place.id.startsWith('lot:') ? 'home' : area === 'outdoors' ? (place.source.kind === 'generated' ? 'wilds' : place.id) : place.id;
   return (GATHERING_DATA.areas[kind]?.targets ?? []).includes(target);
 }
 
@@ -111,8 +113,10 @@ export function swingPlan(action: string, tool: ToolFeel): { swings: number; ms:
 
 /** Where the woods can be worked: the Tangle and the Whitequiet, the woods, home land, and the village's water (in season). */
 export function gatherArea(area: string, position = { x: 0, y: 0 }): boolean {
+  if (area.startsWith('in:')) return false;
   const place = at(area, position.x, position.y);
-  return (area === 'outdoors' && place.source.kind === 'generated') || ['woodland', 'village', 'commons'].includes(place.id) || place.rest === 'home';
+  if (place.id.startsWith('lot:') && lotAtPixel(position.x, position.y) === null) return false;
+  return (area === 'outdoors' && place.source.kind === 'generated') || ['woodland', 'hearthwick'].includes(place.id) || place.id.startsWith('lot:');
 }
 
 /**
@@ -122,7 +126,7 @@ export function gatherArea(area: string, position = { x: 0, y: 0 }): boolean {
  * come back when you leave and return.
  */
 export function keepsWork(area: string, lit: boolean): boolean {
-  return area.startsWith('home:') && lit;
+  return (area.startsWith('home:') || area.startsWith('lot:')) && lit;
 }
 
 /** The button word for a gathering action (the touch action button); a target's own word wins. */
@@ -240,4 +244,18 @@ export function wearLine(wear: { broke: boolean; state: string; wornOut: readonl
   }
   if (wear.wornOut.length) return `${wear.wornOut.map(fittingName).join(' and ').replace(/^t/, 'T')} wore away.`;
   return null;
+}
+
+/** An authored piece, measured from the hero's feet just as the server does. */
+export function fixedGatherAt(position: { x: number; y: number }, tile: readonly number[], target: string, objects: readonly { kind: string; target: string; tx: number; ty: number }[]): boolean {
+  if (tile.length !== 2) return false;
+  const [tx, ty] = tile as readonly [number, number];
+  return Math.hypot(position.x - (tx * 16 + 8), position.y - 8 - (ty + 1) * 16) <= 48 && objects.some((o) => o.kind === 'gather' && o.target === target && o.tx === tx && o.ty === ty);
+}
+
+/** Action labels follow target semantics rather than matching authored English. */
+export function gatheringLabel(target: string, authored: string): string {
+  const noun = ({ tree: 'tree', boulder: 'boulder', stump: 'stump' } as Record<string, string>)[target];
+  const action = gatheringTarget(target)?.action;
+  return noun && action ? `${gatheringVerb(action)} the ${noun}` : authored;
 }

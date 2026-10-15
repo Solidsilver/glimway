@@ -165,9 +165,8 @@
       ]
     },
     {
-      "name": "placed-below-map",
-      "valid": false,
-      "rule": "paper.placed",
+      "name": "placed-negative-world-tile",
+      "valid": true,
       "edits": [
         {
           "path": [
@@ -389,6 +388,118 @@
           "value": {
             "kind": "placed",
             "area": "ruin"
+          }
+        }
+      ]
+    },
+    {
+      "name": "placed-tx--1048577",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "papers",
+            0,
+            "source"
+          ],
+          "value": "placed"
+        },
+        {
+          "path": [
+            "papers",
+            0,
+            "rule"
+          ],
+          "value": {
+            "kind": "placed",
+            "area": "hearthwick",
+            "tx": -1048577,
+            "ty": 61
+          }
+        }
+      ]
+    },
+    {
+      "name": "placed-tx-1048577",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "papers",
+            0,
+            "source"
+          ],
+          "value": "placed"
+        },
+        {
+          "path": [
+            "papers",
+            0,
+            "rule"
+          ],
+          "value": {
+            "kind": "placed",
+            "area": "hearthwick",
+            "tx": 1048577,
+            "ty": 61
+          }
+        }
+      ]
+    },
+    {
+      "name": "placed-ty--1048577",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "papers",
+            0,
+            "source"
+          ],
+          "value": "placed"
+        },
+        {
+          "path": [
+            "papers",
+            0,
+            "rule"
+          ],
+          "value": {
+            "kind": "placed",
+            "area": "hearthwick",
+            "tx": -8,
+            "ty": -1048577
+          }
+        }
+      ]
+    },
+    {
+      "name": "placed-ty-1048577",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "papers",
+            0,
+            "source"
+          ],
+          "value": "placed"
+        },
+        {
+          "path": [
+            "papers",
+            0,
+            "rule"
+          ],
+          "value": {
+            "kind": "placed",
+            "area": "hearthwick",
+            "tx": -8,
+            "ty": 1048577
           }
         }
       ]

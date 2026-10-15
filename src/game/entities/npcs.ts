@@ -160,7 +160,7 @@ export class Npcs {
    * walkers' pose.
    */
   update(dt: number, hero: { x: number; y: number }, held: boolean): void {
-    const routines = ROUTINES[this.world.areaId] ?? {}
+    const routines = ROUTINES[this.world.open ? 'hearthwick' : this.world.areaId] ?? {}
     for (const n of this.npcs) {
       if (n.path) {
         this.stepPath(n, Math.min(dt, 0.1))

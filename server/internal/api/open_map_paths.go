@@ -105,6 +105,9 @@ func (a *Server) spotFor(ctx context.Context, tx *sql.Tx, s *store.Snapshot, x, 
 	p := &pathSpot{x: int(x), y: int(y)}
 	p.cx, p.cy = wilds.FloorDiv(p.x, S), wilds.FloorDiv(p.y, S)
 	p.lx, p.ly = p.x-p.cx*S, p.y-p.cy*S
+	if location.SourceOf(p.cx, p.cy).Kind != location.SourceGenerated {
+		return nil, fail(409, "not-in-wilds")
+	}
 	if !frontier.Inside(s.WorldID, p.cx, p.cy) {
 		return nil, fail(409, "beyond-frontier")
 	}
@@ -440,7 +443,7 @@ func (w *pathWorld) eff(cx, cy int) *chunks.Effective {
 	if v, ok := w.effs[k]; ok {
 		return v
 	}
-	if w.err != nil || !frontier.Inside(w.world, cx, cy) {
+	if w.err != nil || !frontier.Inside(w.world, cx, cy) || location.SourceOf(cx, cy).Kind != location.SourceGenerated {
 		return nil
 	}
 	e := w.ep.of(cx, cy)

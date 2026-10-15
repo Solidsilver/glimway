@@ -13,7 +13,8 @@
   import { INVENTORY_FILTERS, inventoryCopy } from '../content/inventory'
   import { beltFor, heldSlot, KIND_WORDS, type BeltKind } from '../lib/belt'
   import { GATHERING_DATA, isPlantableSeed, PLANTS_FULL_LINE } from '../lib/gathering'
-  import { parseHomeArea, plantTileNear } from '../lib/homestead'
+  import { plantTileNear } from '../lib/homestead'
+  import { lotOrigin, lotAtPixel } from '../lib/lots'
   import { ui } from './store.svelte'
   import { home } from './home.svelte'
   import { inventory } from './inventory.svelte'
@@ -320,33 +321,40 @@
     void act(`carry:${e.key}`, () => items.offHand(e.instance ? { instance: e.instance.id } : { itemDef: e.id }), inventoryCopy.carried(giftPhrase(e.id, 1)))
   }
 
+  function myLandGate(): number | null {
+    return session.state.area === 'outdoors' ? lotAtPixel(session.state.position.x, session.state.position.y) : null
+  }
+
   /** Seeds and saplings go into your own land, at your feet. */
   function plantable(e: InventoryEntry): boolean {
-    const gate = parseHomeArea(session.state.area)
+    const gate = myLandGate()
     return isPlantableSeed(e.id) && gate !== null && homes.mine?.gate === gate
   }
 
   function plantIt(e: InventoryEntry): void {
-    const gate = parseHomeArea(session.state.area)
-    const mine = homes.mine
     // Where the hero stands now (the server measures reach from the save).
     bus.emit(EV.notePosition)
+    const gate = myLandGate()
+    const mine = homes.mine
     if (mine && (mine.plants?.length ?? 0) >= GATHERING_DATA.plantsPerHome) {
       action.say(PLANTS_FULL_LINE, 'error')
       return
     }
-    const tile = mine ? plantTileNear(mine, session.state.position) : null
-    if (gate === null || !tile) {
+    const o = gate !== null && session.state.area === 'outdoors' ? lotOrigin(gate) : { tx: 0, ty: 0 }
+    const localTile = mine ? plantTileNear(mine, { x: session.state.position.x - o.tx * 16, y: session.state.position.y - o.ty * 16 }) : null
+    if (gate === null || !localTile || mine?.gate !== gate) {
       action.say(itemErrorText('land-blocked'), 'error')
       return
     }
+    const tile: [number, number] = [o.tx + localTile[0], o.ty + localTile[1]]
+    const worldId = mine.worldId
     void act(
       `plant:${e.key}`,
       () =>
         items.plant(e.id, tile).then((r) => {
           // The scene draws it now; the home's state keeps it for next time.
-          if (r.ok && r.value.plant) {
-            bus.emit(EV.planted, { plant: r.value.plant })
+          if (r.ok && r.value.plant && session.link?.worldId === worldId) {
+            bus.emit(EV.planted, { plant: r.value.plant, gate, worldId })
             void homes.fetchHome(gate)
           }
           return r

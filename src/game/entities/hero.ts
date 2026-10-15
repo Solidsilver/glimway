@@ -24,6 +24,7 @@
  */
 import { walkFactor } from '../../lib/wilds/walk'
 import Phaser from 'phaser'
+import { at } from '../../lib/location.ts'
 import { getCombatKit, SNAPSTRIKE, snapstrikeReach, type CombatKit, type KitMove } from '../../lib/combat'
 import { CombatField } from '../../lib/combat-moves'
 import { withCharm } from '../../lib/glims'
@@ -327,7 +328,7 @@ export class Hero {
     if (rest > 0 && state.hp > 0 && passiveRegenAllowed(this.deps.session.vitalsSource)) hp = Math.min(state.maxHp, hp + 2 * dt)
     if (
       passiveRegenAllowed(this.deps.session.vitalsSource) &&
-      this.deps.world.areaId === 'village' &&
+      at(this.deps.world.areaId, this.sprite.x, this.sprite.y).rest === 'village' &&
       state.hp > 0
     ) {
       hp = Math.min(state.maxHp, state.hp + 1.2 * dt)

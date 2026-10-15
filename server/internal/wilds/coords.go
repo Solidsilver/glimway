@@ -75,11 +75,30 @@ func FootprintDistance(p *content.WildsPlace, cx, cy int) int {
 	return max(dx, dy)
 }
 
-// NearestFootprint is the least FootprintDistance to any footprint.
+// FixedFootprintAt is authored ground, including the plot neighbourhood.
+// It stays separate from FootprintAt: fixed places have no generated epoch.
+func FixedFootprintAt(cx, cy int) *content.FixedPlace {
+	for _, p := range content.PlacesRules.GetFixed() {
+		x0, y0, x1, y1 := content.FixedChunks(p)
+		if cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1 {
+			return p
+		}
+	}
+	return nil
+}
+
+// NearestFootprint includes both generated footprints and authored ground.
 func NearestFootprint(cx, cy int) int {
 	d := -1
 	for _, p := range content.WildsRules.Places {
 		if e := FootprintDistance(p, cx, cy); d < 0 || e < d {
+			d = e
+		}
+	}
+	for _, p := range content.PlacesRules.GetFixed() {
+		x0, y0, x1, y1 := content.FixedChunks(p)
+		e := max(x0-cx, cx-x1, y0-cy, cy-y1, 0)
+		if d < 0 || e < d {
 			d = e
 		}
 	}
@@ -94,12 +113,12 @@ func Ring(cx, cy int) int {
 }
 
 // Tier is a chunk's tier of difficulty (decision 9): its footprint's, else
-// 2 + Ring, capped at the last content tier.
+// Tier 2 in the first ring, then rises, capped at the last content tier.
 func Tier(cx, cy int) int {
 	if p := FootprintAt(cx, cy); p != nil {
 		return int(p.GetTier())
 	}
-	return min(2+Ring(cx, cy), len(content.WildsRules.Tiers))
+	return min(2+max(Ring(cx, cy)-1, 0), len(content.WildsRules.Tiers))
 }
 
 // EpochKindAt is the epoch kind a chunk is made in: its footprint's, else
@@ -128,5 +147,15 @@ func CellPlaceID(x, y int) string { return fmt.Sprintf("place:%d:%d", x, y) }
 func FootprintCell(x, y int) bool {
 	c := content.WildsRules.GetCells()
 	n := int(c.GetCellChunks())
-	return FootprintAt(int(c.GetOriginCx())+x*n, int(c.GetOriginCy())+y*n) != nil
+	x0, y0 := int(c.GetOriginCx())+x*n, int(c.GetOriginCy())+y*n
+	if FootprintAt(x0, y0) != nil {
+		return true
+	}
+	for _, p := range content.PlacesRules.GetFixed() {
+		ax, ay, bx, by := content.FixedChunks(p)
+		if x0 <= bx && x0+n-1 >= ax && y0 <= by && y0+n-1 >= ay {
+			return true
+		}
+	}
+	return false
 }

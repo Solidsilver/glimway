@@ -1,0 +1,455 @@
+{
+  "comment": "Town rule parity: saved world pixels, gathering areas and exact authored pieces, Mill Pond reach, authored arrivals.",
+  "spawn": {
+    "area": "outdoors",
+    "x": 72,
+    "y": 968
+  },
+  "recovery": {
+    "area": "outdoors",
+    "x": 184,
+    "y": 1000
+  },
+  "cases": [
+    {
+      "name": "town square",
+      "area": "outdoors",
+      "x": 72,
+      "y": 968,
+      "rest": "village",
+      "target": "tree",
+      "gather": false,
+      "fish": false,
+      "gatherArea": true
+    },
+    {
+      "name": "apron blooms",
+      "area": "outdoors",
+      "x": 264,
+      "y": 568,
+      "rest": "village",
+      "target": "bloom-patch",
+      "gather": true,
+      "fish": false,
+      "gatherArea": true
+    },
+    {
+      "name": "north arch",
+      "area": "outdoors",
+      "x": 40,
+      "y": 392,
+      "rest": "village",
+      "target": "bloom-patch",
+      "gather": true,
+      "fish": false,
+      "gatherArea": true
+    },
+    {
+      "name": "Tangle",
+      "area": "outdoors",
+      "x": 40,
+      "y": 376,
+      "rest": "none",
+      "target": "tree",
+      "gather": true,
+      "fish": false,
+      "gatherArea": true
+    },
+    {
+      "name": "southern outskirts",
+      "area": "outdoors",
+      "x": 152,
+      "y": 1544,
+      "rest": "none",
+      "target": "pond-ice",
+      "gather": false,
+      "fish": false,
+      "gatherArea": true
+    },
+    {
+      "name": "western outskirts",
+      "area": "outdoors",
+      "x": -1544,
+      "y": 1112,
+      "rest": "none",
+      "target": "freshet-shore",
+      "gather": false,
+      "fish": false,
+      "gatherArea": true
+    },
+    {
+      "name": "public lot entrance",
+      "area": "outdoors",
+      "x": -952,
+      "y": 712,
+      "rest": "home",
+      "target": "bloom-patch",
+      "gather": false,
+      "fish": false,
+      "gatherArea": false
+    },
+    {
+      "name": "town library",
+      "area": "in:village:library",
+      "x": 80,
+      "y": 80,
+      "rest": "village",
+      "target": "tree",
+      "gather": false,
+      "fish": false,
+      "gatherArea": false
+    },
+    {
+      "name": "Yard office",
+      "area": "in:commons:yard:deeds",
+      "x": 80,
+      "y": 80,
+      "rest": "village",
+      "target": "bloom-patch",
+      "gather": false,
+      "fish": false,
+      "gatherArea": false
+    },
+    {
+      "name": "pond shore",
+      "area": "outdoors",
+      "x": 552,
+      "y": 1160,
+      "rest": "village",
+      "target": "freshet-shore",
+      "gather": true,
+      "fish": true,
+      "gatherArea": true
+    },
+    {
+      "name": "pond ice",
+      "area": "outdoors",
+      "x": 552,
+      "y": 1176,
+      "rest": "village",
+      "target": "pond-ice",
+      "gather": true,
+      "fish": true,
+      "gatherArea": true
+    },
+    {
+      "name": "exact cast radius",
+      "area": "outdoors",
+      "x": 552,
+      "y": 1136,
+      "rest": "village",
+      "target": "tree",
+      "gather": false,
+      "fish": true,
+      "gatherArea": true
+    },
+    {
+      "name": "outside cast radius",
+      "area": "outdoors",
+      "x": 552,
+      "y": 1135.99,
+      "rest": "village",
+      "target": "tree",
+      "gather": false,
+      "fish": false,
+      "gatherArea": true
+    },
+    {
+      "name": "legacy village is not the pond place",
+      "area": "village",
+      "x": 552,
+      "y": 1160,
+      "rest": "none",
+      "target": "pond-ice",
+      "gather": false,
+      "fish": false,
+      "gatherArea": false
+    },
+    {
+      "name": "legacy home land",
+      "area": "home:0",
+      "x": 184,
+      "y": 136,
+      "rest": "none",
+      "target": "tree",
+      "gather": false,
+      "fish": false,
+      "gatherArea": false
+    },
+    {
+      "name": "inside cottage",
+      "area": "in:home:0",
+      "x": 80,
+      "y": 80,
+      "rest": "home",
+      "target": "tree",
+      "gather": false,
+      "fish": false,
+      "gatherArea": false
+    },
+    {
+      "name": "private lot doorstep",
+      "area": "outdoors",
+      "x": -968,
+      "y": 520,
+      "rest": "home",
+      "target": "tree",
+      "gather": true,
+      "fish": false,
+      "gatherArea": true
+    }
+  ],
+  "gates": [
+    {
+      "name": "Silas outside",
+      "with": "silas",
+      "now": 600,
+      "area": "outdoors",
+      "x": 552,
+      "y": 568,
+      "here": true
+    },
+    {
+      "name": "Silas outside from Tangle",
+      "with": "silas",
+      "now": 600,
+      "area": "outdoors",
+      "x": 40,
+      "y": 376,
+      "here": false
+    },
+    {
+      "name": "Silas at counter",
+      "with": "silas",
+      "now": 2400,
+      "area": "in:commons:yard",
+      "x": 80,
+      "y": 80,
+      "here": true
+    },
+    {
+      "name": "counter time outside",
+      "with": "silas",
+      "now": 2400,
+      "area": "outdoors",
+      "x": 552,
+      "y": 568,
+      "here": false
+    },
+    {
+      "name": "Mara town",
+      "with": "mara",
+      "now": 600,
+      "area": "outdoors",
+      "x": 72,
+      "y": 968,
+      "here": true
+    },
+    {
+      "name": "Mara outskirts",
+      "with": "mara",
+      "now": 600,
+      "area": "outdoors",
+      "x": 152,
+      "y": 1544,
+      "here": false
+    }
+  ],
+  "fixedGather": [
+    {
+      "name": "Square cannot pick remote blooms",
+      "x": 72,
+      "y": 968,
+      "tile": [
+        11,
+        37
+      ],
+      "target": "bloom-patch",
+      "allowed": false
+    },
+    {
+      "name": "Square has no bloom piece",
+      "x": 72,
+      "y": 968,
+      "tile": [
+        4,
+        60
+      ],
+      "target": "bloom-patch",
+      "allowed": false
+    },
+    {
+      "name": "missing tile",
+      "x": 184,
+      "y": 604,
+      "tile": [],
+      "target": "bloom-patch",
+      "allowed": false
+    },
+    {
+      "name": "authored blooms",
+      "x": 184,
+      "y": 604,
+      "tile": [
+        11,
+        37
+      ],
+      "target": "bloom-patch",
+      "allowed": true
+    },
+    {
+      "name": "authored shore",
+      "x": 552,
+      "y": 1164,
+      "tile": [
+        34,
+        72
+      ],
+      "target": "freshet-shore",
+      "allowed": true
+    },
+    {
+      "name": "authored ice",
+      "x": 552,
+      "y": 1180,
+      "tile": [
+        34,
+        73
+      ],
+      "target": "pond-ice",
+      "allowed": true
+    },
+    {
+      "name": "wrong adjacent bloom tile",
+      "x": 184,
+      "y": 604,
+      "tile": [
+        12,
+        36
+      ],
+      "target": "bloom-patch",
+      "allowed": false
+    },
+    {
+      "name": "wrong target at shore",
+      "x": 552,
+      "y": 1164,
+      "tile": [
+        34,
+        72
+      ],
+      "target": "pond-ice",
+      "allowed": false
+    },
+    {
+      "name": "reach boundary",
+      "x": 232,
+      "y": 616,
+      "tile": [
+        11,
+        37
+      ],
+      "target": "bloom-patch",
+      "allowed": true
+    },
+    {
+      "name": "past reach",
+      "x": 232.01,
+      "y": 616,
+      "tile": [
+        11,
+        37
+      ],
+      "target": "bloom-patch",
+      "allowed": false
+    },
+    {
+      "name": "authored gather:bloom-patch:1",
+      "x": 200,
+      "y": 604,
+      "tile": [
+        12,
+        37
+      ],
+      "target": "bloom-patch",
+      "allowed": true
+    },
+    {
+      "name": "authored gather:bloom-patch:2",
+      "x": 216,
+      "y": 604,
+      "tile": [
+        13,
+        37
+      ],
+      "target": "bloom-patch",
+      "allowed": true
+    },
+    {
+      "name": "authored gather:bloom-patch:3",
+      "x": 184,
+      "y": 620,
+      "tile": [
+        11,
+        38
+      ],
+      "target": "bloom-patch",
+      "allowed": true
+    },
+    {
+      "name": "authored gather:bloom-patch:4",
+      "x": 200,
+      "y": 620,
+      "tile": [
+        12,
+        38
+      ],
+      "target": "bloom-patch",
+      "allowed": true
+    },
+    {
+      "name": "authored gather:freshet-shore:1",
+      "x": 584,
+      "y": 1164,
+      "tile": [
+        36,
+        72
+      ],
+      "target": "freshet-shore",
+      "allowed": true
+    },
+    {
+      "name": "authored gather:freshet-shore:2",
+      "x": 616,
+      "y": 1164,
+      "tile": [
+        38,
+        72
+      ],
+      "target": "freshet-shore",
+      "allowed": true
+    },
+    {
+      "name": "authored gather:pond-ice:1",
+      "x": 600,
+      "y": 1180,
+      "tile": [
+        37,
+        73
+      ],
+      "target": "pond-ice",
+      "allowed": true
+    },
+    {
+      "name": "authored gather:pond-ice:2",
+      "x": 616,
+      "y": 1212,
+      "tile": [
+        38,
+        75
+      ],
+      "target": "pond-ice",
+      "allowed": true
+    }
+  ]
+}

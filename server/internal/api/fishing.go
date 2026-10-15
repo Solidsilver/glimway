@@ -6,6 +6,7 @@ import (
 	"errors"
 	"glimway/content"
 	contract "glimway/server/internal/gen/glimway/v1"
+	"glimway/server/internal/location"
 	"glimway/server/internal/store"
 	"glimway/server/internal/wilds"
 	"glimway/server/internal/worldchange"
@@ -310,7 +311,7 @@ func rollSpecies(w *content.FishWater, account string, seq int) string {
 // within reachTiles of one of the bank's tiles, measured to the tile's
 // centre as nearTile measures (lane G's bankDistance is the same measure).
 func nearBank(s *store.Snapshot, w *content.FishWater, b *content.FishBank) bool {
-	if s.State.Area != w.GetArea() {
+	if location.At(location.Space(s.State.Area), s.State.Position.X, s.State.Position.Y).ID != w.GetArea() {
 		return false
 	}
 	reach := content.FishingRules.GetReachTiles() * wildsTileSize
@@ -575,7 +576,7 @@ func (a *Server) fishCancel(w http.ResponseWriter, r *http.Request) error {
 // band is the one after that.
 func (a *Server) fishingWaters(w http.ResponseWriter, r *http.Request) error {
 	area := r.URL.Query().Get("area")
-	if area == "" || !validArea(area) {
+	if area == "" || !(validArea(area) || content.KnownContentArea(area)) {
 		return fail(400, "invalid-request")
 	}
 	tx, s, _, err := a.begin(r)
@@ -587,7 +588,7 @@ func (a *Server) fishingWaters(w http.ResponseWriter, r *http.Request) error {
 	now := a.requestTime(r.Context()).Unix()
 	out := &contract.FishingWaters{Waters: []*contract.WaterView{}}
 	for _, water := range content.FishingRules.GetWaters() {
-		if water.GetArea() != area {
+		if water.GetArea() != area && string(location.ContentSpace(water.GetArea())) != area {
 			continue
 		}
 		if err := lapseCasts(r.Context(), a.logf, tx, at, now, "world_id=? AND water=?", s.WorldID, water.GetId()); err != nil {

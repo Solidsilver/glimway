@@ -138,6 +138,7 @@ export const EV = {
   // homesteads (src/game/homestead.ts, src/game/entities/homesteads.ts)
   /** The lane or a home changed: { reason, gate? }. */
   homeChanged: 'home:changed',
+  homeInvalidated: 'home:invalidated',
   /** Open the Yard panel (src/game/yard-open.ts): YardOpenPayload, or nothing for its default tab. */
   homeShop: 'ui:home-shop',
   /** Open the Manage your deed panel (src/game/yard-open.ts). */
@@ -488,7 +489,7 @@ export interface EventMap {
   [EV.fixedReady]: void
   [EV.clock]: void
   [EV.turning]: { reason: 'epoch-ended' }
-  [EV.planted]: { plant: HomePlantView }
+  [EV.planted]: { plant: HomePlantView; gate: number; worldId: string }
   [EV.notePosition]: void
   [EV.action]: void
   [EV.cast]: void
@@ -503,6 +504,7 @@ export interface EventMap {
   [EV.villageChanged]: { what?: string } | undefined
   [EV.villageOpen]: VillageOpenPayload
   [EV.homeChanged]: { reason: string; gate?: number }
+  [EV.homeInvalidated]: { gate: number }
   [EV.homeShop]: YardOpenPayload | void
   [EV.homeDeed]: void
   [EV.homePlacement]: PlacementView | null

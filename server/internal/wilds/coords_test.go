@@ -81,8 +81,8 @@ func TestFloorDiv(t *testing.T) {
 }
 
 func TestFootprintCells(t *testing.T) {
-	if !FootprintCell(0, 0) || !FootprintCell(0, -1) || FootprintCell(1, 0) || FootprintCell(0, -2) {
-		t.Fatal("the Tangle is cell (0,0), the Whitequiet (0,-1), nothing else")
+	if !FootprintCell(0, 1) || !FootprintCell(-1, 1) || !FootprintCell(-1, 2) || !FootprintCell(0, 0) || !FootprintCell(0, -1) || FootprintCell(1, 0) || FootprintCell(0, -2) {
+		t.Fatal("generated and authored footprints reserve their intersecting cells")
 	}
 	if CellPlaceID(-1, 2) != "place:-1:2" {
 		t.Fatal(CellPlaceID(-1, 2))

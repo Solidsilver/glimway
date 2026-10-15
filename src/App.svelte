@@ -196,7 +196,7 @@
       const info = areaInfo(p.areaId)
       const moved = ui.area.areaId !== p.areaId || !areaShown
       // A homestead's land and its cottage announce themselves (whose place, in words).
-      const homestead = /^home:\d+$/.test(p.areaId) || p.areaId === 'cottage'
+      const homestead = /^(home|lot):\d+$/.test(p.areaId) || p.areaId === 'cottage'
       // A new place waits for its own announcement; until then it's "Lot 4", never the last place's name.
       if (ui.area.areaId !== p.areaId) roomName = null
       ui.area = { areaId: p.areaId, name: homestead && roomName ? roomName : info.name, description: info.description }
@@ -329,7 +329,7 @@
       if (phase !== 'playing') return
       // The HUD names the place the way its card does ("Your land", "Ada's Place").
       roomName = v.title
-      if (/^home:\d+$/.test(ui.area.areaId) || ui.area.areaId === 'cottage') ui.area = { ...ui.area, name: v.title }
+      if (/^(home|lot):\d+$/.test(ui.area.areaId) || ui.area.areaId === 'cottage') ui.area = { ...ui.area, name: v.title }
       if (firstVisit(v.key)) ui.banner({ kind: 'area', eyebrow: v.eyebrow, title: v.title, body: v.body })
     }
     return listen({

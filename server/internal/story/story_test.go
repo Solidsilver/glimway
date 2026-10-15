@@ -6,6 +6,7 @@ import (
 	"glimway/content"
 	"glimway/server/internal/chunks/chunkstest"
 	contract "glimway/server/internal/gen/glimway/v1"
+	"glimway/server/internal/location"
 	"glimway/server/internal/ports"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
@@ -15,7 +16,7 @@ import (
 
 func TestEchoAssignmentRestrictionsAndStability(t *testing.T) {
 	r := Rules{}
-	s := store.Snapshot{State: rules.NewState()}
+	s := store.Snapshot{State: rules.NewTownState()}
 	in := ports.EchoInput{Epoch: &contract.WildsEpoch{WorldSeed: "seed", Kind: "wick", Season: "Mudrise"}}
 	for i := 0; i < 12; i++ {
 		in.Sites = append(in.Sites, ports.EchoSite{CX: int32(i%3 - 1), Site: &contract.StorySite{Id: string(rune('a' + i)), Kind: contract.SiteKind_SITE_KIND_ECHO}})
@@ -96,7 +97,7 @@ func TestPaperFactsSitesEchoesAndTurning(t *testing.T) {
 	site := &contract.StorySite{Id: "cairn", Kind: contract.SiteKind_SITE_KIND_CAIRN, Tx: 3, Ty: 4}
 	source.Chunks[chunkstest.Key{World: "w", Epoch: "e1", CX: -1, CY: -5}].Sites = []*contract.StorySite{site}
 	r := Rules{Chunks: source, Epochs: es, Now: func() time.Time { return time.Unix(now, 0) }}
-	s := store.Snapshot{AccountID: "a", WorldID: "w", State: rules.NewState()}
+	s := store.Snapshot{AccountID: "a", WorldID: "w", State: rules.NewTownState()}
 	eligible := func(id string, w *contract.Where, want bool) {
 		t.Helper()
 		got, e := r.Eligible(context.Background(), tx, s, ports.PaperInput{Paper: id, Where: w, Epoch: "e1", Site: site.Id})
@@ -120,13 +121,13 @@ func TestPaperFactsSitesEchoesAndTurning(t *testing.T) {
 	s.WorldID = "w"
 	// Curated paper reach and stage, and a handed-over paper's stage.
 	p := content.PapersByID["pip-copybook-warden-corrections"].Rule
-	w := &contract.Where{Area: p.Area, X: float64(p.GetTx()*16 + 8), Y: float64(p.GetTy()*16 + 8)}
+	w := &contract.Where{Area: string(location.ContentSpace(p.Area)), X: float64(p.GetTx()*16 + 8), Y: float64(p.GetTy()*16 + 8)}
 	eligible("pip-copybook-warden-corrections", w, true)
 	s.State.Quests["lantern-road"] = "accepted"
 	eligible("pip-copybook-warden-corrections", w, true)
 	w.X += 100
 	eligible("pip-copybook-warden-corrections", w, false)
-	w = &contract.Where{Area: "village"}
+	w = &contract.Where{Area: "outdoors", X: 72, Y: 968}
 	eligible("ashwatch-ledger-excerpts", w, false)
 	s.State.Quests["lantern-road"] = "clue-found"
 	eligible("ashwatch-ledger-excerpts", w, true)
@@ -134,22 +135,25 @@ func TestPaperFactsSitesEchoesAndTurning(t *testing.T) {
 	if _, e := r.Grant(context.Background(), tx, &s, "joss-penhallow-letter-map-case", now); e == nil {
 		t.Fatal("unbuilt grant")
 	}
-	// On the Commons: the arch, on the outdoors grid.
-	w = &contract.Where{Area: "outdoors", X: 40, Y: 424}
-	for _, p := range content.PapersByID {
-		if p.Source == "commons" && (p.Rule.Fact == "plot" || p.Rule.Fact == "foundation" || p.Rule.Fact == "door-fox") {
-			eligible(p.GetId(), w, false)
+	t.Run("town-home-facts", func(t *testing.T) {
+
+		// On the Commons: the arch, on the outdoors grid.
+		w = &contract.Where{Area: "outdoors", X: 40, Y: 424}
+		for _, p := range content.PapersByID {
+			if p.Source == "commons" && (p.Rule.Fact == "plot" || p.Rule.Fact == "foundation" || p.Rule.Fact == "door-fox") {
+				eligible(p.GetId(), w, false)
+			}
 		}
-	}
-	tx.Exec("INSERT INTO homestead_members VALUES('a','h'); INSERT INTO homesteads VALUES('h',1); INSERT INTO homestead_items VALUES('h','door-fox','placed')")
-	for _, p := range content.PapersByID {
-		if p.Source == "commons" && (p.Rule.Fact == "plot" || p.Rule.Fact == "foundation" || p.Rule.Fact == "door-fox") {
-			eligible(p.GetId(), w, true)
-			// The Commons' rooms count (the deed is bought in Pell's office); the village's don't.
-			eligible(p.GetId(), &contract.Where{Area: "in:commons:yard:deeds"}, true)
-			eligible(p.GetId(), &contract.Where{Area: "in:village:bakery"}, false)
+		tx.Exec("INSERT INTO homestead_members VALUES('a','h'); INSERT INTO homesteads VALUES('h',1); INSERT INTO homestead_items VALUES('h','door-fox','placed')")
+		for _, p := range content.PapersByID {
+			if p.Source == "commons" && (p.Rule.Fact == "plot" || p.Rule.Fact == "foundation" || p.Rule.Fact == "door-fox") {
+				eligible(p.GetId(), w, true)
+				// All town rooms share Hearthwick's eligibility.
+				eligible(p.GetId(), &contract.Where{Area: "in:commons:yard:deeds"}, true)
+				eligible(p.GetId(), &contract.Where{Area: "in:village:bakery"}, true)
+			}
 		}
-	}
+	})
 	// World pixels: the cairn's tile in chunk (-1, -5).
 	w = &contract.Where{Area: "outdoors", X: (-24+3)*16 + 8, Y: (-5*24+4)*16 + 8}
 	eligible("mary-fenns-cairn-slip", w, false)
@@ -218,12 +222,15 @@ func TestPaperFactsSitesEchoesAndTurning(t *testing.T) {
 	if !contains(s.State.Flags, "wilds:turned") || !contains(s.State.Flags, "paper:weir-effect-survey-draft") {
 		t.Fatal(s.State.Flags)
 	}
-	board := content.StoryRules.Boards["commons"]
+	board := content.StoryRules.Boards["hearthwick"]
 	// The board stands in Commons layout tiles; the Commons is outdoors.
-	eligible("notices-from-the-board", &contract.Where{Area: "outdoors", X: float64((board.GetTx()-21)*16 + 8), Y: float64((board.GetTy()+24)*16 + 8)}, true)
-	eligible("notices-from-the-board", &contract.Where{Area: "outdoors", X: float64((board.GetTx()-21)*16 + 8 + 100), Y: float64((board.GetTy()+24)*16 + 8)}, false)
+	eligible("notices-from-the-board", &contract.Where{Area: "outdoors", X: float64(board.GetTx()*16 + 8), Y: float64(board.GetTy()*16 + 8)}, true)
+	eligible("notices-from-the-board", &contract.Where{Area: "outdoors", X: float64(board.GetTx()*16 + 8 + 100), Y: float64(board.GetTy()*16 + 8)}, false)
 	eligible("notices-from-the-board", &contract.Where{Area: "commons", X: float64(board.GetTx()*16 + 8), Y: float64(board.GetTy()*16 + 8)}, false)
-	eligible("to-the-bench-across", &contract.Where{Area: "outdoors", X: 40, Y: 392}, true)
+	t.Run("town-bench-paper", func(t *testing.T) {
+
+		eligible("to-the-bench-across", &contract.Where{Area: "outdoors", X: 40, Y: 392}, true)
+	})
 	eligible("to-the-bench-across", &contract.Where{Area: "outdoors", X: 40, Y: 376}, false)
 	before := store.JSON(s.State.Flags)
 	// Standing in the Tangle (the still epoch) records no turning.

@@ -9,7 +9,7 @@
         "kind": "quest",
         "stage": "clue-found",
         "from": "mara",
-        "area": "village"
+        "area": "hearthwick"
       }
     },
     {
@@ -19,7 +19,7 @@
       "section": "field-notes",
       "rule": {
         "kind": "commons",
-        "area": "commons",
+        "area": "hearthwick",
         "fact": "silas-toolbox"
       }
     },
@@ -41,7 +41,7 @@
         "kind": "gift",
         "stage": "complete",
         "from": "mara",
-        "area": "village"
+        "area": "hearthwick"
       }
     },
     {
@@ -80,7 +80,7 @@
       "section": "histories",
       "rule": {
         "kind": "commons",
-        "area": "commons",
+        "area": "hearthwick",
         "fact": "carting-day"
       }
     },
@@ -103,7 +103,7 @@
         "kind": "gift",
         "stage": "complete",
         "from": "hazel",
-        "area": "village"
+        "area": "hearthwick"
       }
     },
     {
@@ -145,7 +145,7 @@
       "section": "field-notes",
       "rule": {
         "kind": "commons",
-        "area": "commons",
+        "area": "hearthwick",
         "fact": "door-fox"
       }
     },
@@ -156,9 +156,9 @@
       "section": "field-notes",
       "rule": {
         "kind": "placed",
-        "area": "village",
-        "tx": 25,
-        "ty": 14
+        "area": "hearthwick",
+        "tx": 7,
+        "ty": 72
       }
     },
     {
@@ -187,9 +187,9 @@
       "section": "stories",
       "rule": {
         "kind": "placed",
-        "area": "village",
-        "tx": 39,
-        "ty": 2
+        "area": "hearthwick",
+        "tx": 36,
+        "ty": 49
       }
     },
     {
@@ -220,9 +220,9 @@
       "section": "field-notes",
       "rule": {
         "kind": "placed",
-        "area": "village",
+        "area": "hearthwick",
         "tx": 40,
-        "ty": 22
+        "ty": 76
       }
     },
     {
@@ -312,7 +312,7 @@
       "section": "recipes",
       "rule": {
         "kind": "commons",
-        "area": "commons",
+        "area": "hearthwick",
         "fact": "foundation"
       }
     },
@@ -335,7 +335,7 @@
       "section": "histories",
       "rule": {
         "kind": "commons",
-        "area": "commons",
+        "area": "hearthwick",
         "fact": "plot"
       }
     },
@@ -496,7 +496,7 @@
         "kind": "gift",
         "stage": "complete",
         "from": "orrin",
-        "area": "village"
+        "area": "hearthwick"
       }
     },
     {

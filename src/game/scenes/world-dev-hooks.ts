@@ -1,3 +1,6 @@
+import { homesteadsFor } from '../homestead'
+import { homeLights } from '../../lib/homestead-land'
+import { lotOrigin } from '../../lib/lots'
 /**
  * WorldScene's playtest hooks (docs/playtest.md, src/game/dev-hooks.ts):
  * read-only views of the area, the hero and the systems in it, and the
@@ -366,7 +369,9 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
   on('__fsGather', () => {
     const gathering = s['gathering']
     if (!gathering) return null
-    const lights = s['myLights']()
+    const mine = homesteadsFor(s['session']).mine
+    const origin = mine ? lotOrigin(mine.gate) : { tx: 0, ty: 0 }
+    const lights = mine ? homeLights(mine.items.filter((i) => i.scene === 'outdoor' && i.itemDef === 'lantern-post' && i.x !== null && i.y !== null) as { x: number; y: number }[]).map((l) => ({ ...l, x: l.x + origin.tx, y: l.y + origin.ty })) : []
     return {
       area: s['world'].areaId,
       spots: gathering.spotsView().map((p) => ({ ...p, lit: isLandLit(lights, p.tx, p.ty) })),

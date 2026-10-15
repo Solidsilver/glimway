@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"glimway/content"
+	"glimway/server/internal/chunks"
 	"glimway/server/internal/land"
 	"glimway/server/internal/store"
 	"net/http"
@@ -270,7 +271,8 @@ func standingStable(x *rig, c *http.Cookie, s *response, stalls int) (homeView, 
 
 // atBay is where a hero stands to reach a stall's door (3.3).
 func atBay(h homeView, x0, y0, stall int) map[string]any {
-	return map[string]any{"area": fmt.Sprintf("home:%d", h.Gate), "x": float64((x0+2*stall+1)*16 + 8), "y": float64((y0 + 3) * 16)}
+	ox, oy := chunks.LotOrigin(h.Gate)
+	return map[string]any{"area": "outdoors", "x": float64((ox+x0+2*stall+1)*16 + 8), "y": float64((oy + y0 + 3) * 16)}
 }
 
 func TestStableComesWithStallOneAndOnePerHomestead(t *testing.T) {
@@ -483,7 +485,7 @@ func TestMountOutHomeAndLazyValidity(t *testing.T) {
 
 	// Saddle up at the bay (3.3): the walk-up is the server's too.
 	tooFar := body(a, "far", map[string]any{"homeId": h.ID, "stall": 1})
-	tooFar["where"] = map[string]any{"area": "village", "x": 400.0, "y": 300.0}
+	tooFar["where"] = map[string]any{"area": "in:village:library", "x": 80.0, "y": 80.0}
 	if r := x.companionOp("POST", "/api/stable/out", tooFar, ac, 409); r.Error.Code != "too-far-away" {
 		t.Fatal("saddling up from the village", r.Error.Code)
 	}
@@ -629,7 +631,7 @@ func TestWorldMoveSendsTheMountHome(t *testing.T) {
 	if got := x.companionsInState(c).MountOut; got != "Wolf-Shade" {
 		t.Fatal("out before the move", got)
 	}
-	x.worldReq("POST", "/api/world/move", moveBody(r, "join", pw, "village"), c, 200)
+	x.worldReq("POST", "/api/world/move", moveBody(r, "join", pw, "in:village:library"), c, 200)
 	if x.worldOf("alice") != pw {
 		t.Fatal("the move")
 	}
@@ -818,9 +820,9 @@ func TestTheStablesLandHearsTheMountGoAndCome(t *testing.T) {
 	x.pinWorld(&a)
 	h, x0, y0 := standingStable(x, ac, &a, 1)
 	x.companionOp("POST", "/api/stable/stall", body(a, "in", map[string]any{"homeId": h.ID, "stall": 1, "mount": "Wolf-Shade"}), ac, 200)
-	land := fmt.Sprintf("home:%d", h.Gate)
+	land := "outdoors:-2:1"
 	visitor := x.peerAt("visitor", a.WorldID, land)
-	away := x.peerAt("away", a.WorldID, "village")
+	away := x.peerAt("away", a.WorldID, "in:village:library")
 	otherWorld := x.peerAt("other-world", "elsewhere", land)
 	heard := func(p *presencePeer) *presenceAvatarMsg {
 		t.Helper()
@@ -867,7 +869,7 @@ func TestTheStablesLandHearsTheMountGoAndCome(t *testing.T) {
 
 	// The owner rides off to the village; Go home from there still reaches
 	// the stable's land, once (the owner's own room hears it as before).
-	me := x.peerAt(x.account("alice"), a.WorldID, "village")
+	me := x.peerAt(x.account("alice"), a.WorldID, "in:village:library")
 	x.companionOp("POST", "/api/stable/home", map[string]any{"op": map[string]any{"lease": a.Lease, "key": "home"}}, ac, 200)
 	if v := heard(visitor); v.SelectedMount != nil {
 		t.Fatal("the land hears the mount come home", v)
@@ -914,7 +916,7 @@ func TestTheLandHearsALeaveButNotAnEmptyGoHome(t *testing.T) {
 	x.pinWorld(&a)
 	h, x0, y0 := standingStable(x, ac, &a, 1)
 	x.companionOp("POST", "/api/stable/stall", body(a, "in", map[string]any{"homeId": h.ID, "stall": 1, "mount": "Wolf-Shade"}), ac, 200)
-	visitor := x.peerAt("visitor", a.WorldID, fmt.Sprintf("home:%d", h.Gate))
+	visitor := x.peerAt("visitor", a.WorldID, "outdoors:-2:1")
 	drain := func() {
 		for len(visitor.queue) > 0 {
 			<-visitor.queue
@@ -942,5 +944,40 @@ func TestTheLandHearsALeaveButNotAnEmptyGoHome(t *testing.T) {
 		}
 	default:
 		t.Fatal("the land heard nothing of the leave")
+	}
+}
+
+func TestStoredStableKeepsMountsThroughWithdrawalAndReplacement(t *testing.T) {
+	x := newRig(t)
+	p := profile("owner", 1, 0, 20)
+	p.Mounts = []string{"Wolf-Shade"}
+	x.set(p)
+	c, s := x.ready("owner")
+	x.pinWorld(&s)
+	h, x0, y0 := standingStable(x, c, &s, 1)
+	x.companionOp("POST", "/api/stable/stall", body(s, "stall", map[string]any{"homeId": h.ID, "stall": 1, "mount": "Wolf-Shade"}), c, 200)
+	stable := stablePlaced(h)
+	if stable == nil {
+		t.Fatal("no stable")
+	}
+	// Exactly the cutover storage action; occupied-stable player removal remains refused.
+	exec(t, x, "UPDATE homestead_items SET location='storage',scene=NULL,x=NULL,y=NULL,rotation=NULL WHERE id=?", stable.ID)
+	if got := x.home(c).Stalls; len(got) != 0 {
+		t.Fatal("stored stable draws no mounts", got)
+	}
+	if count(t, x.db, "SELECT count(*) FROM homestead_stalls WHERE homestead_id=? AND mount_key='Wolf-Shade'", h.ID) != 1 {
+		t.Fatal("lost stored stall")
+	}
+	x.refresh(c, &s)
+	s.Snapshot = x.p5("POST", "/api/storage", body(s, "withdraw-stable", map[string]any{"direction": "withdraw", "asset": content.Asset{Kind: "decoration", Id: "stable", Qty: 1}}), c, 200).Snapshot
+	x.homeOpRefreshing(c, &s, "place", map[string]any{"itemId": stable.ID, "scene": "outdoor", "x": x0, "y": y0, "rotation": 0}, 200)
+	restored := x.home(c)
+	if len(restored.Stalls) != 1 || restored.Stalls[0].Mount != "Wolf-Shade" {
+		t.Fatal("mount did not return", restored.Stalls)
+	}
+	x.refresh(c, &s)
+	req := body(s, "saddle-restored", map[string]any{"homeId": h.ID, "stall": 1, "where": atBay(restored, x0, y0, 1)})
+	if got := x.companionOp("POST", "/api/stable/out", req, c, 200).Result.Companions; got.MountOut != "Wolf-Shade" {
+		t.Fatal("restored mount cannot saddle", got)
 	}
 }

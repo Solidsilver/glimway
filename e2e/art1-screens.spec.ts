@@ -41,17 +41,17 @@ async function closeUp(page: Page, name: string, device: string, x: number, y: n
 
 async function outdoorScreens(page: Page, device: string): Promise<void> {
   // The village square: Mara by the well, the cottages around it.
-  await warp(page, 'village', 17, 15)
+  await warp(page, 'outdoors', 17, 63)
   await snap(page, 'village-square', device)
   await closeUp(page, 'mara', device, 16 * 16 + 8, 13 * 16 + 2, 80)
   // The pond's edge, east of the mill.
-  await warp(page, 'village', 36, 17)
+  await warp(page, 'outdoors', 36, 65)
   await snap(page, 'water-edge', device)
   // The Commons lane and its square.
-  await warp(page, 'commons', 23, 19)
+  await warp(page, 'outdoors', 34, 35)
   await snap(page, 'commons-lane', device)
   // Where the cross lane's cobbles meet the grass.
-  await warp(page, 'commons', 9, 17)
+  await warp(page, 'outdoors', -15, 41)
   await snap(page, 'road-grass', device)
   await closeUp(page, 'road-grass-zoom', device, 9 * 16 + 8, 18 * 16, 140, 300)
   // Texture memory after the village and the Commons (the GPU's RGBA bytes).
@@ -64,7 +64,7 @@ const npc = (page: Page, id: string) => page.evaluate((who) => ((window as unkno
 
 /** Mara on her loop by the well (watched from where she won't come home), then Hazel on the bench. */
 async function residentScreens(page: Page, device: string): Promise<void> {
-  await warp(page, 'village', 16, 19)
+  await warp(page, 'outdoors', 16, 67)
   for (const dir of ['right', 'up', 'left', 'down']) {
     await page.waitForFunction((d) => {
       const m = ((window as unknown as { __fsNpcs: () => NpcPose[] }).__fsNpcs() ?? []).find((n) => n.id === 'mara')
@@ -73,7 +73,7 @@ async function residentScreens(page: Page, device: string): Promise<void> {
     const m = (await npc(page, 'mara'))!
     await closeUp(page, `mara-walk-${dir}`, device, m.x, m.y - 10, 50, 0)
   }
-  await warp(page, 'village', 4, 19)
+  await warp(page, 'outdoors', 4, 67)
   // Hazel's hour in the square (her bench is outside).
   await residentsOut(page)
   await page.waitForFunction(() => ((window as unknown as { __fsNpcs: () => NpcPose[] }).__fsNpcs() ?? []).some((n) => n.id === 'hazel' && n.mode === 'sit'), undefined, { timeout: 40_000 })
@@ -108,7 +108,7 @@ test.describe('after: the hero holding the axe', () => {
     const id = await freshPlayer(page, 'Teo')
     giveInstance(id, 'bench-axe', { max: 90 })
     await page.evaluate(() => (window as unknown as { __fsItems: { load: () => Promise<unknown> } }).__fsItems.load())
-    await warp(page, 'village', 30, 12)
+    await warp(page, 'outdoors', 30, 54)
     await page.waitForTimeout(3000)
     await page.keyboard.press('2')
     for (const [key, dir] of [['ArrowLeft', 'left'], ['ArrowRight', 'right'], ['ArrowUp', 'up'], ['ArrowDown', 'down']] as const) {
@@ -122,18 +122,18 @@ test.describe('after: the hero holding the axe', () => {
 
 /** Round 3: the village houses, the hero behind a roof, the footbridge worn and mended, the pond. */
 async function round3Screens(page: Page, device: string): Promise<void> {
-  await warp(page, 'village', 20, 10)
+  await warp(page, 'outdoors', 20, 58)
   await snap(page, 'r3-village-houses', device)
   // Behind the middle house's roof, which rises two tiles over its footprint
   // (at its east eave, so half the hero shows).
-  await warp(page, 'village', 22, 2)
+  await warp(page, 'outdoors', 22, 50)
   await closeUp(page, 'r3-behind-roof', device, 22 * 16 + 8, 3 * 16, 70, 2500)
   // Ada's house, with her window's lamp lit (the window-fund project) where the window is.
   await page.evaluate(() => (window as unknown as { __fsDevWorldFlag: (f: string) => void }).__fsDevWorldFlag('project:cooley-window-fund:complete'))
-  await warp(page, 'village', 34, 10)
+  await warp(page, 'outdoors', 34, 58)
   await closeUp(page, 'r3-ada-house', device, 34 * 16, 6 * 16, 90, 2500)
   // The pond.
-  await warp(page, 'village', 36, 17)
+  await warp(page, 'outdoors', 36, 65)
   await closeUp(page, 'r3-pond', device, 36 * 16, 20 * 16, 110, 2500)
   // The Brackenwood footbridge: worn, then mended once the village repairs it.
   await warp(page, 'woodland', 17, 20)

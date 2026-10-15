@@ -1,4 +1,4 @@
-import { contentTile, resolve } from './location.ts';
+import { contentPosition } from './location.ts';
 /**
  * Item definitions (content/items.json; docs/items/), validated against the
  * schema (proto/glimway/content/v1/items.proto) the same way the Go loader
@@ -21,7 +21,7 @@ const ITEM_KINDS = ['tool', 'consumable', 'material', 'fitting', 'part', 'seed',
 const FITTING_KINDS = ['bite', 'hold', 'heft', 'glow', 'grip', 'remember'] as const;
 /** Use effects the game applies today; a consumable is usable when all of its are. */
 const IMPLEMENTED_USES: readonly string[] = ['restore-hp', 'restore-mana', 'clear-unmoored', 'ease-unmoored'];
-const PICKUP_AREAS = ['village', 'woodland', 'ruin', 'commons'] as const;
+const PICKUP_AREAS = ['hearthwick', 'woodland', 'ruin'] as const;
 
 type ItemTab = (typeof ITEM_TABS)[number];
 type ItemKind = (typeof ITEM_KINDS)[number];
@@ -322,10 +322,10 @@ export function heldEffects(d: ItemDef, cls: string | null): ItemEffect[] {
 /** Pickups lying in an area that this player hasn't taken yet. */
 export function pickupsIn(area: string, taken: readonly string[]): ItemPickup[] {
   return ITEMS.pickups
-    .filter((p) => (p.area === area || resolve(p.area, p.tx, p.ty).space === area) && !taken.includes(p.id))
+    .filter((p) => (p.area === area || contentPosition(p.area, p.tx, p.ty).space === area) && !taken.includes(p.id))
     .map((p) => {
       if (p.area === area) return p;
-      const spot = resolve(p.area, p.tx, p.ty);
+      const spot = contentPosition(p.area, p.tx, p.ty);
       // Only fixed content crosses to outdoors; curated scenes keep their own frame.
       return { ...p, area: 'outdoors' as const, tx: spot.tx, ty: spot.ty };
     });
@@ -350,7 +350,7 @@ export function menderAt(m: ItemMender, now: number): ResidentPlace | null {
 export function menderReaches(m: ItemMender, area: string, x: number, y: number, now: number, tile = 16): boolean {
   const at = menderAt(m, now);
   if (!at) return false;
-  const spot = contentTile(area, at.area, at.tx, at.ty);
+  const spot = contentPosition(at.area, at.tx, at.ty);
   if (spot.space !== area) return false;
   if (m.with && roomFor(area)) return true;
   const dx = x - (spot.tx * tile + tile / 2);

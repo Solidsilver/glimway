@@ -42,7 +42,7 @@ class SceneEvents {
 
 const sceneWith = (events: SceneEvents) => ({ events, cameras: { main: null } }) as unknown as ConstructorParameters<typeof Unmoored>[0];
 const journey = () => new Session(createNewGame());
-const village = { areaId: 'village' } as ConstructorParameters<typeof Unmoored>[1]['world'];
+const village = { areaId: 'in:village:library' } as ConstructorParameters<typeof Unmoored>[1]['world'];
 
 /** One build of an area: the sway's controller, then the restart that ends it. */
 function build(events: SceneEvents, session: InstanceType<typeof Session>) {

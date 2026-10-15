@@ -40,7 +40,7 @@ const HOUR = Date.UTC(2026, 9, 8, 10) / 1000;
 const DONE_OPENING: QuestRecord = { signpost: 'light-first-lamp' };
 
 function gate(over: Partial<GateContext> = {}): GateContext {
-  return { now: HOUR + 10 * 60, area: 'village', glims: 0, carrying: () => 0, gateAt: undefined, online: true, ...over };
+  return { now: HOUR + 10 * 60, area: 'hearthwick', glims: 0, carrying: () => 0, gateAt: undefined, online: true, ...over };
 }
 
 function talkCtx(quests: QuestRecord, over: Partial<GateContext> = {}, extra: Partial<QuestTalkContext> = {}): QuestTalkContext {
@@ -81,11 +81,11 @@ test('the lantern road keeps 0.3’s step ids and every grant row (028’s gift 
   const road = questById('lantern-road')!;
   const grants = road.steps.map(({ id, at, items, marks, papers, glims, witness }) => ({ id, at, items, marks, papers, glims, witness }));
   assert.deepEqual(grants, [
-    { id: 'accepted', at: 'village', items: [], marks: [], papers: [], glims: 0, witness: '' },
+    { id: 'accepted', at: 'hearthwick', items: [], marks: [], papers: [], glims: 0, witness: '' },
     { id: 'clue-found', at: 'ruin', items: ['lantern-route-rubbing'], marks: ['found:old-route-marker'], papers: [], glims: 0, witness: '' },
     { id: 'guardian-defeated', at: 'ruin', items: ['warden-seal'], marks: ['defeated:stone-warden'], papers: ['eleven-days'], glims: 2, witness: 'warden' },
     { id: 'lantern-lit', at: 'ruin', items: [], marks: ['found:hilltop-lantern'], papers: ['principia-memoria-excerpt'], glims: 0, witness: 'lantern' },
-    { id: 'complete', at: 'village', items: [], marks: ['found:lantern-road-restored'], papers: [], glims: 3, witness: '' },
+    { id: 'complete', at: 'hearthwick', items: [], marks: ['found:lantern-road-restored'], papers: [], glims: 3, witness: '' },
   ]);
   assert.deepEqual(road.after, ['signpost']);
 });
@@ -220,18 +220,18 @@ test('residents keep a 60-minute cycle: Hazel 40 in, 20 out; Finn offset 20', ()
   assert.equal(cycleAt('finn', HOUR + 50 * 60)!.spot, 'loft');
   assert.equal(cycleAt('hazel', HOUR + 5 * 60)!.until, HOUR + 40 * 60);
   assert.equal(roomParent('in:village:mill:2'), 'in:village:mill');
-  assert.equal(roomParent('in:village:mill'), 'village');
-  assert.equal(rootArea('in:village:mill:2'), 'village');
+  assert.equal(roomParent('in:village:mill'), 'hearthwick');
+  assert.equal(rootArea('in:village:mill:2'), 'hearthwick');
   assert.equal(rootArea('in:home:12'), 'home:12');
 });
 
 test('with: you’re where they are near now, with the grace either side of a change', () => {
   const step = questById('set-to-rise')!.steps[0];
   assert.deepEqual(checkGate(step, gate({ area: 'in:village:bakery' })), { ok: true });
-  assert.deepEqual(checkGate(step, gate({ area: 'village' })), { ok: false, why: 'not-here' });
+  assert.deepEqual(checkGate(step, gate({ area: 'hearthwick' })), { ok: false, why: 'not-here' });
   // 39:30, she's about to step out: both places count.
   const edge = HOUR + 39 * 60 + 30;
-  assert.ok(checkGate(step, gate({ now: edge, area: 'village' })).ok);
+  assert.ok(checkGate(step, gate({ now: edge, area: 'hearthwick' })).ok);
   assert.ok(checkGate(step, gate({ now: edge, area: 'in:village:bakery' })).ok);
 });
 
@@ -242,7 +242,7 @@ test('gates in the server’s order: with, wait, item, glims, then the connectio
   assert.deepEqual(checkGate(setSponge, gate(inKitchen)), { ok: false, why: 'short', def: 'flour', need: 1 });
   assert.deepEqual(checkGate(setSponge, gate({ ...inKitchen, carrying: (d) => (d === 'flour' ? 1 : 0) })), { ok: true });
   assert.deepEqual(checkGate(setSponge, gate({ ...inKitchen, carrying: () => 1, online: false })), { ok: false, why: 'needs-connection' });
-  assert.deepEqual(checkGate(setSponge, gate({ area: 'village', online: false })), { ok: false, why: 'not-here' }, 'with first');
+  assert.deepEqual(checkGate(setSponge, gate({ area: 'hearthwick', online: false })), { ok: false, why: 'not-here' }, 'with first');
 
   const rise2 = rise.steps[3];
   const setAt = HOUR;
@@ -269,7 +269,7 @@ test('waits in words, and turnings by the calendar', () => {
 
 test('automatic triggers: carrying flour, walking into the library, a lit lamp, a settled wisp', () => {
   const needs = { habitica: false };
-  const ctx = { area: 'village', flags: [] as string[], defeated: [] as string[], carrying: () => 0 };
+  const ctx = { area: 'hearthwick', flags: [] as string[], defeated: [] as string[], carrying: () => 0 };
   assert.deepEqual(autoSteps({}, needs, ctx), []);
   assert.deepEqual(autoSteps({ signpost: 'meet-orrin' }, needs, { ...ctx, area: 'woodland', defeated: ['finger-wisp'] }), [{ quest: 'signpost', step: 'fetch-finger' }]);
   // A step `at` the woodland waits there: the world would refuse it in the village.
@@ -315,7 +315,7 @@ test('Set to Rise: Hazel asks; the offer is disabled with why; "not yet" says th
   const kitchen = { area: 'in:village:bakery' };
   const start = questTalk('hazel', talkCtx(DONE_OPENING, kitchen))!;
   assert.equal(start.choices?.[0].action, 'quest:set-to-rise:hear-hazel');
-  assert.equal(questTalk('hazel', talkCtx(DONE_OPENING, { area: 'village' })), null, 'not with her: her usual talk');
+  assert.equal(questTalk('hazel', talkCtx(DONE_OPENING, { area: 'hearthwick' })), null, 'not with her: her usual talk');
   assert.equal(questTalk('hazel', talkCtx({ signpost: 'see-mara' }, kitchen)), null, 'not before the opening is done');
 
   const asked = { ...DONE_OPENING, 'set-to-rise': 'fetch-flour' };
@@ -496,7 +496,7 @@ test('A Line in the Race: Finn’s rod, a roach from the race, Hazel’s card, o
 
   // The roach in the pack takes the carry step on its own.
   const out = { ...hoisted, 'a-line-in-the-race': 'hear-finn-line' };
-  const ctx = { area: 'village', flags: [] as string[], defeated: [] as string[], carrying: (d: string) => (d === 'mill-roach' ? 1 : 0) };
+  const ctx = { area: 'hearthwick', flags: [] as string[], defeated: [] as string[], carrying: (d: string) => (d === 'mill-roach' ? 1 : 0) };
   assert.deepEqual(autoSteps(out, { habitica: false }, ctx).map((a) => `${a.quest}:${a.step}`), ['a-line-in-the-race:first-catch']);
   assert.deepEqual(autoSteps(out, { habitica: false }, { ...ctx, carrying: () => 0 }), []);
 

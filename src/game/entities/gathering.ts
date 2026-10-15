@@ -1,4 +1,4 @@
-import { at } from '../../lib/location.ts';
+import { lotAt, lotOrigin, lotAtPixel } from '../../lib/lots.ts'
 /**
  * Gathering (docs/items/crafting-and-repair.md, "Gathering"): the workable
  * pieces of a wilds chunk (the Tangle and the Whitequiet), the woods, and
@@ -19,18 +19,16 @@ import { at } from '../../lib/location.ts';
  * stump is still there. Planting draws the new sapling where it went in.
  */
 import type Phaser from 'phaser'
-import { EMPTY_YIELD_LINE, GATHERING_DATA, gatheringTarget, gatheringToolWord, gatheringVerb, keepsStanding, leftBehind, swingPlan, visitIdFor, visitWork, wearLine, yieldLine, type ToolFeel, type VisitWork } from '../../lib/gathering'
-import { parseHomeArea } from '../../lib/homestead'
+import { EMPTY_YIELD_LINE, GATHERING_DATA, gatheringLabel, gatheringTarget, gatheringToolWord, gatheringVerb, keepsStanding, leftBehind, swingPlan, visitIdFor, visitWork, wearLine, yieldLine, type ToolFeel, type VisitWork } from '../../lib/gathering'
 import { itemDef } from '../../lib/items'
 import { itemsFor } from '../items'
 import { itemErrorText } from '../../content/errors'
 import { heldNow } from '../held'
 import { ITEM_ART_FALLBACK, itemIcon } from '../items-pass'
 import { homesteadsFor } from '../homestead'
-import { plantScenery } from '../homeland'
 import { lookAtlasKey } from '../wilds/wilds-looks'
-import { OUTDOORS_AREA } from '../wilds/coords'
 import { ensureSceneryArt } from '../area/props'
+import { OUTDOORS_AREA } from '../wilds/coords'
 import { bus, EV } from '../events'
 import { TILE, tileBottom, tileKey, tileMid } from '../../lib/tile'
 import type { Session } from '../session'
@@ -124,8 +122,15 @@ export class Gathering {
    */
   private live(): boolean {
     if (!this.deps.session.link || this.spots.length === 0) return false
-    const gate = parseHomeArea(this.deps.world.areaId)
-    return gate === null || homesteadsFor(this.deps.session).mine?.gate === gate
+    return true
+  }
+
+  private mayWork(spot: GatherSpot): boolean {
+    if (this.deps.world.areaId !== OUTDOORS_AREA) return true
+    const target = lotAt(Math.floor(spot.tx / 24), Math.floor(spot.ty / 24))
+    if (target === null) return true
+    const hero = this.deps.hero().sprite
+    return lotAtPixel(hero.x, hero.y) === target && homesteadsFor(this.deps.session).myGate === target
   }
 
   /**
@@ -144,9 +149,9 @@ export class Gathering {
         reach: REACH,
         clickReach: REACH,
         markerOffset: 14,
-        label: spot.label,
+        label: gatheringLabel(spot.target, spot.label),
         verb: gatheringVerb(target?.action ?? 'chop', target?.verb),
-        available: () => !this.busy && actionOf(spot) === heldNow().kind && this.live(),
+        available: () => !this.busy && actionOf(spot) === heldNow().kind && this.live() && this.mayWork(spot),
         activate: () => void this.work(spot)
       }
       this.points.set(point, spot)
@@ -263,12 +268,14 @@ export class Gathering {
           return
         }
       }
-      const home = parseHomeArea(session.state.area) !== null
+      const gate = session.state.area === OUTDOORS_AREA ? lotAt(Math.floor(spot.tx / 24), Math.floor(spot.ty / 24)) : null
+      if (!this.mayWork(spot)) return
+      const worldId = session.link?.worldId
       this.deps.notePosition()
-      const wilds = session.state.area === OUTDOORS_AREA && at(session.state.area, hero.sprite.x, hero.sprite.y).source.kind === 'generated'
+      const open = session.state.area === OUTDOORS_AREA
       // The server checks the piece against its own land or chunk: home tiles
       // and the open map's world tiles as they are.
-      const tile: [number, number] | undefined = home || wilds ? [spot.tx, spot.ty] : undefined
+      const tile: [number, number] | undefined = open ? [spot.tx, spot.ty] : undefined
       const r = await itemsFor(session).gather(tool.id, target.action, spot.target, this.visit, { tile })
       // The answer can outlive this build of the area (a snap-back rebuilt
       // it mid-request): it goes to whichever build is up now.
@@ -283,7 +290,7 @@ export class Gathering {
       }
       const now = target.action === 'chop' ? 'stump' : 'open'
       this.done.worked.set(this.key(spot), now)
-      this.paid(r.value)
+      this.paid(r.value, gate, worldId)
       if (!live) return
       live.last = 'landed'
       live.deps.fx.sparkBurst(tileMid(spot.tx), tileBottom(spot.ty) - 8, (r.value.gathered ?? []).length > 0 ? 10 : 4)
@@ -365,7 +372,7 @@ export class Gathering {
     const kind = heldNow().kind
     let best: { d: number; spot: GatherSpot } | null = null
     for (const spot of this.spots) {
-      if (actionOf(spot) === kind) continue
+      if (!this.mayWork(spot) || actionOf(spot) === kind) continue
       const d = this.distance(hero, spot)
       if (d <= REACH && (!best || d < best.d)) best = { d, spot }
     }
@@ -385,7 +392,7 @@ export class Gathering {
     if (this.busy || !this.live()) return false
     const kind = heldNow().kind
     const spot = this.spots.find((s) => {
-      if (actionOf(s) !== kind) return false
+      if (!this.mayWork(s) || actionOf(s) !== kind) return false
       const dx = point.x - tileMid(s.tx)
       const dy = point.y - tileBottom(s.ty)
       return Math.abs(dx) <= 12 && dy >= -28 && dy <= 6 && this.distance(hero, s) <= REACH
@@ -420,7 +427,7 @@ export class Gathering {
   }
 
   /** What the wood gave, said and shown; a change kept at home is read again. */
-  private paid(result: ItemsActionResponse['result']): void {
+  private paid(result: ItemsActionResponse['result'], gate: number | null, worldId: string | undefined): void {
     const gathered = result.gathered ?? []
     if (gathered.length > 0) {
       const gain = { to: 'bag' as const, itemDef: gathered[0].itemDef, ...(gathered.length === 1 ? { qty: gathered[0].qty } : { label: yieldLine(gathered) }) }
@@ -431,8 +438,7 @@ export class Gathering {
     if (worn) bus.emit(EV.toast, { text: worn, icon: 'bag' })
     // Inside your lamplight the server kept the change: read the home again
     // so the next build of the land (a reload, a later visit) shows it.
-    const gate = parseHomeArea(this.deps.session.state.area)
-    if (gate !== null && result.land) void homesteadsFor(this.deps.session).fetchHome(gate)
+    if (gate !== null && result.land && this.deps.session.link?.worldId === worldId) void homesteadsFor(this.deps.session).fetchHome(gate)
   }
 
   private key(spot: { tx: number; ty: number }): string {
@@ -498,18 +504,11 @@ export class Gathering {
   }
 
   /** Something planted on this land: draw it where it went in. */
-  private onPlanted(p: { plant: HomePlantView }): void {
-    const gate = parseHomeArea(this.deps.world.areaId)
-    if (gate === null || this.deps.session.state.area !== this.deps.world.areaId) return
-    const s = plantScenery(p.plant, lookAtlasKey('tangle', null))
-    if (!ensureSceneryArt(this.scene, s.key)) return
-    const img = this.scene.add.image(s.x, s.y, s.key, s.frame).setOrigin(0.5, 1).setFlipX(s.flipX ?? false).setDepth(s.y)
-    if (img.height > TILE) img.setScale(TILE / img.height)
-    if (!this.deps.reducedMotion) {
-      img.setScale(img.scale * 0.4)
-      this.scene.tweens.add({ targets: img, scale: img.scale / 0.4, duration: 260, ease: 'Back.easeOut' })
-    }
-    this.deps.fx.sparkBurst(s.x, s.y - 6, 6)
+  private onPlanted(p: { plant: HomePlantView; gate: number; worldId: string }): void {
+    if (this.deps.world.areaId !== OUTDOORS_AREA || this.deps.session.link?.worldId !== p.worldId) return
+    const o = lotOrigin(p.gate)
+    // The authoritative home refresh owns plant art and its chunk lifetime.
+    this.deps.fx.sparkBurst(tileMid(o.tx + p.plant.x), tileBottom(o.ty + p.plant.y) - 6, 6)
   }
 
   private pause(ms: number): Promise<void> {

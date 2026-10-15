@@ -1,3 +1,6 @@
+import { lotAt } from '../../lib/lots.ts'
+import { homesteadsFor } from '../homestead.ts'
+import { onSceneEnd } from '../scene-end.ts'
 /**
  * The open map's moving window (docs/design/open-map.md 2.5, 2.6, 2.10):
  * one Wilds scene, no restart between chunks.
@@ -37,7 +40,7 @@ import { bus, EV } from '../events.ts'
 import { generateRepairArt } from '../repairs-art.ts'
 import type { Session } from '../session.ts'
 import { CHUNK_TILES, chunkKey, chunkOfPixel, parseChunkKey } from './coords.ts'
-import { fixedPlaceOf, footprint, footprintAt, prepareFixed, type FixedFootprint } from './fixed.ts'
+import { fixedPlaceOf, footprint, footprintAt, prepareFixed, applyLotHome, sceneryOf, type FixedFootprint } from './fixed.ts'
 import { FixedChunk, type FixedChunkDeps } from './fixed-chunk.ts'
 import type { ExitDef } from '../worlds.ts'
 import { PLACES, fixedChunks } from '../../lib/places.ts'
@@ -125,6 +128,8 @@ export class WildsWindow {
   /** Painting on this thread, at once (the first window, behind the scene's fade). */
   private now = false
   private lastVersion = -1
+  private fixedDaySignature = ''
+  private seasonalPending = new Set<string>()
   /** The hero's tile when the window last looked at what it keeps past the 3×3. */
   private heroTile = ''
   private seenTimer = 0
@@ -138,7 +143,7 @@ export class WildsWindow {
   private readonly id = Math.random().toString(36).slice(2, 10)
 
   constructor(private deps: WindowDeps) {
-    deps.scene.events.once('shutdown', () => this.destroy())
+    onSceneEnd(deps.scene, () => this.destroy())
     bus.on(EV.fixedReady, this.onFixedReady)
     // The fixed footprints' ground (its tilemap and cells) and code-drawn
     // textures are prepared now, behind the scene's fade, not on a walking frame.
@@ -167,6 +172,26 @@ export class WildsWindow {
 
   update(dt: number): void {
     if (this.gone) return
+    const calendar = calendarAt(gameNow())
+    const signature = JSON.stringify([calendar.festival, calendar.mark, calendar.wick])
+    if (signature !== this.fixedDaySignature) {
+      if (this.fixedDaySignature) this.seasonalPending = new Set(this.fixed.keys())
+      this.fixedDaySignature = signature
+    }
+    const stale = this.seasonalPending.values().next().value
+    if (stale) {
+      this.seasonalPending.delete(stale)
+      const had = this.fixed.has(stale)
+      this.fixed.get(stale)?.destroy(true)
+      this.fixed.delete(stale)
+      if (had && this.plan?.attach.includes(stale)) {
+        const { cx, cy } = parseChunkKey(stale)
+        const fp = footprintAt(cx, cy)
+        if (fp && !this.failedGround.has(fp.place.id)) {
+          this.attachFixed(fp, cx, cy)
+        }
+      }
+    }
     const hero = this.deps.hero()
     const at = chunkOfPixel(hero.x, hero.y)
     // Nothing to place a window on until the Wilds have been read once (the
@@ -339,12 +364,12 @@ export class WildsWindow {
   private step(): boolean {
     const plan = this.plan
     if (!plan) return false
-    const known = (cx: number, cy: number) => !!chunkTerrain(cx, cy)
+    const known = (cx: number, cy: number) => fixedPlaceOf(cx, cy) !== null || !!chunkTerrain(cx, cy)
     for (const key of plan.attach) {
       const { cx, cy } = parseChunkKey(key)
       if (fixedPlaceOf(cx, cy)) {
         if (this.fixed.has(key) || this.failedGround.has(fixedPlaceOf(cx, cy)!.id)) continue
-        const fp = footprintAt(cx, cy)
+        let fp = footprintAt(cx, cy)
         if (!fp) {
           this.load(key)
           continue
@@ -495,6 +520,11 @@ export class WildsWindow {
   private attachFixed(fp: FixedFootprint, cx: number, cy: number): void {
     perfTime('attach:fixed', () => {
       const { scene, session } = this.deps
+      const gate = lotAt(cx, cy)
+      if (gate !== null) {
+        applyLotHome(gate, homesteadsFor(this.deps.session).homes.get(gate) ?? null)
+        fp = footprintAt(cx,cy)!
+      }
       const ground = this.groundFor(fp)
       if (!ground) return
       const c = new FixedChunk(
@@ -511,7 +541,7 @@ export class WildsWindow {
           ground,
           day: () => {
             const cal = calendarAt(gameNow())
-            return { festival: cal.festival, wick: cal.wick }
+            return { festival: cal.festival, wick: cal.wick, mark: cal.mark }
           },
           light: (lamps) => refreshLanternVisuals(scene, lamps, session.questStage, session.state),
           builds: this.builds
@@ -524,6 +554,14 @@ export class WildsWindow {
       this.attaches++
       if (this.now || perfWithout('spread')) this.builds.finish(c)
     })
+  }
+
+  /** Mutable home overlays rebuild through the same window budget, without a scene restart. */
+  refreshFixed(key: string): void { if (this.fixed.has(key)) this.seasonalPending.add(key) }
+
+  /** Late layers join pending/built chunks through their existing budgeted job. */
+  fixturesReady(): void {
+    for (const c of this.fixed.values()) c.fixturesReady()
   }
 
   /** Fixed ground and collision are attached, even if its drawing is still building. */
@@ -541,7 +579,11 @@ export class WildsWindow {
     const had = this.fixedGround.get(fp.place.id)
     if (had) return had
     if (this.failedGround.has(fp.place.id)) return null
-    const g = groundTiles(this.deps.scene, { areaId: fp.place.id, ground: fp.ground, width: fp.w, height: fp.h, scenery: [] }, true)
+    const g = groundTiles(this.deps.scene, { areaId: fp.place.id, ...(fp.place.id === 'homestead-lots' ? { groundStyle: 'tangle' as const, groundMark: null } : {}), ground: fp.ground, width: fp.w, height: fp.h, scenery: [...fp.objects.values()].flat().flatMap((o) => {
+      const s = sceneryOf(o)
+      if (!s?.groundUnder) return []
+      return [{ ...s, groundUnder: { ...s.groundUnder, tx: s.groundUnder.tx - fp.tx, ty: s.groundUnder.ty - fp.ty } }]
+    }) }, true)
     if (g) {
       this.fixedGround.set(fp.place.id, g)
       this.prewarm(fp)

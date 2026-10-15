@@ -31,6 +31,9 @@ func GenerateV3(e Epoch, cx, cy int, kept []Kept) (Chunk, error) {
 	if err := e.check(); err != nil {
 		return Chunk{}, err
 	}
+	if FixedFootprintAt(cx, cy) != nil {
+		return Chunk{}, fmt.Errorf("%w: chunk %d,%d is fixed", ErrWrongEpoch, cx, cy)
+	}
 	if EpochKindAt(cx, cy) != e.Kind {
 		return Chunk{}, fmt.Errorf("%w: chunk %d,%d is %s, the epoch %s", ErrWrongEpoch, cx, cy, EpochKindAt(cx, cy), e.Kind)
 	}

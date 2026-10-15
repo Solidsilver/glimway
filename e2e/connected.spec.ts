@@ -143,7 +143,8 @@ test('a rest is paid on the server, and the world waits for its answer', async (
   await hurt(page, 6)
   // The hurt goes up with the next report (about every 10 s).
   await expect.poll(async () => (await serverState(page)).body.state.hp, { timeout: 15_000 }).toBeLessThan(41)
-  await warp(page, 'village', 11, 13)
+  // One tile off the well's rank-1 chore so the lantern is the nearest in reach.
+  await warp(page, 'outdoors', 10, 62)
   await lanternReplies(page)
   const choice = page.locator('.choice', { hasText: 'Rest by the flame' })
   await expect(choice).toBeEnabled()
@@ -157,7 +158,7 @@ test('a rest is paid on the server, and the world waits for its answer', async (
 
 test('quest glims come from the server once the story upload lands', async ({ page }) => {
   await freshPlayer(page)
-  await warp(page, 'village', 16, 14)
+  await warp(page, 'outdoors', 14, 62)
   await talkThrough(page, /Talk to Mara/)
   await warp(page, 'ruin', 15, 3)
   await talkThrough(page, /Copy the naming from the stone/)
@@ -181,7 +182,7 @@ test('the shared library shelf: a connected donation lands on the world shelf an
     await new Promise((r) => setTimeout(r, 4000))
     await route.continue()
   })
-  await warp(page, 'village', 25, 15)
+  await warp(page, 'outdoors', 7, 72)
   await expect(page.locator('.prompt')).toContainText('Pick up the folded paper')
   await page.keyboard.press('e')
   await expectToast(page, 'Found: A Page from Pip’s Copybook')
@@ -249,10 +250,11 @@ test('offline play keeps going, spends wait for a connection, and reconnecting u
   // The next report (about every 10 s) finds no connection.
   await expect(page.getByTestId('net-offline')).toBeVisible({ timeout: 15_000 })
   // Story still moves offline.
-  await warp(page, 'village', 16, 14)
+  await warp(page, 'outdoors', 14, 62)
   await talkThrough(page, /Talk to Mara/)
-  // Spends say they need a connection.
-  await warp(page, 'village', 11, 13)
+  // Spends say they need a connection. One tile off the well's rank-1 chore so
+  // the lantern is the nearest in reach.
+  await warp(page, 'outdoors', 10, 62)
   await lanternReplies(page)
   const choice = page.locator('.choice', { hasText: 'Rest by the flame' })
   await expect(choice).toBeDisabled()
@@ -347,7 +349,7 @@ test('logout with unsent progress keeps it on the device, and the next sign-in u
     return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 'unavailable' } }) })
   })
   const queuedStep = (rec: Record<string, any> | null) => (rec?.entries ?? []).some((e: { path: string }) => e.path === '/api/quest/step')
-  await warp(page, 'village', 16, 14)
+  await warp(page, 'outdoors', 14, 62)
   await talkThrough(page, /Talk to Mara/)
   await expect.poll(() => held).toBeGreaterThan(0)
   await expect.poll(async () => queuedStep(await cacheRecord(page, accountOf(id)))).toBe(true)

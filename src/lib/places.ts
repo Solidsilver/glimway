@@ -56,13 +56,16 @@ function placesRules(p: Places, w: WildsData): void {
     for (const a of f.anchors) {
       if (anchors.has(a.id)) bad(`${f.id}: duplicate anchor ${a.id}`);
       anchors.add(a.id);
-      if (!inside(a.tx, a.ty)) bad(`${f.id} anchor ${a.id}: outside the footprint`);
+      const wx = a.tx + f.origin.tx, wy = a.ty + f.origin.ty;
+      const onFixed = p.fixed.some(other => { const r = fixedChunks(other); return wx >= r.x0*S && wx < (r.x1+1)*S && wy >= r.y0*S && wy < (r.y1+1)*S; });
+      if (!onFixed) bad(`${f.id} anchor ${a.id}: outside the footprint`);
     }
     // The gate anchors are the frozen capacity: gate:0 up to gate:n-1.
     const gates = new Set<number>();
     for (const a of f.anchors) {
-      if (!a.id.startsWith('gate:')) continue;
-      const n = a.id.slice('gate:'.length);
+      const prefix = f.id === 'hearthwick' ? 'lot:' : 'gate:';
+      if (!a.id.startsWith(prefix)) continue;
+      const n = a.id.slice(prefix.length);
       if (!/^(0|[1-9][0-9]{0,3})$/.test(n)) bad(`${f.id} anchor ${a.id}: not a gate number`);
       gates.add(Number(n));
     }
@@ -72,7 +75,7 @@ function placesRules(p: Places, w: WildsData): void {
 
 /** A fixed place's gate capacity: its gate anchors, gate:0 to gate:n-1 (the loader's rule). */
 export function gateCapacity(p: FixedPlace): number {
-  return p.anchors.filter((a) => a.id.startsWith('gate:')).length;
+  return p.anchors.filter((a) => a.id.startsWith(p.id === 'hearthwick' ? 'lot:' : 'gate:')).length;
 }
 
 /** Reads places JSON through the schema, then the rules that span entries and files. */

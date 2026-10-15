@@ -73,9 +73,9 @@ func TestStory028Upgrade(t *testing.T) {
 			snap, e := Load(context.Background(), tx, "owner-subject")
 			// 028 sends a Wilds save to the Commons arch; 036 then moves it onto
 			// the outdoors grid (anchor commons:arch) with one more version.
-			wantVersion := int64(8)
+			wantVersion := int64(9)
 			if kind == "wilds" {
-				wantVersion = 9
+				wantVersion = 10
 			}
 			if e != nil {
 				t.Fatal(e)
@@ -86,7 +86,7 @@ func TestStory028Upgrade(t *testing.T) {
 			if kind == "wilds" && (snap.State.Area != "outdoors" || snap.State.Position != (rules.Position{X: 2*16 + 8, Y: 26*16 + 8})) {
 				t.Fatal(snap.State.Area)
 			}
-			if kind == "home-valid" && snap.State.Area != "home:0" || kind == "home-invalid" && snap.State.Area != "village" {
+			if kind == "home-valid" && snap.State.Area != "outdoors" || kind == "home-invalid" && snap.State.Area != "outdoors" {
 				t.Fatal("home normalization", snap.State.Area)
 			}
 			if kind == "over-max" && (snap.State.HP != 50 || snap.State.Mana != 32) {

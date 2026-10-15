@@ -1,4 +1,4 @@
-import { resolve, contentTile } from '../lib/location.ts';
+import { contentPosition } from '../lib/location.ts';
 /**
  * Papers — the owner's found texts as collectible, readable things.
  *
@@ -100,13 +100,13 @@ const DESIGN: Record<string, Design> = {
   'silas-pine-offcut-scrap': { style: 'scrap', source: { kind: 'commons', hook: 'Silas’s firebox, after you help him hang a door-fox on a new lintel' } },
   'pip-copybook-warden-corrections': {
     style: 'notebook',
-    source: { kind: 'placed', area: 'village', tx: 25, ty: 14, look: 'folded', spot: 'Inside the garden fence, in the far corner from the gap' },
+    source: { kind: 'placed', area: 'hearthwick', tx: 7, ty: 72, look: 'folded', spot: 'Inside the garden fence, in the far corner from the gap' },
   },
   // ---- Bedtime Stories
   'the-boy-who-ran-faster-than-the-wick': { style: 'page', source: { kind: 'library-start' } },
   'why-the-tide-fox-has-one-long-ear': {
     style: 'page',
-    source: { kind: 'placed', area: 'village', tx: 39, ty: 2, look: 'folded', spot: 'Blown into the north-east corner, behind the houses' },
+    source: { kind: 'placed', area: 'hearthwick', tx: 36, ty: 49, look: 'folded', spot: 'Blown into the north-east corner, behind the houses' },
   },
   'the-mudrise-fleet-lullaby': { style: 'song', source: { kind: 'library-start' } },
   'the-ashwatch-skipping-game': {
@@ -115,7 +115,7 @@ const DESIGN: Record<string, Design> = {
   },
   'elaras-note-in-pips-copybook': {
     style: 'notebook',
-    source: { kind: 'placed', area: 'village', tx: 40, ty: 22, look: 'folded', spot: 'Caught in the reeds on the pond’s far side' },
+    source: { kind: 'placed', area: 'hearthwick', tx: 40, ty: 76, look: 'folded', spot: 'Caught in the reeds on the pond’s far side' },
   },
   // ---- The Liar's Art
   'failed-grid-of-sector-4': { style: 'notebook', source: { kind: 'wilds-poi', hook: 'A surveyor’s abandoned camp beside a tight-ringed stump' } },
@@ -183,8 +183,8 @@ const DESIGN: Record<string, Design> = {
   },
 };
 
-const AREA_HINT: Record<AreaId, string> = {
-  village: 'Somewhere in Hearthwick, off the beaten path.',
+const AREA_HINT: Record<string, string> = {
+  hearthwick: 'Somewhere in Hearthwick, off the beaten path.',
   woodland: 'Somewhere in Brackenwood, away from the road.',
   ruin: 'Somewhere in Ashwatch Ruin.',
 };
@@ -285,11 +285,11 @@ export function placedPapersIn(area: string, stage: QuestStage, flags: readonly 
   return PAPERS.filter(
     (p): p is PlacedPaper =>
       p.source.kind === 'placed' &&
-      (p.source.area === area || resolve(p.source.area, p.source.tx, p.source.ty).space === area) &&
+      (p.source.area === area || contentPosition(p.source.area, p.source.tx, p.source.ty).space === area) &&
       !flags.includes(paperFlag(p.id)) &&
       (!p.source.after || stageAtLeast(stage, p.source.after)),
   ).map((p) => {
-    const spot = contentTile(area, p.source.area, p.source.tx, p.source.ty);
+    const spot = contentPosition(p.source.area, p.source.tx, p.source.ty);
     return { ...p, source: { ...p.source, area: spot.space, tx: spot.tx, ty: spot.ty } };
   });
 }

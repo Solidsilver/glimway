@@ -27,7 +27,7 @@ func TestFallRecoveryReplayAndMissingGeometry(t *testing.T) {
 	}
 	out := read(req)
 	f := out.GetFall()
-	if f == nil || f.Vitals.Hp != 13 || f.Vitals.Mana != 10 || f.Place.Area != "village" || f.Vitals.VitalsSetVersion != out.State.Version || f.Place.PlaceSetVersion != out.State.Version {
+	if f == nil || f.Vitals.Hp != 13 || f.Vitals.Mana != 10 || f.Place.Area != "outdoors" || f.Place.X != 184 || f.Place.Y != 1000 || f.Vitals.VitalsSetVersion != out.State.Version || f.Place.PlaceSetVersion != out.State.Version {
 		t.Fatal(out)
 	}
 	s = x.expect("GET", "/api/state", nil, c, 200)
@@ -42,12 +42,12 @@ func TestFallRecoveryReplayAndMissingGeometry(t *testing.T) {
 	}}
 	req = body(s, "no-geometry", map[string]any{"where": map[string]any{"area": "outdoors", "x": 300, "y": -1000}})
 	out = read(req)
-	if out.GetFall().Lantern != "none" || out.GetFall().Reason != "generator-unavailable" || out.State.Place.Area != "village" {
+	if out.GetFall().Lantern != "none" || out.GetFall().Reason != "generator-unavailable" || out.State.Place.Area != "outdoors" {
 		t.Fatal(out)
 	}
 	// A zero Habitica HP baseline remains zero even though a fall was requested.
 	x.db.DB.Exec("UPDATE sync_baselines SET profile_json=json_set(profile_json,'$.hp',0) WHERE account_id=?", s.AccountID)
-	req = body(s, "zero-baseline", map[string]any{"where": map[string]any{"area": "village", "x": 0, "y": 0}})
+	req = body(s, "zero-baseline", map[string]any{"where": map[string]any{"area": "in:village:library", "x": 0, "y": 0}})
 	if out = read(req); out.State.Vitals.Hp != 0 {
 		t.Fatal("zero baseline recovered", out)
 	}

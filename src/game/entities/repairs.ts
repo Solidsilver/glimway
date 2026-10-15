@@ -1,3 +1,4 @@
+import { onSceneEnd } from '../scene-end.ts'
 /**
  * Village repairs in the world (docs/items/crafting-and-repair.md, "Village
  * repairs"): the broken things standing in the village and on the Commons —
@@ -56,6 +57,7 @@ interface Standing {
 }
 
 export class RepairsLayer {
+  private stopped = false
   private scope: FixedScope
 
   attachChunk(key: string): void {
@@ -80,9 +82,12 @@ export class RepairsLayer {
     }
     bus.on(EV.villageChanged, sync)
     bus.on(EV.itemsChanged, sync)
-    scene.events.once('shutdown', () => {
+    onSceneEnd(scene, () => {
       bus.off(EV.villageChanged, sync)
       bus.off(EV.itemsChanged, sync)
+      this.stopped = true
+      this.scope.keys.clear()
+      this.sync()
     })
     if (deps.session.link && village.repairsStatus !== 'ready') void village.loadRepairs()
     else this.sync()
@@ -131,7 +136,7 @@ export class RepairsLayer {
     const { session, world } = this.deps
     const village = villageFor(session)
     const open = new Set(village.repairs.open.map((c) => c.id))
-    const here = session.link ? repairsForArea(world.areaId).filter((d) => this.scope.has(d.pos.tx, d.pos.ty)) : []
+    const here = !this.stopped && session.link ? repairsForArea(world.areaId).filter((d) => this.scope.has(d.pos.tx, d.pos.ty)) : []
     const want = here.filter((d) => open.has(d.id))
     const mended = session.link ? here.filter((d) => !open.has(d.id) && village.repairs.mended.some((m) => m.repairId === d.id)) : []
     for (const [id, s] of this.standing) {
@@ -159,6 +164,7 @@ export class RepairsLayer {
       // "The well's rotten rope" → "Mend the well's rotten rope".
       label: `Mend ${d.name.charAt(0).toLowerCase()}${d.name.slice(1)}`,
       verb: 'Mend',
+      rank: 1,
       marker: () => 'quest',
       markerOffset: 30,
       activate: () => this.mend(d.id)

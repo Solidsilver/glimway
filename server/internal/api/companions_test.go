@@ -207,8 +207,8 @@ func TestAvatarChangeReachesTheRoom(t *testing.T) {
 	_, a := x.ready("alice")
 	x.ready("bob")
 	x.ready("carol")
-	me := x.peerAt(x.account("alice"), a.WorldID, "village")
-	friend := x.peerAt(x.account("bob"), a.WorldID, "village")
+	me := x.peerAt(x.account("alice"), a.WorldID, "in:village:library")
+	friend := x.peerAt(x.account("bob"), a.WorldID, "in:village:library")
 	elsewhere := x.peerAt(x.account("carol"), a.WorldID, "outdoors:0:1")
 	avatar := &presenceAvatarMsg{SelectedPet: wrapperspb.String("Fox-Golden")}
 	x.api.avatarChanged(x.account("alice"), avatar)
@@ -288,8 +288,8 @@ func TestCompanionOpsChangeTheRoomsAvatar(t *testing.T) {
 	x.pinWorld(&a)
 	h, x0, y0 := standingStable(x, ac, &a, 1)
 	x.companionOp("POST", "/api/stable/stall", body(a, "in", map[string]any{"homeId": h.ID, "stall": 1, "mount": "Wolf-Shade"}), ac, 200)
-	me := x.peerAt(x.account("alice"), a.WorldID, "village")
-	friend := x.peerAt("friend", a.WorldID, "village")
+	me := x.peerAt(x.account("alice"), a.WorldID, "in:village:library")
+	friend := x.peerAt("friend", a.WorldID, "in:village:library")
 	change := func() *presenceAvatarMsg {
 		x.t.Helper()
 		select {
@@ -337,8 +337,8 @@ func TestNoPetIsAChoice(t *testing.T) {
 	x.set(p)
 	ac, a := x.ready("alice")
 	x.claimGate(ac, &a, 0)
-	x.peerAt(x.account("alice"), a.WorldID, "village")
-	friend := x.peerAt("friend", a.WorldID, "village")
+	x.peerAt(x.account("alice"), a.WorldID, "in:village:library")
+	friend := x.peerAt("friend", a.WorldID, "in:village:library")
 	choose := x.companionOp("POST", "/api/companions", chooseBody(a, "alone", store.NoFollower, nil), ac, 200)
 	if choose.Result.Companions.FollowPet != store.NoFollower {
 		t.Fatal("the answer keeps No pet", choose.Result.Companions)

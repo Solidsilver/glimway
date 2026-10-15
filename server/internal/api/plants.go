@@ -117,6 +117,7 @@ func (a *Server) plant(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *
 	if !nearTile(s, s.State.Area, x, y, 2) {
 		return fail(409, "too-far-away")
 	}
+	x, y = localHomeTile(s, x, y)
 	// A home tends so many plants, then the ground is full.
 	if len(h.Plants) >= int(content.GatheringRules.GetPlantsPerHome()) || !plantGround(*h)[[2]int{x, y}] {
 		return fail(409, "land-blocked")

@@ -29,18 +29,18 @@ import { ITEM_ERRORS } from '../src/content/errors.ts';
 const POND = 'water:village:mill-pond';
 const mid = (t: number) => t * 16 + 8;
 /** The village pond (src/game/worlds.ts): water at 33–38 × 19–22, and the race at 32 × 20–22. */
-const isWater = (tx: number, ty: number) => (tx >= 33 && tx <= 38 && ty >= 19 && ty <= 22) || (tx === 32 && ty >= 20 && ty <= 22);
+const isWater = (tx: number, ty: number) => (tx >= 33 && tx <= 38 && ty >= 73 && ty <= 76) || (tx === 32 && ty >= 74 && ty <= 76);
 
 test('the banks come from the content, and you cast from within a tile and a half of one', () => {
   assert.equal(castReachPx(), 24);
   assert.equal(leaveReachPx(), castReachPx(), 'standing anywhere the server takes a cast from never pulls the line in');
-  assert.equal(bankNear('village', mid(36), mid(18))?.bank.id, 'north');
-  assert.equal(bankNear('village', mid(39), mid(21))?.bank.id, 'east');
-  assert.equal(bankNear('village', mid(32), mid(19))?.bank.id, 'race');
-  assert.equal(bankNear('village', mid(32), mid(18))?.bank.id, 'race', 'a step back is still the bank');
-  assert.equal(bankNear('village', mid(20), mid(18)), null);
-  assert.equal(bankNear('woodland', mid(36), mid(18)), null, 'banks belong to their area');
-  assert.equal(bankNear('village', mid(36), mid(18))?.water.id, POND);
+  assert.equal(bankNear('hearthwick', mid(36), mid(72))?.bank.id, 'north');
+  assert.equal(bankNear('hearthwick', mid(39), mid(75))?.bank.id, 'east');
+  assert.equal(bankNear('hearthwick', mid(32), mid(73))?.bank.id, 'race');
+  assert.equal(bankNear('hearthwick', mid(32), mid(72))?.bank.id, 'race', 'a step back is still the bank');
+  assert.equal(bankNear('hearthwick', mid(74), mid(72)), null);
+  assert.equal(bankNear('woodland', mid(36), mid(72)), null, 'banks belong to their area');
+  assert.equal(bankNear('hearthwick', mid(36), mid(72))?.water.id, POND);
 });
 
 test('the race is open all year; the north and east banks ice over in the Quiet', () => {
@@ -56,15 +56,15 @@ test('the race is open all year; the north and east banks ice over in the Quiet'
 
 test('the float lands on the water in the bank’s facing, the race’s below the wheel', () => {
   const pond = waterFor(POND)!;
-  assert.deepEqual(floatTile(bankFor(pond, 'north')!, mid(35), mid(18), isWater), { tx: 35, ty: 21 });
-  assert.deepEqual(floatTile(bankFor(pond, 'east')!, mid(39), mid(20), isWater), { tx: 36, ty: 20 });
+  assert.deepEqual(floatTile(bankFor(pond, 'north')!, mid(35), mid(72), isWater), { tx: 35, ty: 75 });
+  assert.deepEqual(floatTile(bankFor(pond, 'east')!, mid(39), mid(74), isWater), { tx: 36, ty: 74 });
   // The wheel turns over (32, 20–21): the race's float goes to its foot.
-  assert.deepEqual(floatTile(bankFor(pond, 'race')!, mid(32), mid(19), isWater), { tx: 32, ty: 22 });
+  assert.deepEqual(floatTile(bankFor(pond, 'race')!, mid(32), mid(73), isWater), { tx: 32, ty: 76 });
   // From the bank tile nearest the hero.
-  assert.deepEqual(floatTile(bankFor(pond, 'north')!, mid(38) + 6, mid(18), isWater), { tx: 38, ty: 21 });
+  assert.deepEqual(floatTile(bankFor(pond, 'north')!, mid(38) + 6, mid(72), isWater), { tx: 38, ty: 75 });
   // Only as far as the water goes; none at all when the first tile out is dry.
-  assert.deepEqual(floatTile(bankFor(pond, 'north')!, mid(35), mid(18), (_tx, ty) => ty === 19), { tx: 35, ty: 19 });
-  assert.equal(floatTile(bankFor(pond, 'north')!, mid(35), mid(18), () => false), null);
+  assert.deepEqual(floatTile(bankFor(pond, 'north')!, mid(35), mid(72), (_tx, ty) => ty === 73), { tx: 35, ty: 73 });
+  assert.equal(floatTile(bankFor(pond, 'north')!, mid(35), mid(72), () => false), null);
 });
 
 test('a cast waits for the bite, holds the fish, then lets it slip', () => {

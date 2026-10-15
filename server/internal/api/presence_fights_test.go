@@ -284,7 +284,7 @@ func TestFightSocketWakeSharedJoinResultsLeaveAndReconnect(t *testing.T) {
 	}
 	time.Sleep(5 * time.Millisecond) // past the test config's join cooldown
 	a.closeStatus(presenceReplaced)
-	replacement.send(map[string]any{"type": "join", "area": "village"})
+	replacement.send(map[string]any{"type": "join", "area": "in:village:library"})
 	closed := socketFight(t, replacement, "fightEvent").GetFightEvent()
 	if closed.Kind != wire.FightEventKind_FIGHT_EVENT_KIND_ROOM_CLOSED || closed.Room != join.Room {
 		t.Fatal(closed)

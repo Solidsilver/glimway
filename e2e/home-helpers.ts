@@ -1,3 +1,4 @@
+import { lotOrigin } from '../src/lib/lots.ts'
 import { expect, type Page } from './fixtures'
 import type { Locator } from '@playwright/test'
 import { accountOf, allow, CONTRACT, newUser, openTitleGuide, pasteAndConnect, pastOpening, routeHabitica, setHabitica, sql, syncFromMenu, waitForWorld, served } from './connected'
@@ -13,7 +14,7 @@ import { residentAt } from '../src/lib/residents.ts'
 
 const OUT = '.agent/screens'
 /** `commons`: a warp in Commons tiles (as content names them), landing on the open map (`outdoors`). */
-export type Area = 'village' | 'woodland' | 'ruin' | 'commons' | 'outdoors' | 'in:commons:yard' | 'in:commons:yard:deeds' | `in:home:${number}` | `home:${number}`
+export type Area = 'woodland' | 'ruin' | 'outdoors' | 'in:commons:yard' | 'in:commons:yard:deeds' | `in:home:${number}`
 
 type Item = { id: string; itemDef: string; scene: string | null; x: number | null; y: number | null; rotation: number | null; name?: string | null }
 export interface Home {
@@ -305,15 +306,13 @@ export async function myHome(page: Page, _id?: string): Promise<Home> {
 
 /** Walk through gate g from the lane in front of it, onto its land. */
 export async function throughGate(page: Page, gate: number): Promise<void> {
-  // The lane's slots are the open map's, in world tiles (from the Yard, say, step out first).
-  if (!(await inCommons(page))) await go(page, 'commons', 23, 19)
-  const v = await homes(page)
-  const slot = v.slots.find((s) => s.gate === gate)!
-  await go(page, 'outdoors', slot.entry.tx, slot.entry.ty)
-  const key = slot.side === 'west' ? 'ArrowLeft' : 'ArrowRight'
-  await page.keyboard.down(key)
-  await waitForArea(page, `home:${gate}` as Area)
-  await page.keyboard.up(key)
+  const o = lotOrigin(gate)
+  await go(page, 'outdoors', o.tx + 11, o.ty + 20)
+  await page.evaluate(() => (window as unknown as { __fsHomes?: { fresh?: () => Promise<void> } }).__fsHomes?.fresh?.())
+  await page.keyboard.down('ArrowUp')
+  try { await expect.poll(async () => (await homes(page)).land?.gate).toBe(gate) }
+  finally { await page.keyboard.up('ArrowUp') }
+  await goLot(page, gate, 11, 8)
 }
 
 
@@ -362,7 +361,7 @@ export async function earnPlenty(page: Page, id: string): Promise<void> {
 
 /** Claim the first unclaimed gate on the lane from Pell (read the reply), then step back out onto the lane; returns the gate. */
 export async function claimDeed(page: Page): Promise<number> {
-  await go(page, 'commons', 23, 19)
+  await go(page, 'outdoors', 34, 35)
   await expect.poll(async () => (await homes(page)).status, { timeout: SERVER_ANSWER_MS }).toBe('ready')
   const free = (await homes(page)).gates.find((g) => g.homeId === null)!
   await pellSays(page, new RegExp(`The deed to Lot ${free.gate + 1}`))
@@ -370,7 +369,7 @@ export async function claimDeed(page: Page): Promise<number> {
   // Pell answers once the server has the claim: read it (it would hold the screen).
   await readOn(page, DEED_BOUGHT)
   // Back out on the lane, as a deed bought from Silas used to leave you.
-  await go(page, 'commons', 23, 19)
+  await go(page, 'outdoors', 34, 35)
   return free.gate
 }
 
@@ -380,7 +379,7 @@ export const DEED_BOUGHT = /Entered: Lot|received and logged/
 /** Through your own gate onto your land; the land's fixed spots (door, doorstep, mailbox, site). */
 export async function toMyLand(page: Page): Promise<NonNullable<HomesView['land']>> {
   const gate = (await lane(page)).mine!.gate
-  if (!(await inCommons(page))) await go(page, 'commons', 23, 19)
+  if (!(await inCommons(page))) await go(page, 'outdoors', 34, 35)
   await expect.poll(async () => (await homes(page)).status, { timeout: SERVER_ANSWER_MS }).toBe('ready')
   await throughGate(page, gate)
   await expect.poll(async () => (await homes(page)).land, { timeout: SERVER_ANSWER_MS }).not.toBeNull()
@@ -390,7 +389,7 @@ export async function toMyLand(page: Page): Promise<NonNullable<HomesView['land'
 /** Stand at a tile of your land (relative to the doorstep). */
 export async function onMyLand(page: Page, dx = 0, dy = 0): Promise<NonNullable<HomesView['land']>> {
   const land = await toMyLand(page)
-  await go(page, `home:${land.gate}`, land.doorstep.tx + dx, land.doorstep.ty + dy)
+  await goLot(page, land.gate, land.doorstep.tx + dx, land.doorstep.ty + dy)
   return land
 }
 
@@ -406,5 +405,11 @@ export async function intoCottage(page: Page): Promise<void> {
 /** Stand at your mailbox (on your land). */
 export async function atMyMailbox(page: Page): Promise<void> {
   const land = await toMyLand(page)
-  await go(page, `home:${land.gate}`, land.mailbox.tx, land.mailbox.ty + 1)
+  await goLot(page, land.gate, land.mailbox.tx, land.mailbox.ty + 1)
+}
+
+/** Lot-local fixtures resolve explicitly to signed world tiles; no home scene. */
+export async function goLot(page: Page, gate: number, tx: number, ty: number): Promise<void> {
+ const o = lotOrigin(gate)
+ await go(page, 'outdoors', o.tx + tx, o.ty + ty)
 }

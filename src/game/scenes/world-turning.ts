@@ -26,7 +26,7 @@ import type { Hero } from '../entities/hero.ts'
 import type { Unmoored } from '../entities/unmoored.ts'
 import { chunkOfPixel } from '../wilds/coords.ts'
 import { prepareWilds, resetWilds, wickEnded, wildsEpoch } from '../wilds/store.ts'
-import { forgetGround, standAt } from '../wilds/ground-view.ts'
+import { forgetGround } from '../wilds/ground-view.ts'
 import type { WildsWindow } from '../wilds/window.ts'
 import type { WildsEntities } from '../wilds/entities.ts'
 import { roadStep } from '../../lib/quests.ts'
@@ -176,7 +176,7 @@ export class Turning {
   /** The new land is in: step off anything solid, lift the veil, say what happened. */
   private landed(loud: boolean, parts: Phaser.GameObjects.GameObject[]): void {
     const hero = this.deps.hero().sprite
-    const at = standAt(hero.x, hero.y)
+    const at = this.deps.world.open?.standAt(hero.x, hero.y)
     const moved = !!at && (at.x !== hero.x || at.y !== hero.y)
     if (at && moved) {
       hero.setPosition(at.x, at.y)

@@ -119,7 +119,7 @@ func objectNeeds(o *LayoutObject) string {
 			return "drawn art needs its key and its art"
 		}
 	case "gate":
-		if o.GetExit() == nil || o.GetSide() == "" || o.GetTw() < 1 || o.GetTh() < 1 {
+		if (o.GetExit() == nil && o.GetTarget() != "lot-entry") || o.GetSide() == "" || o.GetTw() < 1 || o.GetTh() < 1 {
 			return "a gate needs its side, its gap and its way through"
 		}
 	case "exit":
@@ -185,17 +185,25 @@ func LayoutsFor(files fs.FS, p *Places, w *Wilds) (map[string]*Layout, error) {
 		if int(l.GetTx()) != x0*S-ox || int(l.GetTy()) != y0*S-oy || int(l.GetWidth()) != (x1-x0+1)*S || int(l.GetHeight()) != (y1-y0+1)*S {
 			return nil, fmt.Errorf("invalid layout %s: the grid is not place %s's footprint", l.GetId(), f.GetId())
 		}
+		capacity := GateCapacity(f)
+		if f.GetId() == "homestead-lots" {
+			for _, owner := range p.GetFixed() {
+				if owner.GetId() == "hearthwick" {
+					capacity = GateCapacity(owner)
+				}
+			}
+		}
 		gates := map[int32]bool{}
 		for _, o := range l.GetObjects() {
 			if o.GetKind() != "gate" {
 				continue
 			}
-			if gates[o.GetGate()] || int(o.GetGate()) >= GateCapacity(f) {
+			if gates[o.GetGate()] || int(o.GetGate()) >= capacity {
 				return nil, fmt.Errorf("invalid layout %s: gate %d is past the capacity or twice", l.GetId(), o.GetGate())
 			}
 			gates[o.GetGate()] = true
 		}
-		if len(gates) != GateCapacity(f) {
+		if f.GetId() != "hearthwick" && len(gates) != capacity {
 			return nil, fmt.Errorf("invalid layout %s: %d gates for place %s's %d gate anchors", l.GetId(), len(gates), f.GetId(), GateCapacity(f))
 		}
 	}
@@ -212,7 +220,7 @@ func LayoutsFor(files fs.FS, p *Places, w *Wilds) (map[string]*Layout, error) {
 func GateCapacity(p *FixedPlace) int {
 	n := 0
 	for _, a := range p.GetAnchors() {
-		if strings.HasPrefix(a.GetId(), "gate:") {
+		if strings.HasPrefix(a.GetId(), "gate:") || p.GetId() == "hearthwick" && strings.HasPrefix(a.GetId(), "lot:") {
 			n++
 		}
 	}

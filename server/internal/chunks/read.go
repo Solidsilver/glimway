@@ -8,6 +8,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"regexp"
 	"slices"
+	"strings"
 )
 
 var placeMarkID = regexp.MustCompile(`^place:-?[0-9]{1,6}:-?[0-9]{1,6}$`)
@@ -29,7 +30,7 @@ func Validate(c *contract.WorldChunk) error {
 	}
 	w := content.WildsRules
 	S := uint32(w.GetChunkSize())
-	if c == nil || c.Source != contract.ChunkSource_CHUNK_SOURCE_UNSPECIFIED || c.LayoutRevision != 0 || len(c.Objects) > 0 || IsFixedEpoch(c.EpochId) || c.Size != S || c.EpochId == "" || c.GeneratorVersion < 3 || c.Realm != w.GetRealm() || c.Layer != 0 || !knownLook(c.Look) || len(c.Mark) > 64 {
+	if c == nil || c.Source != contract.ChunkSource_CHUNK_SOURCE_UNSPECIFIED || c.LayoutRevision != 0 || len(c.Objects) > 0 || IsFixedEpoch(c.EpochId) || strings.HasPrefix(c.EpochId, "plot:") || c.Size != S || c.EpochId == "" || c.GeneratorVersion < 3 || c.Realm != w.GetRealm() || c.Layer != 0 || !knownLook(c.Look) || len(c.Mark) > 64 {
 		return fmt.Errorf("invalid chunk identity")
 	}
 	if c.Tier < 1 || int(c.Tier) > len(w.Tiers) || !slices.ContainsFunc(w.Lands, func(l *content.WildsLand) bool { return l.GetId() == c.Land }) {

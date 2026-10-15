@@ -31,7 +31,7 @@ test('Set to Rise: Hazel asks, the flour goes in, and the sponge rises two hours
   const id = await freshPlayer(page, 'Bryn')
   const start = squareTime(Math.floor(Date.now() / 1000))
   await clockTo(page, start)
-  await warp(page, 'village', 13, 15)
+  await warp(page, 'outdoors', 11, 64)
 
   // The first talk is her introduction (with the hint); the next one asks.
   await openTalk(page, /Talk to Hazel/)

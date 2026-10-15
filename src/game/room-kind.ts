@@ -15,7 +15,7 @@ import { RESIDENTS } from '../lib/residents.ts'
 import { TERRAIN, TILE } from '../lib/tile.ts'
 import { buildRoom, parseHomeRoom } from './cottage.ts'
 import { furnishingFor } from '../lib/furnishings.ts'
-import { landDoor } from './homeland.ts'
+import { landDoor } from './lot-land.ts'
 import type { AreaKind, ExitDef, NpcId, NpcSpot, WorldData } from './worlds.ts'
 
 /** A prop's footprint on the grid: one connected, rectangular group of its letter. */

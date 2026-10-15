@@ -119,11 +119,63 @@ func (w *world) routeEnd(c, to [2]int) (end, way pt, ok bool) {
 		return pt{}, pt{}, false
 	}
 	cx0, cy0 := cellChunk0(c[0], c[1])
+	n := int(contentRules().GetCells().GetCellChunks())
+	for _, f := range content.PlacesRules.GetFixed() {
+		x0, y0, x1, y1 := content.FixedChunks(f)
+		if cx0 > x1 || cx0+n-1 < x0 || cy0 > y1 || cy0+n-1 < y0 {
+			continue
+		}
+		end, way, ok = w.fixedPort(f, to[0]-c[0], to[1]-c[1])
+		if !ok {
+			return pt{}, pt{}, false
+		}
+		tx, ty := end.tile()
+		px, py := CellOf(floorDiv(tx-(to[0]-c[0]), chunkSize()), floorDiv(ty-(to[1]-c[1]), chunkSize()))
+		// A partially occupied cell owns only the mouths on its own fixed tiles.
+		if px != c[0] || py != c[1] {
+			return pt{}, pt{}, false
+		}
+		return end, way, true
+	}
 	foot := FootprintAt(cx0, cy0)
 	if foot == nil {
 		return pt{}, pt{}, false
 	}
 	return w.port(foot, to[0]-c[0], to[1]-c[1])
+}
+
+// fixedPort joins an authored road/spine mouth to the generated network.
+// Ends stand just outside fixed ground; waypoints keep the bends away from
+// its collision. Internal town/lot joins need no generated route.
+func (w *world) fixedPort(p *content.FixedPlace, dx, dy int) (end, way pt, ok bool) {
+	var x, y int
+	switch p.GetId() {
+	case "hearthwick":
+		switch {
+		case dx > 0:
+			x, y = 47, 59
+		case dx < 0:
+			return pt{}, pt{}, false
+		case dy > 0:
+			x, y = 9, 95
+		default:
+			x, y = 2, 24
+		}
+	case "homestead-lots":
+		switch {
+		case dx < 0:
+			x, y = -72, 69
+		case dx > 0:
+			return pt{}, pt{}, false
+		case dy > 0:
+			x, y = -49, 119
+		default:
+			x, y = -49, 24
+		}
+	default:
+		return pt{}, pt{}, false
+	}
+	return tileCentre(x+dx, y+dy), tileCentre(x+dx*10, y+dy*10), true
 }
 
 // port is a footprint's end of a route leaving it by side (dx, dy).
@@ -207,6 +259,9 @@ func (w *world) keptBoxes() []box {
 		if p.GetEpochKind() != w.e.Kind {
 			out = append(out, footprintBox(p))
 		}
+	}
+	for _, p := range content.PlacesRules.GetFixed() {
+		out = append(out, fixedBox(p))
 	}
 	return out
 }
@@ -304,7 +359,7 @@ func (w *world) findGap(k gapKey) int {
 	if k.vertical {
 		bx, by = k.cx+1, k.cy
 	}
-	if by > int(contentRules().GetFrontier().GetSouthLimit()) {
+	if by > int(contentRules().GetFrontier().GetSouthLimit()) || FixedFootprintAt(ax, ay) != nil || FixedFootprintAt(bx, by) != nil {
 		return -1
 	}
 	// An edge with a footprint's fixed opening needs no gap.

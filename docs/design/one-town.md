@@ -227,7 +227,7 @@ Every town errand is **3 to 8 seconds**, and even the farthest of the eight seam
 
 ### 2.2 What survives and what moves or breaks cleanly
 
-There are only the owner and a few friends on the live server, so clean breaks are fine where noted, while all player progress, homes, items, and Tangle/Wilds discoveries survive:
+There are only the owner and a few friends on the live server, so clean breaks are fine where noted, while durable player progress, homes, items and still-epoch Tangle state survive. Wick-epoch state resets as described below:
 
 1. **Saved player positions (`player_place`, migration `037_one_town.sql`):**
    - `area = 'village'` → `area = 'outdoors'` at anchor `hearthwick:spawn` `(4, 60)` (`x = 72, y = 968`), bumping `players.version` and `place_set_version`. (Because the village layout is recomposed rather than translated as a rigid rectangle, placing `village` saves cleanly at the Square spawn avoids dropping anyone inside a moved roof or pond.)
@@ -238,10 +238,10 @@ There are only the owner and a few friends on the live server, so clean breaks a
 2. **Homes, members, storage, and placed items (`homesteads`, `homestead_*`, migration `037_one_town.sql`):**
    - Every `homesteads` row (`id`, `world_id`, `gate` `0..7`, `tier`, `posts_bought`, `vacant_since`), `homestead_members`, `item_stacks` (`storage`), `item_instances` (`storage`/`shelf`/`fitted`), `woodpile_stacks`, `homestead_stalls`, `gate_shelf_slots`, and indoor `homestead_items` (`scene = 'indoor'`) survives **100% untouched**.
    - Outdoor coordinates in `homestead_cleared`, `homestead_stumps`, `homestead_plants`, and `homestead_items` (`scene = 'outdoor'`) shift by `(-8, -3)` so the `8×6` home site (`(16, 6)` → `(8, 3)`) and everything around it keep their exact position relative to the cottage door and gate path.
-   - **Clean break for far-margin outdoor placements:** any cleared tile, stump, or plant whose shifted `(x, y)` falls outside the lot's `2..21 × 1..18` buildable interior (or on the reserved site/path) is dropped; any outdoor `homestead_items` piece whose shifted footprint falls out of bounds or on a blocked tile is moved to `location = 'storage', scene = NULL, x = NULL, y = NULL, rotation = NULL` (returned to the home's chest, never deleted).
+   - **Clean break for far-margin outdoor placements:** any cleared tile, stump, or plant whose shifted `(x, y)` falls outside the lot's `3..20 × 2..18` buildable interior (or on the reserved site/path) is archived in `homestead_land_archive`; each displaced plant also refunds its seed to home storage. Any outdoor `homestead_items` piece whose shifted footprint falls out of bounds or on a blocked tile is moved to `location = 'storage', scene = NULL, x = NULL, y = NULL, rotation = NULL` (returned to the home's chest, never deleted).
 3. **Wilds epochs, seeds, and discoveries:**
    - The world's `still` epoch (the nine Tangle chunks) stays intact.
-   - Because opening the frontier south (`cy = 1..7`) changes `frontierChunks()` (which `newRiver` in `wend.go` reads to place the Wend's southern exit `Y1`), migration `037_one_town.sql` expires the current `wick` epoch (`DELETE FROM wild_epochs WHERE kind = 'wick'`) so the new outskirts and the extended Wend generate cleanly together on the first read.
+   - Because opening the frontier south (`cy = 1..7`) changes `frontierChunks()` (which `newRiver` in `wend.go` reads to place the Wend's southern exit `Y1`), migration `037_one_town.sql` expires the current `wick` epoch (`DELETE FROM wild_epochs WHERE kind = 'wick'`) so the new outskirts and the extended Wend generate cleanly together on the first read. Unclaimed camp falls, camp claims, personal claims and discoveries in that wick epoch expire as at a season change. Fallen way-lamps are free markers created on defeat, not inventory-backed pieces: their full rows and owners are preserved in `one_town_lantern_archive` before expiry; no unrelated item is minted. Still-epoch lamps and state remain intact.
 
 ---
 
@@ -276,7 +276,7 @@ ly=0 [ . . # # # # # # # # # # # # # # # # # # # # . . ]  <- north tree border (
    7 [ . . # . . . . . S S S D D S S S . . . . . # . . ]  <- cottage door D at (11..12, 7)
    8 [ . . # . . . . . S S S @ * S S S . . . . . # . . ]  <- doorstep @ (11, 8), startLight * (12, 7, r=7)
    9 [ . . # . . . . . . . . p p . . . . . . . . # . . ]
-  10 [ . . # . . . . . . . . p p . . . . . . . . # . . ]  <- wild plot ground (lx = 3..20, ly = 1..18):
+  10 [ . . # . . . . . . . . p p . . . . . . . . # . . ]  <- wild plot ground (lx = 3..20, ly = 2..18):
   11 [ . . # . . . . . . . . p p . . . . . . . . # . . ]     trees, stumps, boulders, stream/slope
   12 [ . . # . . . . . . . . p p . . . . . . . . # . . ]     from land.Generate(seed, cfg)
   13 [ . . # . . . . . . . . p p . . . . . . . . # . . ]
@@ -293,12 +293,14 @@ ly=0 [ . . # # # # # # # # # # # # # # # # # # # # . . ]  <- north tree border (
 ```
 
 - **Spine and lanes:** Columns `lx = 22..23` of `cx = -3` and `lx = 0..1` of `cx = -2` form the 4-tile north–south **Homestead Lane** ($x = -50..-47$). Rows `ly = 20..23` of every lot chunk form the 4-tile east–west cross-lanes (`y = 44..47, 68..71, 92..95, 116..119`). The outer two columns (`lx = 0..1` of `cx = -3` and `lx = 22..23` of `cx = -2`) are wooded verge (`Edge`) except where the cross-lanes pass through at `ly = 20..23`.
-- **Plot interior (`lx = 3..20, ly = 1..18`, $18\times18 = 324$ buildable tiles):** `land.Generate(seed, cfg)` generates the lot's deterministic wild terrain (`Grass`, `Tree`, `Stump`, `Boulder`, optional `Water`/`Ford` stream in `lx = 3..6` or `17..20`, optional `Slope`), keeping the `8×6` home site (`lx = 8..15, ly = 3..8`) and the 2-tile gate path (`lx = 11..12, ly = 9..19`) clear.
+- **Plot interior (`lx = 3..20, ly = 2..18`, $18\times17 = 306$ tiles before site/path reservations):** `land.Generate(seed, cfg)` generates the lot's deterministic wild terrain (`Grass`, `Tree`, `Stump`, `Boulder`, optional `Water`/`Ford` stream in `lx = 3..6` or `17..20`, optional `Slope`), keeping the `8×6` home site (`lx = 8..15, ly = 3..8`) and the 2-tile gate path (`lx = 11..12, ly = 9..19`) clear.
 - **Content config (`content/homestead.json` `land`):**
   - `generator: 2`, `width: 24`, `height: 24`
   - `site: { x: 8, y: 3, w: 8, h: 6 }`, `gate: { x: 11, w: 2 }`, `startLight: { x: 12, y: 7, radius: 7 }`
   - `trees: 48`, `stumps: 6`, `boulders: 4`, `streamPermille: 350`, `slopePermille: 350`
-  - `outdoorReserved`: site `(8, 3, 8, 6)`, gate path `(11, 9, 2, 11)`, mailbox `(13, 18, 1, 1)`, and the public lane/fence margins (`x < 3`, `x > 20`, `y < 1`, `y > 18`).
+  - `outdoorReserved`: site `(8, 3, 8, 6)`, gate path `(11, 9, 2, 11)`, mailbox `(13, 18, 1, 1)`, and the public lane/fence margins (`x < 3`, `x > 20`, `y < 2`, `y > 18`).
+
+Private lot services use `lx = 3..20, ly = 2..18` plus the two gate cells `(11..12, 19)`. These gate cells are reserved from furniture placement.
 
 ### 3.2 How plot chunks are composed and rendered
 
@@ -314,7 +316,7 @@ ly=0 [ . . # # # # # # # # # # # # # # # # # # # # . . ]  <- north tree border (
      - Draws the lot's south fence (`ly = 19`), gateposts, signpost (`(9, 20)`), and gift/sale shelf (`(14, 20)`).
      - If unclaimed: draws the `Unclaimed` stake at `(12, 8)` with its `"Read the sign"` interaction.
      - If claimed: draws the campsite (`tier == 0`, with bedroll rest interaction) or cottage (`tier >= 1`, with front door interaction entering `in:home:<lot>`), the mailbox at `(13, 18)`, placed outdoor `homestead_items`, the stable and its stalled mounts, wandering `HomesteadYard` pets, and lantern-post light pools.
-     - While the member is in **Arrange** (`placement`) mode on their lot, the placement grid and saw-clearing tap handler operate in lot-local tiles `(tx - cx*24, ty - cy*24)` bounded to `lx = 3..20, ly = 1..18`.
+     - While the member is in **Arrange** (`placement`) mode on their lot, the placement grid and saw-clearing tap handler operate in lot-local tiles `(tx - cx*24, ty - cy*24)` bounded to `lx = 3..20, ly = 2..18`.
    - When the lot chunk detaches from the window, `detach(key)` removes all of that lot's sprites, static bodies, yard pets, tweens, and interaction points.
 
 ### 3.3 Leaving room for Wilds expansion and remote hearths
@@ -464,7 +466,7 @@ The opening sequence stays **Orrin → east finger-wisp → Orrin → Journal �
   - `worlds.go` & `store/rooms.go`: `arriveFromHome` resolves `Anchor(fmt.Sprintf("hearthwick:lot:%d", gate))` (fallback `hearthwick:arch`); `recoverRoom` resolves the room's front door `Entry` on `outdoors` (fallback `hearthwick:spawn`).
 - **Migration `037_one_town.sql`:**
   - Relocate `player_place` rows with `area = 'village'` → `('outdoors', 72, 968)` (`hearthwick:spawn`); `area = 'outdoors' AND y >= 384` → `('outdoors', 40, 424)` (`hearthwick:arch`); `area LIKE 'home:%'` → `('outdoors', lotDoorstepX, lotDoorstepY)`; bump `players.version` and `place_set_version` for all affected accounts.
-  - Shift `homestead_cleared`, `homestead_stumps`, `homestead_plants`, and outdoor `homestead_items` by `x = x - 8, y = y - 3`. Delete out-of-bounds/reserved rows from `homestead_cleared`, `homestead_stumps`, and `homestead_plants`; move out-of-bounds/blocked outdoor `homestead_items` rows to `location = 'storage', scene = NULL, x = NULL, y = NULL, rotation = NULL`.
+  - Shift `homestead_cleared`, `homestead_stumps`, `homestead_plants`, and outdoor `homestead_items` by `x = x - 8, y = y - 3`. Archive out-of-bounds/reserved rows from `homestead_cleared`, `homestead_stumps`, and `homestead_plants`, refunding a seed for each displaced plant; move out-of-bounds/blocked outdoor `homestead_items` rows to `location = 'storage', scene = NULL, x = NULL, y = NULL, rotation = NULL`.
   - `DELETE FROM wild_epochs WHERE kind = 'wick';` so the expanded outskirts and Wend regenerate together.
 
 ### 6.3 Client changes and code to delete
@@ -591,3 +593,19 @@ Decisions 1–5 were settled in the design conversation for this lane (§0); the
 | 6 | **Existing outdoor home items outside the new `24×24` lot bounds** | Shift outdoor items by `(-8, -3)` so the cottage site (`16,6 → 8,3`) and nearby pieces keep their relative spot; return any piece in the old far margins to the home's **storage chest** (`location = 'storage'`) so nothing is lost. | **Decided 2026-10-14:** as recommended. |
 | 7 | **Saved `village` and step-3 Commons player positions** | Move `village` saves to `hearthwick:spawn` `(4, 60)` and step-3 Commons saves (`y >= 384`) to `hearthwick:arch` `(2, 26)` with a version barrier bump; keep Tangle/Wilds (`y < 384`) and `in:*` room saves at their exact coordinates. | **Decided 2026-10-14:** as recommended. |
 | 8 | **Room IDs (`in:village:bakery`, `in:commons:yard`, etc.)** | Keep the internal room IDs (`in:village:*`, `in:commons:yard*`, `in:home:*`) unchanged in `rooms.json` and saves while pointing their outdoor doors to `"hearthwick"` / lot doorsteps. Avoids churning room IDs in quests and saves. | **Decided 2026-10-14:** as recommended. |
+
+
+### T5 local-save compatibility (owner decision, 2026-10-14)
+
+New local saves carry `layout: "one-town-v1"`. Untagged version-1 files that
+already say `outdoors` keep their coordinates: pre-0.10 Commons exports cannot
+be distinguished reliably from current outdoor saves. Only the once-only
+server migration 037 applies the `y >= 384` relocation. Explicit retired
+village/Commons/home save names still import at the authored spawn/arch/doorstep.
+Displaced plants return a seed to home storage and retain archived history;
+a seed is compensation, not the preserved grown plant. Stored stables keep
+their stalls and mounts, which become available after re-placement.
+Plot services require private ground (`lx=3..20, ly=2..18`, plus the gate
+cells `lx=11..12, ly=19`); public lanes remain outside. Whole-lot Arrange, including saw clearing,
+requires presence inside that fence; tool gathering and planting also require
+individual target reach.

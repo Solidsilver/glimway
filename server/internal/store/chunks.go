@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -207,14 +208,24 @@ func deleteStaleEpochs(ctx context.Context, tx *sql.Tx, world, kind, season stri
 // the LRU under that pseudo-epoch (a new revision is a new key). Any other
 // epoch there, or a fixed pseudo-epoch anywhere else, is sql.ErrNoRows.
 func (c *Chunks) Chunk(ctx context.Context, tx *sql.Tx, world, epoch string, layer, cx, cy int32) (*contract.WorldChunk, error) {
-	if src := location.SourceOf(int(cx), int(cy)); src.Kind == location.SourceFixed || chunks.IsFixedEpoch(epoch) {
-		if src.Kind != location.SourceFixed || layer != 0 || epoch != chunks.FixedEpoch(src.Layout, src.Revision) {
+	if src := location.SourceOf(int(cx), int(cy)); src.Kind == location.SourceFixed || chunks.IsFixedEpoch(epoch) || strings.HasPrefix(epoch, "plot:") {
+		expected := chunks.FixedEpoch(src.Layout, src.Revision)
+		plot := src.Kind == location.SourceFixed && src.Layout == "homestead-lots"
+		if plot {
+			expected = chunks.PlotEpoch(world, chunks.LotAt(int(cx), int(cy)))
+		}
+		if src.Kind != location.SourceFixed || layer != 0 || epoch != expected {
 			return nil, sql.ErrNoRows
 		}
 		key := chunkKey{epoch, layer, cx, cy}
 		m := c.get(key)
 		if m == nil {
-			if m = chunks.Fixed(epoch, cx, cy); m == nil {
+			if plot {
+				m = chunks.Plot(world, chunks.LotAt(int(cx), int(cy)))
+			} else {
+				m = chunks.Fixed(epoch, cx, cy)
+			}
+			if m == nil {
 				return nil, sql.ErrNoRows
 			}
 			c.put(key, m)
@@ -289,7 +300,23 @@ func (c *Chunks) make(ctx context.Context, tx *sql.Tx, world string, e *contract
 		for dy := int32(-1); dy <= 1; dy++ {
 			for dx := int32(-1); dx <= 1; dx++ {
 				nx, ny := x+int(dx), y+int(dy)
-				if dx == 0 && dy == 0 || wilds.EpochKindAt(nx, ny) != EpochStill || !frontier.Inside(world, nx, ny) {
+				if dx == 0 && dy == 0 {
+					continue
+				}
+				src := location.SourceOf(nx, ny)
+				if src.Kind == location.SourceFixed {
+					epoch := chunks.FixedEpoch(src.Layout, src.Revision)
+					if src.Layout == "homestead-lots" {
+						epoch = chunks.PlotEpoch(world, chunks.LotAt(nx, ny))
+					}
+					m, err := c.Chunk(ctx, tx, world, epoch, 0, int32(nx), int32(ny))
+					if err != nil {
+						return nil, fmt.Errorf("fixed kept side of %d,%d: %w", x, y, err)
+					}
+					kept = append(kept, chunks.Kept{CX: nx, CY: ny, Chunk: m})
+					continue
+				}
+				if wilds.EpochKindAt(nx, ny) != EpochStill || !frontier.Inside(world, nx, ny) {
 					continue
 				}
 				if still == nil {

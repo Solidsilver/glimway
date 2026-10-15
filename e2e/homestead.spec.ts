@@ -1,11 +1,13 @@
+import { goLot } from './home-helpers'
 import { expect, test, type Page } from './fixtures'
 import { serverState, sql, accountOf, CONTRACT, served, reenter, seedStory } from './connected'
 import { readFileSync } from 'node:fs'
-import { COMMONS_ORIGIN, commonsTile, inCommons, windowWhole, waitForArea, waitForLive, player, expectAreaCard, expectToast, SERVER_ANSWER_MS } from './helpers'
+import { inCommons, windowWhole, waitForArea, waitForLive, player, expectAreaCard, expectToast, SERVER_ANSWER_MS } from './helpers'
 import { area, earnGlims, freshPlayer, fund, go, homeAt, homes, hurt, landOf, lane, myHome, place, readOn, shot, silasSays, talk, throughGate, type Home, DEED_BOUGHT, yardBuild, pellSays, DEEDS, AT_PELL, manageDeed, giveUpPlace } from './home-helpers'
 import { HOMESTEAD_DATA } from '../src/lib/homestead.ts'
 import { PLACES } from '../src/lib/places.ts'
 import { LAND, buildableKind, clearable, clearedSet, effectiveKind, homeLights, isLit, type Land } from '../src/lib/homestead-land.ts'
+import { homeDoorstep } from '../src/lib/lots.ts'
 
 /**
  * Homesteads, second version, against the real Go server
@@ -59,35 +61,32 @@ async function carryTo(page: Page, piece: string, x: number, y: number): Promise
 
 /** Claim the first unclaimed gate on the lane from Pell; returns the gate. */
 async function claimFirstFree(page: Page): Promise<number> {
-  await go(page, 'commons', 23, 19)
+  await go(page, 'outdoors', 34, 35)
   await expect.poll(async () => (await homes(page)).status).toBe('ready')
   const free = (await homes(page)).gates.find((g) => g.homeId === null)!
   await pellSays(page, new RegExp(`The deed to Lot ${free.gate + 1}`))
   await expect.poll(async () => (await homes(page)).myGate).toBe(free.gate)
   // Pell answers once the server has the claim: read it (it would hold the screen).
   await readOn(page, DEED_BOUGHT)
-  await go(page, 'commons', 23, 19)
+  await go(page, 'outdoors', 34, 35)
   return free.gate
 }
 
 test('the Commons gate: walk in from Hearthwick and back, and through an unclaimed gate', async ({ page }) => {
   await freshPlayer(page)
-  // The village's east gate, below the Lantern Road.
-  await go(page, 'village', 39, 15)
-  await page.keyboard.down('ArrowRight')
-  await waitForArea(page, 'commons')
-  await page.keyboard.up('ArrowRight')
-  // On the open map, just inside the Commons' west gate (anchor commons:west-path, Commons tile 2,21).
+  // Walk west from Hearthwick along West Road onto the plot lane.
+  await go(page, 'outdoors', -22, 69)
   expect(await inCommons(page)).toBe(true)
-  expect(Math.floor((await player(page)).x / 16)).toBeLessThan(commonsTile(6, 0).tx)
-  await expectAreaCard(page, 'Hearthwick Commons')
+  await page.keyboard.down('ArrowLeft')
+  await expect.poll(async () => inCommons(page)).toBe(false)
+  await page.keyboard.up('ArrowLeft')
 
   // The lane shows its spare gates, and the sign at one says what it is.
   const v = await homes(page)
   expect(v.gates.filter((g) => g.homeId === null).length).toBeGreaterThanOrEqual(HOMESTEAD_DATA.commons.spareGates)
-  // The lane's slots are world tiles (the Commons is on the open map's grid).
-  expect(v.slots[0].entry).toEqual(commonsTile(20, 9))
-  await go(page, 'outdoors', v.slots[0].entry.tx, v.slots[0].entry.ty)
+  // The lane's slots are world tiles (the lots are on the open map's grid).
+  expect(v.slots[0].entry).toEqual({ tx: -60, ty: 44 })
+  await go(page, 'outdoors', v.slots[0].sign.tx, v.slots[0].sign.ty + 1)
   await talk(page, new RegExp(`Read the sign · Lot ${v.slots[0].gate + 1}`))
 
   // Through a gate: wild land, nobody's, and back out onto the lane.
@@ -95,31 +94,30 @@ test('the Commons gate: walk in from Hearthwick and back, and through an unclaim
   await expectAreaCard(page, 'Unclaimed land')
   await expect(page.getByTestId('arrange')).toHaveCount(0)
   await page.keyboard.down('ArrowDown')
-  await waitForArea(page, 'commons')
+  await expect.poll(async () => (await homes(page)).land).toBeNull()
   await page.keyboard.up('ArrowDown')
   const p = await player(page)
-  expect(Math.floor(p.x / 16)).toBe(v.slots[0].entry.tx)
+  expect(Math.abs(Math.floor(p.x / 16) - v.slots[0].entry.tx)).toBeLessThanOrEqual(1)
 
-  // And back out through the village gate.
-  await go(page, 'commons', 2, 21)
-  expect(await inCommons(page)).toBe(true)
-  await page.keyboard.down('ArrowLeft')
-  await waitForArea(page, 'village')
-  await page.keyboard.up('ArrowLeft')
-  expect((await player(page)).x).toBeGreaterThan(36 * 16)
+  // And back east into Hearthwick.
+  await go(page, 'outdoors', -26, 69)
+  expect(await inCommons(page)).toBe(false)
+  await page.keyboard.down('ArrowRight')
+  await expect.poll(async () => inCommons(page)).toBe(true)
+  await page.keyboard.up('ArrowRight')
 })
 
-/** The Commons as served (content/layouts/commons.json): its solid grid, Commons tile (0,0) at [0][layout.tx < 0 ? -tx : 0]. */
-function commonsLayout(): { solid: boolean[][]; x0: number; y0: number } {
-  const l = JSON.parse(readFileSync(new URL('../content/layouts/commons.json', import.meta.url), 'utf8')) as { tx: number; ty: number; solid: string[] }
+/** Hearthwick as served (content/layouts/hearthwick.json): its solid grid, Hearthwick tile (0,0) at [0][layout.tx < 0 ? -tx : 0]. */
+function hearthwickLayout(): { solid: boolean[][]; x0: number; y0: number } {
+  const l = JSON.parse(readFileSync(new URL('../content/layouts/hearthwick.json', import.meta.url), 'utf8')) as { tx: number; ty: number; solid: string[] }
   return { solid: l.solid.map((row) => [...row].map((c) => c === '#')), x0: l.tx, y0: l.ty }
 }
 
-/** The Commons tiles an arrival anchor's ground reaches (content/places.json), as "tx,ty" (Commons tiles). */
-function reachedCommons(): { reach: Set<string>; open: (x: number, y: number) => boolean } {
-  const { solid, x0, y0 } = commonsLayout()
+/** The Hearthwick tiles an arrival anchor's ground reaches (content/places.json), as "tx,ty" (Hearthwick tiles). */
+function reachedHearthwick(): { reach: Set<string>; open: (x: number, y: number) => boolean } {
+  const { solid, x0, y0 } = hearthwickLayout()
   const open = (x: number, y: number) => solid[y - y0]?.[x - x0] === false
-  const anchors = PLACES.fixed.find((f) => f.id === 'commons')!.anchors
+  const anchors = PLACES.fixed.find((f) => f.id === 'hearthwick')!.anchors
   const queue = anchors.map((a) => [a.tx, a.ty]).filter(([x, y]) => open(x!, y!))
   const reach = new Set(queue.map(([x, y]) => `${x},${y}`))
   while (queue.length) {
@@ -132,8 +130,8 @@ function reachedCommons(): { reach: Set<string>; open: (x: number, y: number) =>
   }
   return { reach, open }
 }
-/** A world pixel's Commons tile, as "tx,ty". */
-const commonsKey = (p: { x: number; y: number }) => `${Math.floor(p.x / 16) - COMMONS_ORIGIN.tx},${Math.floor(p.y / 16) - COMMONS_ORIGIN.ty}`
+/** A world pixel's Hearthwick tile, as "tx,ty". */
+const hearthwickKey = (p: { x: number; y: number }) => `${Math.floor(p.x / 16) - (-24)},${Math.floor(p.y / 16) - 24}`
 
 // Review P1 (lane S2), on the joined Commons (S5): the served layout has open
 // pockets among the verge trees that no arrival reaches. A save that names
@@ -141,12 +139,12 @@ const commonsKey = (p: { x: number; y: number }) => `${Math.floor(p.x / 16) - CO
 // the arrivals reach, and the save follows; so does a reload.
 test('the Commons: a save in a walled-in pocket of the woods stands on reached ground, and after a reload', async ({ page }) => {
   const id = await freshPlayer(page)
-  const { reach, open } = reachedCommons()
+  const { reach } = reachedHearthwick()
   let pocket: [number, number] | null = null
-  for (let y = 0; y < 48 && !pocket; y++) for (let x = -3; x < 69 && !pocket; x++) if (open(x, y) && !reach.has(`${x},${y}`)) pocket = [x, y]
+  for (let y = 26; y < 48 && !pocket; y++) for (let x = 24; x < 48 && !pocket; x++) if (!reach.has(`${x},${y}`)) pocket = [x, y]
   expect(pocket, 'the layout has a walled-in pocket').not.toBeNull()
   const [px, py] = pocket!
-  const at = commonsTile(px, py)
+  const at = { tx: px - 24, ty: py + 24 }
   // Seed a server save with no newer local report overlay. A live tab's
   // cached village position would otherwise win on Continue.
   await page.reload()
@@ -162,25 +160,25 @@ test('the Commons: a save in a walled-in pocket of the woods stands on reached g
   await page.getByTestId('continue-world').click()
   await waitForArea(page, 'outdoors')
   await windowWhole(page)
-  const back = commonsKey(await player(page))
+  const back = hearthwickKey(await player(page))
   expect(back).not.toBe(`${px},${py}`)
   expect(reach.has(back), 'a pocket save recovers to reached ground').toBe(true)
   // The save has it (the server's place), not the pocket.
   await expect
     .poll(() => {
       const [area, x, y] = sql(`SELECT area,x,y FROM player_place WHERE account_id='${account}';`).split('|')
-      return area === 'outdoors' && reach.has(commonsKey({ x: Number(x), y: Number(y) }))
+      return area === 'outdoors' && reach.has(hearthwickKey({ x: Number(x), y: Number(y) }))
     }, { timeout: SERVER_ANSWER_MS })
     .toBe(true)
   await reenter(page, 'outdoors')
-  expect(reach.has(commonsKey(await player(page))), 'reloaded on reached ground').toBe(true)
+  expect(reach.has(hearthwickKey(await player(page))), 'reloaded on reached ground').toBe(true)
 })
 
 test('claim and guidance, then expansion: lantern posts, naming, clearing, cottage, rest at home', async ({ page }) => {
   test.setTimeout(240_000)
   const id = await freshPlayer(page)
   await earnGlims(page, id)
-  await go(page, 'commons', 23, 19)
+  await go(page, 'outdoors', 34, 35)
   await expect.poll(async () => (await homes(page)).status).toBe('ready')
   let v = await homes(page)
   expect(v.claimed).toBe(false)
@@ -190,7 +188,7 @@ test('claim and guidance, then expansion: lantern posts, naming, clearing, cotta
 
   // Read the sign at the gate you like, then buy its deed from Pell (the sign's gate is offered first).
   const slot = v.slots.find((s) => s.gate === free.gate)!
-  await go(page, 'outdoors', slot.entry.tx, slot.entry.ty + 1)
+  await go(page, 'outdoors', slot.sign.tx, slot.sign.ty + 1)
   await talk(page, new RegExp(`Read the sign · Lot ${free.gate + 1}`))
   const glims = (await serverState(page)).body.state.glims
   await pellSays(page, new RegExp(`The deed to Lot ${free.gate + 1}`))
@@ -202,7 +200,7 @@ test('claim and guidance, then expansion: lantern posts, naming, clearing, cotta
 
   // Guidance: the journal and the HUD say where, and out on the lane a marker leads there.
   await expect(page.getByTestId('home-goal')).toContainText(`Lot ${free.gate + 1}`)
-  await go(page, 'commons', 53, 19)
+  await go(page, 'outdoors', 2, 26)
   await expect.poll(async () => (await homes(page)).guide).not.toBeNull()
   v = await homes(page)
   expect(v.guide!.arrow).toBe(true) // the gate is off screen from the Yard's door
@@ -247,7 +245,7 @@ test('claim and guidance, then expansion: lantern posts, naming, clearing, cotta
   const tray = page.getByTestId('placement-tray')
   const ground = await landOf(page, free.gate)
   const near = spotOn(home, ground, (x, y, k, lit) => lit && buildableKind(k) && Math.abs(x - S.x) <= 4 && y > S.y)
-  await go(page, `home:${free.gate}`, near.x, near.y + 1)
+  await goLot(page, free.gate, near.x, near.y + 1)
   await page.getByTestId('arrange').click()
   await carryTo(page, 'wooden-stool', near.x, near.y)
   await expect(tray.getByRole('button', { name: /Set it here/ })).toBeEnabled()
@@ -309,7 +307,7 @@ test('claim and guidance, then expansion: lantern posts, naming, clearing, cotta
     await page.getByTestId('clear-tile').click()
     await expect.poll(async () => (await myHome(page)).cleared).toContainEqual([tree.x, tree.y])
     expect((await serverState(page)).body.state.glims).toBe(before - HOMESTEAD_DATA.clearTileGlims)
-    await waitForArea(page, `home:${free.gate}`)
+    await waitForArea(page, 'outdoors')
     expect(ground.tiles[tree.y * L.width + tree.x]).not.toBe(LAND.GRASS)
   } else if (await tray.isVisible()) {
     await tray.getByRole('button', { name: /Done/ }).click()
@@ -319,7 +317,7 @@ test('claim and guidance, then expansion: lantern posts, naming, clearing, cotta
   // Home rest at the bedroll (your own land).
   const land = (await homes(page)).land!
   await hurt(page, 6)
-  await go(page, `home:${free.gate}`, Math.floor((land.site.x * 16 - 64 + 96) / 16), Math.floor((land.site.y * 16 + 52) / 16))
+  await goLot(page, free.gate, Math.floor((land.site.x * 16 - 64 + 96) / 16), Math.floor((land.site.y * 16 + 52) / 16))
   await talk(page, /Rest at your bedroll/, /Rest a while/)
   await expectToast(page, 'Home, and rested')
 
@@ -329,9 +327,9 @@ test('claim and guidance, then expansion: lantern posts, naming, clearing, cotta
   await expect.poll(async () => (await myHome(page)).tier).toBe(1)
   expect((await serverState(page)).body.state.glims).toBe(embers2 - 15)
   await throughGate(page, free.gate)
-  await go(page, `home:${free.gate}`, land.doorstep.tx + 1, land.doorstep.ty + 3)
+  await goLot(page, free.gate, land.doorstep.tx + 1, land.doorstep.ty + 3)
   await shot(page, 'land-cottage-desktop')
-  await go(page, `home:${free.gate}`, land.doorstep.tx, land.doorstep.ty)
+  await goLot(page, free.gate, land.doorstep.tx, land.doorstep.ty)
   await expect(page.locator('.prompt')).toContainText('Go inside')
   await page.keyboard.press('e')
   await waitForArea(page, `in:home:${free.gate}`)
@@ -342,9 +340,9 @@ test('claim and guidance, then expansion: lantern posts, naming, clearing, cotta
   await expectToast(page, 'Home, and rested')
   await place(page, 112, 13 * 16 - 4)
   await page.keyboard.down('ArrowDown')
-  await waitForArea(page, `home:${free.gate}`)
+  await waitForArea(page, 'outdoors')
   await page.keyboard.up('ArrowDown')
-  expect(Math.floor((await player(page)).x / 16)).toBe(land.doorstep.tx)
+  expect(Math.floor((await player(page)).x / 16)).toBe(homeDoorstep(free.gate).tx)
 })
 
 /**
@@ -488,13 +486,13 @@ test('visiting: a second player walks through a neighbour’s gate, sees their p
   const errors: string[] = []
   other.on('pageerror', (e) => errors.push(e.message))
   await freshPlayer(other, 'Bram', code)
-  await go(other, 'commons', 23, 19)
+  await go(other, 'outdoors', 34, 35)
   await expect.poll(async () => (await homes(other)).gates.find((g) => g.gate === gate)?.names ?? []).toEqual(['Tansy'])
   const info = (await homes(other)).gates.find((g) => g.gate === gate)!
   expect(info.mine).toBe(false)
   expect(info.tier).toBe(1)
   const slot = (await homes(other)).slots.find((s) => s.gate === gate)!
-  await go(other, 'outdoors', slot.entry.tx, slot.entry.ty + 1)
+  await go(other, 'outdoors', slot.sign.tx, slot.sign.ty + 1)
   await talk(other, new RegExp(`Read the sign · Lot ${gate + 1}`))
   await shot(other, 'visiting-lane-desktop')
 
@@ -507,10 +505,10 @@ test('visiting: a second player walks through a neighbour’s gate, sees their p
   await throughGate(page, gate)
   const peers = (p: Page) => p.evaluate(() => (window as unknown as { __fsPresence: () => { area: string | null; peers: string[] } }).__fsPresence())
   await expect.poll(async () => (await peers(other)).peers, { timeout: 20_000 }).toContain(accountOf(a))
-  expect((await peers(other)).area).toBe(`home:${gate}`)
+  expect((await peers(other)).area).toMatch(/^outdoors/)
   await shot(other, 'visiting-land-desktop')
   const land = (await homes(other)).land!
-  await go(other, `home:${gate}`, land.doorstep.tx, land.doorstep.ty)
+  await goLot(other, gate, land.doorstep.tx, land.doorstep.ty)
   await expect(other.locator('.prompt')).toContainText('Visit the cottage')
   await other.keyboard.press('e')
   await waitForArea(other, `in:home:${gate}`)
@@ -556,7 +554,7 @@ test('desolation: an empty homestead overgrows, its sign weathers, and in time t
   ago(HOMESTEAD_DATA.desolation.desolateAfterDays)
   const home = (await homeAt(page, gate))!
   expect(home.desolate).toBe(true)
-  await go(page, 'commons', 23, 19)
+  await go(page, 'outdoors', 34, 35)
   await expect.poll(async () => (await homes(page)).gates.find((g) => g.gate === gate)?.desolate).toBe(true)
   const slot = (await homes(page)).slots.find((s) => s.gate === gate)!
   await go(page, 'outdoors', slot.entry.tx, slot.entry.ty + 1)

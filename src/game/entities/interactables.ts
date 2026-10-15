@@ -1,3 +1,4 @@
+import { onSceneEnd } from '../scene-end.ts'
 /**
  * Interactables: everything the action button can be used on, in one list.
  *
@@ -152,8 +153,7 @@ export class Interactables {
       bus.off(EV.villageChanged, refresh)
       bus.off(EV.homeChanged, refresh)
     }
-    this.scene.events.once('shutdown', off)
-    this.scene.events.once('destroy', off)
+    onSceneEnd(this.scene, off)
   }
 
   /** "!" over whoever moves the story on, "…" over anyone with news. */

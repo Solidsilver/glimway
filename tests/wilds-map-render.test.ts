@@ -41,6 +41,10 @@ function recorder() {
       calls.strokeRect++;
     },
     setLineDash() {},
+    beginPath() {},
+    moveTo() {},
+    lineTo() {},
+    stroke() { calls.strokeRect++; },
     drawImage(img: unknown) {
       calls.drawImage++;
       calls.images.push(img);
@@ -272,6 +276,10 @@ function landPainter() {
     clearRect() {},
     strokeRect() {},
     setLineDash() {},
+    beginPath() {},
+    moveTo() {},
+    lineTo() {},
+    stroke() {},
     fillRect(x: number, y: number, w: number, h: number) {
       if (fill.startsWith('rgb(') && !notLand.has(fill)) paints.push({ x, y, w, h });
     },

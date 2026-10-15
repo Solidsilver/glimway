@@ -12,11 +12,11 @@
       "id": "well-rope",
       "name": "The well's rotten rope",
       "part": "fibre-rope",
-      "area": "village",
+      "area": "hearthwick",
       "target": "well",
       "pos": {
-        "tx": 13,
-        "ty": 12
+        "tx": 12,
+        "ty": 60
       },
       "resident": "hazel",
       "reaction": "Bread tastes of the well again.",
@@ -35,11 +35,11 @@
       "id": "fence-rail",
       "name": "A fallen fence rail",
       "part": "split-rail",
-      "area": "village",
+      "area": "hearthwick",
       "target": "fence",
       "pos": {
-        "tx": 27,
-        "ty": 18
+        "tx": 9,
+        "ty": 76
       },
       "resident": "silas",
       "reaction": "The gap’s shut. Path was chewing into the grass.",
@@ -52,11 +52,11 @@
       "id": "library-roof",
       "name": "The leaking library roof",
       "part": "slates",
-      "area": "village",
+      "area": "hearthwick",
       "target": "library",
       "pos": {
-        "tx": 4,
-        "ty": 17
+        "tx": -11,
+        "ty": 76
       },
       "resident": "mara",
       "reaction": "The drip’s stopped. I’ve put the bucket away.",
@@ -69,11 +69,11 @@
       "id": "bench-slat",
       "name": "A bench with a cracked slat",
       "part": "oak-slat",
-      "area": "village",
+      "area": "hearthwick",
       "target": "bench",
       "pos": {
-        "tx": 9,
-        "ty": 13
+        "tx": 8,
+        "ty": 61
       },
       "resident": "orrin",
       "reaction": "That’s a true slat. Good oak.",
@@ -86,11 +86,11 @@
       "id": "village-lamp",
       "name": "A guttering village lamp",
       "part": "lamp-wick",
-      "area": "village",
+      "area": "hearthwick",
       "target": "lamp",
       "pos": {
-        "tx": 11,
-        "ty": 12
+        "tx": 10,
+        "ty": 60
       },
       "resident": "ada",
       "reaction": "Burns steady now. Good wick.",
@@ -103,11 +103,11 @@
       "id": "gate-hame",
       "name": "The hame before Carting Day",
       "part": "oilcloth-wrap",
-      "area": "commons",
+      "area": "hearthwick",
       "target": "hame",
       "pos": {
-        "tx": 3,
-        "ty": 18
+        "tx": 0,
+        "ty": 43
       },
       "resident": "silas",
       "reaction": "Shines the way Hollis kept it.",

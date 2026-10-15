@@ -121,8 +121,8 @@ func TestOperationBoundaryFixtures(t *testing.T) {
 func TestPreparedRequestRetainsPayloadSpellingAndRejectsSecrets(t *testing.T) {
 	// Nested object order/numeric spelling belongs to the stored payload; the
 	// request hash keeps the previous decoded/re-encoded canonicalization.
-	first := json.RawMessage(`{"op":{"lease":"old"},"where":{"y":0.0,"x":1e0,"area":"village"},"nested":{"z":1.00,"a":0}}`)
-	second := json.RawMessage(`{"op":{"lease":"new"},"nested":{"a":0,"z":1},"where":{"area":"village","x":1,"y":0}}`)
+	first := json.RawMessage(`{"op":{"lease":"old"},"where":{"y":0.0,"x":1e0,"area":"in:village:library"},"nested":{"z":1.00,"a":0}}`)
+	second := json.RawMessage(`{"op":{"lease":"new"},"nested":{"a":0,"z":1},"where":{"area":"in:village:library","x":1,"y":0}}`)
 	a, err := prepareRequest(first)
 	if err != nil {
 		t.Fatal(err)

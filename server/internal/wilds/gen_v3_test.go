@@ -44,7 +44,7 @@ func frontierList() [][2]int {
 	var out [][2]int
 	for cy := minCy; cy <= maxCy; cy++ {
 		for cx := minCx; cx <= maxCx; cx++ {
-			if insideReach(cx, cy) {
+			if insideReach(cx, cy) && FixedFootprintAt(cx, cy) == nil {
 				out = append(out, [2]int{cx, cy})
 			}
 		}
@@ -107,6 +107,20 @@ func buildFrontierKept(t testing.TB, seed, season, keptSeed string) *frontierMap
 			m.walk[j], m.ground[j] = !ch.Solid[i], ch.Ground[i]
 		}
 	}
+	for cy := minCy; cy <= maxCy; cy++ {
+		for cx := minCx; cx <= maxCx; cx++ {
+			if p := FixedFootprintAt(cx, cy); p != nil {
+				for ly := range S {
+					for lx := range S {
+						tx, ty := cx*S+lx, cy*S+ly
+						j := m.i(tx, ty)
+						m.walk[j], m.ground[j] = fixedTile(p, tx, ty)
+					}
+				}
+			}
+		}
+	}
+
 	return m
 }
 
@@ -143,6 +157,9 @@ func (m *frontierMap) reach(tx, ty int) []bool {
 // ---------------------------------------------------------------- refusals
 
 func TestV3Refusals(t *testing.T) {
+	if _, err := GenerateV3(WickEpoch("s", wickSeason(1795000000)), 0, 2, nil); !errors.Is(err, ErrWrongEpoch) {
+		t.Fatalf("fixed coordinate generated: %v", err)
+	}
 	if _, err := GenerateV3(Epoch{"s", EpochWick, 2, wickSeason(1795000000)}, 3, -3, nil); !errors.Is(err, ErrGeneratorUnavailable) {
 		t.Fatalf("v2 epoch: %v", err)
 	}
@@ -227,6 +244,15 @@ func TestV3EdgeAgreement(t *testing.T) {
 			if c, ok := made[[2]int{cx, cy}]; ok {
 				return c
 			}
+			if p := FixedFootprintAt(cx, cy); p != nil {
+				c := Chunk{Ground: make([]Ground, S*S), Solid: make([]bool, S*S)}
+				for i := range c.Ground {
+					walk, g := fixedTile(p, cx*S+i%S, cy*S+i/S)
+					c.Ground[i], c.Solid[i] = g, !walk
+				}
+				return c
+			}
+
 			c := mustV3(t, seed, season, cx, cy)
 			made[[2]int{cx, cy}] = c
 			return c
@@ -324,7 +350,7 @@ func (m *frontierMap) mustReachAll(t *testing.T) {
 		for k := 0; k < len(piece); k++ {
 			j := piece[k]
 			x, y := j%m.W, j/m.W
-			if x == 0 || y == 0 || x == m.W-1 {
+			if frontierExitTile(m.x0+x, m.y0+y) {
 				off = true
 			}
 			for _, d := range dirs4 {
@@ -419,7 +445,7 @@ func TestV3Seams(t *testing.T) {
 func TestV3Wend(t *testing.T) {
 	S := chunkSize()
 	data := contentRules().GetRiver()
-	minCx, minCy, maxCx, maxCy := frontierChunks()
+	_, minCy, maxCx, maxCy := frontierChunks()
 	tangle, wq := Footprint("tangle"), Footprint("whitequiet")
 	for _, ws := range v3Worlds(60) {
 		seed, season := ws[0], ws[1]
@@ -447,7 +473,7 @@ func TestV3Wend(t *testing.T) {
 					t.Fatalf("%s: river past the Whitequiet's west column at %d,%d", seed, tx, ty)
 				}
 				north = north || ty == minCy*S
-				west = west || tx == minCx*S
+				west = west || !insideReach(FloorDiv(tx-1, S), FloorDiv(ty, S))
 				if ty == (maxCy+1)*S-1 {
 					south = true
 					if cx > int(data.GetLeavesMaxCx()) {
@@ -729,16 +755,22 @@ func TestV3PlacesAndRumour(t *testing.T) {
 	picked := map[string]bool{}
 	rings := map[int]bool{}
 	past := 0
-	for _, ws := range v3Worlds(40) {
+	for seedIndex, ws := range v3Worlds(40) {
 		seed, season := ws[0], ws[1]
 		e := WickEpoch(seed, season)
 		m := buildFrontier(t, seed, season)
 		w := newWorld(e)
 		places := w.rumourPlaces()
-		if len(places) != 7 {
-			t.Fatalf("%s: %d places in the frontier", seed, len(places))
+		// Pinned per seed, independent of the enumeration/filter implementation.
+		counts := [...]int{15, 14, 15, 16, 14, 13, 14, 13, 15, 13, 15, 15, 15, 15, 16, 14, 15, 15, 16, 14, 15, 15, 15, 14, 15, 14, 16, 14, 14, 14, 14, 14, 13, 13, 16, 15, 13, 16, 15, 13}
+		expected := counts[seedIndex]
+		if len(places) != expected {
+			t.Fatalf("%s: %d rumour places; want %d", seed, len(places), expected)
 		}
 		for _, p := range places {
+			if FixedFootprintAt(p.CX, p.CY) != nil || !insideReach(p.CX, p.CY) {
+				t.Fatal("rumour place is not generated frontier ground")
+			}
 			ch := m.chunks[[2]int{p.CX, p.CY}]
 			if FootprintCell(p.CellX, p.CellY) {
 				t.Fatalf("%s: place %s in a footprint's cell", seed, p.ID)
@@ -813,7 +845,7 @@ func (m *frontierMap) sides() []int {
 	label := make([]int, m.W*m.H)
 	next := 0
 	for i := range label {
-		if label[i] != 0 || m.ground[i] == groundRiverWater || m.ground[i] == groundRiverFord {
+		if !insideReach(FloorDiv(m.x0+i%m.W, chunkSize()), FloorDiv(m.y0+i/m.W, chunkSize())) || label[i] != 0 || m.ground[i] == groundRiverWater || m.ground[i] == groundRiverFord {
 			continue
 		}
 		next++
@@ -828,7 +860,7 @@ func (m *frontierMap) sides() []int {
 					continue
 				}
 				k := y*m.W + x
-				if label[k] != 0 || m.ground[k] == groundRiverWater || m.ground[k] == groundRiverFord {
+				if !insideReach(FloorDiv(m.x0+x, chunkSize()), FloorDiv(m.y0+y, chunkSize())) || label[k] != 0 || m.ground[k] == groundRiverWater || m.ground[k] == groundRiverFord {
 					continue
 				}
 				label[k] = next
@@ -1069,28 +1101,19 @@ func TestV3Loot(t *testing.T) {
 	}
 }
 
-// TestV3SouthLimit: nothing lies south of cy 0, so the last two rows of the
-// south limit's chunks are shut but for the Commons gate.
+// The frontier bounds movement; its southern edge has no artificial wall.
 func TestV3SouthLimit(t *testing.T) {
 	S := chunkSize()
-	south := int(contentRules().GetFrontier().GetSouthLimit())
-	gate := openingTiles(EpochStill)
-	for _, ws := range v3Worlds(20) {
+	for _, ws := range v3Worlds(10) {
 		m := buildFrontier(t, ws[0], ws[1])
 		open := 0
-		for ty := (south+1)*S - band; ty < (south+1)*S; ty++ {
-			for tx := m.x0; tx < m.x0+m.W; tx++ {
-				if !m.walk[m.i(tx, ty)] {
-					continue
-				}
-				if _, ok := gate[[2]int{tx, ty}]; !ok {
-					t.Fatalf("%s: open ground at %d,%d on the south limit's edge", ws[0], tx, ty)
-				}
+		for tx := -6 * S; tx < 2*S; tx++ {
+			if m.walkable(tx, 8*S-1) {
 				open++
 			}
 		}
 		if open == 0 {
-			t.Fatalf("%s: the gate is shut", ws[0])
+			t.Fatalf("%s: artificial south wall", ws[0])
 		}
 	}
 }
@@ -1117,7 +1140,7 @@ func TestV3EdgeTilesFollowField(t *testing.T) {
 			for i, f := range final {
 				tx, ty := x0+i%S, y0+i/S
 				r := at(tx, ty)
-				if r.kind != bField || !inBand(tx, ty) || !r.walk || ty >= (int(contentRules().GetFrontier().GetSouthLimit())+1)*S-band {
+				if r.kind != bField || !inBand(tx, ty) || !r.walk {
 					continue
 				}
 				open++
@@ -1150,5 +1173,101 @@ func TestV3EdgeTilesFollowField(t *testing.T) {
 	t.Logf("edge tiles the field leaves open: %d, shut as shut in: %d (%d.%d%%)", open, shut, shut*100/open, shut*1000/open%10)
 	if shut*100 > open {
 		t.Fatalf("%d of %d open edge tiles shut: the edge rule overrides the field", shut, open)
+	}
+}
+
+// Town mouths and the plot spine must join the dry route network on both
+// banks of the Wend, across the larger kept block and its partial cells.
+func TestV3TownReach(t *testing.T) {
+	S := chunkSize()
+	x0, _, _, _ := frontierChunks()
+	if x0 > -6 {
+		t.Fatal("fewer than two chunks west of the lots")
+	}
+	starts := [][2]int{{2, 23}, {2, 26}, {47, 59}, {9, 95}, {-72, 69}, {-49, 24}, {-49, 119}}
+	for _, ws := range v3Worlds(10) {
+		m := buildFrontier(t, ws[0], ws[1])
+		w := newWorld(WickEpoch(ws[0], ws[1]))
+		for _, r := range frontierRoutes(w) {
+			for i := 0; i+1 < len(r.pts); i++ {
+				for _, f := range content.PlacesRules.GetFixed() {
+					if segMeetsBox(r.pts[i], r.pts[i+1], fixedBox(f)) {
+						t.Fatalf("%s: route cuts %s", ws[0], f.GetId())
+					}
+				}
+			}
+		}
+
+		for cy := 1; cy <= 4; cy++ {
+			for cx := -3; cx <= 1; cx++ {
+				if FixedFootprintAt(cx, cy) != nil && w.river.crossesChunk(cx, cy) {
+					t.Fatalf("%s: Wend enters fixed chunk %d,%d", ws[0], cx, cy)
+				}
+			}
+		}
+		for _, p := range starts {
+			seen := m.reach(p[0], p[1])
+			for _, q := range starts {
+				if !seen[m.i(q[0], q[1])] {
+					t.Fatalf("%s: gate %v cannot reach %v", ws[0], p, q)
+				}
+			}
+			// Every generated cell's landmark front is reachable from each gate.
+			for _, ch := range m.chunks {
+				for range ch.Places {
+					cellX, cellY := CellOf(ch.CX, ch.CY)
+					place := w.place(cellX, cellY)
+					if place == nil {
+						continue
+					}
+					tx, ty := place.front()
+					if m.in(tx, ty) && insideReach(FloorDiv(tx, S), FloorDiv(ty, S)) && !seen[m.i(tx, ty)] {
+						t.Fatalf("%s: %v cannot reach cell %d,%d front %d,%d", ws[0], p, cellX, cellY, tx, ty)
+					}
+				}
+			}
+		}
+	}
+}
+
+// A stepped frontier exit is a tile on the facing edge, not an entire chunk
+// neighbouring a missing chunk. Whole connected components may lead to drift.
+func frontierExitTile(tx, ty int) bool {
+	S := chunkSize()
+	if !insideReach(FloorDiv(tx, S), FloorDiv(ty, S)) {
+		return false
+	}
+	for _, d := range dirs4 {
+		if !insideReach(FloorDiv(tx+d[0], S), FloorDiv(ty+d[1], S)) {
+			return true
+		}
+	}
+	return false
+}
+func TestFrontierExitRequiresFacingTile(t *testing.T) {
+	for _, c := range []struct {
+		x, y int
+		exit bool
+	}{{-132, -48, true}, {-132, -47, false}, {-132, -36, false}, {-144, -36, true}, {-145, -36, false}} {
+		if got := frontierExitTile(c.x, c.y); got != c.exit {
+			t.Fatalf("%d,%d exit %v", c.x, c.y, got)
+		}
+	}
+}
+func TestTownInternalPortsHaveNoGeneratedRoute(t *testing.T) {
+	w := newWorld(WickEpoch("internal-ports", "t:100:200"))
+	for _, c := range []struct {
+		id string
+		dx int
+	}{{"hearthwick", -1}, {"homestead-lots", 1}} {
+		var p *content.FixedPlace
+		for _, f := range content.PlacesRules.GetFixed() {
+			if f.GetId() == c.id {
+				p = f
+			}
+		}
+		if _, _, ok := w.fixedPort(p, c.dx, 0); ok {
+			t.Fatal("internal fixed join created generated route", c.id)
+		}
 	}
 }

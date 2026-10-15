@@ -49,7 +49,7 @@ test('desktop screens', async ({ page }) => {
   await seed(page, id, FINDS, 'complete')
 
   // A pickup in the world (garden corner) and one in Brackenwood.
-  await warp(page, 'village', 26, 14)
+  await warp(page, 'outdoors', 26, 62)
   await page.waitForTimeout(2600)
   await page.screenshot({ path: `${OUT}/desktop-pickup-village.png` })
   await warp(page, 'woodland', 25, 10)
@@ -60,7 +60,7 @@ test('desktop screens', async ({ page }) => {
   await page.screenshot({ path: `${OUT}/desktop-pickup-ruin-slate.png` })
 
   // The library door.
-  await warp(page, 'village', 3, 19)
+  await warp(page, 'outdoors', 3, 67)
   await page.screenshot({ path: `${OUT}/desktop-library-door.png` })
 
   const journal = await openPapers(page)
@@ -97,7 +97,7 @@ test.describe('phone', () => {
     const id = await freshPlayer(page)
     await seed(page, id, FINDS, 'complete')
 
-    await warp(page, 'village', 26, 14)
+    await warp(page, 'outdoors', 26, 62)
     await page.waitForTimeout(2600)
     await page.screenshot({ path: `${OUT}/phone-pickup-village.png` })
 

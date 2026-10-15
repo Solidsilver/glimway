@@ -1,3 +1,4 @@
+import { PLOT_REVISION, lotAt, plotIdentity } from '../lots.ts';
 import { clone, fromBinary } from '@bufbuild/protobuf';
 import { ChunkSource as ChunkSourceKind, WorldChunkSchema, SiteKind, type WorldChunk, type WildsEntity } from '../gen/glimway/v1/wilds_pb.js';
 import { loadWilds } from '../wilds/data.ts';
@@ -17,7 +18,7 @@ export function validateChunk(chunk: WorldChunk): WorldChunk {
   if (chunk.source === ChunkSourceKind.FIXED) return validateFixedChunk(chunk);
   const w = loadWilds();
   const size = chunk.size;
-  if (chunk.source !== ChunkSourceKind.UNSPECIFIED || chunk.layoutRevision !== 0 || chunk.objects.length || chunk.epochId.startsWith('fixed:') || size !== CHUNK_SIZE || size !== w.chunkSize || !chunk.epochId || chunk.generatorVersion !== w.generatorVersion || chunk.realm !== w.realm || chunk.layer !== 0 || !LOOKS.includes(chunk.look) || !Number.isInteger(chunk.cx) || !Number.isInteger(chunk.cy)) throw new Error('invalid chunk identity');
+  if (chunk.source !== ChunkSourceKind.UNSPECIFIED || chunk.layoutRevision !== 0 || chunk.objects.length || chunk.epochId.startsWith('fixed:') || chunk.epochId.startsWith('plot:') || size !== CHUNK_SIZE || size !== w.chunkSize || !chunk.epochId || chunk.generatorVersion !== w.generatorVersion || chunk.realm !== w.realm || chunk.layer !== 0 || !LOOKS.includes(chunk.look) || !Number.isInteger(chunk.cx) || !Number.isInteger(chunk.cy)) throw new Error('invalid chunk identity');
   if (chunk.tier < 1 || chunk.tier > w.tiers.length || !w.lands.some((l) => l.id === chunk.land)) throw new Error('invalid chunk tier or land');
   if (!chunk.palette.length || chunk.palette.length > 16 || chunk.ground.length !== size * size / 2 || chunk.solid.length !== size * size / 8) throw new Error('invalid cell packing');
   for (const cell of chunk.ground) if ((cell & 15) >= chunk.palette.length || (cell >> 4) >= chunk.palette.length) throw new Error('invalid palette index');
@@ -51,8 +52,8 @@ function validateFixedChunk(chunk: WorldChunk): WorldChunk {
   const size = chunk.size;
   const src = sourceOf(chunk.cx, chunk.cy);
   if (size !== CHUNK_SIZE || chunk.realm !== w.realm || chunk.layer !== 0 || chunk.generatorVersion !== 0 || !Number.isInteger(chunk.cx) || !Number.isInteger(chunk.cy)) throw new Error('invalid chunk identity');
-  if (src.kind !== 'fixed' || chunk.epochId !== fixedEpoch(src.layout, src.revision) || chunk.layoutRevision !== src.revision) throw new Error('unknown layout');
-  if (chunk.look || chunk.mark || chunk.tier || chunk.land || chunk.decor || chunk.sites.length || chunk.entities.length || chunk.places.length) throw new Error('a fixed chunk carries generated geometry');
+  if (src.kind !== 'fixed' || (plotIdentity(chunk.epochId) ? src.layout !== 'homestead-lots' || src.revision !== PLOT_REVISION || plotIdentity(chunk.epochId)!.gate !== lotAt(chunk.cx, chunk.cy) : chunk.epochId !== fixedEpoch(src.layout, src.revision)) || chunk.layoutRevision !== src.revision) throw new Error('unknown layout');
+  if ((chunk.look && !(plotIdentity(chunk.epochId) && chunk.look === 'tangle')) || chunk.mark || chunk.tier || chunk.land || chunk.decor || chunk.sites.length || chunk.entities.length || chunk.places.length) throw new Error('a fixed chunk carries generated geometry');
   if (!chunk.palette.length || chunk.palette.length > 16 || chunk.ground.length !== size * size / 2 || chunk.solid.length !== size * size / 8) throw new Error('invalid cell packing');
   if (chunk.palette.some((p) => !Object.hasOwn(TERRAIN, p))) throw new Error('unknown terrain');
   for (const cell of chunk.ground) if ((cell & 15) >= chunk.palette.length || (cell >> 4) >= chunk.palette.length) throw new Error('invalid palette index');

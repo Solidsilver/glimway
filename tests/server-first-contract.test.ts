@@ -202,7 +202,7 @@ test('the open map contract 8 shapes decode through the facade (open-map.md 2.4,
   fake.responses.set('/api/wilds/near/-2/-4', [get('glimway.v1.WildsNearResult', 'valid-near')]);
   const near = await fake.api.near(-2, -4);
   assert.deepEqual([near.still!.kind, near.wick!.kind, near.center!.cx, near.center!.cy, near.radius], ['still', 'wick', -2, -4, 2]);
-  assert.deepEqual(near.frontier!.rect, create(wilds.WildsChunkRectSchema, { minCx: -4, minCy: -8, maxCx: 4, maxCy: 0 }));
+  assert.deepEqual(near.frontier!.rect, create(wilds.WildsChunkRectSchema, { minCx: -6, minCy: -8, maxCx: 4, maxCy: 7 }));
   assert.equal(near.ground[0]!.changes!.changes[1]!.change, 'stone');
   assert.deepEqual([near.glimpse[0]!.land, near.glimpse[0]!.river, near.ways[0]!.name], ['meadow', true, "Fixture's way"]);
   // A window answered for another chunk is refused.
@@ -214,8 +214,8 @@ test('the open map contract 8 shapes decode through the facade (open-map.md 2.4,
   assert.deepEqual([chunk.cx, chunk.cy, chunk.tier, chunk.land, chunk.places[0]!.id, chunk.sites[0]!.kind], [-3, -7, 3, 'meadow', 'place:-1:-2', wilds.SiteKind.RUMOUR]);
   // A fixed chunk as served (location-seam.md 1.4): the Commons' heart, its objects, through the client's validator.
   const fixed = decodeChunk(toBinary(wilds.WorldChunkSchema, decodeWire(wilds.WorldChunkSchema, get('glimway.v1.WorldChunk', 'valid-fixed'))));
-  assert.deepEqual([fixed.source, fixed.epochId, fixed.layoutRevision, fixed.cx, fixed.cy], [wilds.ChunkSource.FIXED, 'fixed:commons@3', 3, 0, 1]);
-  assert.ok(fixed.objects.some((o) => o.id === 'well' && o.kind === 'well'));
+  assert.deepEqual([fixed.source, fixed.epochId, fixed.layoutRevision, fixed.cx, fixed.cy], [wilds.ChunkSource.FIXED, 'fixed:hearthwick@1', 1, 0, 2]);
+  assert.ok(fixed.objects.some((o) => o.id === 'town-well' && o.kind === 'well'));
   assert.deepEqual(near.chunks.map((c) => [c.chunk!.cx, c.chunk!.cy, c.source, c.epoch]), [[-2, -4, 'generated', 'wick-epoch']]);
 });
 

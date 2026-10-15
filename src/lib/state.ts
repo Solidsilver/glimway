@@ -1,7 +1,8 @@
+import { homeDoorstep } from './lots.ts';
 import { knownRoom } from './rooms.ts';
-import { resolve } from './location.ts';
+import { anchor, contentSpace } from './location.ts';
 // Area builders register IDs at runtime; save validation uses SAVE_AREAS below.
-export type AreaId = 'village' | 'woodland' | 'ruin' | (string & {});
+export type AreaId = 'outdoors' | 'woodland' | 'ruin' | (string & {});
 
 /** The lantern road's step reached (`'new'` before it starts): what the game's older reads follow. */
 export type QuestStage =
@@ -22,6 +23,7 @@ export type QuestEvent =
 
 export interface GameState {
   version: 1;
+  layout?: 'one-town-v1';
   area: AreaId;
   position: { x: number; y: number };
   /** Quest id → the step reached (src/lib/quests.ts). No entry: not started. */
@@ -70,28 +72,25 @@ export class InvalidSaveError extends Error {
 }
 
 // Curated areas are buildable by the existing standalone frontend.
-export const AREAS: readonly AreaId[] = ['village', 'woodland', 'ruin'];
+export const AREAS: readonly AreaId[] = ['woodland', 'ruin'];
 const SAVE_AREAS: readonly AreaId[] = [...AREAS, 'outdoors'];
 /**
  * A fixed place's own frame, as saves named it before it joined the open
  * map (the Commons: docs/design/location-seam.md 3). A save still there is
  * read onto the grid, at the same spot.
  */
-const JOINED_AREAS: readonly string[] = ['commons'];
 
 /** A homestead's land behind Commons gate g: `home:<g>` (0..9999, no leading zeros). */
 export const HOME_AREA_RE = /^home:(0|[1-9]\d{0,3})$/;
 
 /** A saved spot, onto the grid if it named a joined place's own frame. */
 function onGrid(area: string, x: number, y: number): { area: AreaId; position: { x: number; y: number } } {
-  if (!JOINED_AREAS.includes(area)) return { area, position: { x, y } };
-  const o = resolve(area, 0, 0);
-  return { area: o.space, position: { x: x + o.tx * 16, y: y + o.ty * 16 } };
+  return { area: contentSpace(area), position: { x, y } };
 }
 
 /** Can a save say it is here? The fixed areas, any homestead's land, and the rooms (a cottage, a village room). */
 function isSaveArea(area: unknown): area is AreaId {
-  return typeof area === 'string' && ((SAVE_AREAS as readonly string[]).includes(area) || HOME_AREA_RE.test(area) || knownRoom(area));
+  return typeof area === 'string' && ((SAVE_AREAS as readonly string[]).includes(area) || knownRoom(area));
 }
 
 export const QUEST_STAGES: readonly QuestStage[] = [
@@ -110,14 +109,16 @@ const DEFAULT_HP = 40;
 const DEFAULT_MAX_MANA = 20;
 const DEFAULT_MANA = 20;
 
-const DEFAULT_POSITION = { x: 400, y: 300 } as const;
+const DEFAULT_POSITION = anchor('hearthwick:spawn')!;
+const RECOVERY_POSITION = anchor('hearthwick:well')!;
 
 const STARTING_INVENTORY: readonly string[] = ['field-journal', 'hearthwick-map'];
 
 export function createNewGame(): GameState {
   return {
     version: SAVE_VERSION,
-    area: 'village',
+    layout: 'one-town-v1',
+    area: 'outdoors',
     position: { x: DEFAULT_POSITION.x, y: DEFAULT_POSITION.y },
     quests: {},
     hp: DEFAULT_HP,
@@ -250,11 +251,8 @@ export function validateSave(data: unknown): GameState {
     );
   }
 
-  if (!isSaveArea(data.area) && !JOINED_AREAS.includes(data.area as string)) {
-    throw new InvalidSaveError(
-      `expected one of ${SAVE_AREAS.map((a) => JSON.stringify(a)).join(', ')} home:<gate> or a room, got ${describe(data.area)}`,
-      'area',
-    );
+  if (data.layout !== undefined && data.layout !== 'one-town-v1') {
+    throw new InvalidSaveError(`unsupported world layout ${describe(data.layout)}`, 'layout');
   }
 
   if (!isPlainObject(data.position)) {
@@ -263,8 +261,27 @@ export function validateSave(data: unknown): GameState {
       'position',
     );
   }
-  const x = requireFiniteNumber(data.position.x, 'position.x');
-  const y = requireFiniteNumber(data.position.y, 'position.y');
+  requireFiniteNumber(data.position.x, 'position.x');
+  requireFiniteNumber(data.position.y, 'position.y');
+
+  // Import retired local save frames once; current saves only name live spaces.
+  if (data.area === 'village' || data.area === 'commons' || (typeof data.area === 'string' && HOME_AREA_RE.test(data.area))) {
+    const gate = typeof data.area === 'string' && HOME_AREA_RE.test(data.area) ? Number(data.area.slice(5)) : null;
+    const p = gate !== null && gate < 8 ? homeDoorstep(gate) : null;
+    const fallback = anchor(data.area === 'village' ? 'hearthwick:spawn' : 'hearthwick:arch')!;
+    data = { ...data, area: 'outdoors', position: p ? { x: p.tx * 16 + 8, y: p.ty * 16 + 8 } : { x: fallback.x, y: fallback.y } };
+  }
+  if (!isPlainObject(data)) throw new InvalidSaveError('invalid cutover save');
+  if (!isSaveArea(data.area)) {
+    throw new InvalidSaveError(
+      `expected one of ${SAVE_AREAS.map((a) => JSON.stringify(a)).join(', ')} or a known room, got ${describe(data.area)}`,
+      'area',
+    );
+  }
+
+  const pos = data.position as { x: number; y: number };
+  const x = requireFiniteNumber(pos.x, 'position.x');
+  const y = requireFiniteNumber(pos.y, 'position.y');
 
   const quests = validateQuests(data);
   const questGateAt = isPlainObject(data.questGateAt) ? numberMap(data.questGateAt) : undefined;
@@ -303,6 +320,7 @@ export function validateSave(data: unknown): GameState {
   return {
     ...(wickEpoch ? { wickEpoch } : {}),
     version: SAVE_VERSION,
+    layout: 'one-town-v1',
     ...onGrid(data.area as string, x, y),
     quests,
     ...(questGateAt ? { questGateAt } : {}),
@@ -324,7 +342,7 @@ export function validateSave(data: unknown): GameState {
 
 /**
  * The guest (demo vitals) defeat rule: the player returns to the Hearthwick
- * spawn and recovers full demo health and mana. Quests, inventory,
+ * well and recovers full demo health and mana. Quests, inventory,
  * discoveries, defeated enemies, and play time are kept, so story progress
  * survives defeat. Imported vitals go through resolveDefeatRecovery
  * (src/lib/habitica/sync.ts), which caps them; see docs/runtime-contract.md.
@@ -333,8 +351,8 @@ export function recoverFromDefeat(state: GameState): GameState {
   const current = validateSave(state);
   return {
     ...current,
-    area: 'village',
-    position: { x: DEFAULT_POSITION.x, y: DEFAULT_POSITION.y },
+    area: 'outdoors',
+    position: { x: RECOVERY_POSITION.x, y: RECOVERY_POSITION.y },
     hp: current.maxHp,
     mana: current.maxMana,
   };

@@ -28,6 +28,9 @@ func TestOpenMapChunksValidateAtSignedCoordinates(t *testing.T) {
 	n := 0
 	for cy := y0; cy <= y1; cy++ {
 		for cx := x0; cx <= x1; cx++ {
+			if !frontier.Inside("", cx, cy) || wilds.FixedFootprintAt(cx, cy) != nil {
+				continue
+			}
 			m, err := g.Chunk(fakeEpoch(wilds.EpochKindAt(cx, cy)), int32(cx), int32(cy), nil)
 			if err != nil {
 				t.Fatal(cx, cy, err)
@@ -38,7 +41,7 @@ func TestOpenMapChunksValidateAtSignedCoordinates(t *testing.T) {
 			n++
 		}
 	}
-	if n != 81 {
+	if n != 144 {
 		t.Fatalf("made %d chunks", n)
 	}
 	if _, err := g.Chunk(fakeEpoch("still"), 0, -5, nil); err == nil {
@@ -138,7 +141,7 @@ func TestFakeRumourIsAPlace(t *testing.T) {
 	if _, ok, _ := g.Rumour(fakeEpoch("still")); ok {
 		t.Fatal("the still epoch has a rumour")
 	}
-	if len(fakegen.Cells()) != 7 {
+	if len(fakegen.Cells()) != 13 {
 		t.Fatal("place cells", fakegen.Cells())
 	}
 }

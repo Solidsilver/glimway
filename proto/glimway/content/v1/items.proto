@@ -101,13 +101,13 @@ message ItemMender {
   option (buf.validate.message).cel = {
     id: "mender.place"
     message: "a mender stands with a resident or at a fixed spot in a known area, not both"
-    expression: "this.with != \"\" ? (!has(this.area) && !has(this.tx) && !has(this.ty)) : (this.area in [\"village\", \"woodland\", \"ruin\", \"commons\"] && has(this.tx) && has(this.ty))"
+    expression: "this.with != \"\" ? (!has(this.area) && !has(this.tx) && !has(this.ty)) : (this.area in [\"hearthwick\", \"woodland\", \"ruin\"] && has(this.tx) && has(this.ty))"
   };
   string npc = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
   string name = 2 [(buf.validate.field).string.min_len = 1];
   optional string area = 3;
-  optional int32 tx = 4 [(buf.validate.field).int32.gte = 0];
-  optional int32 ty = 5 [(buf.validate.field).int32.gte = 0];
+  optional int32 tx = 4 [(buf.validate.field).int32 = {gte: -1048576, lte: 1048576}];
+  optional int32 ty = 5 [(buf.validate.field).int32 = {gte: -1048576, lte: 1048576}];
   int32 radius_tiles = 6 [(buf.validate.field).int32.gte = 1];
   optional string with = 7 [(buf.validate.field).string.pattern = "^([a-z0-9-]{1,100})?$"];
 }
@@ -243,9 +243,9 @@ message ItemPickup {
   // The item it is: a carried definition — checked in code.
   string item = 2;
   int32 qty = 3 [(buf.validate.field).int32 = {gte: 1, lte: 100}];
-  string area = 4 [(buf.validate.field).string = {in: ["village", "woodland", "ruin", "commons"]}];
-  optional int32 tx = 5 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
-  optional int32 ty = 6 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+  string area = 4 [(buf.validate.field).string = {in: ["hearthwick", "woodland", "ruin"]}];
+  optional int32 tx = 5 [(buf.validate.field).required = true, (buf.validate.field).int32 = {gte: -1048576, lte: 1048576}];
+  optional int32 ty = 6 [(buf.validate.field).required = true, (buf.validate.field).int32 = {gte: -1048576, lte: 1048576}];
   // What's left of a worn tool found lying about.
   optional int32 uses_left = 7 [(buf.validate.field).int32.gte = 0];
   string label = 8 [(buf.validate.field).string.min_len = 1];
@@ -281,15 +281,15 @@ message ItemSeller {
   option (buf.validate.message).cel = {
     id: "seller.place"
     message: "a seller without a resident stands in a known area"
-    expression: "this.with != \"\" || this.area in [\"village\", \"woodland\", \"ruin\", \"commons\"]"
+    expression: "this.with != \"\" || this.area in [\"hearthwick\", \"woodland\", \"ruin\"]"
   };
   // The resident this seller stands with (their spot is the shared one).
   optional string with = 1 [(buf.validate.field).string.pattern = "^([a-z0-9-]{1,100})?$"];
   string id = 2 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
   string npc = 3 [(buf.validate.field).string = {min_len: 1, max_len: 40}];
-  optional int32 tx = 4 [(buf.validate.field).int32.gte = 0];
-  optional int32 ty = 5 [(buf.validate.field).int32.gte = 0];
-  optional string area = 6 [(buf.validate.field).string = {in: ["village", "woodland", "ruin", "commons"]}];
+  optional int32 tx = 4 [(buf.validate.field).int32 = {gte: -1048576, lte: 1048576}];
+  optional int32 ty = 5 [(buf.validate.field).int32 = {gte: -1048576, lte: 1048576}];
+  optional string area = 6 [(buf.validate.field).string = {in: ["hearthwick", "woodland", "ruin"]}];
   int32 radius_tiles = 7 [(buf.validate.field).int32 = {gte: 1, lte: 16}];
   // The seller stands on its festival day only (a calendar festival —
   // checked in code).

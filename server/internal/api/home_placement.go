@@ -210,6 +210,17 @@ func validatePlacement(h homeView, item homeInstance, r *contract.HomesteadReque
 	return nil
 }
 
+func placementPresence(s *store.Snapshot, h homeView, scene string) error {
+	if scene == "indoor" {
+		if s.State.Area == fmt.Sprintf("in:home:%d", h.Gate) {
+			return nil
+		}
+	} else if onPrivateLot(s, h.Gate) {
+		return nil
+	}
+	return fail(409, "not-at-own-plot")
+}
+
 func arrange(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, op string, req *contract.HomesteadRequest, now int64) (string, error) {
 	var item *homeInstance
 	for i := range h.Items {
@@ -226,6 +237,17 @@ func arrange(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, op 
 	}
 	if (op == "move" || op == "remove") && item.Scene == nil {
 		return "", fail(409, "not-placed")
+	}
+	scene := req.Scene
+	if item.Scene != nil {
+		if err := placementPresence(s, h, *item.Scene); err != nil {
+			return "", err
+		}
+	}
+	if op != "remove" {
+		if err := placementPresence(s, h, scene); err != nil {
+			return "", err
+		}
 	}
 	var err error
 	post := item.ItemDef == content.HomeRules.GetLanternPosts().GetItem()
@@ -311,6 +333,9 @@ func arrange(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, op 
 }
 
 func clearTile(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, req *contract.HomesteadRequest, now int64) error {
+	if !onPrivateLot(s, h.Gate) {
+		return fail(409, "not-at-own-plot")
+	}
 	if req.X == nil || req.Y == nil {
 		return fail(400, "invalid-placement")
 	}

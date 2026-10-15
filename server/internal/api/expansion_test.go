@@ -22,6 +22,7 @@ type expansionResponse struct {
 	LandSeed  uint32         `json:"landSeed"`
 	Materials map[string]int `json:"materials"`
 	Gates     []gateView     `json:"gates"`
+	Homes     []homeView     `json:"homes"`
 	GateCount int            `json:"gateCount"`
 	Mine      *struct {
 		HomeID string `json:"homeId"`
@@ -218,6 +219,7 @@ func TestHomesteadTransactionsIdempotencyAndPlacement(t *testing.T) {
 	x.exp("POST", "/api/homestead/buy", req, c, 409)
 	x.exp("POST", "/api/homestead/buy", body(s, "chair-too-soon", map[string]any{"itemDef": "reading-chair"}), c, 409)
 	place := func(key, id, scene string, px, py, rotation int, status int) expansionResponse {
+		x.standForHome(&s, scene)
 		return x.exp("POST", "/api/homestead/place", body(s, key, map[string]any{"itemId": id, "scene": scene, "x": px, "y": py, "rotation": rotation}), c, status)
 	}
 	place("no-indoor", fern, "indoor", 0, 0, 0, 409)
@@ -308,7 +310,8 @@ func TestHomeRestAndSafeBoundaries(t *testing.T) {
 	// Before the cottage (tier 0) the bedroll on the land rests you; once it stands, only inside.
 	doc = s.State
 	doc.HP = 1
-	doc.Area = "home:0"
+	doc.Area = "outdoors"
+	doc.Position.X, doc.Position.Y = -968, 520
 	s = x.reportState(c, s, doc.HP, doc.Mana, testWhere(doc))
 	x.expect("POST", "/api/spend", spendBody(s, "home-rest", "", "bedroll", doc), c, 200)
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
@@ -317,15 +320,17 @@ func TestHomeRestAndSafeBoundaries(t *testing.T) {
 	}
 	doc = s.State
 	doc.HP = 1
-	doc.Area = "home:0"
+	doc.Area = "outdoors"
+	doc.Position.X, doc.Position.Y = -968, 520
 	s = x.reportState(c, s, doc.HP, doc.Mana, testWhere(doc))
 	if v := x.exp("POST", "/api/spend", spendBody(s, "home-rest", "", "doorstep", doc), c, 409); v.Error.Code != "not-at-own-plot" {
 		t.Fatal("doorstep rest with a cottage", v.Error.Code)
 	}
-	for name, area := range map[string]string{"other-home": "in:home:1", "commons": "commons", "village": "village", "padded": "in:home:00"} {
+	for name, area := range map[string]string{"other-home": "in:home:1", "commons": "commons", "in:village:library": "in:village:library", "padded": "in:home:00"} {
 		doc = s.State
 		doc.HP = 1
 		doc.Area = area
+		doc.Position.X, doc.Position.Y = 80, 80
 		if area == "commons" {
 			doc = onCommons(doc, 376, 40)
 		}
@@ -339,12 +344,19 @@ func TestHomeRestAndSafeBoundaries(t *testing.T) {
 		}
 	}
 	p := profile("alice", 1, 0, 20)
-	for _, area := range []string{"commons", "home:0", "home:7", "in:village:library", "in:village:mill:2", "in:home:0"} {
+	for _, tc := range []struct {
+		area string
+		pos  rules.Position
+	}{
+		{"outdoors", commonsPx(376, 40)},
+		{"outdoors", rules.Position{X: -968, Y: 520}},
+		{"outdoors", rules.Position{X: -37*16 + 8, Y: 104*16 + 8}},
+		{"in:village:library", rules.Position{X: 80, Y: 80}},
+		{"in:village:mill:2", rules.Position{X: 80, Y: 80}},
+		{"in:home:0", rules.Position{X: 80, Y: 80}},
+	} {
 		doc = s.State
-		doc.Area = area
-		if area == "commons" {
-			doc = onCommons(doc, 376, 40)
-		}
+		doc.Area, doc.Position = tc.area, tc.pos
 		s.Snapshot = x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, p, doc), c, 200).Snapshot
 	}
 	doc = s.State

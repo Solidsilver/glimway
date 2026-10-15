@@ -5,7 +5,7 @@ import { allKeepsakeLines, echoKeepsakeOffer, keepsakeAsk, keepsakeReturnAction,
 import { itemDef, ITEMS, ITEM_RULES } from '../src/lib/items.ts';
 import { CRAFTING } from '../src/lib/workshop.ts';
 import { buildArea } from '../src/game/worlds.ts';
-import { servedCommonsFixture } from './commons-fixture.ts';
+import { servedTownFixture } from './commons-fixture.ts';
 import { residentById } from '../src/lib/residents.ts';
 
 test('repairs rules match crafting and lore canon', () => {
@@ -54,11 +54,11 @@ test('repairs rules match crafting and lore canon', () => {
   const hame = repairFor('gate-hame');
   assert.ok(hame);
   assert.equal(hame.part, 'oilcloth-wrap');
-  assert.equal(hame.area, 'commons');
+  assert.equal(hame.area, 'hearthwick');
   assert.equal(hame.resident, 'silas');
 
-  assert.equal(repairsForArea('village').length, 5);
-  assert.equal(repairsForArea('commons').length, 1);
+  assert.equal(repairsForArea('hearthwick').length, 6);
+  assert.equal(repairsForArea('outdoors').length, 6);
 
   // The hame waits for its Carting Day window (content, read finding 2);
   // the well never breaks again (N1): water is a dependency, not a chore.
@@ -161,12 +161,13 @@ test('every repair part has a source a player can get', () => {
 test('the world is built from the shared spots the server checks', () => {
   // The well, Ada and Hazel stand where the shared content says (the
   // server's draw-water and keepsake-return checks read the same rows).
-  const v = buildArea('village');
+  const v = servedTownFixture();
   const well = repairFor('well-rope')!.pos;
-  assert.deepEqual(v.well, { tx: well.tx, ty: well.ty });
+  assert.equal(v.features.well.tx, well.tx);
+  assert.equal(v.features.well.ty, well.ty + 1, 'repair is on the well footprint; sprite is anchored to its bottom row');
   for (const res of ITEM_RULES.residents) {
     // The Commons is fixed ground on the open map: its served layout, in Commons tiles.
-    const npc = (res.area === 'commons' ? servedCommonsFixture() : buildArea(res.area)).npcs.find((n) => n.id === res.id);
+    const npc = (res.area === 'hearthwick' ? servedTownFixture() : buildArea(res.area)).npcs.find((n) => n.id === res.id);
     assert.ok(npc, `${res.id} stands in ${res.area}`);
     assert.deepEqual({ tx: npc!.tx, ty: npc!.ty }, { tx: res.tx, ty: res.ty });
   }
@@ -175,5 +176,5 @@ test('the world is built from the shared spots the server checks', () => {
   const silas = ITEM_RULES.menders.find((m) => m.npc === 'silas')!;
   assert.equal(silas.with, 'silas');
   const yard = residentById('silas')!.spots.yard!;
-  assert.deepEqual(servedCommonsFixture().features.silas, { tx: yard.tx, ty: yard.ty });
+  assert.deepEqual(servedTownFixture().features.silas, { tx: yard.tx, ty: yard.ty });
 });

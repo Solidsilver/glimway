@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/coder/websocket"
+	"glimway/server/internal/rules"
 )
 
 type witnessed struct {
@@ -27,7 +28,11 @@ func (w *wsClient) witness() witnessed {
 func (x *rig) quest(c *http.Cookie, s *response, to, area string) {
 	x.t.Helper()
 	doc := s.State
-	doc.Area = area
+	if area == "in:village:library" || area == "hearthwick" {
+		doc.Area, doc.Position = rules.TownAnchor("spawn")
+	} else {
+		doc.Area = area
+	}
 	if to == "guardian-defeated" {
 		s.Snapshot = x.expect("POST", "/api/story/mark", body(*s, "quest-defeat-mark", map[string]any{"mark": "defeated:stone-warden", "where": testWhere(doc)}), c, 200).Snapshot
 	}
@@ -36,6 +41,7 @@ func (x *rig) quest(c *http.Cookie, s *response, to, area string) {
 }
 
 func TestWitnessRelayedFromTheBeatToThoseNearby(t *testing.T) {
+
 	x := newRig(t)
 	ts := startPresence(t, x, presenceTestConfig())
 	x.hero("olive", "Olive", "p1")
@@ -83,7 +89,7 @@ func TestWitnessRelayedFromTheBeatToThoseNearby(t *testing.T) {
 	// Olive speaks the naming in the ruin: Bob was there; Cal stood too far
 	// off, Eve was in the woods, and Dee's ruin is another world's.
 	doc := o.State
-	x.quest(oc, &o, "accepted", "village")
+	x.quest(oc, &o, "accepted", "in:village:library")
 	doc.Area, doc.Quest = "ruin", "clue-found"
 	x.quest(oc, &o, doc.Quest, doc.Area)
 	bob.none()
@@ -151,7 +157,7 @@ func TestWitnessEchoAndOnlyLiveMoments(t *testing.T) {
 	}
 	x.api.presenceWitness(o.WorldID, o.AccountID, "Renamed", "outdoors", "echo:nan")
 	bob.none()
-	x.api.presenceWitness(o.WorldID, o.AccountID, o.DisplayName, "village", "echo:tam")
+	x.api.presenceWitness(o.WorldID, o.AccountID, o.DisplayName, "in:village:library", "echo:tam")
 	bob.none()
 	if got := x.expect("GET", "/api/state", nil, bc, 200); got.Version != recorded.Version {
 		t.Fatal("repeat bumped witness")

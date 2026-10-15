@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"glimway/content"
 	contract "glimway/server/internal/gen/glimway/v1"
+	"glimway/server/internal/location"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -102,7 +103,7 @@ func TestRoomPositionAndPresence(t *testing.T) {
 }
 
 func TestResidentChecksWithGraceAndReach(t *testing.T) {
-	s := store.Snapshot{State: rules.NewState()}
+	s := store.Snapshot{State: rules.NewTownState()}
 	hazel, _ := content.ResidentByID("hazel")
 	for _, row := range []struct {
 		now  int64
@@ -110,7 +111,7 @@ func TestResidentChecksWithGraceAndReach(t *testing.T) {
 		yes  bool
 	}{{0, "kitchen", true}, {1200, "square", false}, {2310, "square", true}, {2400, "kitchen", true}, {2490, "kitchen", true}, {2491, "kitchen", false}, {3000, "square", true}} {
 		p := hazel.GetSpots()[row.spot]
-		s.State.Area = p.GetArea()
+		s.State.Area = string(location.ContentSpace(p.GetArea()))
 		s.State.Position = rules.Position{X: float64(p.GetTx()*16 + 8), Y: float64(p.GetTy()*16 + 8)}
 		if personHere("hazel", p.GetArea(), row.now) != row.yes || nearResident(&s, "hazel", row.now, 4) != row.yes {
 			t.Fatal(row)
@@ -120,7 +121,7 @@ func TestResidentChecksWithGraceAndReach(t *testing.T) {
 			t.Fatal("out of reach")
 		}
 	}
-	if personHere("mara", "in:village:bakery", 0) || !personHere("mara", "village", 0) {
+	if personHere("mara", "in:village:bakery", 0) || !personHere("mara", "hearthwick", 0) {
 		t.Fatal("fixed talk area")
 	}
 	finn, _ := content.ResidentAt("finn", 3000)
@@ -164,7 +165,7 @@ func TestQuestGatesAtomicReplayAndTimes(t *testing.T) {
 	for i, row := range []struct {
 		now        int64
 		area, code string
-	}{{4000, "village", "not-here"}, {3600, "in:village:bakery", "not-yet"}, {7200, "in:village:bakery", "short"}} {
+	}{{4000, "in:village:library", "not-here"}, {3600, "in:village:bakery", "not-yet"}, {7200, "in:village:bakery", "short"}} {
 		x.now.Store(row.now)
 		got := call("test-bread", "finish", fmt.Sprint("refuse", i), row.area, 409)
 		if got.Error.Code != row.code {
@@ -225,7 +226,7 @@ func TestQuestTriggerPredicates(t *testing.T) {
 	cases := []struct {
 		trigger *content.QuestTrigger
 		success bool
-	}{{trig("open", "journal"), true}, {trig("reach", "in:village:library"), true}, {trig("reach", "village"), false}, {trig("use", "library-shelf"), true}, {trig("use", "sponge-bowl"), false}, {trig("talk", "mara"), false}, {trig("defeat", "stone-warden"), false}, {trig("carry", "flour"), false}, {trig("carry", "tally-token"), false}, {trig("flag", "library:lamp"), false}, {trig("sync", "glims"), false}}
+	}{{trig("open", "journal"), true}, {trig("reach", "in:village:library"), true}, {trig("reach", "outdoors"), false}, {trig("use", "library-shelf"), true}, {trig("use", "sponge-bowl"), false}, {trig("talk", "mara"), false}, {trig("defeat", "stone-warden"), false}, {trig("carry", "flour"), false}, {trig("carry", "tally-token"), false}, {trig("flag", "library:lamp"), false}, {trig("sync", "glims"), false}}
 	for _, row := range cases {
 		err = questTrigger(context.Background(), tx, &snap, "test", &content.QuestStep{Do: row.trigger}, 100)
 		if (err == nil) != row.success {
@@ -260,7 +261,7 @@ func TestQuestPrerequisitesAndHabitica(t *testing.T) {
 	first := plainStep("first")
 	last := plainStep("last")
 	fixtureQuests(t, &content.Quest{Id: "test-before", Steps: []*content.QuestStep{first, last}})
-	s := store.Snapshot{State: rules.NewState(), ProfileSource: "demo"}
+	s := store.Snapshot{State: rules.NewTownState(), ProfileSource: "demo"}
 	habitica := "habitica"
 	q := &content.Quest{After: []string{"test-before:first"}, Needs: habitica}
 	if questPrerequisites(s, q) == nil {
@@ -380,6 +381,7 @@ func TestOpeningTopupOnce(t *testing.T) {
 }
 
 func TestIndoorsRestAndGathering(t *testing.T) {
+
 	x := newRig(t)
 	c, s := x.ready("alice")
 	x.fund(s.AccountID, 10, 0)
@@ -421,7 +423,7 @@ func TestRoomsHaveSeparatePresence(t *testing.T) {
 	ts := startPresence(t, x, presenceTestConfig())
 	alice := wsConnect(t, ts, c, s.Lease)
 	bob := wsConnect(t, ts, bc, b.Lease)
-	if len(alice.join("in:village:mill").Players) != 0 || len(bob.join("village").Players) != 0 {
+	if len(alice.join("in:village:mill").Players) != 0 || len(bob.join("in:village:library").Players) != 0 {
 		t.Fatal("indoors leaked outdoors")
 	}
 	alice.none()
@@ -485,6 +487,7 @@ func (x *rig) seedOpeningDone(account string) {
 }
 
 func TestAuthoredOpeningUnlocksLanternRoad(t *testing.T) {
+
 	x := newRig(t)
 	c, s := x.ready("alice")
 	refused := x.exp("POST", "/api/quest/step", body(s, "before-opening", map[string]any{"quest": "lantern-road", "to": "accepted"}), c, 409)
@@ -514,7 +517,7 @@ func TestAuthoredOpeningUnlocksLanternRoad(t *testing.T) {
 		}
 	}
 	doc := s.State
-	doc.Area = "village"
+	doc.Area, doc.Position = rules.TownAnchor("spawn")
 	s.Snapshot = x.expect("POST", "/api/quest/step", body(s, "after-opening", map[string]any{"quest": "lantern-road", "to": "accepted", "where": testWhere(doc)}), c, 200).Snapshot
 	if s.State.Quests["lantern-road"] != "accepted" {
 		t.Fatal(s.State.Quests)

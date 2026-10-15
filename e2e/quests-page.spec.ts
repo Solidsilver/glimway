@@ -26,7 +26,7 @@ test('a new account finds the opening on the Quests page, pins it, and the goal 
   await freshPlayer(page, 'Tansy', undefined, { opening: true })
   // With nothing pinned, the goal line follows the road's current quest: the opening.
   await expect(page.locator('.objective').first()).toContainText('See what Orrin’s grumbling about')
-  expect((await quests(page)).goal).toMatchObject({ kind: 'quest', quest: 'signpost', where: { area: 'village', npc: 'orrin' } })
+  expect((await quests(page)).goal).toMatchObject({ kind: 'quest', quest: 'signpost', where: { area: 'hearthwick', npc: 'orrin' } })
 
   const journal = await openQuests(page)
   const card = journal.locator('[data-quest="signpost"]')

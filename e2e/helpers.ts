@@ -1,3 +1,4 @@
+import { anchor } from '../src/lib/location.ts'
 import type { FsHooks } from '../src/game/dev-hooks.ts'
 import { expect, type Page } from '@playwright/test'
 
@@ -14,7 +15,7 @@ import { expect, type Page } from '@playwright/test'
  * `holdUntil` cover the usual cases; see docs/testing.md.
  */
 
-type AreaId = 'village' | 'woodland' | 'ruin' | (string & {})
+type AreaId = 'outdoors' | 'woodland' | 'ruin' | (string & {})
 /** An exit of the current area, in tiles. */
 export type ExitView = ReturnType<FsHooks['__fsWorld']>['exits'][number]
 /**
@@ -143,7 +144,7 @@ export async function settled(page: Page, match: { area?: string; prefix?: strin
 
 export async function waitForArea(page: Page, area: AreaId): Promise<void> {
   // The Commons is fixed ground on the open map (location-seam.md 3): waiting for it is waiting for the open map.
-  if (area === 'outdoors' || area === 'commons') await waitForWilds(page)
+  if (area === 'outdoors' || area === 'hearthwick' || area.startsWith('hearthwick:')) await waitForWilds(page)
   else await settled(page, { area: String(area) })
 }
 
@@ -157,9 +158,10 @@ export async function waitForWilds(page: Page): Promise<string> {
     const h = window
     const d = h.__fsWilds?.()
     const w = h.__fsWildsWindow?.()
-    if (!d || !w || !d.wickEpoch) return null
+    if (!d || !w) return null
     const here = `${d.chunk.cx},${d.chunk.cy}`
-    return w.attached.includes(here) ? here : null
+    if (!d.wickEpoch) return null
+    return (w.attached.includes(here) || w.fixed.includes(here)) ? here : null
   })
   return (await handle.jsonValue()) as string
 }
@@ -485,28 +487,26 @@ export async function wildsWindow(page: Page): Promise<WildsWindowView | null> {
  * other area's its own. `commons` takes Commons tiles (as content names
  * them) and lands on the open map at the same spot (`commonsTile`).
  */
-export async function warp(page: Page, area: AreaId, tx: number, ty: number): Promise<void> {
+export async function warp(page: Page, area: AreaId, tx?: number, ty?: number): Promise<void> {
+  const named = anchor(area)
+  if (named) {
+    tx = Math.floor(named.x / 16); ty = Math.floor(named.y / 16); area = named.space
+  }
+  if (tx === undefined || ty === undefined) throw new Error(`warp needs an anchor or tile: ${area}`)
+  await waitForLive(page)
   // The warp starts the transition at once (a refused warp leaves us here).
   await page.evaluate(([a, x, y]) => window.__fsDevWarp!(a, x, y), [area, tx, ty] as const)
   await waitForArea(page, area)
 }
 
-/** The Commons' origin on the grid: Commons tile (tx, ty) is world tile (tx - 21, ty + 24) (content/places.json). */
-export const COMMONS_ORIGIN = { tx: -21, ty: 24 } as const
-
-/** A Commons tile (as content names it) as the open map's world tile. */
-export function commonsTile(tx: number, ty: number): { tx: number; ty: number } {
-  return { tx: tx + COMMONS_ORIGIN.tx, ty: ty + COMMONS_ORIGIN.ty }
-}
-
-/** Is the hero on the Commons (the open map, on its footprint: world tiles x -24..47, y 24..71)? */
+/** Is the hero on Hearthwick (the open map, on its footprint: world tiles x -24..47, y 24..95)? */
 export async function inCommons(page: Page): Promise<boolean> {
   return page.evaluate(() => {
     const s = window.__fsSafety?.()
     if (!s || s.areaId !== 'outdoors' || !s.position) return false
     const tx = Math.floor(s.position.x / 16)
     const ty = Math.floor(s.position.y / 16)
-    return tx >= -24 && tx < 48 && ty >= 24 && ty < 72
+    return tx >= -24 && tx < 48 && ty >= 24 && ty < 96
   })
 }
 

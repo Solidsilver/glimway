@@ -105,17 +105,17 @@ test('the client dispatches a batched frame in order, each event as if alone', (
     },
   });
   try {
-    client.setArea('village');
+    client.setArea('woodland');
     client.start('a'.repeat(64));
     socket.onopen?.({});
     socket.server({ type: 'ready', accountId: 'alice' });
     socket.server(
-      { type: 'room', area: 'village', players: [] },
+      { type: 'room', area: 'woodland', players: [] },
       { type: 'pos', accountId: 'bob', x: 1, y: 2, facing: { x: 0, y: 1 }, moving: true },
       { type: 'emote', accountId: 'bob', id: 'wave' },
       { type: 'leave', accountId: 'bob' },
     );
-    assert.deepEqual(seen, ['ready', 'room:village:0', 'pos:bob', 'emote:bob:wave', 'leave:bob']);
+    assert.deepEqual(seen, ['ready', 'room:woodland:0', 'pos:bob', 'emote:bob:wave', 'leave:bob']);
   } finally { client.stop(); }
 });
 
@@ -130,7 +130,7 @@ for (const protocol of [PRESENCE_PROTOCOL]) {
       handlers: { ready: id => events.push(id), pos: (id, pos) => events.push({ id, pos }) },
     });
     try {
-      client.setArea('village');
+      client.setArea('woodland');
       client.start('a'.repeat(64));
       assert.deepEqual(offered, [PRESENCE_PROTOCOL]);
       assert.equal(socket.binaryType, 'arraybuffer');
@@ -140,7 +140,7 @@ for (const protocol of [PRESENCE_PROTOCOL]) {
       // Generated binary payloads drive the real client.
       socket.server({ type: 'ready', accountId: 'alice' });
       assert.equal(client.status, 'live');
-      assert.deepEqual(sent()[1], { type: 'join', area: 'village' });
+      assert.deepEqual(sent()[1], { type: 'join', area: 'woodland' });
       socket.server({ type: 'pos', accountId: 'bob', x: 0, y: 2, facing: { x: 0, y: 1 }, moving: false });
       assert.deepEqual(events, ['alice', { id: 'bob', pos: { x: 0, y: 2, facing: { x: 0, y: 1 }, moving: false } }]);
       assert.ok(socket.sent.every(data => protocol ? data instanceof Uint8Array : typeof data === 'string'));

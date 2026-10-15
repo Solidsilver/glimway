@@ -14,7 +14,7 @@ test('the HUD names the goal in a few words, and the needle points the way', asy
   await freshPlayer(page)
   // Before the quest: Mara, here in the village.
   await expect(page.locator('.hud .goal-text')).toHaveText('Hear Mara out about the road')
-  await warp(page, 'village', 4, 18)
+  await warp(page, 'outdoors', -11, 78)
   await frames(page, 10)
   let g = await goal(page)
   expect(g.dir.here, 'Mara is in this area').toBe(true)
@@ -22,7 +22,7 @@ test('the HUD names the goal in a few words, and the needle points the way', asy
   // Mara stands east and north of the library door.
   expect(Math.cos(g.dir.angle!), 'toward Mara: east').toBeGreaterThan(0)
 
-  await warp(page, 'village', 16, 14)
+  await warp(page, 'outdoors', 14, 62)
   await talkThrough(page, /Talk to Mara/)
   await expect(page.locator('.hud .goal-text')).toHaveText('Copy the route stone in Ashwatch Ruin')
   await waitForLive(page)
@@ -50,7 +50,7 @@ test.describe('pinned guides', () => {
   test('a pinned "How do I…?" guide leads the goal line and the needle, and unpins back to the story', async ({ page }) => {
     const { freshPlayer, go } = await import('./home-helpers')
     await freshPlayer(page)
-    await go(page, 'village', 16, 14)
+    await go(page, 'outdoors', 14, 62)
     await waitForLive(page)
     // The journal's "How do I…?" page: open "Make your first tool" and pin it.
     await page.keyboard.press('j')
@@ -70,13 +70,13 @@ test.describe('pinned guides', () => {
     expect(Math.cos(g.dir.angle!), 'toward the Commons gate: east').toBeGreaterThan(0.3)
 
     // On the Commons: the way in is the Yard's front door, under Silas's sign (content/rooms.json).
-    await go(page, 'commons', 23, 19)
+    await go(page, 'outdoors', 34, 35)
     await waitForLive(page)
     await frames(page, 30)
     g = await goal(page)
     expect(g.dir.here, 'Pell is indoors').toBe(false)
-    // (The door's Commons tile 53,17, on the open map's grid: world tile 32,41.)
-    expect(g.target).toMatchObject({ x: 32.5 * 16, y: 41.5 * 16 })
+    // The door is at world tile (34, 34).
+    expect(g.target).toMatchObject({ x: 34.5 * 16, y: 34.5 * 16 })
     // In the shop, the side door; in Pell's office, Pell.
     await go(page, 'in:commons:yard', 7, 7)
     await waitForLive(page)

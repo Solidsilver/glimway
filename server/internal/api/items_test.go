@@ -439,8 +439,8 @@ func TestItemsConsumablesRestoreAndThankTheMaker(t *testing.T) {
 		t.Fatal("missing maker thank-you mail")
 	}
 	// Together, nothing is sent.
-	x.stand(x.account("alice"), s.WorldID, "village", 100, 100)
-	x.stand(x.account("bob"), s.WorldID, "village", 120, 100)
+	x.stand(x.account("alice"), s.WorldID, "in:village:library", 100, 100)
+	x.stand(x.account("bob"), s.WorldID, "in:village:library", 120, 100)
 	x.opRefreshing(c, &s, "use", map[string]any{"itemDef": "keepers-twists", "maker": bob}, 200)
 	if count(t, x.db, "SELECT count(*) FROM mail WHERE to_id='"+x.account("bob")+"' AND kind='thanks'") != 1 {
 		t.Fatal("thanked while together")
@@ -529,7 +529,7 @@ func TestItemsGiveRaces(t *testing.T) {
 	cc, cr := x.member("cara", s.WorldID)
 	_, _, _, _ = bc, b, cc, cr
 	for _, id := range []string{"alice", "bob", "cara"} {
-		x.stand(x.account(id), s.WorldID, "village", 200, 200)
+		x.stand(x.account(id), s.WorldID, "in:village:library", 200, 200)
 	}
 	other, err := store.Open(filepath.Join(x.dir, "game.sqlite"))
 	if err != nil {
@@ -632,8 +632,8 @@ func TestItemsPocketsAndCarryGear(t *testing.T) {
 	}
 	x.opRefreshing(c, &s, "pocket", map[string]any{"slot": 1, "itemDef": "work-glove"}, 200)
 	// Handing the satchel over closes the second pocket.
-	x.stand(x.account("alice"), s.WorldID, "village", 10, 10)
-	x.stand(x.account("bob"), s.WorldID, "village", 12, 10)
+	x.stand(x.account("alice"), s.WorldID, "in:village:library", 10, 10)
+	x.stand(x.account("bob"), s.WorldID, "in:village:library", 12, 10)
 	v = x.opRefreshing(c, &s, "give", map[string]any{"toId": x.account("bob"), "asset": map[string]any{"kind": "instance", "id": "forager-satchel", "qty": 1, "instance": satchel}}, 200)
 	if len(v.Result.Items.Pockets) != 1 || count(t, x.db, "SELECT count(*) FROM item_slots WHERE account_id='"+x.account("alice")+"'") != 1 {
 		t.Fatal("pocket 2 settled")

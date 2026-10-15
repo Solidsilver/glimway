@@ -12,7 +12,7 @@ import { road } from './helpers/quests.ts';
 test('createNewGame returns a valid fresh demo state', () => {
   const state = createNewGame();
   assert.equal(state.version, 1);
-  assert.equal(state.area, 'village');
+  assert.equal(state.area, 'outdoors');
   assert.deepEqual(state.quests, {});
   assert.equal(state.hp, state.maxHp);
   assert.equal(state.mana, state.maxMana);
@@ -49,6 +49,7 @@ test('validateSave accepts a well-formed state and strips foreign fields', () =>
     'glims',
     'hp',
     'inventory',
+    'layout',
     'mana',
     'maxHp',
     'maxMana',
@@ -112,7 +113,7 @@ test('validateSave rejects missing required fields', () => {
   assert.throws(() => validateSave(partial), InvalidSaveError);
 });
 
-test('recoverFromDefeat: demo rule returns to village with full resources and keeps story', () => {
+test('recoverFromDefeat: demo rule returns to the town well with full resources and keeps story', () => {
   let state = createNewGame();
   state = road(state, 'accept', 'find-clue');
   const hurt: GameState = {
@@ -124,7 +125,7 @@ test('recoverFromDefeat: demo rule returns to village with full resources and ke
     playSeconds: 120,
   };
   const recovered = recoverFromDefeat(hurt);
-  assert.equal(recovered.area, 'village');
+  assert.equal(recovered.area, 'outdoors');
   assert.equal(recovered.hp, recovered.maxHp);
   assert.equal(recovered.mana, recovered.maxMana);
   assert.equal(recovered.quests['lantern-road'], 'clue-found');
@@ -145,6 +146,17 @@ test('a save from before the quest tree loads its lantern road, with the opening
 test('a legacy Commons save moves its pixels onto the grid exactly once', () => {
   const loaded = validateSave({ ...createNewGame(), area: 'commons', position: { x: 376.5, y: 40.25 } });
   assert.equal(loaded.area, 'outdoors');
-  assert.deepEqual(loaded.position, { x: 40.5, y: 424.25 });
+  assert.deepEqual(loaded.position, { x: 40, y: 424 });
   assert.deepEqual(validateSave(loaded), loaded);
+});
+
+
+test('ambiguous untagged outdoors saves preserve coordinates and acquire a layout tag', () => {
+  const old = { ...createNewGame(), position: { x: -801.5, y: 1050.25 } };
+  delete old.layout;
+  const current = validateSave(old);
+  assert.deepEqual(current.position, old.position);
+  assert.equal(current.layout, 'one-town-v1');
+  assert.throws(() => validateSave({ ...current, layout: 'future-town' }), /unsupported world layout/);
+  assert.deepEqual(validateSave(current), current);
 });

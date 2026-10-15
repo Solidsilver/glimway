@@ -12,9 +12,11 @@ import (
 	"glimway/server/internal/frontier"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/land"
+	"glimway/server/internal/location"
 	"glimway/server/internal/ports"
 	"glimway/server/internal/ports/portstest"
 	"glimway/server/internal/store"
+	"glimway/server/internal/story"
 	"glimway/server/internal/wilds"
 	"net/http"
 	"net/http/httptest"
@@ -231,17 +233,17 @@ func TestWildsNearMakesEpochsAndChunks(t *testing.T) {
 	if n.Center.Cx != 0 || n.Center.Cy != -1 || n.Center.Realm != "hearthwick" || n.Center.Layer != 0 || n.Radius != 2 {
 		t.Fatalf("window %+v %d", n.Center, n.Radius)
 	}
-	if r := n.Frontier.Rect; r.MinCx != -4 || r.MinCy != -8 || r.MaxCx != 4 || r.MaxCy != 0 {
+	if r := n.Frontier.Rect; r.MinCx != -6 || r.MinCy != -8 || r.MaxCx != 4 || r.MaxCy != 7 {
 		t.Fatalf("frontier %+v", r)
 	}
 	// The window around (0,-1) is chunks -2..2 by -3..0 inside the frontier:
 	// the Tangle's nine (made with the still epoch) and eleven wick chunks.
 	// It touches the Whitequiet, whose Echoes are dealt over all nine of its
 	// chunks, so its other six are made too.
-	if a, b := count(t, x.db, "SELECT count(*) FROM wilds_chunks WHERE epoch_id=?", n.Still.Id), count(t, x.db, "SELECT count(*) FROM wilds_chunks WHERE epoch_id=?", n.Wick.Id); a != 9 || b != 11+6 {
+	if a, b := count(t, x.db, "SELECT count(*) FROM wilds_chunks WHERE epoch_id=?", n.Still.Id), count(t, x.db, "SELECT count(*) FROM wilds_chunks WHERE epoch_id=?", n.Wick.Id); a != 9 || b != 12+6 {
 		t.Fatal("window chunks not made on read", a, b)
 	}
-	if len(n.Entities) != 4*20 || len(v.Entities) != len(v.bodies) {
+	if len(n.Entities) != 4*21 || len(v.Entities) != len(v.bodies) {
 		t.Fatal("entity states don't match the chunks' bodies", len(n.Entities))
 	}
 	for _, e := range n.Entities {
@@ -267,7 +269,7 @@ func TestWildsNearMakesEpochsAndChunks(t *testing.T) {
 		t.Fatal("a second read wrote")
 	}
 	// Off the grid: refused, and nothing is made.
-	for _, at := range [][2]int{{5, 0}, {0, 3}, {-2, 1}, {-5, -4}, {0, -9}} {
+	for _, at := range [][2]int{{5, 0}, {2, 7}, {-7, 1}, {-5, -4}, {0, -9}} {
 		x.near(c, at[0], at[1], 409)
 	}
 	for _, path := range []string{"0", "0/-1/2", "x/1", "01/1", "0/-01", ""} {
@@ -285,12 +287,13 @@ func TestWildsNearMakesEpochsAndChunks(t *testing.T) {
 	for _, ch := range commons.Chunks {
 		listed[[2]int32{ch.Chunk.Cx, ch.Chunk.Cy}] = ch.Source + " " + ch.Epoch
 	}
-	if len(listed) != 16 || listed[[2]int32{0, 1}] != "fixed fixed:commons@3" || listed[[2]int32{1, 2}] != "fixed fixed:commons@3" || listed[[2]int32{0, 0}] != "generated "+n.Still.Id || listed[[2]int32{2, -1}] != "generated "+n.Wick.Id {
+	if len(listed) != 25 || listed[[2]int32{0, 1}] != "fixed fixed:hearthwick@1" || listed[[2]int32{1, 2}] != "fixed fixed:hearthwick@1" || listed[[2]int32{0, 0}] != "generated "+n.Still.Id || listed[[2]int32{2, -1}] != "generated "+n.Wick.Id {
 		t.Fatal("the window's chunks", listed)
 	}
 	for _, e := range commons.Entities {
-		if !strings.Contains(e.Id, ":-1:") && !strings.Contains(e.Id, ":0:") {
-			t.Fatal("state off the generated chunks", e.Id)
+		cx, cy, ok := story.EntityChunk(e.Id)
+		if !ok || location.SourceOf(cx, cy).Kind != location.SourceGenerated {
+			t.Fatal("state off generated chunks", e.Id)
 		}
 	}
 	if w := x.rawHTTP("GET", "/api/wilds/region/inner-1", nil, c); w.Code != 404 {
@@ -305,20 +308,19 @@ func TestWildsNearMakesEpochsAndChunks(t *testing.T) {
 	glimpsed := map[[2]int32]bool{}
 	for _, g := range corner.Glimpse {
 		k := [2]int32{g.Chunk.Cx, g.Chunk.Cy}
-		if glimpsed[k] || frontier.Inside("", int(k[0]), int(k[1])) || k[0] < -6 || k[1] < -10 || k[0] > 0 || k[1] > -4 || g.Land == "" {
+		if glimpsed[k] || frontier.Inside("", int(k[0]), int(k[1])) || k[0] < -8 || k[1] < -12 || k[0] > 0 || k[1] > -4 || wilds.NearestFootprint(int(k[0]), int(k[1])) > 5 || g.Land == "" {
 			t.Fatalf("glimpse %+v", g)
 		}
 		glimpsed[k] = true
 	}
-	// Within four of (-4,-8) and two of the frontier: x -6..0, y -10..-4,
-	// less the 5x5 of it inside the frontier.
-	if len(glimpsed) != 49-25 || count(t, x.db, "SELECT count(*) FROM wilds_chunks WHERE cx<-4 OR cy<-8") != 0 {
+	// Within four of the centre and two of the actual reach union.
+	if len(glimpsed) != 26 || count(t, x.db, "SELECT count(*) FROM wilds_chunks WHERE cx<-4 OR cy<-8") != 0 {
 		t.Fatal("glimpse made chunks or missed some", len(glimpsed))
 	}
 	south := x.near(c, 4, 0, 200)
 	for _, g := range south.Glimpse {
-		if g.Chunk.Cy > 0 {
-			t.Fatal("glimpse south of the village edge", g)
+		if g.Chunk.Cy > 7 {
+			t.Fatal("glimpse beyond the southern frontier", g)
 		}
 	}
 }
@@ -539,7 +541,7 @@ func TestWildsClaimReach(t *testing.T) {
 	x.campFell(s.WorldID, v.Epoch.Id, v.kind(t, "camp"), 0, x.account("alice"))
 	for _, kind := range []string{"node", "camp", "chest", "poi"} {
 		e := v.kind(t, kind)
-		if _, code := x.claim(c, s, kind+"-village", v.Epoch.Id, e, 0, &contract.Where{Area: "village", X: 10, Y: 10}, 409); code != "not-in-wilds" {
+		if _, code := x.claim(c, s, kind+"-village", v.Epoch.Id, e, 0, &contract.Where{Area: "in:village:library", X: 10, Y: 10}, 409); code != "not-in-wilds" {
 			t.Fatal(kind, code)
 		}
 		wrong := at(e, 0)
@@ -676,7 +678,7 @@ func TestWildsFallenLanterns(t *testing.T) {
 		where  *contract.Where
 		reason string
 	}{
-		{"curated", v.Epoch, &contract.Where{Area: "village", X: 100, Y: 100}, "not-wilds"},
+		{"curated", v.Epoch, &contract.Where{Area: "in:village:library", X: 100, Y: 100}, "not-wilds"},
 		{"no epoch", nil, here, "epoch-missing"},
 		{"wick land on the still epoch", v.Epoch, atTile(2*24+1, -24+1), "invalid-place"},
 		{"outside the frontier", v.Epoch, atTile(5*24, -10), "invalid-place"},
@@ -728,7 +730,7 @@ func TestWildsRelight(t *testing.T) {
 	first := x.fall("alice", v.Epoch, here)
 	second := x.fall("alice", v.Epoch, here)
 	relight(bc, b, "obsolete", "alice", first.ID, here, 404)
-	if _, code := relight(bc, b, "village", "alice", second.ID, &contract.Where{Area: "village", X: 1, Y: 1}, 409); code != "not-in-wilds" {
+	if _, code := relight(bc, b, "in:village:library", "alice", second.ID, &contract.Where{Area: "in:village:library", X: 1, Y: 1}, 409); code != "not-in-wilds" {
 		t.Fatal(code)
 	}
 	if _, code := relight(bc, b, "far", "alice", second.ID, atTile(tx+4, ty), 409); code != "too-far-away" {

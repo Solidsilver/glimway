@@ -39,7 +39,7 @@ message FishBand {
 // country adds rows, not code (5.6).
 message FishWater {
   string id = 1 [(buf.validate.field).string.pattern = "^water:(village|woodland|ruin|commons):([a-z0-9]+(-[a-z0-9]+)*)$"];
-  string area = 2 [(buf.validate.field).string = {in: ["village", "woodland", "ruin", "commons"]}];
+  string area = 2 [(buf.validate.field).string = {in: ["hearthwick", "woodland", "ruin"]}];
   // "still" in 0.5; generated habitats come with lake country.
   string habitat = 3 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
   int32 tiles = 4 [(buf.validate.field).int32.gt = 0];
@@ -63,8 +63,8 @@ message FishBank {
 
 // A tile a player stands on (client tiles; 0 is a legal coordinate).
 message FishTile {
-  int32 tx = 1 [(buf.validate.field).int32.gte = 0];
-  int32 ty = 2 [(buf.validate.field).int32.gte = 0];
+  int32 tx = 1 [(buf.validate.field).int32 = {gte: -1048576, lte: 1048576}];
+  int32 ty = 2 [(buf.validate.field).int32 = {gte: -1048576, lte: 1048576}];
 }
 
 // One species row: the catalogue item a kept fish becomes, and its weight

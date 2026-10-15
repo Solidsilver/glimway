@@ -1,3 +1,4 @@
+import { homeDoorstep } from '../src/lib/lots.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ROOMS as ROOM_DATA, knownRoom, roomFor, roomParent, rootArea } from '../src/lib/rooms.ts';
@@ -11,13 +12,12 @@ import { SEATED_MANA_BONUS, manaRegenRate } from '../src/game/seats.ts';
 import { residentAt } from '../src/lib/residents.ts';
 import { doorFor, residentPlace, residentIn, twoLegs } from '../src/game/resident-cycle.ts';
 import { ROOM_ENTRY, homeRoomArea, parseHomeRoom } from '../src/game/cottage.ts';
-import { landDoor } from '../src/game/homeland.ts';
 import { roomZoomFor, zoomFor } from '../src/game/viewport.ts';
 import { isPresenceArea, presenceAreaFor } from '../src/lib/presence-client.ts';
 import { isSafeArea } from '../src/lib/habitica/sync.ts';
 import { createNewGame, validateSave } from '../src/lib/state.ts';
 import { TILE, tileFeet } from '../src/lib/tile.ts';
-import { serveFixtureCommons, servedCommonsFixture } from './commons-fixture.ts';
+import { serveFixtureCommons, servedCommonsFixture, servedTownFixture, toCommons } from './commons-fixture.ts';
 
 // The Commons is the server's: these tests stand on its served chunks.
 serveFixtureCommons();
@@ -89,9 +89,9 @@ test('a doorway leads out to the doorstep on the parent, facing away from the do
     // The parent: the door tile is solid (you press it), the doorstep is open.
     const door = def.doors.find((d) => d.kind === 'door')!;
     // The Commons is fixed ground on the open map: its served layout, in Commons tiles (as rooms.json names the door).
-    const parent = def.parent === 'commons' ? servedCommonsFixture() : buildArea(def.parent);
-    assert.equal(parent.solid[door.outside!.ty][door.outside!.tx], true, `${def.id}: the door tile is the house's`);
-    assert.equal(parent.solid[out.entry.ty][out.entry.tx], false, `${def.id}: the doorstep is open`);
+    const parent = def.parent === 'hearthwick' ? servedCommonsFixture() : buildArea(def.parent);
+    assert.equal(parent.solid[toCommons(door.outside!).ty][toCommons(door.outside!).tx], true, `${def.id}: the door tile is the house's`);
+    assert.equal(parent.solid[toCommons(out.entry).ty][toCommons(out.entry).tx], false, `${def.id}: the doorstep is open`);
     assert.equal(out.entry.ty, door.outside!.ty + 1, 'the doorstep is just below the door');
     // Coming in, you arrive on the @.
     assert.deepEqual(roomArrival(def.id), w.room!.arrive);
@@ -126,12 +126,12 @@ test('the mill’s stairs run along its west wall; the loft’s opening is right
 
 test('room ids: parents, roots, and what counts as a room', () => {
   assert.equal(roomParent('in:village:mill:2'), 'in:village:mill');
-  assert.equal(roomParent('in:village:mill'), 'village');
+  assert.equal(roomParent('in:village:mill'), 'hearthwick');
   assert.equal(roomParent('in:home:12'), 'home:12');
-  assert.equal(roomParent('village'), 'village');
-  assert.equal(rootArea('in:village:mill:2'), 'village');
+  assert.equal(roomParent('hearthwick'), 'hearthwick');
+  assert.equal(rootArea('in:village:mill:2'), 'hearthwick');
   assert.equal(rootArea('in:home:12'), 'home:12');
-  assert.equal(rootArea('commons'), 'commons');
+  assert.equal(rootArea('hearthwick'), 'hearthwick');
   assert.ok(knownRoom('in:village:library'));
   assert.ok(knownRoom('in:home:0'));
   assert.ok(!knownRoom('in:home:012'));
@@ -149,8 +149,8 @@ test('the cottage is the place in:home:<gate>: in by its door, out onto the land
   assert.equal(w.areaId, 'in:home:7');
   assert.deepEqual(w.spawn, ROOM_ENTRY);
   const out = w.exits[0];
-  assert.equal(out.to, 'home:7');
-  assert.deepEqual(out.entry, landDoor().doorstep);
+  assert.equal(out.to, 'outdoors');
+  assert.deepEqual(out.entry, homeDoorstep(7));
   assert.equal(out.side, 'south');
   assert.equal(out.kind, 'door');
 });
@@ -208,21 +208,21 @@ test('who’s home: a room’s resident is in while their spot is in it (the lof
 test('residents are placed at every spot they have in an area; the cycle says which one they stand at', () => {
   assert.deepEqual(residentSpotsIn('in:village:bakery'), [{ id: 'hazel', tx: 4, ty: 6, spot: 'kitchen' }]);
   assert.deepEqual(residentSpotsIn('in:village:mill:2'), [{ id: 'finn', tx: 7, ty: 5, spot: 'loft' }]);
-  const village = buildArea('village').npcs.filter((n) => n.spot);
-  assert.deepEqual(village.map((n) => `${n.id}:${n.spot}`).sort(), ['ada:window', 'finn:door', 'hazel:square']);
+  const village = servedTownFixture().npcs.filter((n) => n.spot);
+  assert.deepEqual(village.map((n) => `${n.id}:${n.spot}`).sort(), ['ada:window', 'elara:camp', 'finn:door', 'hazel:square', 'silas:yard']);
   // Every spot is open floor.
   for (const def of ROOMS) for (const n of residentSpotsIn(def.id)) assert.equal(buildArea(def.id).solid[n.ty][n.tx], false, `${n.id} at ${def.id}`);
 });
 
 test('the walk at a change: to the doorway, the stairs, or the front door outside', () => {
   // Hazel leaving the kitchen for the square: out through the doorway.
-  assert.deepEqual(doorFor('hazel', 'in:village:bakery', 'village'), { step: { tx: 6, ty: 8 }, door: { tx: 6, ty: 9 } });
+  assert.deepEqual(doorFor('hazel', 'in:village:bakery', 'hearthwick'), { step: { tx: 6, ty: 8 }, door: { tx: 6, ty: 9 } });
   // Finn going up to the loft: onto the stairs from their foot (their `side`).
   assert.deepEqual(doorFor('finn', 'in:village:mill', 'in:village:mill:2'), { step: { tx: 1, ty: 6 }, door: { tx: 1, ty: 5 } });
   // ...and from the loft out to his door: down through the opening, from its north side.
-  assert.deepEqual(doorFor('finn', 'in:village:mill:2', 'village'), { step: { tx: 1, ty: 3 }, door: { tx: 1, ty: 4 } });
+  assert.deepEqual(doorFor('finn', 'in:village:mill:2', 'hearthwick'), { step: { tx: 1, ty: 3 }, door: { tx: 1, ty: 4 } });
   // Outside, Hazel comes and goes by her front door.
-  assert.deepEqual(doorFor('hazel', 'village', 'in:village:bakery'), { step: { tx: 7, ty: 8 }, door: { tx: 7, ty: 7 } });
+  assert.deepEqual(doorFor('hazel', 'hearthwick', 'in:village:bakery'), { step: { tx: -11, ty: 59 }, door: { tx: -11, ty: 58 } });
   // Two legs, across then up or down, ending on the target's feet.
   const legs = twoLegs({ tx: 12, ty: 15 }, { tx: 7, ty: 8 });
   assert.deepEqual(legs, [tileFeet(7, 15), tileFeet(7, 8)]);
@@ -261,7 +261,7 @@ test('standing at the kitchen’s hearth warms you like a seat: the seated mana 
   assert.ok(warmAt(kitchen, (spot.tx + 0.5) * TILE, (spot.ty + 1.5) * TILE));
   // Across the room, or out in the village: no.
   assert.ok(!warmAt(kitchen, 2 * TILE, 8 * TILE));
-  assert.ok(!warmAt(buildArea('village'), 7 * TILE, 3 * TILE));
+  assert.ok(!warmAt(buildArea('outdoors'), 7 * TILE, 3 * TILE));
   const plain = manaRegenRate({ seated: false, warm: false, rest: 0 });
   assert.equal(manaRegenRate({ seated: false, warm: true, rest: 0 }), plain + SEATED_MANA_BONUS);
   assert.equal(manaRegenRate({ seated: false, warm: true, rest: 0 }), manaRegenRate({ seated: true, warm: false, rest: 0 }), 'the same as sitting');

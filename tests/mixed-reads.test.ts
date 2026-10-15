@@ -12,7 +12,7 @@ const storage = { home: null, inventory: { materials: { fiber: 4 }, items: {}, d
 test('domain reads find their extras under result, beside the typed state', async () => {
   const fetchImpl = (async (url: string) => {
     if (url === '/api/storage') return json({ state: BASE, result: storage });
-    if (url === '/api/commons') return json({ state: BASE, result: { gateCount: 4, gates: [], invites: [], mine: null } });
+    if (url === '/api/commons') return json({ state: BASE, result: { gateCount: 4, gates: [], invites: [], mine: null, homes: [] } });
     throw new Error(url);
   }) as typeof fetch;
   const api = createApiClient({ fetchImpl });

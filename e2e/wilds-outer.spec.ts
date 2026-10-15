@@ -128,7 +128,7 @@ test('in the Whitequiet, an Echo settled, the land turns in place and gives a te
   await shot(page, '47-outer-given-back-desktop')
 
   // Back in Hearthwick, the notice board's old notices, now you've seen a Turning.
-  await warp(page, 'village', 15, 10)
+  await warp(page, 'outdoors', 12, 57)
   await expect(page.locator('.prompt')).toContainText('Read the notice board')
   await waitForLive(page)
   await page.keyboard.press('e')

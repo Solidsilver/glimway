@@ -66,6 +66,7 @@ func (x *rig) craftAndPlace(c *http.Cookie, s *response, piece, key string) {
 			x.t.Fatal("no adjacent lit tiles for the woodpile")
 		}
 	}
+	x.standForHome(s, scene)
 	update(s, x.exp("POST", "/api/homestead/place", body(*s, "place-"+key, map[string]any{
 		"itemId": id, "scene": scene, "x": px, "y": py, "rotation": 0}), c, 200))
 }

@@ -58,7 +58,8 @@ export declare const RoomsSchema: GenMessage<Rooms, {validType: RoomsValid}>;
 
 /**
  * Room maps are 16-pixel tiles. Floors and side rooms share an outdoor
- * parent; the building follows from the id (in:village:bakery -> village,
+ * parent; persisted village/Commons room IDs now have Hearthwick as parent.
+ * The building follows from the id (in:village:bakery -> hearthwick,
  * in:village:mill:2 -> in:village:mill, in:commons:yard:deeds ->
  * in:commons:yard) and is checked in code, beside RoomParent.
  *
@@ -121,7 +122,8 @@ export declare type Room = Message<"glimway.content.v1.Room"> & {
 
 /**
  * Room maps are 16-pixel tiles. Floors and side rooms share an outdoor
- * parent; the building follows from the id (in:village:bakery -> village,
+ * parent; persisted village/Commons room IDs now have Hearthwick as parent.
+ * The building follows from the id (in:village:bakery -> hearthwick,
  * in:village:mill:2 -> in:village:mill, in:commons:yard:deeds ->
  * in:commons:yard) and is checked in code, beside RoomParent.
  *

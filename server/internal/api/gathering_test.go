@@ -59,7 +59,7 @@ func standAt(s response, area string, tx, ty int) rules.State {
 // Wilds, the Tangle unless the fields say otherwise).
 func gatherIn(s response, area string, tile [2]int, tool, action, target, visit string) map[string]any {
 	f := map[string]any{"tool": tool, "action": action, "target": target, "visitId": visit, "progress": standAt(s, area, tile[0], tile[1])}
-	if rules.HomeGate(area) >= 0 {
+	if rules.HomeGate(area) >= 0 || area == "hearthwick" {
 		f["tile"] = tile
 	}
 	if area == "outdoors" {
@@ -163,9 +163,9 @@ func TestGatheringWearAndYields(t *testing.T) {
 	axe := x.instance(s.AccountID, "bench-axe", -1, "")
 	here := [2]int{20, 20}
 
-	// Only in the woods: not in the village.
-	if x.opRefreshing(c, &s, "gather", gatherIn(s, "village", here, axe, "chop", "tree", "v1"), 409).Error.Code != "cannot-gather-here" {
-		t.Fatal("chopped in the village")
+	// Only in the woods: not in the village or indoors.
+	if got := x.opRefreshing(c, &s, "gather", gatherIn(s, "in:village:library", [2]int{5, 5}, axe, "chop", "tree", "v1"), 409).Error.Code; got != "cannot-gather-here" {
+		t.Fatalf("chopped in the village: got %s, want cannot-gather-here", got)
 	}
 	// The tool must suit the target.
 	if x.opRefreshing(c, &s, "gather", gatherIn(s, "outdoors", here, axe, "break", "tree", "v1"), 409).Error.Code != "wrong-tool" {
@@ -421,11 +421,20 @@ func TestPlantingAtHome(t *testing.T) {
 		return x.opRefreshing(c, &s, "plant", map[string]any{"itemDef": def, "tile": tile, "progress": standAt(s, area, at[0], at[1])}, status)
 	}
 
-	litTile := litSpots(h)[0]
+	var litTile [2]int
+	for _, candidate := range litSpots(h) {
+		if plantGround(h)[candidate] {
+			litTile = candidate
+			break
+		}
+	}
+	if litTile == [2]int{} {
+		t.Fatal("no lit planting ground")
+	}
 	var darkTile [2]int
 	for _, t := range landTiles(h, land.Grass, false) {
 		// Room to wander: open grass all round.
-		if landKind(h, t[0]+1, t[1]) == land.Grass && landKind(h, t[0]-1, t[1]) == land.Grass && landKind(h, t[0], t[1]+1) == land.Grass && landKind(h, t[0], t[1]-1) == land.Grass {
+		if plantGround(h)[t] && landKind(h, t[0]+1, t[1]) == land.Grass && landKind(h, t[0]-1, t[1]) == land.Grass && landKind(h, t[0], t[1]+1) == land.Grass && landKind(h, t[0], t[1]-1) == land.Grass {
 			darkTile = t
 			break
 		}
@@ -444,7 +453,7 @@ func TestPlantingAtHome(t *testing.T) {
 	if plant("birch-sapling", litTile, [2]int{litTile[0] + 5, litTile[1]}, 409).Error.Code != "too-far-away" {
 		t.Fatal("planted from afar")
 	}
-	if x.opRefreshing(c, &s, "plant", map[string]any{"itemDef": "birch-sapling", "tile": litTile, "progress": standAt(s, "commons", litTile[0], litTile[1])}, 409).Error.Code != "cannot-plant-here" {
+	if x.opRefreshing(c, &s, "plant", map[string]any{"itemDef": "birch-sapling", "tile": litTile, "progress": atAnchor(s.State, "hearthwick:spawn")}, 409).Error.Code != "cannot-plant-here" {
 		t.Fatal("planted in the Commons")
 	}
 
@@ -603,6 +612,11 @@ func TestPlantingNeverStacksIsCappedAndBlocksPlacement(t *testing.T) {
 // first back onto it (plantsOf counts who stands where).
 func TestPlantsNeverShareATile(t *testing.T) {
 	h := homeView{Gate: 0, LandSeed: 1234, Items: []homeInstance{}}
+	// A cleared garden provides neighbouring plant tiles on the smaller lot.
+	for _, kind := range []byte{land.Tree, land.Stump, land.Boulder} {
+		h.Cleared = append(h.Cleared, landTiles(h, kind, false)...)
+		h.Cleared = append(h.Cleared, landTiles(h, kind, true)...)
+	}
 	open := plantGround(h)
 	var r [2]int
 	for _, tl := range landTiles(h, land.Grass, false) {

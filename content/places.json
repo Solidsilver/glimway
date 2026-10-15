@@ -1,37 +1,289 @@
 {
   "fixed": [
     {
-      "id": "commons",
-      "name": "the Commons",
-      "layout": "commons",
-      "revision": 3,
-      "origin": { "tx": -21, "ty": 24 },
+      "id": "hearthwick",
+      "name": "Hearthwick",
+      "kind": "layout",
+      "layout": "hearthwick",
+      "revision": 1,
+      "origin": {
+        "tx": -24,
+        "ty": 24
+      },
       "cx": -1,
       "cy": 1,
       "width": 3,
-      "height": 2,
-      "rules": { "safe": true, "ride": true, "sync": true, "rest": "none" },
-      "zones": [],
+      "height": 3,
+      "rules": {
+        "safe": true,
+        "ride": true,
+        "sync": true,
+        "rest": "village"
+      },
+      "zones": [
+        {
+          "id": "town-walk",
+          "place": "hearthwick",
+          "tx": 0,
+          "ty": 20,
+          "w": 69,
+          "h": 49,
+          "rules": {
+            "safe": true,
+            "ride": false,
+            "sync": true,
+            "rest": "village"
+          }
+        }
+      ],
       "anchors": [
-        { "id": "arch", "tx": 23, "ty": 2 },
-        { "id": "west-path", "tx": 2, "ty": 21 },
-        { "id": "yard-door", "tx": 53, "ty": 18 },
-        { "id": "gate:0", "tx": 20, "ty": 9 },
-        { "id": "gate:1", "tx": 27, "ty": 9 },
-        { "id": "gate:2", "tx": 20, "ty": 13 },
-        { "id": "gate:3", "tx": 27, "ty": 13 },
-        { "id": "gate:4", "tx": 20, "ty": 28 },
-        { "id": "gate:5", "tx": 27, "ty": 28 },
-        { "id": "gate:6", "tx": 20, "ty": 33 },
-        { "id": "gate:7", "tx": 27, "ty": 33 }
+        {
+          "id": "spawn",
+          "tx": 28,
+          "ty": 36
+        },
+        {
+          "id": "well",
+          "tx": 35,
+          "ty": 38
+        },
+        {
+          "id": "arch",
+          "tx": 26,
+          "ty": 2
+        },
+        {
+          "id": "east-road",
+          "tx": 66,
+          "ty": 38
+        },
+        {
+          "id": "south-gate",
+          "tx": 33,
+          "ty": 68
+        },
+        {
+          "id": "west-gate",
+          "tx": 2,
+          "ty": 45
+        },
+        {
+          "id": "bakery-door",
+          "tx": 13,
+          "ty": 35
+        },
+        {
+          "id": "library-door",
+          "tx": 13,
+          "ty": 53
+        },
+        {
+          "id": "yard-door",
+          "tx": 58,
+          "ty": 11
+        },
+        {
+          "id": "mill-door",
+          "tx": 53,
+          "ty": 53
+        },
+        {
+          "id": "lot:0",
+          "tx": -36,
+          "ty": 20
+        },
+        {
+          "id": "lot:1",
+          "tx": -12,
+          "ty": 20
+        },
+        {
+          "id": "lot:2",
+          "tx": -36,
+          "ty": 44
+        },
+        {
+          "id": "lot:3",
+          "tx": -12,
+          "ty": 44
+        },
+        {
+          "id": "lot:4",
+          "tx": -36,
+          "ty": 68
+        },
+        {
+          "id": "lot:5",
+          "tx": -12,
+          "ty": 68
+        },
+        {
+          "id": "lot:6",
+          "tx": -36,
+          "ty": 92
+        },
+        {
+          "id": "lot:7",
+          "tx": -12,
+          "ty": 92
+        }
       ]
+    },
+    {
+      "id": "homestead-lots",
+      "name": "Homestead Lane",
+      "kind": "plots",
+      "layout": "homestead-lots",
+      "revision": 2,
+      "origin": {
+        "tx": -72,
+        "ty": 24
+      },
+      "cx": -3,
+      "cy": 1,
+      "width": 2,
+      "height": 4,
+      "rules": {
+        "safe": true,
+        "ride": true,
+        "sync": true,
+        "rest": "home"
+      },
+      "zones": [
+        {
+          "id": "lot-0",
+          "place": "lot:0",
+          "tx": 0,
+          "ty": 0,
+          "w": 24,
+          "h": 24,
+          "rules": {
+            "safe": true,
+            "ride": true,
+            "sync": true,
+            "rest": "home"
+          }
+        },
+        {
+          "id": "lot-1",
+          "place": "lot:1",
+          "tx": 24,
+          "ty": 0,
+          "w": 24,
+          "h": 24,
+          "rules": {
+            "safe": true,
+            "ride": true,
+            "sync": true,
+            "rest": "home"
+          }
+        },
+        {
+          "id": "lot-2",
+          "place": "lot:2",
+          "tx": 0,
+          "ty": 24,
+          "w": 24,
+          "h": 24,
+          "rules": {
+            "safe": true,
+            "ride": true,
+            "sync": true,
+            "rest": "home"
+          }
+        },
+        {
+          "id": "lot-3",
+          "place": "lot:3",
+          "tx": 24,
+          "ty": 24,
+          "w": 24,
+          "h": 24,
+          "rules": {
+            "safe": true,
+            "ride": true,
+            "sync": true,
+            "rest": "home"
+          }
+        },
+        {
+          "id": "lot-4",
+          "place": "lot:4",
+          "tx": 0,
+          "ty": 48,
+          "w": 24,
+          "h": 24,
+          "rules": {
+            "safe": true,
+            "ride": true,
+            "sync": true,
+            "rest": "home"
+          }
+        },
+        {
+          "id": "lot-5",
+          "place": "lot:5",
+          "tx": 24,
+          "ty": 48,
+          "w": 24,
+          "h": 24,
+          "rules": {
+            "safe": true,
+            "ride": true,
+            "sync": true,
+            "rest": "home"
+          }
+        },
+        {
+          "id": "lot-6",
+          "place": "lot:6",
+          "tx": 0,
+          "ty": 72,
+          "w": 24,
+          "h": 24,
+          "rules": {
+            "safe": true,
+            "ride": true,
+            "sync": true,
+            "rest": "home"
+          }
+        },
+        {
+          "id": "lot-7",
+          "place": "lot:7",
+          "tx": 24,
+          "ty": 72,
+          "w": 24,
+          "h": 24,
+          "rules": {
+            "safe": true,
+            "ride": true,
+            "sync": true,
+            "rest": "home"
+          }
+        }
+      ],
+      "anchors": []
     }
   ],
-  "generated": { "safe": false, "ride": true, "sync": false, "rest": "none" },
+  "generated": {
+    "safe": false,
+    "ride": true,
+    "sync": false,
+    "rest": "none"
+  },
   "spaces": {
-    "village": { "safe": true, "ride": false, "sync": true, "rest": "village" },
-    "woodland": { "safe": false, "ride": true, "sync": false, "rest": "none" },
-    "ruin": { "safe": false, "ride": true, "sync": false, "rest": "none" },
-    "home": { "safe": true, "ride": true, "sync": true, "rest": "home" }
+    "woodland": {
+      "safe": false,
+      "ride": true,
+      "sync": false,
+      "rest": "none"
+    },
+    "ruin": {
+      "safe": false,
+      "ride": true,
+      "sync": false,
+      "rest": "none"
+    }
   }
 }

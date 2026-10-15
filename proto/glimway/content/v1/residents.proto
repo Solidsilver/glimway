@@ -43,8 +43,8 @@ message Resident {
 
 message ResidentSpot {
   string area = 1 [(buf.validate.field).string.min_len = 1];
-  optional int32 tx = 2 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
-  optional int32 ty = 3 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+  optional int32 tx = 2 [(buf.validate.field).required = true, (buf.validate.field).int32 = {gte: -1048576, lte: 1048576}];
+  optional int32 ty = 3 [(buf.validate.field).required = true, (buf.validate.field).int32 = {gte: -1048576, lte: 1048576}];
   optional bool seated = 4;
 }
 

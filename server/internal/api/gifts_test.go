@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"glimway/content"
+	"glimway/server/internal/chunks"
 	"glimway/server/internal/store"
 	"net/http"
 	"net/http/httptest"
@@ -707,4 +708,43 @@ func TestThanksNeverReturnOrBumpSenderRevision(t *testing.T) {
 	if count(t, x.db, "SELECT COUNT(*) FROM mail WHERE id='thanks-old' AND returned_at IS NULL") != 1 {
 		t.Fatal("thank-you was marked returned")
 	}
+}
+
+// Gate management retains the inside-fence rule, including after travellers
+// have taken every gift. Use explicit positions rather than fixture remapping.
+func TestGateShelfRemovalPresenceAfterTravellers(t *testing.T) {
+	x := newRig(t)
+	ac, a := x.ready("alice")
+	h := x.claimGate(ac, &a, 0)
+	if _, err := x.db.DB.Exec("UPDATE homesteads SET tier=1 WHERE id=?", h.ID); err != nil {
+		t.Fatal(err)
+	}
+	item := x.decoration(x.account("alice"), "gate-shelf")
+	x.homeOpRefreshing(ac, &a, "place", map[string]any{"itemId": item, "scene": "gate"}, 200)
+	ox, oy := chunks.LotOrigin(h.Gate)
+	public := map[string]any{"area": "outdoors", "x": (ox+14)*16 + 8, "y": (oy+20)*16 + 18}
+	inside := map[string]any{"area": "outdoors", "x": (ox+12)*16 + 8, "y": (oy+19)*16 + 8}
+	remove := func(where map[string]any, status int) expansionResponse {
+		return x.homeOpRefreshing(ac, &a, "remove", map[string]any{"itemId": item, "where": where}, status)
+	}
+	x.stack(x.account("alice"), "comfrey-salve", x.account("alice"), 4)
+	for i := 0; i < 4; i++ {
+		x.shelfOp(ac, &a, map[string]any{"op": "stock", "gate": 0, "slot": i, "asset": map[string]any{"kind": "item", "id": "comfrey-salve", "qty": 1}}, 200)
+	}
+	if v := remove(inside, 409); v.Error.Code != "shelf-not-empty" {
+		t.Fatalf("stocked removal: %s", v.Error.Code)
+	}
+	for i := 0; i < 4; i++ {
+		bc, b := x.member(fmt.Sprintf("traveller%d", i), a.WorldID)
+		x.shelfOp(bc, &b, map[string]any{"op": "take", "gate": 0, "slot": i}, 200)
+		x.conserved(b.AccountID)
+	}
+	if v := remove(public, 409); v.Error.Code != "not-at-own-plot" {
+		t.Fatalf("public removal: %s", v.Error.Code)
+	}
+	remove(inside, 200)
+	if count(t, x.db, "SELECT count(*) FROM homestead_items WHERE id='"+item+"' AND location='inventory' AND account_id='"+x.account("alice")+"'") != 1 {
+		t.Fatal("shelf not returned")
+	}
+	x.conserved(x.account("alice"))
 }

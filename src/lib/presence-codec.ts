@@ -84,6 +84,7 @@ function decodeEvent({ event }: WireMessage): PresenceServerMessage | null {
       return p && event.value.accountId !== undefined ? { type: 'pos', accountId: event.value.accountId, ...p } : null;
     }
     case 'emote': return event.value.accountId !== undefined ? { type: 'emote', accountId: event.value.accountId, id: event.value.id } : null;
+    case 'homeChanged': return event.value.gate < 8 ? { type: 'homeChanged', gate: event.value.gate } : null;
     case 'avatarChange': {
       const a = avatar(event.value.avatar);
       return event.value.accountId && a ? { type: 'avatarChange', accountId: event.value.accountId, avatar: a } : null;

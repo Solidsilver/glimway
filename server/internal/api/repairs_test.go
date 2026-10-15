@@ -61,7 +61,7 @@ func TestRepairsScriptedProgressionAndMending(t *testing.T) {
 
 	// 2. Far away: fails too-far-away (409, like every other proximity refusal)
 	farDoc := s.State
-	farDoc.Area = "village"
+	farDoc.Area = "outdoors"
 	farDoc.Position = rules.Position{X: 100, Y: 100}
 	bad := x.mendRefreshing(c, &s, "well-rope", map[string]any{"progress": farDoc}, 409)
 	if bad.Error.Code != "too-far-away" {
@@ -70,8 +70,8 @@ func TestRepairsScriptedProgressionAndMending(t *testing.T) {
 
 	// 3. Proximity to well (tx: 13, ty: 12) but no fibre-rope in pack
 	wellDoc := s.State
-	wellDoc.Area = "village"
-	wellDoc.Position = rules.Position{X: float64(13*16 + 8), Y: float64(12*16 + 8)}
+	wellDoc.Area = "outdoors"
+	wellDoc.Position = rules.Position{X: float64(12*16 + 8), Y: float64(60*16 + 8)}
 	bad = x.mendRefreshing(c, &s, "well-rope", map[string]any{"progress": wellDoc}, 409)
 	if bad.Error.Code != "insufficient-items" {
 		t.Fatalf("expected insufficient-items, got %s", bad.Error.Code)
@@ -124,8 +124,8 @@ func TestDrawingWaterAtWell(t *testing.T) {
 
 	// 1. Drawing water when well-rope is broken fails (well-rope-broken)
 	wellDoc := s.State
-	wellDoc.Area = "village"
-	wellDoc.Position = rules.Position{X: float64(13*16 + 8), Y: float64(12*16 + 8)}
+	wellDoc.Area = "outdoors"
+	wellDoc.Position = rules.Position{X: float64(12*16 + 8), Y: float64(60*16 + 8)}
 	bad := x.opRefreshing(c, &s, "use", map[string]any{"instance": bucketID, "action": "draw", "progress": wellDoc}, 409)
 	if bad.Error.Code != "well-rope-broken" {
 		t.Fatalf("expected well-rope-broken, got %s", bad.Error.Code)
@@ -137,7 +137,7 @@ func TestDrawingWaterAtWell(t *testing.T) {
 
 	// 3. Drawing water far away fails (too-far-away)
 	farDoc := s.State
-	farDoc.Area = "village"
+	farDoc.Area = "outdoors"
 	farDoc.Position = rules.Position{X: 100, Y: 100}
 	bad = x.opRefreshing(c, &s, "use", map[string]any{"instance": bucketID, "action": "draw", "progress": farDoc}, 409)
 	if bad.Error.Code != "too-far-away" {
@@ -165,12 +165,12 @@ func TestReturningKeepsakes(t *testing.T) {
 	x.conserved(x.account("alice"))
 
 	adaDoc := s.State
-	adaDoc.Area = "village"
-	adaDoc.Position = rules.Position{X: float64(35*16 + 8), Y: float64(8*16 + 8)}
+	adaDoc.Area = "outdoors"
+	adaDoc.Position = rules.Position{X: float64(32*16 + 8), Y: float64(55*16 + 8)}
 
 	// Too far away from Ada
 	farDoc := s.State
-	farDoc.Area = "village"
+	farDoc.Area = "outdoors"
 	farDoc.Position = rules.Position{X: 100, Y: 100}
 	bad := x.opRefreshing(c, &s, "return", map[string]any{"itemDef": "knotted-halter", "target": "ada", "progress": farDoc}, 409)
 	if bad.Error.Code != "too-far-away" {
@@ -225,7 +225,7 @@ func TestReturningKeepsakes(t *testing.T) {
 	x.stack(x.account("alice"), "whittled-fox", "", 1)
 	x.conserved(x.account("alice"))
 	x.residentPhase("silas", "counter")
-	commonsDoc := atContentTile(s.State, "commons", 51, 21, 8)
+	commonsDoc := atAnchor(s.State, "hearthwick:yard-door")
 	if bad := x.opRefreshing(c, &s, "return", map[string]any{"itemDef": "whittled-fox", "target": "silas", "progress": commonsDoc}, 409); bad.Error.Code != "too-far-away" {
 		t.Fatalf("expected too-far-away on the Commons, got %s", bad.Error.Code)
 	}
@@ -287,11 +287,11 @@ func TestRepairsWeatherPacing(t *testing.T) {
 
 	// The scripted two, mended (their parts seeded; both near the square).
 	wellDoc := s.State
-	wellDoc.Area = "village"
-	wellDoc.Position = rules.Position{X: float64(13*16 + 8), Y: float64(12*16 + 8)}
+	wellDoc.Area = "outdoors"
+	wellDoc.Position = rules.Position{X: float64(12*16 + 8), Y: float64(60*16 + 8)}
 	fenceDoc := s.State
-	fenceDoc.Area = "village"
-	fenceDoc.Position = rules.Position{X: float64(27*16 + 8), Y: float64(18*16 + 8)}
+	fenceDoc.Area = "outdoors"
+	fenceDoc.Position = rules.Position{X: float64(9*16 + 8), Y: float64(76*16 + 8)}
 	for _, chore := range []struct {
 		id   string
 		part string
@@ -319,8 +319,8 @@ func TestRepairsWeatherPacing(t *testing.T) {
 
 	// Mended, the next wick takes the bench (the roof, mended last, sits out).
 	roofDoc := s.State
-	roofDoc.Area = "village"
-	roofDoc.Position = rules.Position{X: float64(4*16 + 8), Y: float64(17*16 + 8)}
+	roofDoc.Area = "outdoors"
+	roofDoc.Position = rules.Position{X: float64(-11*16 + 8), Y: float64(76*16 + 8)}
 	x.stack(x.account("alice"), "slates", "", 1)
 	x.mendRefreshing(c, &s, "library-roof", map[string]any{"progress": roofDoc}, 200)
 	read = nextWick()
@@ -453,8 +453,8 @@ func TestMendGiftFailureRollsBack(t *testing.T) {
 	}
 	x.stack(x.account("alice"), "fibre-rope", "", 1)
 	wellDoc := s.State
-	wellDoc.Area = "village"
-	wellDoc.Position = rules.Position{X: float64(13*16 + 8), Y: float64(12*16 + 8)}
+	wellDoc.Area = "outdoors"
+	wellDoc.Position = rules.Position{X: float64(12*16 + 8), Y: float64(60*16 + 8)}
 	x.mendRefreshing(c, &s, "well-rope", map[string]any{"progress": wellDoc}, 500)
 	x.conserved(x.account("alice"))
 

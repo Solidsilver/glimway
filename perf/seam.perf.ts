@@ -2,8 +2,8 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import type { CDPSession } from '@playwright/test'
 import { expect, test, type Page } from '../e2e/fixtures'
 import { CONTRACT, pinWorld, serverState, waitForWorld } from '../e2e/connected'
-import { freshPlayer, homes, throughGate } from '../e2e/home-helpers'
-import { exitTo, holdUntil, parkCreatures, player, waitForWilds, warp, windowWhole } from '../e2e/helpers'
+import { freshPlayer, throughGate } from '../e2e/home-helpers'
+import { parkCreatures, player, waitForWilds, warp, windowWhole } from '../e2e/helpers'
 
 const OUT = process.env.PERF_OUT || 'test-results/perf'
 const LABEL = process.env.PERF_LABEL || 'seam'
@@ -213,10 +213,10 @@ for (const mode of ['desktop', 'phone'] as const) {
   })
 }
 
-for (const network of ['slow-network', 'fixed-only'] as const) for (const from of ['boot', 'home', 'tangle'] as const) {
+for (const network of ['slow-network', 'fixed-only'] as const) for (const from of ['boot', 'lot', 'tangle'] as const) {
   test(`seam arrival ${from}, ${network}`, async ({ page }) => {
     await enter(page)
-    if (from === 'home') await throughGate(page, 0)
+    if (from === 'lot') await throughGate(page, 0)
     else await warp(page, 'outdoors', 2, from === 'boot' ? 26 : 22)
     await expect.poll(() => page.evaluate(() => window.__fsDevSaved!().pending)).toBe(false)
     const before = await player(page)
@@ -240,7 +240,8 @@ for (const network of ['slow-network', 'fixed-only'] as const) for (const from o
     let releaseReads!: () => void
     const gate = new Promise<void>((resolve) => { releaseReads = resolve })
     await page.route('**/api/wilds/chunk/**', async (route) => {
-      if (!decodeURIComponent(route.request().url()).includes('fixed:')) return route.continue()
+      const url = decodeURIComponent(route.request().url())
+      if (!url.includes('fixed:') && !url.includes('plot:')) return route.continue()
       const read = { url: route.request().url(), start: Date.now(), end: undefined as number | undefined }
       reads.push(read)
       if (network === 'fixed-only') {
@@ -258,7 +259,7 @@ for (const network of ['slow-network', 'fixed-only'] as const) for (const from o
     })
     const begun = Date.now()
     await page.getByTestId('continue-world').click()
-    await waitForWorld(page, from === 'home' ? 'home:0' : 'outdoors')
+    await waitForWorld(page, 'outdoors')
     const visibleAt = Date.now()
     const release = setTimeout(releaseReads, 6000)
     // Measure visible pop-in independently of the three-second position
@@ -267,7 +268,7 @@ for (const network of ['slow-network', 'fixed-only'] as const) for (const from o
     const whole = (async () => {
       await page.waitForFunction(() => window.__fsWorld?.().areaId === 'outdoors' && !window.__fsSafety?.()?.transitioning && !!window.__fsWildsWindow?.())
       outdoorVisibleAt = Date.now()
-      const key = from === 'home' ? '-1,1' : '0,1'
+      const key = from === 'lot' ? '-3,1' : '0,1'
       await page.waitForFunction((key) => {
         const w = window.__fsWildsWindow?.()
         return !!w?.ready && w.fixed.includes(key)
@@ -282,22 +283,15 @@ for (const network of ['slow-network', 'fixed-only'] as const) for (const from o
       const key = `${Math.floor(h.x / 384)},${Math.floor(h.y / 384)}`
       return { t: performance.now(), x: h.x, y: h.y, savedX: s.position.x, savedY: s.position.y, ground: window.__fsGroundAt!(Math.floor(h.x / 16), Math.floor(h.y / 16)), attached: !!w?.attached.includes(key), whole: !!w?.ready }
     })
-    if (from === 'home') {
-      await expect.poll(async () => (await homes(page)).status).not.toBe('loading')
-      const exit = await exitTo(page, 'outdoors')
-      await page.evaluate((e) => window.__fsDevPlace!((e.tx + e.tw / 2) * 16, (e.ty - 1) * 16 + 8), exit)
-      await holdUntil(page, 'ArrowDown', async () => (await page.evaluate(() => window.__fsWorld!().areaId)) === 'outdoors')
-    }
-    if (from !== 'home') {
-      // Step towards fixed ground while its reads are held, then complete the walk.
-      if (from === 'tangle') await page.keyboard.down('ArrowDown')
-      try {
-        for (let i = 0; i < 12; i++) {
-          samples.push(await sample())
-          await page.waitForTimeout(250)
-        }
-      } finally { if (from === 'tangle') await page.keyboard.up('ArrowDown') }
-    }
+    // Both town and lot arrivals stay on outdoors; only the Tangle walks
+    // towards the held fixed ground. Lots no longer have an exit transition.
+    if (from === 'tangle') await page.keyboard.down('ArrowDown')
+    try {
+      for (let i = 0; i < 12; i++) {
+        samples.push(await sample())
+        await page.waitForTimeout(250)
+      }
+    } finally { if (from === 'tangle') await page.keyboard.up('ArrowDown') }
     samples.push(await sample())
     await waitForWilds(page)
     await windowWhole(page, 30_000)
@@ -309,14 +303,14 @@ for (const network of ['slow-network', 'fixed-only'] as const) for (const from o
     write(`arrival-${from}-${network}`, { before, visibleMs: visibleAt - begun, outdoorVisibleMs: outdoorVisibleAt - begun, postDeliveryMs, elapsedMs: Date.now() - begun, reads, samples, perf: await report(page) })
     for (const s of samples) {
       expect(Math.hypot(s.x - s.savedX, s.y - s.savedY)).toBeLessThan(120)
-      if (from === 'boot' && !s.attached) {
+      if ((from === 'boot' || from === 'lot') && !s.attached) {
         expect(Math.hypot(s.x - before.x, s.y - before.y)).toBeLessThan(1)
         expect(Math.hypot(s.savedX - before.x, s.savedY - before.y)).toBeLessThan(1)
       }
       if (from === 'tangle' && s.ground === null) expect(s.y).toBeLessThan(384)
     }
     const after = await player(page)
-    const expected = from === 'home' ? { tx: -1, ty: 33 } : { tx: 2, ty: 26 }
+    const expected = from === 'lot' ? { tx: -61, ty: 32 } : { tx: 2, ty: 26 }
     expect(Math.floor(after.x / 16)).toBe(expected.tx)
     expect(Math.floor(after.y / 16)).toBe(expected.ty)
     expect(await page.evaluate(() => window.__fsTileSolid!(Math.floor(window.__fsPlayer!().x / 16), Math.floor(window.__fsPlayer!().y / 16)))).toBe(false)

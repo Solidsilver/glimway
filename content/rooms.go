@@ -48,6 +48,9 @@ func RoomParent(area string) string {
 	if m[3] != "" {
 		return "in:" + m[1] + ":" + m[2]
 	}
+	if m[1] == "village" || m[1] == "commons" {
+		return "hearthwick"
+	}
 	return m[1]
 }
 
@@ -63,6 +66,9 @@ func RootArea(area string) string {
 		return strings.TrimPrefix(area, "in:")
 	}
 	if m := roomID.FindStringSubmatch(area); m != nil {
+		if m[1] == "village" || m[1] == "commons" {
+			return "hearthwick"
+		}
 		return m[1]
 	}
 	return area
@@ -77,7 +83,7 @@ func RoomFor(area string) (*Room, bool) {
 	return nil, false
 }
 func KnownContentArea(area string) bool {
-	return slices.Contains([]string{"village", "woodland", "ruin", "commons"}, area) || KnownRoom(area)
+	return slices.Contains([]string{"hearthwick", "woodland", "ruin"}, area) || KnownRoom(area)
 }
 
 // tileXY is a map tile address; generated tiles carry presence, so the map

@@ -353,7 +353,7 @@ var File_glimway_content_v1_story_proto protoreflect.FileDescriptor
 
 const file_glimway_content_v1_story_proto_rawDesc = "" +
 	"\n" +
-	"\x1eglimway/content/v1/story.proto\x12\x12glimway.content.v1\x1a\x1bbuf/validate/validate.proto\"\xe2\a\n" +
+	"\x1eglimway/content/v1/story.proto\x12\x12glimway.content.v1\x1a\x1bbuf/validate/validate.proto\"\xd5\a\n" +
 	"\x05Story\x12G\n" +
 	"\n" +
 	"namespaces\x18\x01 \x03(\v2\x1d.glimway.content.v1.NamespaceB\b\xbaH\x05\x92\x01\x02\b\x01R\n" +
@@ -362,9 +362,11 @@ const file_glimway_content_v1_story_proto_rawDesc = "" +
 	"\x05areas\x18\x03 \x03(\v2$.glimway.content.v1.Story.AreasEntryR\x05areas\x12<\n" +
 	"\x06echoes\x18\x04 \x03(\v2\x18.glimway.content.v1.EchoB\n" +
 	"\xbaH\a\x92\x01\x04\b\x06\x10\x06R\x06echoes\x12=\n" +
-	"\x06boards\x18\x05 \x03(\v2%.glimway.content.v1.Story.BoardsEntryR\x06boards\x12\x7f\n" +
-	"\x04npcs\x18\x06 \x03(\v2#.glimway.content.v1.Story.NpcsEntryBF\xbaHC\x9a\x01@\b\x01\"\x16r\x142\x12^[a-z0-9-]{1,100}$*$r\"R\avillageR\bwoodlandR\x04ruinR\acommonsR\x04npcs\x12\x82\x01\n" +
-	"\x05spots\x18\a \x03(\v2$.glimway.content.v1.Story.SpotsEntryBF\xbaHC\x9a\x01@\b\x01\"\x16r\x142\x12^[a-z0-9-]{1,100}$*$r\"R\avillageR\bwoodlandR\x04ruinR\acommonsR\x05spots\x12C\n" +
+	"\x06boards\x18\x05 \x03(\v2%.glimway.content.v1.Story.BoardsEntryR\x06boards\x12y\n" +
+	"\x04npcs\x18\x06 \x03(\v2#.glimway.content.v1.Story.NpcsEntryB@\xbaH=\x9a\x01:\b\x01\"\x16r\x142\x12^[a-z0-9-]{1,100}$*\x1er\x1cR\n" +
+	"hearthwickR\bwoodlandR\x04ruinR\x04npcs\x12|\n" +
+	"\x05spots\x18\a \x03(\v2$.glimway.content.v1.Story.SpotsEntryB@\xbaH=\x9a\x01:\b\x01\"\x16r\x142\x12^[a-z0-9-]{1,100}$*\x1er\x1cR\n" +
+	"hearthwickR\bwoodlandR\x04ruinR\x05spots\x12C\n" +
 	"\vquest_items\x18\b \x03(\tB\"\xbaH\x1f\x92\x01\x1c\b\x01\x18\x01\"\x16r\x142\x12^[a-z0-9-]{1,100}$R\n" +
 	"questItems\x1aS\n" +
 	"\bIdsEntry\x12\x10\n" +

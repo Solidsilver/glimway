@@ -457,13 +457,13 @@ func TestGlimLettersReturnFourWays(t *testing.T) {
 		home := h.WorldID
 		x.hero("hal", "Hal", "p1")
 		hc, h := x.again("hal")
-		h.Snapshot = x.worldReq("POST", "/api/world/move", moveBody(h, "in", pw, "village"), hc, 200).Snapshot
+		h.Snapshot = x.worldReq("POST", "/api/world/move", moveBody(h, "in", pw, "in:village:library"), hc, 200).Snapshot
 		sent := x.p5("POST", "/api/mail", body(o, "send", map[string]any{"toId": x.account("hal"), "glims": 25}), oc, 200)
 		if x.glims(olive) != 15 {
 			t.Fatal("sent", x.glims(olive))
 		}
 		x.now.Add(MoveCooldown)
-		x.worldReq("POST", "/api/world/move", moveBody(h, "out", home, "village"), hc, 200)
+		x.worldReq("POST", "/api/world/move", moveBody(h, "out", home, "in:village:library"), hc, 200)
 		if x.glims(olive) != 40 || x.worldOf("hal") != home {
 			t.Fatal("moved away", x.glims(olive))
 		}

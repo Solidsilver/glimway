@@ -69,6 +69,10 @@ func (a *Server) itemsMutation(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
+		if (op == "gather" && out.Land != nil || op == "plant") && homeGateAt(s) >= 0 {
+			world, gate := s.WorldID, homeGateAt(s)
+			notify = append(notify, func() { a.homeChanged(world, gate) })
+		}
 		if err = settleSlots(ctx, tx, s); err != nil {
 			return nil, err
 		}

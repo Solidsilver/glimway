@@ -25,7 +25,7 @@ const entry = (id: number, over: Partial<OutboxEntry> = {}): OutboxEntry => ({
   kind: 'mark',
   path: '/api/story/mark',
   key: `k${id}`,
-  body: JSON.stringify({ op: { lease: '', key: `k${id}` }, mark: `seen:${id}`, where: { area: 'village', x: 1, y: 1 } }),
+  body: JSON.stringify({ op: { lease: '', key: `k${id}` }, mark: `seen:${id}`, where: { area: 'outdoors', x: 1, y: 1 } }),
   contract: 3,
   createdAt: 1000,
   sent: false,
@@ -42,12 +42,12 @@ test('records are validated: bad entries drop one by one, order and the id alloc
     nextId: 2,
     entries: [entry(5), { ...entry(3), kind: 'progress' }, { ...entry(4), body: '{not json' }, { ...entry(2), path: 'https://elsewhere/api' }, entry(1), 'junk'],
     lease: '',
-    reports: { client: 'c', generation: 'g', seq: 2, next: { place: { area: 'village', x: 1, y: 2 }, hp: 5, mana: -3, casts: 2.7, abilityCasts: { kindle: 2.4, echo: -1, stand: 'x' }, basis: 4, boundary: null, changed: true }, captured: null },
+    reports: { client: 'c', generation: 'g', seq: 2, next: { place: { area: 'outdoors', x: 1, y: 2 }, hp: 5, mana: -3, casts: 2.7, abilityCasts: { kindle: 2.4, echo: -1, stand: 'x' }, basis: 4, boundary: null, changed: true }, captured: null },
   })!;
   assert.deepEqual(r.entries.map((e) => e.id), [1, 5]);
   assert.equal(r.nextId, 6, 'never reuses an id still in the outbox');
   assert.equal(r.lease, null);
-  assert.deepEqual(r.reports?.next, { place: { area: 'village', x: 1, y: 2 }, hp: 5, mana: 0, casts: 2, abilityCasts: { kindle: 2 }, basis: 4, boundary: null, changed: true });
+  assert.deepEqual(r.reports?.next, { place: { area: 'outdoors', x: 1, y: 2 }, hp: 5, mana: 0, casts: 2, abilityCasts: { kindle: 2 }, basis: 4, boundary: null, changed: true });
   assert.equal(normalizeRecord({ account: '', device: 'dev' }), null);
   assert.equal(normalizeRecord('nope'), null);
 });
@@ -133,13 +133,13 @@ test('a Wilds place loads: the open map is one area, its position world pixels',
   const wilds = at('outdoors');
   assert.deepEqual([wilds.area, wilds.position], ['outdoors', { x: 424, y: -744 }]);
   // A 0.7 region place is gone with the regions (a clean break): the village spawn.
-  assert.equal(at('wilds:outer-1').area, 'village');
+  assert.equal(at('wilds:outer-1').area, 'outdoors');
   // Through the response parser too (a reload's state read).
   const snap = parseSnapshot({ state: { ...structuredClone(BASE), place: { area: 'outdoors', x: -424, y: -744, placeSetVersion: 0, wickEpoch: '' } } });
   assert.deepEqual([snap.state.area, snap.state.position], ['outdoors', { x: -424, y: -744 }]);
   // A place this build can't draw never fails the load.
   const lost = at('somewhere-new');
-  assert.deepEqual([lost.area, lost.position], ['village', { x: 400, y: 300 }]);
+  assert.deepEqual([lost.area, lost.position], ['outdoors', { x: 72, y: 968 }]);
 });
 
 test('places: every area as it is in where.area, the open map as wilds', () => {
@@ -183,13 +183,13 @@ test('fall recovery: a quarter of max HP and half of max mana, rounded up, never
   assert.deepEqual(fallRecovery(g, { hp: 5, mp: 2 } as never), { hp: 5, mana: 2 });
   assert.deepEqual(fallRecovery(g, { hp: 0, mp: 0 } as never), { hp: 0, mana: 0 });
   const fallen = predict({ ...g, area: 'ruin', hp: 0 }, { kind: 'fall' }, { profile: null });
-  assert.equal(fallen.area, 'village');
+  assert.equal(fallen.area, 'outdoors');
   assert.equal(fallen.hp, 13);
 });
 
 test('the wick epoch the server last recorded the place in comes with the state', () => {
   const s = gameStateOf(state((j) => (j.place = { area: 'outdoors', x: 424, y: -744, placeSetVersion: 0, wickEpoch: 'e-old' })));
   assert.equal(s.wickEpoch, 'e-old');
-  const none = gameStateOf(state((j) => (j.place = { area: 'village', x: 400, y: 300, placeSetVersion: 0, wickEpoch: '' })));
+  const none = gameStateOf(state((j) => (j.place = { area: 'outdoors', x: 72, y: 968, placeSetVersion: 0, wickEpoch: '' })));
   assert.equal(none.wickEpoch, undefined);
 });

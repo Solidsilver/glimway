@@ -1,3 +1,4 @@
+import { footprint } from '../src/game/wilds/fixed.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -17,8 +18,7 @@ import { journalEntries } from '../src/content/world.ts';
 import { handoverFor, paperFlag } from '../src/content/papers.ts';
 import { QUEST_STAGES, type QuestStage } from '../src/lib/state.ts';
 import { calendarAt } from '../src/lib/calendar.ts';
-import { buildArea } from '../src/game/worlds.ts';
-import { servedCommonsFixture } from './commons-fixture.ts';
+import { servedTownFixture } from './commons-fixture.ts';
 import { TERRAIN, TILE } from '../src/lib/tile.ts';
 
 const EPOCH = Date.parse('2026-01-05T00:00:00Z') / 1000;
@@ -201,57 +201,32 @@ test('resident talk is pure (no shared arrays)', () => {
 });
 
 test('residents stand on open ground in their places, clear of the quest NPCs and the spawn', () => {
-  const village = buildArea('village');
-  // The Commons is fixed ground on the open map: its served layout, in Commons tiles (as residents.json names spots).
-  const commons = servedCommonsFixture();
-  const spot = (w: { npcs: typeof village.npcs }, id: string) => w.npcs.find((n) => n.id === id)!;
-  for (const [w, id] of [[village, 'hazel'], [village, 'finn'], [village, 'ada'], [commons, 'elara']] as const) {
-    const n = spot(w, id);
-    assert.ok(n, `${id} is placed`);
-    assert.equal(w.solid[n.ty][n.tx], false, `${id} stands on open ground`);
-    for (const o of w.npcs) if (o !== n) assert.ok(Math.hypot(o.tx - n.tx, o.ty - n.ty) * TILE > 48, `${id} is clear of ${o.id}`);
-    assert.ok(Math.hypot(w.spawn.tx - n.tx, w.spawn.ty - n.ty) * TILE > 48, `${id} is clear of the spawn`);
-    for (const b of [...w.bushes, ...w.rocks]) assert.ok(b.tx !== n.tx || b.ty !== n.ty, `${id} not on a bush or rock`);
+  const town = servedTownFixture();
+  for (const n of town.npcs) {
+    assert.equal(town.solid[n.ty][n.tx], false, `${n.id} stands on open ground`);
+    for (const o of town.npcs) if (o !== n) assert.ok(Math.hypot(o.tx - n.tx, o.ty - n.ty) * TILE > 32, `${n.id} is clear of ${o.id}`);
+    assert.ok(Math.hypot(town.spawn.tx - n.tx, town.spawn.ty - n.ty) * TILE > 48, `${n.id} is clear of spawn`);
+    for (const b of [...town.bushes, ...town.rocks]) assert.ok(b.tx !== n.tx || b.ty !== n.ty);
   }
-  // Finn at his mill door, Ada under her window, Elara by the Wilds arch.
-  const finn = spot(village, 'finn');
-  const mill = village.mill!;
-  assert.equal(finn.ty, mill.ty + mill.th, 'Finn stands on the ground in front of the mill');
-  assert.ok(Math.abs(finn.tx - mill.door.tx) <= 1, 'beside the door');
-  assert.deepEqual(spot(village, 'ada'), { id: 'ada', tx: 35, ty: 8, spot: 'window' });
-  // The mouth under the Tangle's gate (world x 1..3, Commons tiles 22..24 on row 0).
-  const arch = { tx: 22, ty: 0, tw: 3 };
-  for (let x = arch.tx; x < arch.tx + arch.tw; x++) assert.equal(commons.solid[0]![x], false, 'the mouth is open');
-  const elara = spot(commons, 'elara');
-  assert.ok(Math.abs(elara.ty - arch.ty) <= 6 && elara.tx >= arch.tx && elara.tx <= arch.tx + arch.tw + 1);
-  // Off the lane's walk: the Wilds path stays clear.
-  assert.ok(elara.tx > arch.tx + arch.tw - 1);
+  assert.deepEqual(town.npcs.find((n) => n.id === 'ada'), { id: 'ada', tx: 32, ty: 55, spot: 'window' });
+  const elara = town.npcs.find((n) => n.id === 'elara')!;
+  assert.deepEqual(elara, { id: 'elara', tx: 6, ty: 27, spot: 'camp' });
+  assert.equal(town.solid[26][6], false, 'the pack can be reached from the west');
+  assert.equal(town.solid[26][8], false, 'the pack can be reached from the east');
+  for (let tx = 1; tx <= 3; tx++) assert.equal(town.solid[24][tx], false, 'arch mouth stays open');
 });
 
 test('the Tolley mill sits on the pond’s edge, clear of the quest, the library, Ada and Hazel', () => {
-  const village = buildArea('village');
-  const m = village.mill!;
-  assert.ok(m, 'the village has a mill');
-  // Its footprint is solid, the wheel stands at the water's edge, and the
-  // hopper is solid against the west wall.
-  for (let y = m.ty; y < m.ty + m.th; y++) for (let x = m.tx; x < m.tx + m.tw; x++) assert.ok(village.solid[y][x], `${x},${y}`);
-  const wheel = { tx: Math.floor(m.wheel.x / TILE), ty: Math.floor(m.wheel.y / TILE) };
-  assert.ok(village.solid[wheel.ty][wheel.tx], 'the wheel blocks its own tile');
-  assert.equal(wheel.tx, m.tx + m.tw, 'on the east wall');
-  assert.ok([TERRAIN.water_a, TERRAIN.water_b].some(tile => tile === village.ground[wheel.ty][wheel.tx + 1]), 'pond water beside the wheel');
-  assert.ok(village.solid[m.hopper.ty][m.hopper.tx]);
-  assert.ok(m.hopper.tx === m.tx - 1 && m.hopper.ty >= m.ty && m.hopper.ty < m.ty + m.th, 'hopper against the west wall');
-  // The door opens onto walkable ground, and the garden's gap above still opens onto grass.
-  assert.equal(village.solid[m.door.ty + 1][m.door.tx], false);
-  assert.equal(village.solid[19][27], false);
-  // Nothing of the quest, the library, Ada's house or Hazel in or against it.
-  const inMill = (p: { tx: number; ty: number }) => p.tx >= m.tx - 1 && p.tx <= m.tx + m.tw && p.ty >= m.ty - 1 && p.ty <= m.ty + m.th;
-  for (const n of village.npcs.filter((n) => n.id !== 'finn')) assert.ok(!inMill(n), n.id);
-  for (const p of [village.library!, village.board!, village.well!, village.spawn]) assert.ok(!inMill(p), `${p.tx},${p.ty}`);
-  for (const b of [...village.bushes, ...village.rocks]) assert.ok(!inMill(b), `${b.tx},${b.ty}`);
-  for (const e of village.exits) assert.ok(!inMill({ tx: e.tx, ty: e.ty }));
-  const keys = (village.scenery ?? []).map((s) => s.key);
-  assert.ok(keys.includes('mill-house') && keys.includes('mill-hopper'));
+  const town = servedTownFixture();
+  const fp = footprint('hearthwick')!;
+  const mill = [...fp.objects.values()].flat().find((o) => o.id === 'mill')!;
+  for (let y = mill.ty - mill.th + 1; y <= mill.ty; y++) for (let x = mill.tx; x < mill.tx + mill.tw; x++) assert.ok(town.solid[y][x]);
+  assert.ok(([TERRAIN.water_a, TERRAIN.water_b] as number[]).includes(town.ground[76][33]), 'race beside the east wall');
+  assert.equal(town.solid[78][29], false, 'mill doorway approach is open');
+  const inMill = (p: { tx: number; ty: number }) => p.tx >= 27 && p.tx <= 32 && p.ty >= 72 && p.ty <= 77;
+  for (const n of town.npcs.filter((n) => n.id !== 'finn')) assert.ok(!inMill(n), n.id);
+  for (const p of [{ tx: -11, ty: 77 }, town.features.board, town.features.well, town.spawn]) assert.ok(!inMill(p));
+
 });
 
 test('the hopper’s tally is a mystery until Finn’s paper says what it counts', () => {

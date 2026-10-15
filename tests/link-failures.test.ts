@@ -189,3 +189,22 @@ test('a refusal’s removal is stored before anything behind it goes', async (t)
   assert.equal(r.server.sent('POST /api/story/mark').length, 1);
   assert.equal((await store.load('fixture-account', 'dev'))!.entries.length, 0);
 });
+
+test('shelf removal settles a public-lane refusal and then succeeds inside the gate', { timeout: 3000 }, async (t) => {
+  const r = await rig(t);
+  await online(r);
+  r.server.on('POST /api/homestead/remove',
+    refuse('not-at-own-plot', S({ version: 2 })),
+    { body: { state: S({ version: 3, area: 'outdoors', x: -952, y: 696 }), result: { home: null, materials: {}, itemId: 'shelf', status: '' } } });
+  const refused = await r.link.homeAction({ op: 'remove', itemId: 'shelf' });
+  assert.deepEqual(refused, { ok: false, code: 'not-at-own-plot' });
+  assert.equal(r.link.busy, false);
+  assert.equal(r.link.pendingOperation, null);
+  assert.equal(r.link.outbox.length, 0);
+  r.session.state.position = { x: -952, y: 696 }; // Lot 0's private gate opening.
+  const removed = await r.link.homeAction({ op: 'remove', itemId: 'shelf' });
+  assert.deepEqual(removed, { ok: true, home: null, materials: {}, itemId: 'shelf', status: undefined });
+  assert.equal(r.link.busy, false);
+  assert.equal(r.link.outbox.length, 0);
+  assert.deepEqual(r.server.sent('POST /api/homestead/remove')[1]!.body.where, { area: 'outdoors', x: -952, y: 696 });
+});

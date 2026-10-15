@@ -1,7 +1,23 @@
-import { expect, test } from './fixtures'
+import { expect, test, type Page } from './fixtures'
 import { sql, accountOf, CONTRACT } from './connected'
 import { waitForLive, expectToast } from './helpers'
 import { claimDeed, earnGlims, freshPlayer, fund, homes, myHome, place, go, atMyMailbox, hurt, type HomesView, yardBuild } from './home-helpers'
+
+/**
+ * Open the gift-shelf panel. The prompt is up but the action key can land
+ * between frames right after a warp, so retry until the dialog opens rather
+ * than dropping the press.
+ */
+async function openShelfPanel(page: Page): Promise<void> {
+  const dlg = page.getByRole('dialog', { name: /Gift Shelf/ })
+  for (let i = 0; i < 6; i++) {
+    await waitForLive(page)
+    await page.keyboard.press('e')
+    if (await dlg.isVisible().catch(() => false)) return
+    await page.waitForTimeout(120)
+  }
+  await expect(dlg).toBeVisible()
+}
 
 /**
  * Gate shelf and maker's-mark thank-you mail (exp/gifts):
@@ -34,7 +50,7 @@ test('gate shelf: place shelf on Commons lane, stock it, traveller takes gift, d
        VALUES ('${aWren}', 'decoration:gate-shelf', 1, 0, 'test-grant', 'shelf-${idWren}', unixepoch());`)
 
   // Step out to the Commons lane
-  await go(page, 'commons', 25, 10)
+  await go(page, 'outdoors', 1, 34)
 
   // Find Wren's gate slot coordinates from homes view
   const hView = await homes(page)
@@ -43,10 +59,11 @@ test('gate shelf: place shelf on Commons lane, stock it, traveller takes gift, d
   const shelfPy = slotWren.shelf.ty * 16 + 18
 
   // Walk up to Wren's gate shelf position
-  await place(page, shelfPx, shelfPy)
+  await place(page, (slotWren.tx + 1) * 16 + 8, slotWren.ty * 16 + 8)
 
   // Prompt should say "Set out your gate shelf"
   await expect(page.locator('.prompt')).toContainText('Set out your gate shelf')
+  await waitForLive(page)
   await page.keyboard.press('e')
 
   // Verify shelf is now placed at gate
@@ -58,11 +75,10 @@ test('gate shelf: place shelf on Commons lane, stock it, traveller takes gift, d
   // Walk up to look at the newly placed shelf
   await place(page, shelfPx, shelfPy)
   await expect(page.locator('.prompt')).toContainText('Look at the gift shelf')
-  await page.keyboard.press('e')
+  await openShelfPanel(page)
 
   // The GateShelfPanel dialog opens
   const shelfModal = page.getByRole('dialog', { name: /Gift Shelf/ })
-  await expect(shelfModal).toBeVisible()
 
   // Stock slot 0
   const stockBtn = shelfModal.locator('button', { hasText: '+ Put a gift' }).first()
@@ -103,7 +119,7 @@ test('gate shelf: place shelf on Commons lane, stock it, traveller takes gift, d
   const ctxFinn = await browser.newContext({ baseURL })
   const pageFinn = await ctxFinn.newPage()
   const idFinn = await freshPlayer(pageFinn, 'Finn', inviteCode)
-  await go(pageFinn, 'commons', 25, 10)
+  await go(pageFinn, 'outdoors', 1, 34)
   await expect.poll(async () => {
     const gate = (await homes(pageFinn)).gates.find((g) => g.gate === gateWren) as (HomesView['gates'][number] & { shelf?: boolean }) | undefined
     return gate?.shelf
@@ -112,10 +128,9 @@ test('gate shelf: place shelf on Commons lane, stock it, traveller takes gift, d
   // Walk up to Wren's gate shelf
   await place(pageFinn, shelfPx, shelfPy)
   await expect(pageFinn.locator('.prompt')).toContainText('Look at the gift shelf')
-  await pageFinn.keyboard.press('e')
+  await openShelfPanel(pageFinn)
 
   const shelfModalFinn = pageFinn.getByRole('dialog', { name: /Gift Shelf/ })
-  await expect(shelfModalFinn).toBeVisible()
   await expect(shelfModalFinn).toContainText('Wren’s Gift Shelf')
 
   // Finn takes the comfrey salve
@@ -144,13 +159,12 @@ test('gate shelf: place shelf on Commons lane, stock it, traveller takes gift, d
   const ctxIra = await browser.newContext({ baseURL })
   const pageIra = await ctxIra.newPage()
   const idIra = await freshPlayer(pageIra, 'Ira', (await inviteIra.json()).code as string)
-  await go(pageIra, 'commons', 25, 10)
+  await go(pageIra, 'outdoors', 1, 34)
   await expect.poll(async () => (await homes(pageIra)).gates.find((g) => g.gate === gateWren)?.shelf).toBe(true)
   await place(pageIra, shelfPx, shelfPy)
   await expect(pageIra.locator('.prompt')).toContainText('Look at the gift shelf')
-  await pageIra.keyboard.press('e')
+  await openShelfPanel(pageIra)
   const iraShelf = pageIra.getByRole('dialog', { name: /Gift Shelf/ })
-  await expect(iraShelf).toBeVisible()
   const iraTake = iraShelf.getByTestId('take-slot-2')
   await expect(iraTake).toBeEnabled()
   await iraTake.click()
@@ -169,18 +183,23 @@ test('gate shelf: place shelf on Commons lane, stock it, traveller takes gift, d
   await freshPlayer(pageOne, 'Moss', (await inviteOne.json()).code as string)
   await freshPlayer(pageTwo, 'Reed', (await inviteTwo.json()).code as string)
   for (const traveller of [pageOne, pageTwo]) {
-    await go(traveller, 'commons', 25, 10)
+    await go(traveller, 'outdoors', 1, 34)
     await expect.poll(async () => (await homes(traveller)).gates.find((g) => g.gate === gateWren)?.shelf).toBe(true)
     await place(traveller, shelfPx, shelfPy)
     await expect(traveller.locator('.prompt')).toContainText('Look at the gift shelf')
-    await traveller.keyboard.press('e')
-    await expect(traveller.getByRole('dialog', { name: /Gift Shelf/ })).toBeVisible()
+    await openShelfPanel(traveller)
   }
   // Both panels have read the slot before either takes it: a click on a
   // button that is not there (or is disabled) would wait out the whole test.
   const takes = [pageOne, pageTwo].map((p) => p.getByTestId('take-slot-1'))
   for (const take of takes) await expect(take).toBeEnabled()
-  await Promise.all(takes.map((take) => take.click()))
+  // Fire both takes back-to-back without Playwright's stability waits: whichever
+  // lands first wins the slot, and that winner's re-read detaches the button under
+  // the loser's pending click. A direct dispatch lets both attempts reach the
+  // server so exactly one succeeds and the other reads the empty-slot refusal.
+  await Promise.all([pageOne, pageTwo].map(async (p) =>
+    p.evaluate(() => (document.querySelector('[data-testid="take-slot-1"]') as HTMLButtonElement | null)?.click())
+  ))
   await expect.poll(async () => {
     const lines = await Promise.all([pageOne, pageTwo].map(async (p) => p.locator('.msg.error').allTextContents()))
     return lines.flat().some((line) => line.includes('That slot is empty.'))
@@ -188,17 +207,17 @@ test('gate shelf: place shelf on Commons lane, stock it, traveller takes gift, d
   await ctxOne.close()
   await ctxTwo.close()
 
-  // Wren can put the now-empty shelf away from its panel.
-  await place(page, shelfPx, shelfPy)
+  // Wren manages the now-empty shelf from inside the gate, as removal requires.
+  await place(page, (slotWren.tx + 1) * 16 + 8, slotWren.ty * 16 + 8)
   await expect(page.locator('.prompt')).toContainText('Look at the gift shelf')
-  await waitForLive(page)
-  await page.keyboard.press('e')
+  await openShelfPanel(page)
   const ownerShelf = page.getByRole('dialog', { name: /Gift Shelf/ })
   await expect(ownerShelf).toBeVisible()
   const takeDown = ownerShelf.getByRole('button', { name: 'Take down shelf' })
   await expect(takeDown).toBeVisible()
   await takeDown.click()
-  await expect(ownerShelf).toBeHidden()
+  // Taking the shelf down defers its close by a beat; give it room under load.
+  await expect(ownerShelf).toBeHidden({ timeout: 15_000 })
   await expect.poll(async () => (await homes(page)).mine?.items.some((i) => i.itemDef === 'gate-shelf' && i.scene === 'gate')).toBe(false)
 })
 
@@ -224,7 +243,7 @@ test('maker thank-you mail: when item made by someone else is used, maker receiv
   await hurt(pageFinn, 20)
 
   // Finn travels to village (far from Wren who is in commons or home)
-  await go(pageFinn, 'village', 15, 10)
+  await go(pageFinn, 'outdoors', 16, 60)
 
   // Finn opens inventory and uses the comfrey salve
   const inv = pageFinn.getByRole('dialog', { name: 'Inventory' })

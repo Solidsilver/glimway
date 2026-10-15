@@ -6,7 +6,7 @@
  * (src/lib/residents.ts): when the step names a resident, the schedule says
  * which area they're in, and the needle and the glow agree on it.
  */
-import { contentTile } from '../lib/location.ts'
+import { contentPosition } from '../lib/location.ts'
 import type { QuestWhere } from '../lib/quests.ts'
 import { residentAt, type ResidentPlace } from '../lib/residents.ts'
 import { TILE } from '../lib/tile.ts'
@@ -40,7 +40,7 @@ export function questPlace(where: QuestWhere, now: number, at: (id: string, now:
  * person, or the spot; a resident not drawn yet stands at their schedule's
  * tile. `id` is what it is ("finger-wisp", "orrin", "road-1").
  */
-export function questPointHere(where: QuestWhere, resident: ResidentPlace | null, look: QuestLook, currentArea?: string): (Point & { id: string }) | null {
+export function questPointHere(where: QuestWhere, resident: ResidentPlace | null, look: QuestLook, _currentArea?: string): (Point & { id: string }) | null {
   const tag = (id: string, p: Point | null) => (p ? { ...p, id } : null)
   if (where.enemy === 'stone-warden') {
     // The warden, or its route stone while it isn't standing up to be settled.
@@ -51,7 +51,7 @@ export function questPointHere(where: QuestWhere, resident: ResidentPlace | null
     if (e) return e
   }
   if (where.npc) {
-    const spot = resident ? contentTile(currentArea ?? resident.area, resident.area, resident.tx, resident.ty) : null
+    const spot = resident ? contentPosition(resident.area, resident.tx, resident.ty) : null
     const n = tag(where.npc, look.npcAt(where.npc) ?? (spot ? { x: (spot.tx + 0.5) * TILE, y: (spot.ty + 0.5) * TILE } : null))
     if (n) return n
   }

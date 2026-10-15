@@ -54,16 +54,12 @@ import { villageFor } from '../village'
 import { VillageLayer } from '../entities/village-life'
 import { Touches } from '../entities/touches'
 import { ROOM_ENTRY, homeRoomArea, parseHomeRoom } from '../cottage'
-import { parseHomeArea } from '../../lib/homestead'
-import { homeLights } from '../../lib/homestead-land'
-import { homesteadsFor } from '../homestead'
-import { prepareHomeLand } from '../homeland'
 import { commonsLane, fixedPlaceOf } from '../wilds/fixed'
 import { FixedLife } from '../wilds/fixed-life'
 import { isSafeArea } from '../../lib/habitica/sync'
 import { fingerInBracken } from '../../lib/quests'
 import { OUTDOORS_AREA, isWildsArea, chunkOfPixel, chunkKey } from '../wilds/coords'
-import { resolve } from '../../lib/location'
+import { contentPosition } from '../../lib/location'
 import { holdOnSafe, stopAtEdge } from '../safe-barrier'
 import { prepareWilds } from '../wilds/store'
 import { WildsWindow } from '../wilds/window'
@@ -375,14 +371,14 @@ export class WorldScene extends Phaser.Scene {
     this.homesteads = null
     // On the open map, the Commons lane: built once its chunks are here (they come with the Wilds' read).
     const lane = open ? commonsLane() : null
-    if (lane || parseHomeArea(this.world.areaId) !== null || homeRoom !== null || isYardRoom(this.world.areaId)) this.homesteads = this.homesteadLayer(lane, homeRoom)
+    if (lane || homeRoom !== null || isYardRoom(this.world.areaId)) this.homesteads = this.homesteadLayer(lane, homeRoom)
     else if (open) {
       // The Commons' chunks came after this build began (a first visit): the lane joins in then.
       const late = () => {
         const lane = commonsLane()
         if (!lane || this.homesteads) return
         this.homesteads = this.homesteadLayer(lane, null)
-        for (const key of this.window?.fixedKeys() ?? []) for (const draw of this.homesteads.fixedHooks.attach(key)) draw()
+        this.window?.fixturesReady()
       }
       bus.on(EV.fixedReady, late)
       this.events.once('shutdown', () => bus.off(EV.fixedReady, late))
@@ -437,13 +433,14 @@ export class WorldScene extends Phaser.Scene {
         interactables: this.interactables,
         hero: () => this.hero.sprite
       }))
-      const fixedLife = new FixedLife({ world: this.world, npcs: this.npcs, cycle, talk, pickups, papers, repairs, touches, village, homes: () => this.homesteads?.fixedHooks ?? null })
+      const fixedLife = new FixedLife({ world: this.world, npcs: this.npcs, cycle, talk, pickups, papers, repairs, touches, village, fishing: this.fishing ?? undefined, pip: this.pipWalkOn ?? undefined, homes: () => this.homesteads?.fixedHooks ?? null, lights })
       this.window = new WildsWindow({
         scene: this,
         session: this.session,
         solids: this.solids.group,
         tileArt: this.tileArt,
         gathering: () => this.gathering,
+        touches,
         entities: wilds,
         occluders: {
           add: (list) => this.occluders.push(...list),
@@ -580,7 +577,7 @@ export class WorldScene extends Phaser.Scene {
       () => [
         ...(this.avatar.follower ? [{ id: 'mine', x: this.avatar.follower.x, y: this.avatar.follower.y, hop: () => this.avatar.follower?.hop() }] : []),
         ...this.remotePlayers.pets(),
-        ...(this.homesteads?.yard?.petPoints() ?? [])
+        ...(this.homesteads?.petPoints() ?? [])
       ],
       // The prompt offers the pet only with empty hands (src/lib/pet-gating.ts).
       () => heldNow().kind
@@ -1036,14 +1033,6 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /** My homestead's lamps on this land (the light that holds the ground). */
-  private myLights(): { x: number; y: number; radius: number }[] {
-    if (parseHomeArea(this.world.areaId) === null) return []
-    const mine = homesteadsFor(this.session).mine
-    if (!mine) return []
-    return homeLights(
-      mine.items.filter((i) => i.itemDef === 'lantern-post' && i.scene === 'outdoor' && i.x !== null && i.y !== null) as { x: number; y: number }[]
-    )
-  }
 
   /**
    * Connected play: the server's area/position won (a stale merge after
@@ -1140,7 +1129,7 @@ export class WorldScene extends Phaser.Scene {
       if (tx >= exit.tx && tx < exit.tx + exit.tw && ty >= exit.ty && ty < exit.ty + exit.th) {
         // The open map is the server's: without a connection its gate stays shut. (A way out
         // to a fixed place by its own name, a room's door to the Commons, leads onto the open map.)
-        const to = resolve(String(exit.to), exit.entry.tx, exit.entry.ty).space
+        const to = contentPosition(String(exit.to), exit.entry.tx, exit.entry.ty).space
         if (!canEnter(to) || (to === OUTDOORS_AREA && !this.session.link)) {
           this.overgrown(exit)
           return
@@ -1175,7 +1164,7 @@ export class WorldScene extends Phaser.Scene {
   private transitionTo(area: AreaId, entry: { tx: number; ty: number }, facing?: { x: number; y: number }): void {
     // Content names Commons positions in Commons tiles (the Yard's door back
     // out): since the join they lie on the open map's grid.
-    const at = resolve(String(area), entry.tx, entry.ty)
+    const at = contentPosition(String(area), entry.tx, entry.ty)
     if (at.space !== area) {
       area = at.space
       entry = { tx: at.tx, ty: at.ty }
@@ -1190,7 +1179,7 @@ export class WorldScene extends Phaser.Scene {
       return
     }
     // A homestead's land is the server's: fetched while the screen is dark.
-    this.moveTo({ area, position: tileCenter(entry.tx, entry.ty) }, { entry, ...extra }, { inDark: () => prepareHomeLand(String(area)) })
+    this.moveTo({ area, position: tileCenter(entry.tx, entry.ty) }, { entry, ...extra })
   }
 
   /** Dev: straight to a world tile of the open map (its chunks load while the screen is dark). */
@@ -1256,7 +1245,8 @@ export class WorldScene extends Phaser.Scene {
       sitter: () => this.hero,
       room: homeRoom !== null ? { gate: homeRoom } : null,
       enterRoom: (gate) => this.goIn(homeRoomArea(gate)),
-      rebuild: () => this.rebuildArea()
+      rebuild: () => this.rebuildArea(),
+      refreshLot: (key) => this.window?.refreshFixed(key)
     })
   }
 
