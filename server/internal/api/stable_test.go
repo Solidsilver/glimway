@@ -497,6 +497,15 @@ func TestMountOutHomeAndLazyValidity(t *testing.T) {
 	if r := x.companionOp("POST", "/api/stable/out", tooFar, ac, 409); r.Error.Code != "too-far-away" {
 		t.Fatal("saddling up from the village", r.Error.Code)
 	}
+	// The lots' retired home:<gate> frame, at the bay's own local pixels:
+	// refused (no longer an area at all, before the stable reads it).
+	local := atBay(h, x0, y0, 1)
+	ox, oy := chunks.LotOrigin(h.Gate)
+	retired := body(a, "retired", map[string]any{"homeId": h.ID, "stall": 1})
+	retired["where"] = map[string]any{"area": fmt.Sprintf("home:%d", h.Gate), "x": local["x"].(float64) - float64(ox*16), "y": local["y"].(float64) - float64(oy*16)}
+	if r := x.companionOp("POST", "/api/stable/out", retired, ac, 409); r.Error.Code != "invalid-position" {
+		t.Fatal("saddling up in the retired home frame", r.Error.Code)
+	}
 	at := body(a, "up", map[string]any{"homeId": h.ID, "stall": 1})
 	at["where"] = atBay(h, x0, y0, 1)
 	out := x.companionOp("POST", "/api/stable/out", at, ac, 200)

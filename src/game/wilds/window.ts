@@ -493,16 +493,29 @@ export class WildsWindow {
 
   /**
    * What a chunk's paint depends on. A generated chunk: its epoch and
-   * changes. A fixed one: its footprint's revision, the Mark (fixed ground
-   * follows the year, as the outskirts do), what it paints from (a lot's
-   * clearing) and which of its neighbours were known.
+   * changes. A fixed one: where it is, the world seed, its footprint's
+   * revision, the Mark (fixed ground follows the year, as the outskirts do),
+   * what it paints from (a lot's clearing), and each neighbour's own
+   * identity (a fixed one's hash, a generated one's epoch and changes).
    */
   private sigOf(cx: number, cy: number): string {
     const fp = fixedPlaceOf(cx, cy) ? footprintAt(cx, cy) : null
     if (fp) {
-      let around = ''
-      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (dx || dy) around += !onWindow(cx + dx, cy + dy) || this.known(cx + dx, cy + dy) ? '1' : '0'
-      return `fixed|${fp.epoch}|${fixedMark() ?? ''}|${fixedChunkHash(fp, cx, cy)}|${around}`
+      const around: string[] = []
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (dx || dy) {
+        const nx = cx + dx, ny = cy + dy
+        if (!onWindow(nx, ny)) { around.push('void'); continue }
+        const neighbour = fixedPlaceOf(nx, ny) ? footprintAt(nx, ny) : null
+        if (neighbour) around.push(JSON.stringify([neighbour.epoch, fixedChunkHash(neighbour, nx, ny)]))
+        else {
+          const terrain = chunkTerrain(nx, ny)
+          around.push(terrain ? JSON.stringify([terrain.epochId, chunkSig(nx, ny)]) : '?')
+        }
+      }
+      // Pixel noise uses the world seed and absolute coordinates; edge
+      // blending reads four tiles into the neighbouring chunks.
+      const seed = wildsEpoch('still').worldSeed || wildsEpoch('wick').worldSeed
+      return JSON.stringify(['fixed', cx, cy, fp.epoch, seed, fixedMark(), fixedChunkHash(fp, cx, cy), around])
     }
     const t = chunkTerrain(cx, cy)
     return `${t?.epochId ?? ''}|${chunkSig(cx, cy)}`

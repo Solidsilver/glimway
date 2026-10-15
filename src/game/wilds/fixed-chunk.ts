@@ -309,7 +309,7 @@ export class FixedChunk implements Buildable {
         if (s.tint !== undefined) img.setTint(s.tint)
         if (s.tx !== undefined && s.ty !== undefined) this.keep(s.tx, s.ty, img)
         else this.images.push(img)
-        if (fadesOver(s.key)) {
+        if (fadesOver(s.key, s.frame)) {
           fading.push({ image: img, bounds: img.getBounds(), footY: s.y })
           this.fading.push(img)
         }

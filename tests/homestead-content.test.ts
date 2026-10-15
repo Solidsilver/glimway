@@ -127,8 +127,11 @@ test('Silas’s Yard: buildings come from the content flag, in a section of thei
 test('lot geometry agrees with authored footprint and the public lane is outside private services', async () => {
   const { PLACES } = await import('../src/lib/places.ts');
   const { lotOrigin, lotAt, lotAtPixel, PLOT_REVISION } = await import('../src/lib/lots.ts');
+  const { readFileSync } = await import('node:fs');
   for (const place of PLACES.fixed.filter(p=>p.kind==='plots')) {
+    // The place, its layout and PLOT_REVISION (Go's PlotRevision) move together.
     assert.equal(place.revision, PLOT_REVISION);
+    assert.equal(JSON.parse(readFileSync(`content/layouts/${place.layout}.json`, 'utf8')).revision, PLOT_REVISION, place.layout);
     assert.equal(place.width, 1);
     assert.equal(place.height, 4);
   }

@@ -3,9 +3,11 @@
  * crossing an edge): one worker (./ground-worker.ts) paints chunks while
  * the hero walks; the main thread only puts the pixels into a texture. The
  * first window (behind the scene's fade) paints its 3×3 at once across a few
- * more (`lanes`). If a worker can't start or fails, painting falls back to
- * the main thread for the page (the pure painter is the same, so nothing
- * looks different).
+ * more (`lanes`). If a worker can't start or fails (an error, or a reply
+ * that can't be read), painting falls back to the main thread for the page
+ * (the pure painter is the same, so nothing looks different). A job whose
+ * reply never comes is painted here after PAINT_DEADLINE_MS, so no chunk
+ * waits on it for ever.
  */
 import { paintGround, packGround, unpackGround, type GroundSource, type PaintTable } from './ground-paint.ts'
 import { wildsLook } from './wilds-looks.ts'
@@ -29,6 +31,9 @@ export interface PaintResult {
   /** Where it was painted. */
   thread: 'worker' | 'main'
 }
+
+/** How long a job waits for its worker's reply before it is painted here instead (ms). */
+export const PAINT_DEADLINE_MS = 2000
 
 /** Workers by lane (lane 0 paints while walking; the others help the first window). */
 const workers: Worker[] = []
@@ -70,6 +75,8 @@ function start(lane = 0): Worker | null {
       w.resolve({ rgba: e.data.rgba, ms: e.data.ms, thread: 'worker' })
     })
     worker.addEventListener('error', failAll)
+    // A reply that can't be deserialised is lost as surely as a crash.
+    worker.addEventListener('messageerror', failAll)
     workers[i] = worker
     return worker
   } catch {
@@ -89,8 +96,9 @@ export function paintHere(job: PaintJob, src: GroundSource): PaintResult {
 /**
  * Paint off the main thread when a worker is up (else here); the tiles are
  * read now. The promise settles once: the worker's paint, or this thread's
- * from the same tiles if the worker fails or the job can't be posted (a
- * reply after that is dropped). `lane` picks the worker (`lanes`).
+ * from the same tiles if the worker fails, the job can't be posted or no
+ * reply comes within PAINT_DEADLINE_MS (a reply after that is dropped).
+ * `lane` picks the worker (`lanes`).
  */
 export function paintAway(job: PaintJob, src: GroundSource, lane = 0): Promise<PaintResult> {
   // Kept for a fallback: posting transfers a copy, which detaches it here.
@@ -103,10 +111,12 @@ export function paintAway(job: PaintJob, src: GroundSource, lane = 0): Promise<P
     const settle = (r: () => PaintResult) => {
       if (done) return
       done = true
+      clearTimeout(deadline)
       waiting.delete(id)
       resolve(r())
     }
     const entry = { resolve: (r: PaintResult) => settle(() => r), fallback: () => settle(() => paintHere(job, unpackGround(tiles))) }
+    const deadline = setTimeout(entry.fallback, PAINT_DEADLINE_MS)
     waiting.set(id, entry)
     const sent = { ...tiles, ground: tiles.ground.slice(), solid: tiles.solid.slice() }
     try {

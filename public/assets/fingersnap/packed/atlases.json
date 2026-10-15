@@ -119,6 +119,7 @@
   "assets/generated/hearthwick2-pass/frames/cottage-b.png": "90c8177d89fff74bcf4361a0a6874e8591a83c139cc73b6fdf49ed16dcb23ad2",
   "assets/generated/hearthwick2-pass/frames/cottage-c.png": "557a387ab5bd27213fac67b5d2bba07b839b6b0e07e9b42617ee7b5b4d1dd302",
   "assets/generated/hearthwick2-pass/frames/crate-stack.png": "fbf77eeaa011e7e5a34137750c07c294d0e04d27a31c3d4d9352c01b04d684d8",
+  "assets/generated/hearthwick2-pass/frames/farmhouse-silas.png": "9525b2bab8bbd75bdad1ab09aaa7ecddf971c4ee654b91807cb2371c9f2099e0",
   "assets/generated/hearthwick2-pass/frames/forge-glow-0.png": "e9bfddcbccc3da96e54be76d9d96044e14ad342553330ae45df25353df4b52fd",
   "assets/generated/hearthwick2-pass/frames/forge-glow-1.png": "11d9af4a9eece6072dff6eb633fac76e7b7c4e2707cf7789f9279af81db7adcf",
   "assets/generated/hearthwick2-pass/frames/forge-glow-2.png": "cc70d7d0258d437e152675f8dd5ecf3198c32f9abaeebaa357702c860b5f5f70",
@@ -126,6 +127,12 @@
   "assets/generated/hearthwick2-pass/frames/fruit-tree-carting.png": "dece4727297e70944aacfefab30fac007c7875e7a3cd2b0965ff7f16a4f7b602",
   "assets/generated/hearthwick2-pass/frames/fruit-tree-mudrise.png": "777ba516146fc7a1ca7909a81746197f658709709cded5bdbe8da756de04f90e",
   "assets/generated/hearthwick2-pass/frames/fruit-tree-quiet.png": "01b5bfd942b5912a773aeb636c715699f917cf18f3b42aa24b55f5062f2e4cd9",
+  "assets/generated/hearthwick2-pass/frames/garden-flowers-gold.png": "a10b15bf8a98c90f4a88bf19d2cf88187581a65489ed3e79759f1e53e3d80ad1",
+  "assets/generated/hearthwick2-pass/frames/garden-flowers-pink.png": "fae57a4ff40cf8990fa7e0a02cd84cd1c70daed3cc54d5b6fd9a954b7735df29",
+  "assets/generated/hearthwick2-pass/frames/garden-flowers-white.png": "b8b0117cbf35e1b825512f0de27d730aeb932a3f1417563360c891bdbb27fc24",
+  "assets/generated/hearthwick2-pass/frames/garden-hedge-post.png": "1128544a31e915e7f8374450b26a78fbbf6711dc7026450cd74e7879ca7b1aac",
+  "assets/generated/hearthwick2-pass/frames/garden-shrub-a.png": "e3a81abbffc47b1021eb60d7b8211dfcfaa417dd73326bce1eeff15cc86a5796",
+  "assets/generated/hearthwick2-pass/frames/garden-shrub-b.png": "7c78b4280396db08a8c7cbdf7fc2dcf566586576f2f4a10e6338fde43eeb5d84",
   "assets/generated/hearthwick2-pass/frames/guildhouse.png": "66a1052ba6b15a098e9e42ab39e47466accb09eb6c06726ae7ee4a38c7a99f0a",
   "assets/generated/hearthwick2-pass/frames/handcart.png": "99382d16a91b5a854039e1b3a3d0ea189e26eee0b46d04680cf6d62b5b59066f",
   "assets/generated/hearthwick2-pass/frames/haystack.png": "5aa3c5a5b99a9f8d8e48adf76c71bd4bf9f1e8ba03bdf5754cc1722acc82fa27",
@@ -136,6 +143,10 @@
   "assets/generated/hearthwick2-pass/frames/land-office.png": "3015b84afe0f21c37902b3220d26c4a082aad5772f08825bd894db0ca05f8f91",
   "assets/generated/hearthwick2-pass/frames/lantern-stake-0.png": "39fdaaa8b311213540ed51f6a4f38891350f526170718c8988a54dfbfb55dd26",
   "assets/generated/hearthwick2-pass/frames/lantern-stake-1.png": "519302ae713437b3f7ec00a55454f77bd7e8bd477d2d4574bdb83f31f1dd8d63",
+  "assets/generated/hearthwick2-pass/frames/living-portal-0.png": "91c966d9925d08dce1c3a395deabeea00e8082c20f2402d7a4fc7230f02c8214",
+  "assets/generated/hearthwick2-pass/frames/living-portal-1.png": "ac9b62812d8f478a8a980ef0e946a0f46ed22ab0d925393eadd37dedd2810391",
+  "assets/generated/hearthwick2-pass/frames/living-portal-2.png": "9a47631f3411800eae5cb282c04dca43cb180b3e0b77e36779e4996ad7b8f6fa",
+  "assets/generated/hearthwick2-pass/frames/living-portal-3.png": "ac9b62812d8f478a8a980ef0e946a0f46ed22ab0d925393eadd37dedd2810391",
   "assets/generated/hearthwick2-pass/frames/lot-gatepost-side.png": "155fcb5582be3fe12a2c9c91d765d2e9b1db7221c2e82245115a262a43385a70",
   "assets/generated/hearthwick2-pass/frames/sack-pile.png": "74d16932b8ca46dbfaa1b72cb8dfe775f9d071a2a14901ac74a8c3dcbccf2b43",
   "assets/generated/hearthwick2-pass/frames/scarecrow.png": "990431b22f0223e888795c9bb387ef2e222a7a9ba67568252691af53913f5cfb",
@@ -146,8 +157,9 @@
   "assets/generated/hearthwick2-pass/frames/shop-sign-scroll.png": "4babee43a5bc4a2b39bcf830e03258623e4e76314b81b4a11f12ffdd59850245",
   "assets/generated/hearthwick2-pass/frames/shop-sign-wheel.png": "97bd94adf723b2efb24cde5bddbfa69d881a77d527d3ef3632096bdc634d1d1e",
   "assets/generated/hearthwick2-pass/frames/smithy.png": "5af350f66d3d3e02f408919ebd4d7942ba3f09f721c0982a4fcf0b6acc546394",
-  "assets/generated/hearthwick2-pass/frames/spring-stones-0.png": "578695ace64fd4d9bd72c75bf2be82ec98af0deae68ae45a9b45f29386f20432",
-  "assets/generated/hearthwick2-pass/frames/spring-stones-1.png": "f11c7580b9d0b2678fef6442dcf7d9d389057baa4cee2401c64f40ddcaae90be",
+  "assets/generated/hearthwick2-pass/frames/spring-stones-0.png": "640c47c0f07f50fcba243ebbfcf035ae9c6d3156cdcb56e1205a09f1bc5e20eb",
+  "assets/generated/hearthwick2-pass/frames/spring-stones-1.png": "a67aa65ca55ee09433128512ab2253456ca4e5195454da4559a69c1b9eef520b",
+  "assets/generated/hearthwick2-pass/frames/spring-stones-2.png": "29f4f0327a26ba609a60fbb062887b2c7f7a859c8c56ba00f0aa3f6522311dc5",
   "assets/generated/hearthwick2-pass/frames/townhouse-a.png": "24527ad33fe7171e684caf0caba9141608d4ae0fadfd824e4b32d0995de23475",
   "assets/generated/hearthwick2-pass/frames/townhouse-b.png": "7f966e60ac4f8aea797ce8cdcaf6ed162f46968f508d1031e1c2aaf023497aba",
   "assets/generated/hearthwick2-pass/frames/townhouse-c.png": "8fd82a1f94b208a1c2bfd2fd334fecd82925e93434f0133809abda5e211acccc",
@@ -158,9 +170,10 @@
   "assets/generated/hearthwick2-pass/frames/wick-tree-carting.png": "147edd50f7dc5bba789ac2c3bd3d92d966d782bf0e929587065b48ced009aa63",
   "assets/generated/hearthwick2-pass/frames/wick-tree-mudrise.png": "c2541b7b6a68f5be006b19b2c42a7025e6a06ee85915e1c50baed23ca5508721",
   "assets/generated/hearthwick2-pass/frames/wick-tree-quiet.png": "e7a644827967037523db727c1f857c2c299a780c8a29b8bd75d04b8883980c76",
+  "assets/generated/hearthwick2-pass/frames/wildgate-arch-side.png": "28ea0f7e0ec7e574e40b3ce658cccbeb36f8ae6af4ffa1caf4ad016494a2e2ae",
   "assets/generated/hearthwick2-pass/frames/wildgate-arch.png": "4f79dc1c609b6d665dc85e2fce9c2eecd77d0d3fbbd86940e34ef77e0ed5ff54",
   "assets/generated/hearthwick2-pass/frames/workshop-orrin.png": "3aaa9116f4c3a1705ec8dfedc9d95467b8807891f43e691bba3f9160ab7e1565",
-  "assets/generated/hearthwick2-pass/manifest.json": "fd40e858317dc7dbebdea49a83daed0e8c669002df48177e09612dca958079fb",
+  "assets/generated/hearthwick2-pass/manifest.json": "5b2c767fd82beaff8c0352e6c26032b663f06b4fd0d3f4210511cab271d3e030",
   "assets/generated/indoors-pass/manifest.json": "7c002164a907320483239b16eb568c9ab8ecb54b9dd286160e3b035fb2e20562",
   "assets/generated/indoors-pass/sheets/edge-clean/cellar-ladder.png": "247bbd8e77d9950f2bd5c980139e8bdec4b8e6d6b20bd492fe6018fb75bcd424",
   "assets/generated/indoors-pass/sheets/edge-clean/chimney-smoke-5.png": "47b54c84740536f8a503c9f30ce4bd8450a3dd668231b1f04199c57a3ff924d3",
@@ -377,7 +390,7 @@
   "fingersnap-village.webp": "55741365aef1f255193af044288f16e68d9fb918b71ad464aad62dab5d42f842",
   "glims.webp": "64e0c927c1d0dd1dd4a101d2de9b19e6a7fe7ef7a907589815a1b5f50e81214e",
   "ground.webp": "6151b5306345edf22bdea4211e20910d3a83dbe0ede013999a3d65f5a7529d94",
-  "hearthwick2.webp": "52841b3bfb0b415da9581421f9c0c16c9ee1264a16f2ae80f192579621fba3fa",
+  "hearthwick2.webp": "cc3f7eddd78cab53e18d6f8bb1a0f6bfe3f69d5041aa9c6ade054ed509fbd097",
   "indoors.webp": "f8a34227b29a345347126c09304e318a9c2bdb0e6269b3e360c1593e542ab1d2",
   "items.webp": "ecd2b4d308db0615f50126868db6e5acb40718c52e0c098296c25bf323ceb020",
   "open-map.webp": "6d3750d12794aef4646ea5448d087fed329e77ec1911480088a653d38a13ec7b",
@@ -4813,8 +4826,8 @@
  "hearthwick2": {
   "image": "hearthwick2.webp",
   "size": [
-   2098,
-   1936
+   2232,
+   2016
   ],
   "density": 64,
   "frames": {
@@ -4843,37 +4856,37 @@
     576
    ],
    "townhouse-a": [
-    0,
-    1408,
+    1856,
+    1024,
     256,
     384
    ],
    "townhouse-b": [
-    256,
+    0,
     1408,
     256,
     384
    ],
    "townhouse-c": [
-    512,
+    256,
     1408,
     256,
     384
    ],
    "cottage-a": [
+    1856,
+    576,
+    320,
+    384
+   ],
+   "cottage-b": [
     0,
     1024,
     320,
     384
    ],
-   "cottage-b": [
-    320,
-    1024,
-    320,
-    384
-   ],
    "cottage-c": [
-    640,
+    320,
     1024,
     320,
     384
@@ -4921,196 +4934,274 @@
     384
    ],
    "hearth-stone-0": [
-    896,
+    1728,
     1792,
     128,
     96
    ],
    "hearth-stone-1": [
-    1024,
+    1856,
     1792,
     128,
     96
    ],
    "hearth-stone-2": [
-    1152,
+    1984,
     1792,
     128,
     96
    ],
    "forge-glow-0": [
-    384,
+    960,
     1792,
     128,
     96
    ],
    "forge-glow-1": [
-    512,
+    1088,
     1792,
     128,
     96
    ],
    "forge-glow-2": [
-    640,
+    1216,
     1792,
     128,
     96
    ],
    "washing-line-0": [
-    0,
+    576,
     1792,
     192,
     96
    ],
    "washing-line-1": [
-    192,
+    768,
     1792,
     192,
     96
    ],
    "lantern-stake-0": [
-    1280,
-    1792,
+    0,
+    1920,
     64,
     96
    ],
    "lantern-stake-1": [
-    1344,
-    1792,
+    64,
+    1920,
     64,
     96
    ],
    "lot-gatepost-side": [
-    928,
+    1440,
     1408,
     56,
     176
    ],
    "wildgate-arch": [
-    768,
+    1280,
     1408,
     160,
     192
    ],
    "shop-sign-bread": [
-    1904,
-    1792,
+    1104,
+    1920,
     48,
     48
    ],
    "shop-sign-mug": [
-    2000,
-    1792,
+    1200,
+    1920,
     48,
     48
    ],
    "shop-sign-candle": [
-    1952,
-    1792,
+    1152,
+    1920,
     48,
     48
    ],
    "shop-sign-scroll": [
-    2048,
-    1792,
+    1248,
+    1920,
     48,
     48
    ],
    "shop-sign-wheel": [
-    0,
-    1888,
+    1296,
+    1920,
     48,
     48
    ],
    "barrel": [
-    1536,
-    1792,
+    736,
+    1920,
     64,
     80
    ],
    "crate-stack": [
-    1600,
-    1792,
+    800,
+    1920,
     64,
     80
    ],
    "sack-pile": [
-    1664,
-    1792,
+    864,
+    1920,
     64,
     80
    ],
    "handcart": [
-    768,
+    1600,
     1792,
     128,
     96
    ],
    "water-trough": [
-    1408,
-    1792,
+    608,
+    1920,
     128,
     80
    ],
    "haystack": [
-    1496,
-    1408,
+    0,
+    1792,
     128,
     128
    ],
    "scarecrow": [
-    1880,
-    1408,
+    512,
+    1792,
     64,
     128
    ],
    "shop-sign-anvil": [
-    1856,
-    1792,
+    1056,
+    1920,
     48,
     48
    ],
    "fruit-tree-mudrise": [
-    1240,
+    1944,
     1408,
     128,
     160
    ],
    "fruit-tree-carting": [
-    1112,
+    1816,
     1408,
     128,
     160
    ],
    "fruit-tree-amberfall": [
-    984,
+    1688,
     1408,
     128,
     160
    ],
    "fruit-tree-quiet": [
-    1368,
+    2072,
     1408,
     128,
     160
    ],
    "allotment-bed": [
-    1728,
-    1792,
+    928,
+    1920,
     128,
     64
    ],
-   "spring-stones-0": [
-    1624,
+   "wildgate-arch-side": [
+    1496,
     1408,
+    192,
+    160
+   ],
+   "farmhouse-silas": [
+    640,
+    1024,
+    320,
+    384
+   ],
+   "spring-stones-0": [
+    128,
+    1792,
     128,
     128
    ],
    "spring-stones-1": [
-    1752,
-    1408,
+    256,
+    1792,
     128,
     128
+   ],
+   "spring-stones-2": [
+    384,
+    1792,
+    128,
+    128
+   ],
+   "living-portal-0": [
+    512,
+    1408,
+    192,
+    256
+   ],
+   "living-portal-1": [
+    704,
+    1408,
+    192,
+    256
+   ],
+   "living-portal-2": [
+    896,
+    1408,
+    192,
+    256
+   ],
+   "living-portal-3": [
+    1088,
+    1408,
+    192,
+    256
+   ],
+   "garden-shrub-a": [
+    1344,
+    1792,
+    128,
+    96
+   ],
+   "garden-shrub-b": [
+    1472,
+    1792,
+    128,
+    96
+   ],
+   "garden-flowers-white": [
+    448,
+    1920,
+    160,
+    80
+   ],
+   "garden-flowers-pink": [
+    288,
+    1920,
+    160,
+    80
+   ],
+   "garden-flowers-gold": [
+    128,
+    1920,
+    160,
+    80
+   ],
+   "garden-hedge-post": [
+    2112,
+    1792,
+    64,
+    96
    ]
   },
   "animations": [
@@ -5147,9 +5238,21 @@
     "key": "spring-ripple",
     "frames": [
      "spring-stones-0",
-     "spring-stones-1"
+     "spring-stones-1",
+     "spring-stones-2"
     ],
     "frameRate": 2,
+    "repeat": -1
+   },
+   {
+    "key": "living-portal",
+    "frames": [
+     "living-portal-0",
+     "living-portal-1",
+     "living-portal-2",
+     "living-portal-3"
+    ],
+    "frameRate": 4,
     "repeat": -1
    }
   ]

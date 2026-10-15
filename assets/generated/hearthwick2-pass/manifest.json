@@ -31,6 +31,26 @@
     {
       "key": "wilds-small-source",
       "file": "sheets/generated-wilds-small.png"
+    },
+    {
+      "key": "wildgate-arch-side-source",
+      "file": "sheets/generated-wildgate-arch-side.png"
+    },
+    {
+      "key": "farmhouse-silas-source",
+      "file": "sheets/generated-farmhouse-silas.png"
+    },
+    {
+      "key": "spring-stones-round3-source",
+      "file": "sheets/generated-spring-stones-round3.png"
+    },
+    {
+      "key": "living-portal-source",
+      "file": "sheets/generated-living-portal.png"
+    },
+    {
+      "key": "garden-set-source",
+      "file": "sheets/generated-garden-set.png"
     }
   ],
   "frames": [
@@ -1633,13 +1653,81 @@
       "file": "frames/allotment-bed.png"
     },
     {
-      "key": "spring-stones-0",
-      "source": "wilds-small-source",
+      "key": "wildgate-arch-side",
+      "source": "wildgate-arch-side-source",
       "sourceRect": {
-        "x": 512,
-        "y": 560,
-        "w": 512,
-        "h": 464
+        "x": 0,
+        "y": 0,
+        "w": 1536,
+        "h": 1024
+      },
+      "canvasSize": {
+        "w": 192,
+        "h": 160
+      },
+      "destinationRect": {
+        "x": 20,
+        "y": 8,
+        "w": 152,
+        "h": 152
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "footPoint": {
+        "x": 96,
+        "y": 160
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "edge-prop",
+      "file": "frames/wildgate-arch-side.png"
+    },
+    {
+      "key": "farmhouse-silas",
+      "source": "farmhouse-silas-source",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 1402,
+        "h": 1122
+      },
+      "canvasSize": {
+        "w": 320,
+        "h": 384
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 174,
+        "w": 312,
+        "h": 210
+      },
+      "footprint": [
+        5,
+        4
+      ],
+      "footPoint": {
+        "x": 160,
+        "y": 384
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "building",
+      "file": "frames/farmhouse-silas.png"
+    },
+    {
+      "key": "spring-stones-0",
+      "source": "spring-stones-round3-source",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 1254,
+        "h": 1254
       },
       "canvasSize": {
         "w": 128,
@@ -1647,9 +1735,9 @@
       },
       "destinationRect": {
         "x": 4,
-        "y": 49,
+        "y": 30,
         "w": 120,
-        "h": 79
+        "h": 98
       },
       "footprint": [
         2,
@@ -1668,12 +1756,12 @@
     },
     {
       "key": "spring-stones-1",
-      "source": "wilds-small-source",
+      "source": "spring-stones-round3-source",
       "sourceRect": {
-        "x": 1024,
-        "y": 560,
-        "w": 512,
-        "h": 464
+        "x": 0,
+        "y": 0,
+        "w": 1254,
+        "h": 1254
       },
       "canvasSize": {
         "w": 128,
@@ -1681,9 +1769,9 @@
       },
       "destinationRect": {
         "x": 4,
-        "y": 39,
+        "y": 30,
         "w": 120,
-        "h": 89
+        "h": 98
       },
       "footprint": [
         2,
@@ -1699,6 +1787,380 @@
       ],
       "role": "natural-water",
       "file": "frames/spring-stones-1.png"
+    },
+    {
+      "key": "spring-stones-2",
+      "source": "spring-stones-round3-source",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 1254,
+        "h": 1254
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 128
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 30,
+        "w": 120,
+        "h": 98
+      },
+      "footprint": [
+        2,
+        2
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "natural-water",
+      "file": "frames/spring-stones-2.png"
+    },
+    {
+      "key": "living-portal-0",
+      "source": "living-portal-source",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 1087,
+        "h": 1447
+      },
+      "canvasSize": {
+        "w": 192,
+        "h": 256
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 10,
+        "w": 184,
+        "h": 246
+      },
+      "footprint": [
+        3,
+        4
+      ],
+      "footPoint": {
+        "x": 96,
+        "y": 256
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "natural-portal",
+      "file": "frames/living-portal-0.png"
+    },
+    {
+      "key": "living-portal-1",
+      "source": "living-portal-source",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 1087,
+        "h": 1447
+      },
+      "canvasSize": {
+        "w": 192,
+        "h": 256
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 10,
+        "w": 184,
+        "h": 246
+      },
+      "footprint": [
+        3,
+        4
+      ],
+      "footPoint": {
+        "x": 96,
+        "y": 256
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "natural-portal",
+      "file": "frames/living-portal-1.png"
+    },
+    {
+      "key": "living-portal-2",
+      "source": "living-portal-source",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 1087,
+        "h": 1447
+      },
+      "canvasSize": {
+        "w": 192,
+        "h": 256
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 10,
+        "w": 184,
+        "h": 246
+      },
+      "footprint": [
+        3,
+        4
+      ],
+      "footPoint": {
+        "x": 96,
+        "y": 256
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "natural-portal",
+      "file": "frames/living-portal-2.png"
+    },
+    {
+      "key": "living-portal-3",
+      "source": "living-portal-source",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 1087,
+        "h": 1447
+      },
+      "canvasSize": {
+        "w": 192,
+        "h": 256
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 10,
+        "w": 184,
+        "h": 246
+      },
+      "footprint": [
+        3,
+        4
+      ],
+      "footPoint": {
+        "x": 96,
+        "y": 256
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "natural-portal",
+      "file": "frames/living-portal-3.png"
+    },
+    {
+      "key": "garden-shrub-a",
+      "source": "garden-set-source",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 96
+      },
+      "destinationRect": {
+        "x": 7,
+        "y": 8,
+        "w": 113,
+        "h": 88
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 96
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "natural-garden-prop",
+      "file": "frames/garden-shrub-a.png"
+    },
+    {
+      "key": "garden-shrub-b",
+      "source": "garden-set-source",
+      "sourceRect": {
+        "x": 512,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 96
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 21,
+        "w": 120,
+        "h": 75
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 96
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "natural-garden-prop",
+      "file": "frames/garden-shrub-b.png"
+    },
+    {
+      "key": "garden-flowers-white",
+      "source": "garden-set-source",
+      "sourceRect": {
+        "x": 1024,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "canvasSize": {
+        "w": 160,
+        "h": 80
+      },
+      "destinationRect": {
+        "x": 18,
+        "y": 8,
+        "w": 124,
+        "h": 72
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "footPoint": {
+        "x": 80,
+        "y": 80
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "natural-garden-prop",
+      "file": "frames/garden-flowers-white.png"
+    },
+    {
+      "key": "garden-flowers-pink",
+      "source": "garden-set-source",
+      "sourceRect": {
+        "x": 0,
+        "y": 512,
+        "w": 512,
+        "h": 512
+      },
+      "canvasSize": {
+        "w": 160,
+        "h": 80
+      },
+      "destinationRect": {
+        "x": 13,
+        "y": 8,
+        "w": 133,
+        "h": 72
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "footPoint": {
+        "x": 80,
+        "y": 80
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "natural-garden-prop",
+      "file": "frames/garden-flowers-pink.png"
+    },
+    {
+      "key": "garden-flowers-gold",
+      "source": "garden-set-source",
+      "sourceRect": {
+        "x": 512,
+        "y": 512,
+        "w": 512,
+        "h": 512
+      },
+      "canvasSize": {
+        "w": 160,
+        "h": 80
+      },
+      "destinationRect": {
+        "x": 7,
+        "y": 8,
+        "w": 146,
+        "h": 72
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "footPoint": {
+        "x": 80,
+        "y": 80
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "natural-garden-prop",
+      "file": "frames/garden-flowers-gold.png"
+    },
+    {
+      "key": "garden-hedge-post",
+      "source": "garden-set-source",
+      "sourceRect": {
+        "x": 1024,
+        "y": 512,
+        "w": 512,
+        "h": 512
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 96
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 60,
+        "w": 56,
+        "h": 36
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 96
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "natural-garden-prop",
+      "file": "frames/garden-hedge-post.png"
     }
   ],
   "animations": [
@@ -1735,9 +2197,21 @@
       "key": "spring-ripple",
       "frames": [
         "spring-stones-0",
-        "spring-stones-1"
+        "spring-stones-1",
+        "spring-stones-2"
       ],
       "frameRate": 2,
+      "repeat": -1
+    },
+    {
+      "key": "living-portal",
+      "frames": [
+        "living-portal-0",
+        "living-portal-1",
+        "living-portal-2",
+        "living-portal-3"
+      ],
+      "frameRate": 4,
       "repeat": -1
     }
   ],

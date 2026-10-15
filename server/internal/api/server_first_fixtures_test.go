@@ -283,7 +283,7 @@ func TestServerFirstWireFixtures(t *testing.T) {
 	branchBC.By = "peer-account"
 	add("valid-open-map", &contract.WorldChunk{EpochId: "wick-epoch", Realm: "hearthwick", Look: "outer", Cx: -3, Cy: -7, GeneratorVersion: 3, Size: 24, Palette: []string{"grass_c"}, Ground: make([]byte, 288), Solid: make([]byte, 72), Decor: &contract.DecorList{Kinds: []string{"split-oak"}, Kind: []uint32{0}, Tx: []uint32{12}, Ty: []uint32{12}, Ox: []int32{0}, Oy: []int32{0}, Variant: []uint32{0}, Flags: []byte{0}}, Sites: []*contract.StorySite{{Id: "rumour:-3:-7", Kind: contract.SiteKind_SITE_KIND_RUMOUR, Tx: 12, Ty: 13}}, Tier: 3, Land: "meadow", Places: []*contract.WildsPlaceMark{{Id: "place:-1:-2", Kind: "camp-glade", Tx: 12, Ty: 12}}})
 	// A fixed chunk as served: the Commons' heart (layout revision 3).
-	add("valid-fixed", chunks.Fixed(chunks.FixedEpoch("hearthwick", 2), 0, 2))
+	add("valid-fixed", chunks.Fixed(chunks.FixedEpoch("hearthwick", 3), 0, 2))
 	add("valid-near", &contract.WildsNearResult{
 		Still:    &contract.WildsEpoch{Id: "still-epoch", WorldSeed: "world-seed", Kind: "still", GeneratorVersion: 3, Season: "0", StartsAt: 1791300000},
 		Wick:     &contract.WildsEpoch{Id: "wick-epoch", WorldSeed: "world-seed", Kind: "wick", GeneratorVersion: 3, Season: "t:1791300000:1791500000", StartsAt: 1791300000, EndsAt: wrapperspb.Double(1791500000)},

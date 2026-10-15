@@ -97,12 +97,21 @@ func TestPlotGeometryMatchesAuthoredContent(t *testing.T) {
 			continue
 		}
 		found = true
+		// The place, its layout and PlotRevision move together, or Plot serves nothing.
+		if l := content.Layouts[f.GetLayout()]; l == nil || l.GetRevision() != PlotRevision {
+			t.Fatalf("layout %s is not at PlotRevision %d", f.GetLayout(), PlotRevision)
+		}
 		if f.GetRevision() != PlotRevision || (f.GetOrigin().GetTx() != -48 && f.GetOrigin().GetTx() != 48) || f.GetOrigin().GetTy() != 24 || f.GetWidth() != 1 || f.GetHeight() != 4 {
 			t.Fatal("update versioned plot geometry with content", f)
 		}
 	}
 	if !found {
 		t.Fatal("missing lots footprint")
+	}
+	for gate := 0; gate < 8; gate++ {
+		if Plot("revision-check", gate) == nil {
+			t.Fatalf("no plot bytes for lot %d at PlotRevision %d", gate, PlotRevision)
+		}
 	}
 	// Pin every mirrored outer band, including ground as well as collision.
 	// Internal horizontal seams between lots are not mirrored by generated land.

@@ -19,9 +19,9 @@ import (
 // Hashes pin served bytes to their cache identity. A shipped layout edit
 // must bump the revision and add a new hash, never rewrite an old revision.
 var fixedGolden = map[string]string{
-	"fixed:hearthwick@2": "349b1551f5c95f8905a337fc69d82d507de219a6117c93c9a684c2f4df263cdc",
-	"fixed:lots-west@3":  "45531ae3c2a2c0bf204ed741f12cddb83ec00386ae5e792675e427db14ad0246",
-	"fixed:lots-east@3":  "d147a2bb7109b62d2aac268eb398edfadf0f28ec0c0a70dd219dd40516f9df33",
+	"fixed:hearthwick@3": "a52b1d8bd5d209558912bbd856661fb7cb85a50d8562fd67d81d700d151ae492",
+	"fixed:lots-west@4":  "c5755cf59b56db9b817f22db228c29ad0d6b76e846f568d354c1d277a37c6c6b",
+	"fixed:lots-east@4":  "83bce80b7eec8443a06553ed3313a38345fd7aa3fd040233fbe2b5081e7eb73e",
 }
 
 func servedBytes(t *testing.T, c *contract.WorldChunk) []byte {
@@ -85,8 +85,8 @@ func TestFixedEpochs(t *testing.T) {
 func TestValidateFixedChunks(t *testing.T) {
 	for name, edit := range map[string]func(*contract.WorldChunk){
 		"unknown layout":     func(c *contract.WorldChunk) { c.EpochId = "fixed:missing@1" },
-		"another revision":   func(c *contract.WorldChunk) { c.EpochId = "fixed:hearthwick@3"; c.LayoutRevision = 3 },
-		"revision mismatch":  func(c *contract.WorldChunk) { c.LayoutRevision = 3 },
+		"another revision":   func(c *contract.WorldChunk) { c.EpochId = "fixed:hearthwick@4"; c.LayoutRevision = 4 },
+		"revision mismatch":  func(c *contract.WorldChunk) { c.LayoutRevision = 4 },
 		"outside place":      func(c *contract.WorldChunk) { c.Cx = 2 },
 		"not fixed epoch":    func(c *contract.WorldChunk) { c.EpochId = "still-epoch" },
 		"generator":          func(c *contract.WorldChunk) { c.GeneratorVersion = 3 },
@@ -103,7 +103,7 @@ func TestValidateFixedChunks(t *testing.T) {
 		"object id":     func(c *contract.WorldChunk) { c.Objects[1].Id = c.Objects[0].Id },
 		"empty id":      func(c *contract.WorldChunk) { c.Objects[0].Id = "" },
 	} {
-		c := proto.Clone(Fixed("fixed:hearthwick@2", 0, 1)).(*contract.WorldChunk)
+		c := proto.Clone(Fixed("fixed:hearthwick@3", 0, 1)).(*contract.WorldChunk)
 		edit(c)
 		if Validate(c) == nil {
 			t.Errorf("accepted %s", name)
@@ -227,13 +227,26 @@ func TestServedTownStandsAndTargets(t *testing.T) {
 }
 func TestServedTownRoadMouths(t *testing.T) {
 	open := servedOpen(t)
+	// North, against the Tangle, only the arch; south, the lanes and the South
+	// Gate always, and the rest of the rim open between its trunks
+	// (export-hearthwick.ts: no two touch).
+	rim := 0
 	for x := -24; x <= 47; x++ {
 		if open[[2]int{x, 24}] != (x >= 1 && x <= 3) {
 			t.Errorf("north %d", x)
 		}
-		if open[[2]int{x, 119}] != (x <= -22 || x >= 45 || x >= 11 && x <= 13) {
+		road := x <= -22 || x >= 45 || x >= 11 && x <= 13
+		if road && !open[[2]int{x, 119}] {
 			t.Errorf("south %d", x)
 		}
+		if !road && open[[2]int{x, 119}] {
+			rim++
+		} else if !road && (!open[[2]int{x - 1, 119}] || !open[[2]int{x + 1, 119}] || !open[[2]int{x, 118}]) {
+			t.Errorf("south rim trunk at %d touches another", x)
+		}
+	}
+	if rim < 30 {
+		t.Errorf("the south rim is open at %d tiles only", rim)
 	}
 	for y := 25; y <= 119; y++ {
 		for _, x := range []int{-24, 47} {

@@ -296,6 +296,7 @@ export class WorldScene extends Phaser.Scene {
     this.npcs = new Npcs(this, this.world, open ? this.solids.group : undefined)
     this.interactables.setAway((id) => this.npcs.away(id))
     this.interactables.setGone((id) => this.npcs.gone(id))
+    this.interactables.setWhere((id) => this.npcs.where(id))
     this.projectiles = new Projectiles(this, this.fx, () => this.enemies)
     this.enemies = new EnemySystem(
       this,

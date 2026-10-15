@@ -98,13 +98,16 @@ export interface KeepsakeAsk {
  * What the resident adds to their talk while you carry their keepsake and
  * haven't given it back yet: the spotting line, then *give it back* / *not
  * yet*. Null when nothing is carried, it's already home, or they own
- * nothing in the village.
+ * nothing in the village. Out of the server's reach (`inReach` false: they
+ * stopped for you on their route) they spot it but offer nothing; the
+ * caller says where to find them (src/game/resident-reach.ts).
  */
-export function keepsakeAsk(resident: string, flags: readonly string[], carried: readonly string[]): KeepsakeAsk | null {
+export function keepsakeAsk(resident: string, flags: readonly string[], carried: readonly string[], inReach = true): KeepsakeAsk | null {
   const ask = ASKS[resident]
   if (!ask) return null
   if (!carried.includes(ask.def)) return null
   if (flags.includes(`returned:${ask.def}`)) return null
+  if (!inReach) return { line: ask.line, choices: [] }
   // "Give it back" closes on a neutral line; their thanks wait for the
   // server's yes (the return is a keyed mutation, shown after it lands).
   const choices: DialogueChoice[] = [

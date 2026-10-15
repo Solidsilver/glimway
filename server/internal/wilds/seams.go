@@ -181,8 +181,11 @@ func (w *world) sideLean(tx, ty int) (int, bool) {
 	return 0, false
 }
 
-// The lands the two lot columns are painted as (homestead.json land.sides).
+// The lands the generator leans to beside the block: woods west, meadow
+// east. Frozen here, not read from homestead.json's land.sides (how the lot
+// columns are painted), so tuning the lots' look can't change world
+// generation; TestV3SideLean checks the two still agree.
 var (
-	sideWoods  = landIndex(content.HomeRules.GetLand().GetSides()["west"].GetGround())
-	sideMeadow = landIndex(content.HomeRules.GetLand().GetSides()["east"].GetGround())
+	sideWoods  = landIndex("woods")
+	sideMeadow = landIndex("meadow")
 )

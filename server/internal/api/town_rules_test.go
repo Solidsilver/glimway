@@ -66,7 +66,7 @@ func TestTownRuleVectors(t *testing.T) {
 		if len(c.Tile) == 2 {
 			x, y := c.Tile[0], c.Tile[1]
 			cx, cy := wilds.FloorDiv(x, 24), wilds.FloorDiv(y, 24)
-			got = fixedGatherAt(&s, chunks.Fixed(chunks.FixedEpoch("hearthwick", 2), int32(cx), int32(cy)), c.Target, x, y)
+			got = fixedGatherAt(&s, chunks.Fixed(chunks.FixedEpoch("hearthwick", 3), int32(cx), int32(cy)), c.Target, x, y)
 		}
 		if got != c.Allowed {
 			t.Fatalf("%s: fixed gather %v", c.Name, got)

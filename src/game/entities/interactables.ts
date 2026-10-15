@@ -75,10 +75,11 @@ export const DEFAULT_REACH = 34
 export const DEFAULT_CLICK_REACH = 40
 const DEFAULT_MARKER_OFFSET = 25
 
+const xy = (p: { x: number; y: number }) => ({ x: p.x, y: p.y })
 const read = <T>(v: Live<T>): T => (typeof v === 'function' ? (v as () => T)() : v)
 
-/** What the target is chosen by: the hero's feet to the point. */
-const distance = (player: { x: number; y: number }, it: Interactable) => Math.hypot(player.x - it.x, player.y - it.y)
+/** Where a point is now: a resident out on their route moves it with them (`setWhere`). */
+type Where = (id: string) => { x: number; y: number } | null
 
 export class Interactables {
   /** Every registered point, in registration order. */
@@ -98,6 +99,8 @@ export class Interactables {
   /** Residents not here at all (their cycle is elsewhere: ./npcs.ts `gone`): not usable. */
   private goneCheck: ((id: string) => boolean) | null = null
   private awayNow = ''
+  /** Residents out on their route: their talk point walks with them (./npcs.ts `where`). */
+  private whereCheck: Where | null = null
 
   private readonly scene: Phaser.Scene
   private readonly deps: { reducedMotion: boolean }
@@ -130,6 +133,22 @@ export class Interactables {
   /** Say who is away from their spot right now (checked every frame). */
   setAway(check: (id: string) => boolean): void {
     this.awayCheck = check
+  }
+
+  /** Say where a point that moves is right now (checked every frame; null: where it was registered). */
+  setWhere(check: Where): void {
+    this.whereCheck = check
+  }
+
+  /** Where a point is now (its marker stays where it was registered). */
+  private at(it: Interactable): { x: number; y: number } {
+    return this.whereCheck?.(it.id) ?? it
+  }
+
+  /** What the target is chosen by: the hero's feet to the point. */
+  private distance(player: { x: number; y: number }, it: Interactable): number {
+    const p = this.at(it)
+    return Math.hypot(player.x - p.x, player.y - p.y)
   }
 
   /** Say who isn't here at all right now (checked every frame; their points can't be used). */
@@ -193,7 +212,8 @@ export class Interactables {
     if (this.keyHint) {
       if (best) {
         const bob = this.deps.reducedMotion ? 0 : Math.round(Math.sin(now * 0.008) * 1)
-        this.keyHint.setPosition(best.x, best.y - (best.markerOffset ?? DEFAULT_MARKER_OFFSET) + bob).setVisible(true)
+        const p = this.at(best)
+        this.keyHint.setPosition(p.x, p.y - (best.markerOffset ?? DEFAULT_MARKER_OFFSET) + bob).setVisible(true)
       } else {
         this.keyHint.setVisible(false)
       }
@@ -206,7 +226,7 @@ export class Interactables {
     let bestRank = -Infinity
     let bestDist = Infinity
     for (const it of this.list) {
-      const d = distance(player, it)
+      const d = this.distance(player, it)
       if (d >= (it.reach ?? DEFAULT_REACH)) continue
       const rank = it.rank ?? 0
       if (rank < bestRank || (rank === bestRank && d >= bestDist)) continue
@@ -224,11 +244,11 @@ export class Interactables {
    * them, usable or not.
    */
   debugTarget(at: { x: number; y: number }, current: boolean): { target: InteractableView | null; near: (InteractableView & { d: number; usable: boolean })[] } {
-    const view = (it: Interactable): InteractableView => ({ id: it.id, label: read(it.label), x: it.x, y: it.y, rank: it.rank ?? 0 })
+    const view = (it: Interactable): InteractableView => ({ id: it.id, label: read(it.label), ...xy(this.at(it)), rank: it.rank ?? 0 })
     const target = current ? this.currentTarget : this.pick(at)
     const near = this.list
-      .filter((it) => distance(at, it) < (it.reach ?? DEFAULT_REACH))
-      .map((it) => ({ ...view(it), d: Math.round(distance(at, it) * 10) / 10, usable: this.usable(it) }))
+      .filter((it) => this.distance(at, it) < (it.reach ?? DEFAULT_REACH))
+      .map((it) => ({ ...view(it), d: Math.round(this.distance(at, it) * 10) / 10, usable: this.usable(it) }))
     return { target: target ? view(target) : null, near }
   }
 
@@ -250,8 +270,8 @@ export class Interactables {
     return (
       this.list.find(
         (it) =>
-          Math.hypot(at.x - it.x, at.y - (it.y - 8)) <= 14 &&
-          distance(hero, it) <= (it.clickReach ?? DEFAULT_CLICK_REACH) &&
+          Math.hypot(at.x - this.at(it).x, at.y - (this.at(it).y - 8)) <= 14 &&
+          this.distance(hero, it) <= (it.clickReach ?? DEFAULT_CLICK_REACH) &&
           this.usableDirect(it)
       ) ?? null
     )

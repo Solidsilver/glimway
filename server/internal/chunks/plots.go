@@ -11,7 +11,7 @@ import (
 )
 
 // PlotRevision changes only with a deliberately versioned plot-byte format.
-const PlotRevision = 3
+const PlotRevision = 4
 
 // InsideLot includes the private ground and two front gate cells; the back lantern line stays public.
 func InsideLot(x, y, gate int) bool {

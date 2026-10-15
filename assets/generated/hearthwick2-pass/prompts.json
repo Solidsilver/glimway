@@ -72,7 +72,7 @@
         ".agent/wilds-refs/seam-lot3.png",
         ".agent/wilds-refs/seam-north.png"
       ],
-      "prompt": "Asset type: original low resolution RPG sprite for Fingersnap, a cozy lantern-lit pixel-art village RPG. Genuine transparent background, isolated poses, no labels/grid, large transparent gutters. Top-down three-quarter RPG viewpoint, not isometric. STRICT ultra simple chunky pixel style designed to read at its native size, few large flat-colour blocks, dark warm brown #3a2a28 outline, lit from upper left, no gradients, no antialiasing, no painterly detail.\nUse case: stylized-concept. Transparent production sheet of seven natural sprites in 4 columns by 2 rows, last cell empty.\nInput images: Image 1 is the generated large Wick Tree style; Images 2–4 show the owner's Wilds preference: dark layered canopies, teal shadows, birches, speckled earth, undergrowth and muted warmth.\nSubject in order: four small orchard pear trees with same upright silhouette and scale in Mudrise pale blossom, Carting green leaves and visible pears, Amberfall russet foliage, Quiet bare/frosted boughs; one raised vegetable allotment bed with tidy rows of greens in dark speckled soil; a small clear spring ringed by irregular mossy stones in ripple frame A; the same spring with subtly shifted water ripple in frame B. Trees are miniature Wilds layered clumped trees with dark teal occlusion, branching trunks and expressive crowns, never lollipop trees. Spring must be a natural pool, not a trough.\nComposition: centered separated sprite per cell; trees upright with trunks facing south; spring shown slightly from above; allotment aligned to grid and facing south. Square to tile grid with no rotation. 64 texels per 16px tile. Coarse flat color clusters, one-texel #3a2a28 outline and upper-left light. Palette: deep emerald and teal shadows, seasonal leaf ramps, muted golden russets, pale frost, mossy warm stone, speckled earth and clear water. Match Wilds references. Avoid labels, letters, grids, ground tile, landscape, building, people, lollipop canopy, straight thin trunks, trough shape, rotated objects, diagonal placement, smooth gradients, blur, antialiasing, photorealism, red fringe, watermark."
+      "prompt": "Asset type: original low resolution RPG sprite for Fingersnap, a cozy lantern-lit pixel-art village RPG. Genuine transparent background, isolated poses, no labels/grid, large transparent gutters. Top-down three-quarter RPG viewpoint, not isometric. STRICT ultra simple chunky pixel style designed to read at its native size, few large flat-colour blocks, dark warm brown #3a2a28 outline, lit from upper left, no gradients, no antialiasing, no painterly detail.\nUse case: stylized-concept. Transparent production sheet of seven natural sprites in 4 columns by 2 rows, last cell empty.\nInput images: Image 1 is the generated large Wick Tree style; Images 2\u20134 show the owner's Wilds preference: dark layered canopies, teal shadows, birches, speckled earth, undergrowth and muted warmth.\nSubject in order: four small orchard pear trees with same upright silhouette and scale in Mudrise pale blossom, Carting green leaves and visible pears, Amberfall russet foliage, Quiet bare/frosted boughs; one raised vegetable allotment bed with tidy rows of greens in dark speckled soil; a small clear spring ringed by irregular mossy stones in ripple frame A; the same spring with subtly shifted water ripple in frame B. Trees are miniature Wilds layered clumped trees with dark teal occlusion, branching trunks and expressive crowns, never lollipop trees. Spring must be a natural pool, not a trough.\nComposition: centered separated sprite per cell; trees upright with trunks facing south; spring shown slightly from above; allotment aligned to grid and facing south. Square to tile grid with no rotation. 64 texels per 16px tile. Coarse flat color clusters, one-texel #3a2a28 outline and upper-left light. Palette: deep emerald and teal shadows, seasonal leaf ramps, muted golden russets, pale frost, mossy warm stone, speckled earth and clear water. Match Wilds references. Avoid labels, letters, grids, ground tile, landscape, building, people, lollipop canopy, straight thin trunks, trough shape, rotated objects, diagonal placement, smooth gradients, blur, antialiasing, photorealism, red fringe, watermark."
     },
     {
       "id": "lot-pieces-round2",
@@ -85,6 +85,73 @@
         ".agent/wilds-refs/seam-north.png"
       ],
       "prompt": "Asset type: original low resolution RPG sprite for Fingersnap, a cozy lantern-lit pixel-art village RPG. Genuine transparent background, isolated poses, no labels/grid, large transparent gutters. Top-down three-quarter RPG viewpoint, not isometric. STRICT ultra simple chunky pixel style designed to read at its native size, few large flat-colour blocks, dark warm brown #3a2a28 outline, lit from upper left, no gradients, no antialiasing, no painterly detail.\nUse case: stylized-concept. Transparent 4-column by 3-row production sheet for twelve animation and lot sprite frames.\nInput images: Image 1 establishes Fingersnap house outline and palette; Image 2 is coarse timber prop style; Image 3 is rustic arch reference; Image 4 shows Wilds textures and muted colors.\nSubject by exact cell order: row 1: hearth-stone ember frames 0,1,2, then forge-glow frame 0. Row 2: forge-glow frames 1 and 2, then washing-line sway frames 0 and 1. Row 3: lantern-stake bare, lantern-stake with amber lantern, straight wooden lot-gatepost-side, and low rustic wildgate arch of bent saplings tied over footpath. Hearth is low round golden fieldstone ring viewed slightly from above, dark bed with ember coals and tiny smoke, no cobbles; keep its silhouette exactly same for first three and vary only embers. Forge glow frames are isolated flame pixels only, no forge background. Washing line pair has two upright posts and modest cloth, same shape with subtle linen sway. Stakes/post vertical and arch square to grid.\nComposition: each centered and fully separated in an equal cell, upright, straight to grid, front faces south where applicable. No rotation or diagonal placement. Warm upper-left highlights and one-pixel #3a2a28 outline at 64 texels per 16px tile. Palette/material: golden weathered stones, russet wood, amber/orange/red coals, muted sapling green and teal shadow, iron hooks, linen. Avoid labels, lettering, grid lines, borders, ground/cobbles, buildings, people, extra props, tilted items, 30-degree angle, isometric, smooth gradients, blur, antialiasing, matte fringe, watermark."
+    },
+    {
+      "id": "wildgate-arch-side-round3",
+      "source": "sheets/generated-wildgate-arch-side.png",
+      "generation_file": "exec-01f9558c-c2ac-48b7-ac9b-a34139871f37.png",
+      "edited_from": "exec-adf209df-ef1e-4158-be42-b0ed74f6a46b.png",
+      "style_reference": "docs/art-requests.md house-style preamble; Round 3 orientation and Wilds-look requirements in .agent/BRIEF.md",
+      "references": [
+        ".agent/playtest/1-wildgate.png"
+      ],
+      "prompt": "Landscape transparent sprite: a side-view wildgate for an east\u2013west path, seen edge-on and turned a quarter-turn from a south-facing doorway. A sideways C-shaped bent-sapling arch, open toward the right so a traveler passes left-to-right. Intertwined young trunks, leafy twigs, lashings and roots. Make the horizontal passage unmistakably open. Coarse Wilds pixels, deep teal-green shadows, moss and russet bark, warm dark-brown outline, complete silhouette; no front-facing door, people, background or text.",
+      "edit_history": [
+        "exec-adf209df-ef1e-4158-be42-b0ed74f6a46b.png",
+        "exec-23b20a8d-0c55-4b15-9274-3d6de96ba12c.png",
+        "exec-7c8d7c6c-6493-4666-b514-1a6ffef81e0b.png"
+      ]
+    },
+    {
+      "id": "farmhouse-silas-round3",
+      "source": "sheets/generated-farmhouse-silas.png",
+      "generation_file": "exec-40ab8753-bc55-4156-825b-fb2d5c8b2d33.png",
+      "style_reference": "docs/art-requests.md house-style preamble; style like cottage-a/b/c and barn; Round 3 in .agent/BRIEF.md",
+      "references": [
+        ".agent/playtest/2-silas-house.png",
+        "assets/generated/hearthwick2-pass/frames/cottage-a.png",
+        "assets/generated/hearthwick2-pass/frames/barn.png"
+      ],
+      "prompt": "One isolated low-resolution 5-by-4-tile farmhouse sprite, straight-on south-facing and square to grid. Cosy retired carter Silas\u2019s timber-and-stone farmhouse matching the new cottages and barn, weathered stone footing, russet plank walls, shingle roof in slate-brown courses with moss, chimney, warm amber window, flower box, centered south-facing door, sawdust on step. Small readable wooden sign beside door with exact text \u201cSilas\u2019s Yard\u201d. Full silhouette, transparent background, chunky flat-color pixels, warm dark-brown #3a2a28 outline, upper-left light; no neighboring building, people or scenery."
+    },
+    {
+      "id": "spring-stones-round3",
+      "source": "sheets/generated-spring-stones-round3.png",
+      "generation_file": "exec-a4739fce-6fe6-4612-b81a-73c6367778d8.png",
+      "style_reference": "docs/art-requests.md house-style preamble; Wilds references described in Round 3 of .agent/BRIEF.md",
+      "references": [
+        ".agent/playtest/3-spring.png",
+        ".agent/wilds-refs/seam-lot1.png",
+        ".agent/wilds-refs/seam-lot3.png",
+        ".agent/wilds-refs/seam-north.png"
+      ],
+      "prompt": "One isolated, slightly enlarged natural spring at a pond edge, viewed slightly from above: fixed irregular ring of mossy fieldstones around a clear teal pool with a simple ripple. Keep stone and moss pixels separate from blue-green water so the builder can preserve one identical ring and silhouette while changing only water colors between three animation frames. Wilds-matching dark teal shadows, speckled moss, warm muted stone, chunky coarse pixel clusters, dark warm-brown outline, transparent background; no pond tile or trough."
+    },
+    {
+      "id": "living-portal-round3",
+      "source": "sheets/generated-living-portal.png",
+      "generation_file": "exec-40a99a02-0123-4095-b79a-5cc03412cee7.png",
+      "style_reference": "docs/art-requests.md house-style preamble; Wilds references described in Round 3 of .agent/BRIEF.md",
+      "references": [
+        ".agent/playtest/6-portal.png",
+        ".agent/wilds-refs/seam-lot1.png",
+        ".agent/wilds-refs/seam-lot3.png",
+        ".agent/wilds-refs/seam-north.png"
+      ],
+      "prompt": "One isolated south-facing living teleport portal, about 3 tiles wide by 4 tall. Two intertwined living trees arch overhead, roots gripping the ground, layered dark teal-green foliage. The opening is filled with soft luminous teal and pale amber shimmer so it clearly reads as a portal. Keep the tree arch, roots, and silhouette static; make the portal interior a distinct broad area so the builder can vary only glow colors across four frames. Straight-on, square to grid, complete transparent sprite, coarse chunky Wilds pixels, muted bark and moss, warm dark-brown outline; no doorway, house, people or background."
+    },
+    {
+      "id": "garden-set-round3",
+      "source": "sheets/generated-garden-set.png",
+      "generation_file": "exec-aa628fb7-ac2d-4d51-8e81-e89edbad93ec.png",
+      "style_reference": "docs/art-requests.md house-style preamble; Wilds references described in Round 3 of .agent/BRIEF.md",
+      "references": [
+        ".agent/playtest/4-between-plots.png",
+        ".agent/wilds-refs/seam-lot1.png",
+        ".agent/wilds-refs/seam-lot3.png",
+        ".agent/wilds-refs/seam-north.png"
+      ],
+      "prompt": "Transparent 3-column by 2-row production sprite sheet with six isolated garden sprites in exact order: shrub A, shrub B, white flower bed, pink flower bed, golden flower bed, 1x1 hedge segment that joins horizontally. Shrubs one tile square, beds two tiles wide by one deep. Wilds-matching dark teal-green shadows, muted layered leaves, speckled natural accents, warm upper-left light, coarse flat pixel clusters and dark warm-brown outline. No labels, roads, houses, people or backgrounds."
     }
   ]
 }

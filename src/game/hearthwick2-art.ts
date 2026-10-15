@@ -49,10 +49,12 @@ export function loopOf(key: string): string | null {
 /**
  * Pieces the hero walks under or behind, which fade while someone is
  * beneath them (../area/foreground.ts): the Wick Tree's crown, the fruit
- * trees, the wildgate arch.
+ * trees, the wildgate arches, the living portal, and the Wilds trees on the
+ * town's edge (the outer drift's atlas; its thickets and undergrowth don't).
  */
-export function fadesOver(key: string): boolean {
-  return /^hw2:(wick-tree|fruit-tree)-|^hw2:wildgate-arch$/.test(key)
+export function fadesOver(key: string, frame?: string): boolean {
+  if (key.startsWith('wilds-decor-outer-')) return !!frame && /^(oak|pine|birch)-/.test(frame)
+  return /^hw2:(wick-tree|fruit-tree)-|^hw2:wildgate-arch(-side)?$|^hw2:living-portal-/.test(key)
 }
 
 /**
