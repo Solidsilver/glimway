@@ -45,6 +45,10 @@ function fence(x0: number, y0: number, x1: number, y1: number): void {
   rect(x0, y0, x1, y1, '.', true);
   object(`fence:${x0},${y0}`, 'scenery', x0, y1, { variant: x0 === x1 ? `fence-v-${y1 - y0 + 1}` : `fence-h-${x1 - x0 + 1}`, art: { ox: 0, oy: 16, originLeft: true } as LayoutObject['art'] });
 }
+function hedge(x0: number, y0: number, x1: number, y1: number): void {
+  rect(x0, y0, x1, y1, '.', true);
+  object(`hedge:${x0},${y0}`, 'scenery', x0, y1, { variant: x0 === x1 ? `hedge-v-${y1 - y0 + 1}` : `hedge-h-${x1 - x0 + 1}`, art: { ox: 0, oy: 16, originLeft: true } as LayoutObject['art'] });
+}
 function house(id: string, variant: string, x: number, y: number, w: number, doorX: number, windowX?: number): void {
   rect(x, y, x + w - 1, y + 1, '.', true);
   rect(x, y + 2, x + w - 1, y + 3, '.', true);
@@ -69,7 +73,6 @@ house('house-west','p1:house-west',3,50,6,6);
 house('library','commons-art:hearthwick-library',-2,62,5,0);
 house('house-ada','p1:house-ada',-18,44,6,-14,-15);
 house('house-middle','p1:house-middle',-18,71,7,-15);
-house('cottage-silas','cottage-silas',-16,100,6,-14);
 house('mill','mill-house',20,100,4,21);
 // The Hearthwick 2 pass (assets/generated/hearthwick2-pass, src/game/hearthwick2-art.ts): a building's solid
 // footprint stands on grass with its facade on the foot row and the roof two tiles above, as house() does.
@@ -90,12 +93,14 @@ function deco(id: string, art: string, x: number, y: number, w = 1, d = 1, block
 function seasonal(id: string, art: string, x: number, y: number, w = 1): void {
   for (const mark of ['Mudrise', 'Carting', 'Amberfall', 'Quiet']) object(`${id}:${mark.toLowerCase()}`, 'scenery', x, y, { variant: `hw2:${art}-${mark.toLowerCase()}`, festival: mark, art: { ox: w * 8, oy: 16 } as LayoutObject['art'] });
 }
+// Silas's farmhouse (round 3): 5 wide, its door on its middle tile, the farmhouse room's front door (-14,103).
+building('cottage-silas','farmhouse-silas',-16,100,5);
 for(const [id,x,y,w,h] of [['inn',15,49,8,5],['chandler',1,55,4,4],['land-office',21,55,5,4],['smithy',21,62,6,4],['guildhouse',15,67,7,4],['workshop-orrin',23,67,5,4],['barn',-8,99,8,5]] as const)building(id,id,x,y,w,h);
 // Townhouses (4 wide) and cottages (5 wide), their roofs (russet, slate, straw / moss, russet, slate) turning along each row and from row to row.
 let count=0,rows=0;const row=(xs:number[],y:number,w=4)=>{rows++;xs.forEach((x,i)=>building(`house:${++count}`,`${w===5?'cottage':'townhouse'}-${'abc'[(i+rows)%3]}`,x-48,y+24,w));};
 row([46,50,54],21);row([63,67,71],21);row([45],26,5);row([45],31);row([72],26);
 row([45,49],43);row([46,50,54],48);row([63,67,71],48);row([44,48,52],13);row([63,67,71,75],13);
-row([37],20,5);row([30],30,5);row([35,39],30);row([30,35],40,5);row([80,85],20,5);row([80,85],30,5);
+row([37],20,5);row([30],30,5);row([35,39],30);row([30,35],40,5);row([80,85],20,5);row([80],30,5);
 row([33,38,43,48],57);row([64,68,72,76,80,85],57);
 // Shop signs by the doors (the inn's mug and the guildhouse's wheel are in their facades).
 overlay('sign:bakery','shop-sign-bread',3,53,70,-2);overlay('sign:chandler','shop-sign-candle',1,58,46,-2);
@@ -114,9 +119,13 @@ deco('field:scarecrow-west','scarecrow',-6,115);deco('field:scarecrow-east','sca
 for(const y of [89,92])for(const x of [-17,-13,-9,-5,-1,3])deco(`allotment:${x},${y}`,'allotment-bed',x,y,2);
 // The Bloom orchard (its flowers grow under the front row) and the pear walk, following the year.
 for(const [x,y] of [[19,32],[22,32],[25,32],[28,32],[31,32],[21,29],[27,29],[17,91],[21,91],[25,91],[29,91],[33,91],[37,91],[41,91]] as const){seasonal(`fruit-tree:${x},${y}`,'fruit-tree',x,y);solid[y-24]![x+24]='#';}
-// Way signs at the road mouths, and the Brackenwood Arch over its way out on Lantern Road.
+// Way signs at the road mouths. The Brackenwood Arch stands in a glade off the north side of Lantern Road, two
+// tiles in, so walking the road never takes you through it: you turn in and walk up to it from the south.
+rect(37,54,41,55,',',true);rect(37,56,37,57,',',true);rect(41,56,41,57,',',true);rect(38,56,40,58,':');
+for(const [x,y,v] of [[37,57,'a'],[41,57,'b'],[37,55,'b'],[41,55,'a']] as const)deco(`brackenwood:shrub:${x},${y}`,`garden-shrub-${v}`,x,y);
 for(const [id,x,y] of [['west-road',-21,58],['lantern-road',44,58],['south-gate',10,115]] as const)deco(`way-sign:${id}`,'om-art:way-sign',x,y);
-object('brackenwood-arch','overhang',39,62,{variant:'leafy-arch',width:48});
+// The living portal (round 3): two old trees grown into a ring of light over the way out, 3 wide, glowing in a loop.
+deco('brackenwood-arch','living-portal-0',39,56,1,1,false);
 rect(-17,106,0,111,':');rect(-17,113,6,118,'f');rect(16,110,43,117,'f');rect(-18,88,7,93,'f');rect(31,67,41,74,'f');
 piece('sawhorse','sawhorse',-16,107);prop('toolbox','tool-crate',-1,107);piece('firebox','firebox',-1,110);piece('timber-stack','timber-stack',-5,109);piece('skids','skids',-8,109);piece('woodpile','woodpile',-12,110);
 // The Wick Tree, one crown a Mark, its trunk solid; the hearth keeps its rest/light ID.
@@ -128,19 +137,27 @@ rect(7,64,8,64,'.',true);object('town-well','well',7,64,{variant:'commons-well',
 rect(17,55,18,55,'.',true);object('town-board','board',17,55,{variant:'notice-board'});
 object('gate-hame','scenery',-4,31,{variant:'gatepost-small'});
 piece('camp-pack','commons-art:wilds-pack',7,26);piece('camp-fire','commons-art:wilds-fire-ring',7,28);
-fence(-11,69,-5,69);fence(-11,70,-11,76);fence(-5,70,-5,76);fence(-10,76,-9,76);fence(-7,76,-6,76);
+// Pip's garden, as the old village garden was: hedged on three sides, a post-and-rail fence along the front with
+// the fallen rail's gap (the fence-rail repair) as its way in, shrubs and flower beds inside, planters at the gap.
+// Pip walks the middle path, his post clear of the gap (a resident's post is solid: src/game/entities/npcs.ts).
+hedge(-11,69,-5,69);hedge(-11,70,-11,75);hedge(-5,70,-5,75);fence(-11,76,-9,76);fence(-7,76,-5,76);
+deco('garden:shrub-west','garden-shrub-a',-10,70);deco('garden:shrub-east','garden-shrub-b',-6,70);
+for(const [x,y,c] of [[-10,73,'white'],[-7,73,'pink'],[-10,75,'gold'],[-7,75,'white']] as const)deco(`garden:flowers:${x},${y}`,`garden-flowers-${c}`,x,y,2);
+// Hedge posts at the gap, where the rails end (the fence's tiles are already solid).
+for(const x of [-9,-7])deco(`garden:post:${x}`,'garden-hedge-post',x,76,1,1,false);
+prop('garden:planter-west','flower-planter',-10,77,16);prop('garden:planter-east','flower-planter',-6,77,16);
 rect(25,99,33,104,'~',true);rect(24,101,24,103,'~',true);rect(34,97,35,98,'~',true);rect(33,98,33,98,'~',true);
 rect(25,98,32,98,':');
 // The spring that feeds the pond, welling up in its ring of stones (its water tiles are already solid).
 deco('spring','spring-stones-0',34,98,2,2,false);rect(34,99,34,104,':');rect(24,105,35,105,':');
 object('mill-hopper','scenery',19,103,{variant:'mill-hopper'});rect(19,103,19,103,'.',true);
-for(const [id,spot,x,y] of [['mara','',17,61],['orrin','',20,58],['pip','',-8,75],['hazel','square',9,63],['finn','door',21,105],['ada','window',-15,49],['elara','camp',6,27],['silas','yard',-16,108]] as const)object(`npc:${id}`,'npc-post',x,y,{npc:id,...(spot?{spot}:{})});
+for(const [id,spot,x,y] of [['mara','',17,61],['orrin','',20,58],['pip','',-8,71],['hazel','square',9,63],['finn','door',21,105],['ada','window',-15,49],['elara','camp',6,27],['silas','yard',-16,108]] as const)object(`npc:${id}`,'npc-post',x,y,{npc:id,...(spot?{spot}:{})});
 for(const [id,x,y] of [['well-rope',7,64],['village-lamp',12,62],['bench-slat',9,64],['fence-rail',-8,76],['library-roof',0,65],['gate-hame',-4,31]] as const)object(`repair:${id}`,'repair',x,y,{target:id});
 for(const [target,festival,coords] of [
  ['bloom-patch','Bloom',[[19,33],[22,33],[25,33],[28,33],[31,33]]],
  ['freshet-shore','Mudrise',[[26,98],[29,98],[32,98]]],['pond-ice','Quiet',[[26,99],[29,99],[33,103]]],
 ] as const)for(const [i,[x,y]] of coords.entries())object(`gather:${target}:${i}`,'gather',x,y,{target,festival,label:target==='bloom-patch'?'Pick Bloom flowers':target==='pond-ice'?'Break the pond ice':'Sweep the freshet shore',variant:target==='pond-ice'?'pond-ice':target==='bloom-patch'?'wildflowers':'tangle-decor',...(target==='freshet-shore'?{frame:`pebbles-${i}`} : {}),art:{ox:8,oy:16,depthY:true,tile:true} as LayoutObject['art']});
-object('exit:woodland','exit',38,62,{tw:3,th:1,label:'Brackenwood & Ashwatch',exit:{to:'woodland',entryTx:2,entryTy:15} as LayoutObject['exit']});
+object('exit:woodland','exit',38,56,{tw:3,th:1,label:'Brackenwood & Ashwatch',exit:{to:'woodland',entryTx:2,entryTy:15} as LayoutObject['exit']});
 for (const [id,x,y,label] of [['north',1,25,'Beyond the arch: the Tangle.'],['south',10,116,'South Gate: the Wilds.'],['west-wildgate',-21,70,'West Row and the Western Drift.'],['east-wildgate',44,70,'East Row and the Eastern Reaches.']] as const)object(`boundary:${id}`,'scenery',x,y,{variant:'gatepost-small',label});
 prop('lamp:north','lantern-post',4,26,32,'village');prop('lamp:south','lantern-post',14,116,32,'village');
 for(let y=28;y<116;y+=12)for(const x of [-21,44])prop(`lamp:row:${x},${y}`,'lantern-post',x,y,32,'village');
@@ -165,8 +182,11 @@ for(let side=0;side<2;side++){
   for(let y=2;y<=20;y+=2)obs.push({id:`lot:${gate}:stake:${y}`,kind:'scenery',tx:back,ty:oy+y,variant:'hw2:lantern-stake-0',art:{ox:8,oy:16} as LayoutObject['art']});
  }
  for(const y of [47,48])for(let x=0;x<24;x++){sol[y]![x]='.';gnd[y]![x]='-';}
+ // The other verges between neighbouring lots are trodden footpaths, open from the Lot Row lane to the Wilds at the
+ // backs (the generator keeps their back ends open: server/internal/wilds/seams.go).
+ for(const y of [23,24,71,72])for(let x=0;x<24;x++){sol[y]![x]='.';gnd[y]![x]=':';}
  // The wildgate's arch where it opens onto the Wilds (walked under: it fades).
- obs.push({id:'wildgate:arch',kind:'scenery',tx:side?22:0,ty:48,variant:'hw2:wildgate-arch',art:{ox:16,oy:16} as LayoutObject['art']});
+ obs.push({id:'wildgate:arch',kind:'scenery',tx:side?22:0,ty:48,variant:'hw2:wildgate-arch-side',art:{ox:16,oy:16,...(side?{flip:true}:{})} as LayoutObject['art']});
  const id=lotLayout(side);writeFileSync(`content/layouts/${id}.json`,JSON.stringify({id,revision:3,tx:0,ty:0,width:24,height:96,palette,ground:gnd.map(r=>r.join('')),solid:sol.map(r=>r.join('')),objects:obs},null,2)+'\n');
 }
 if(existsSync('content/layouts/homestead-lots.json'))unlinkSync('content/layouts/homestead-lots.json');

@@ -15,7 +15,7 @@ import { bus, EV } from '../events'
 import type { Session } from '../session'
 import { tileBottom, tileMid } from '../../lib/tile'
 import type { GlimSpotId, WorldData } from '../worlds'
-import { NPC_NAMES } from './npcs'
+import { NPC_NAMES, TALK_RISE } from './npcs'
 import { handoverFor } from '../../content/papers'
 import { isResident, keeperTalk, metAt, residentFullName, residentTalk, type ResidentId } from '../../content/residents'
 import { elaraRumourChoice } from '../../content/open-map'
@@ -84,7 +84,7 @@ export class WorldTalk {
       points.push({
         id,
         x: tileMid(n.tx),
-        y: tileBottom(n.ty) - 4,
+        y: tileBottom(n.ty) - TALK_RISE,
         label: `Talk to ${NPC_NAMES[id]}`,
         marker: () => (isResident(id) ? this.residentMarker(id) : this.storyMarker(id)),
         activate: () => this.talk(id)

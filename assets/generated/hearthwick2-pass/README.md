@@ -6,11 +6,12 @@ prompts, reference files, and generation file IDs are recorded in `prompts.json`
 
 ## Contents
 
-- 49 transparent native-canvas frames in `frames/`, with bottom-centre foot points.
-- Seven full-resolution generated source sheets in `sheets/`.
+- 62 transparent native-canvas frames in `frames/`, with bottom-centre foot points.
+- Twelve full-resolution generated source sheets in `sheets/`.
 - `manifest.json` with each frame's source rectangle, destination rectangle,
   footprint, canvas size, and foot point.
-- Four animation loops for the hearth embers, forge glow, washing line, and spring.
+- Five animation loops for hearth embers, forge glow, washing line, spring water,
+  and living-portal glow.
 - `contact-sheet.png` for review and `build_pass.py` to reproduce the crops,
   quantization, manifest, and contact sheet.
 - `drafts/round1/` preserves the hand-drawn Round 1 frames and associated files.
@@ -22,8 +23,10 @@ per world tile. Facades and props face south and sit square to the tile grid.
 Natural assets use layered Wilds-style canopies, teal shadows, muted stone and
 speckled soil. No ground tiles were added, as §7 assigns those to H3.
 
-The design estimates “about 55” frames; the enumerated assets and animation
-frames total 49, and all are included. No listed §7 assets were skipped.
+The original §7 set totals 49 frames. Round 3 adds the side-on Wildgate arch,
+Silas’s farmhouse, a three-frame spring, a four-frame living portal, and six
+garden dressing frames, bringing the pass to 62 frames. The garden set was the
+optional lower-priority request and is included.
 
 Rebuild with `python3 assets/generated/hearthwick2-pass/build_pass.py` from the
 repository root.
@@ -31,7 +34,6 @@ repository root.
 ## Install (H5)
 
 The Wilds sheet's second row holds three 512-px cells, but the builder cut it
-on the 4-column grid, so the allotment bed and both spring frames took slices
-of their neighbours (and the trees' grass above them). `build_pass.py` now
-crops those three from their own cells, starting below the trees' grass; the
-other 46 frames are unchanged.
+on the 4-column grid, so the allotment bed took a slice of its neighbour (and
+the trees' grass above it). `build_pass.py` crops it from its own cell,
+starting below the trees' grass. Round 3 redrew the spring from its own sheet.

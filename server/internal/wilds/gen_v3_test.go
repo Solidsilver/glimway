@@ -1309,8 +1309,9 @@ func TestFixedPortsAtTheMouths(t *testing.T) {
 	S := chunkSize()
 	want := map[string][][2]int{
 		"hearthwick": {{12, 119}, {-23, 119}, {46, 119}}, // the South Gate, the Lot Row lane ends
-		"lots-west":  {{-48, 72}},                        // the west wildgate: between y 71 and 72, on 72's edge
-		"lots-east":  {{71, 72}},                         // the east wildgate
+		// The footpaths between lots 0/2 and 4/6, and the wildgate between 2/4: each between its two rows, on the lower's edge.
+		"lots-west": {{-48, 48}, {-48, 72}, {-48, 96}},
+		"lots-east": {{71, 48}, {71, 72}, {71, 96}},
 	}
 	for _, f := range content.PlacesRules.GetFixed() {
 		var got [][2]int

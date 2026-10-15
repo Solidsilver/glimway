@@ -14,12 +14,12 @@ FRAMES.mkdir(exist_ok=True)
 # key, sheet key, filename, grid columns, grid rows, cell column, cell row,
 # native output canvas (texture pixels), world footprint, role
 JOBS = []
-def job(key, sheet, filename, grid, cell, canvas, footprint, role="prop"):
+def job(key, sheet, filename, grid, cell, canvas, footprint, role="prop", animation_surface=None):
     cols, rows = grid
     col, row = cell
     JOBS.append({"key":key,"source":sheet,"grid":{"cols":cols,"rows":rows},
                  "sheet_file":filename,"cell":{"col":col,"row":row},"canvas":canvas,
-                 "footprint":footprint,"role":role})
+                 "footprint":footprint,"role":role,"animationSurface":animation_surface})
 
 # Four seasonal versions of the same Wilds-style square tree.
 for key, cell in zip(("wick-tree-mudrise","wick-tree-carting","wick-tree-amberfall","wick-tree-quiet"),
@@ -57,11 +57,9 @@ BUILDING_CROP_RECTS = {
  "smithy":(968,12,1536,516),
  "workshop-orrin":(648,512,1172,992),
  # The Wilds sheet's second row holds three 512-px cells, not four: on the
- # 4-column grid the bed and the two spring frames took slices of their
- # neighbours, and the row starts below the trees' grass (H5).
+ # 4-column grid the bed took a slice of its neighbour, and the row starts
+ # below the trees' grass (H5).
  "allotment-bed":(0,560,512,1024),
- "spring-stones-0":(512,560,1024,1024),
- "spring-stones-1":(1024,560,1536,1024),
 }
 
 # Hearth, forge glow, washing-line loop, stakes, gatepost and Wildgate arch.
@@ -105,11 +103,33 @@ wild_jobs=[
  ("fruit-tree-carting",(1,0),(128,160),(1,1),"natural-tree"),
  ("fruit-tree-amberfall",(2,0),(128,160),(1,1),"natural-tree"),
  ("fruit-tree-quiet",(3,0),(128,160),(1,1),"natural-tree"),
- ("allotment-bed",(0,1),(128,64),(2,1),"natural-farm-prop"),
- ("spring-stones-0",(1,1),(128,128),(2,2),"natural-water"),
- ("spring-stones-1",(2,1),(128,128),(2,2),"natural-water")]
+ ("allotment-bed",(0,1),(128,64),(2,1),"natural-farm-prop")]
 for key,cell,canvas,foot,role in wild_jobs:
     job(key,"wilds-small-source","generated-wilds-small.png",(4,2),cell,canvas,foot,role)
+
+# Round 3 generated additions. Spring and portal animation frames share one
+# generated master image each; the builder changes only existing water/glow
+# colors so the stone ring and living-wood silhouette remain pixel-identical.
+job("wildgate-arch-side","wildgate-arch-side-source","generated-wildgate-arch-side.png",
+    (1,1),(0,0),(192,160),(2,1),"edge-prop")
+job("farmhouse-silas","farmhouse-silas-source","generated-farmhouse-silas.png",
+    (1,1),(0,0),(320,384),(5,4),"building")
+for i in range(3):
+    job(f"spring-stones-{i}","spring-stones-round3-source","generated-spring-stones-round3.png",
+        (1,1),(0,0),(128,128),(2,2),"natural-water","spring-water")
+for i in range(4):
+    job(f"living-portal-{i}","living-portal-source","generated-living-portal.png",
+        (1,1),(0,0),(192,256),(3,4),"natural-portal","portal-glow")
+garden_jobs=[
+ ("garden-shrub-a",(0,0),(128,96),(1,1)),
+ ("garden-shrub-b",(1,0),(128,96),(1,1)),
+ ("garden-flowers-white",(2,0),(160,80),(2,1)),
+ ("garden-flowers-pink",(0,1),(160,80),(2,1)),
+ ("garden-flowers-gold",(1,1),(160,80),(2,1)),
+ ("garden-hedge-post",(2,1),(64,96),(1,1)),
+]
+for key,cell,canvas,foot in garden_jobs:
+    job(key,"garden-set-source","generated-garden-set.png",(3,2),cell,canvas,foot,"natural-garden-prop")
 
 SOURCES = [
  {"key":"wick-trees-source","file":"sheets/generated-wick-trees.png"},
@@ -119,6 +139,11 @@ SOURCES = [
  {"key":"town-props-source","file":"sheets/generated-town-props.png"},
  {"key":"anvil-sign-source","file":"sheets/generated-anvil-sign.png"},
  {"key":"wilds-small-source","file":"sheets/generated-wilds-small.png"},
+ {"key":"wildgate-arch-side-source","file":"sheets/generated-wildgate-arch-side.png"},
+ {"key":"farmhouse-silas-source","file":"sheets/generated-farmhouse-silas.png"},
+ {"key":"spring-stones-round3-source","file":"sheets/generated-spring-stones-round3.png"},
+ {"key":"living-portal-source","file":"sheets/generated-living-portal.png"},
+ {"key":"garden-set-source","file":"sheets/generated-garden-set.png"},
 ]
 
 def clean_alpha(im: Image.Image) -> Image.Image:
@@ -192,6 +217,36 @@ def keep_main_and_nearby(im: Image.Image, radius: int=8) -> Image.Image:
             r,g,b,_=px[x,y]; px[x,y]=(r,g,b,0)
     return im
 
+def animate_water_or_glow(im: Image.Image, frame_index: int, surface: str) -> Image.Image:
+    """Animate color inside the water/portal only; keep alpha and structure fixed."""
+    if frame_index == 0:
+        return im.copy()
+    out=im.copy().convert("RGBA")
+    px=out.load(); w,h=out.size
+    for y in range(h):
+        for x in range(w):
+            r,g,b,a=px[x,y]
+            if not a:
+                continue
+            if surface=="spring-water":
+                nx=(x-w*0.5)/(w*0.28); ny=(y-h*0.69)/(h*0.23)
+                in_surface=nx*nx+ny*ny<=1
+                target=in_surface and b>r+28 and g>r+14
+            else:
+                nx=(x-w*0.5)/(w*0.225); ny=(y-h*0.59)/(h*0.34)
+                in_surface=nx*nx+ny*ny<=1
+                target=in_surface and ((g>r+24 and b>r+30) or
+                                       (r>150 and g>150 and b>65 and g>r*0.78))
+            if not target:
+                continue
+            phase=(x//4 + y//4 + frame_index*2) % 4
+            # Cycle the brightness of existing luminous pixels to suggest a
+            # moving ripple without shifting any art or changing its silhouette.
+            delta=(-18,12,30,-6)[phase]
+            px[x,y]=(max(0,min(255,r+delta)),max(0,min(255,g+delta)),
+                     max(0,min(255,b+delta)),a)
+    return out
+
 def crop_building(src: Image.Image, initial_rect: tuple[int,int,int,int]):
     """Expand horizontally until the main facade has transparent crop margins."""
     x0,y0,x1,y1=initial_rect
@@ -243,7 +298,7 @@ def quantized_nearest(panel: Image.Image, canvas: tuple[int,int]):
 
 def main():
     source_images={s["key"]:Image.open(ROOT/s["file"]).convert("RGBA") for s in SOURCES}
-    frames=[]
+    frames=[]; animated_masters={}
     for spec in JOBS:
         src=source_images[spec["source"]]
         cols,rows=spec["grid"]["cols"],spec["grid"]["rows"]
@@ -258,6 +313,18 @@ def main():
             panel=src.crop((x0,y0,x1,y1))
         source_rect={"x":x0,"y":y0,"w":x1-x0,"h":y1-y0}
         image,dest=quantized_nearest(panel,tuple(spec["canvas"]))
+        if spec.get("animationSurface"):
+            surface=spec["animationSurface"]
+            frame_index=int(spec["key"].rsplit("-",1)[1])
+            image=animate_water_or_glow(image,frame_index,surface)
+            if surface in animated_masters:
+                master_alpha,master_pixels=animated_masters[surface]
+                if image.getchannel("A").tobytes()!=master_alpha:
+                    raise ValueError(f"{spec['key']}: animated silhouette differs from its master")
+                if frame_index and image.tobytes()==master_pixels:
+                    raise ValueError(f"{spec['key']}: animation frame has no visible water/glow change")
+            else:
+                animated_masters[surface]=(image.getchannel("A").tobytes(),image.tobytes())
         alpha=image.getchannel("A")
         if any(alpha.getpixel((x,y)) for x in (0,image.width-1) for y in range(image.height)):
             raise ValueError(f"{spec['key']}: opaque pixels touch a horizontal frame edge")
@@ -271,7 +338,8 @@ def main():
       {"key":"hearth-stone-embers","frames":[f"hearth-stone-{i}" for i in range(3)],"frameRate":3,"repeat":-1},
       {"key":"forge-glow","frames":[f"forge-glow-{i}" for i in range(3)],"frameRate":6,"repeat":-1},
       {"key":"washing-line-sway","frames":["washing-line-0","washing-line-1"],"frameRate":1.5,"repeat":-1},
-      {"key":"spring-ripple","frames":["spring-stones-0","spring-stones-1"],"frameRate":2,"repeat":-1},
+      {"key":"spring-ripple","frames":[f"spring-stones-{i}" for i in range(3)],"frameRate":2,"repeat":-1},
+      {"key":"living-portal","frames":[f"living-portal-{i}" for i in range(4)],"frameRate":4,"repeat":-1},
     ]
     manifest={"id":"hearthwick2-pass","date":"2026-10-15","tool":"built-in image_gen + Pillow crop/quantize builder",
       "density":64,"sources":SOURCES,"frames":frames,"animations":animations,

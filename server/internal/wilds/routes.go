@@ -170,7 +170,9 @@ func (w *world) routeEnds(c, to [2]int) []routeEnd {
 
 // fixedPorts join the fixed block's public mouths on side (dx, dy) to the
 // generated network (hearthwick-2.md §1): the South Gate and the Lot Row
-// lane ends south, and a wildgate out of each lot column. Ends stand just
+// lane ends south, and out of each lot column its wildgate and the two
+// footpaths between its other lots (they open on chunk seams, where the edge
+// band would shut a thin way in: a route keeps it open). Ends stand just
 // outside fixed ground; waypoints keep the bends away from its collision.
 // The joins inside the block (town to lots), the Tangle Arch and the lots'
 // open backs (each a household's own) take no generated route.
@@ -185,11 +187,11 @@ func fixedPorts(p *content.FixedPlace, dx, dy int) []routeEnd {
 		}
 	case "lots-west":
 		if dx < 0 {
-			mouths = [][2]int{{2 * -48, 2*71 + 1}}
+			mouths = [][2]int{{2 * -48, 2*47 + 1}, {2 * -48, 2*71 + 1}, {2 * -48, 2*95 + 1}}
 		}
 	case "lots-east":
 		if dx > 0 {
-			mouths = [][2]int{{2 * 71, 2*71 + 1}}
+			mouths = [][2]int{{2 * 71, 2*47 + 1}, {2 * 71, 2*71 + 1}, {2 * 71, 2*95 + 1}}
 		}
 	}
 	var out []routeEnd

@@ -70,6 +70,31 @@ func TestV3SoftBand(t *testing.T) {
 	}
 }
 
+// TestV3LotVerges: the footpaths between neighbouring lots run from the Lot
+// Row lane, between the lots' fences, out past the backs into the Wilds.
+// They open on chunk seams, where the edge band would shut a two-tile way
+// in a few tiles out (about one world in thirty before each got a route).
+func TestV3LotVerges(t *testing.T) {
+	for _, ws := range v3Worlds(24) {
+		m := buildFrontier(t, ws[0], ws[1])
+		for _, y := range []int{47, 48, 95, 96} {
+			for _, side := range []struct{ lane, back, out int }{{-23, -48, -1}, {46, 71, 1}} {
+				seen := m.reach(side.lane, y)
+				if !seen[m.i(side.back, y)] || !seen[m.i(side.back+side.out, y)] {
+					t.Fatalf("%s: the verge at y %d doesn't reach the Wilds past %d", ws[0], y, side.back)
+				}
+				deep := false
+				for dy := -4; dy <= 4 && !deep; dy++ {
+					deep = seen[m.i(side.back+side.out*(softDepth+2), y+dy)]
+				}
+				if !deep {
+					t.Fatalf("%s: the verge at y %d stops at a wall behind %d", ws[0], y, side.back)
+				}
+			}
+		}
+	}
+}
+
 // TestV3KeepOut: no camp (so no enemy) and no dealt site stands within
 // keepOutTiles of an open fixed edge, and the keep-out covers every lot
 // back, both wildgates and the town's south mouths.

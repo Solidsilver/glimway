@@ -77,6 +77,9 @@ export interface NpcEntity {
   path?: { points: { x: number; y: number }[]; done: () => void; speed: number }
 }
 
+/** A resident's talk point stands this far above their feet (./world-talk.ts). */
+export const TALK_RISE = 4
+
 export class Npcs {
   readonly npcs: NpcEntity[] = []
   private readonly still = prefersReducedMotion()
@@ -188,6 +191,18 @@ export class Npcs {
   away(id: string): boolean {
     const n = this.npcs.find((x) => x.id === id)
     return !!n && (!!n.path || (!!n.walker && !!n.home && !atHome(n.walker, n.home)))
+  }
+
+  /**
+   * Where a resident out on their route can be talked to: their feet, at
+   * the talk point's height over them (null at home, or walking the cycle's
+   * path to a door: then the point stays at their spot).
+   */
+  where(id: string): { x: number; y: number } | null {
+    const n = this.npcs.find((x) => x.id === id)
+    const w = n?.walker
+    if (!n || !w || !n.home || n.path || !n.present || (w.x === n.home.x && w.y === n.home.y)) return null
+    return { x: w.x, y: w.y - TALK_RISE }
   }
 
   /** Not here at all (a resident whose cycle is elsewhere): no talking, no marker. */

@@ -32,7 +32,8 @@ export const ROUTINES: Readonly<Record<string, Readonly<Record<string, readonly 
     mara: [wait(7), walk(17,63), walk(11,63), walk(11,62), walk(8,62), wait(3), walk(11,62), walk(11,63), walk(17,63), walk(17,58), wait(3), walk(17,61)],
     // To her bakery door up the square's west lip, clear of the crown.
     hazel: [wait(9), walk(10,63), walk(10,65), walk(9,65), { kind: 'sit', tx: 9, ty: 64, s: 16 }, walk(9,65), walk(10,65), walk(11,65), walk(11,63), walk(8,63), walk(8,54), walk(6,54), wait(4), walk(8,54), walk(8,63), walk(9,63)],
-    pip: [wait(5), walk(-7,75), walk(-7,71), walk(-10,71), wait(2), walk(-10,75), walk(-8,75)],
+    // Up and down the garden's middle path, between the shrubs and the flower beds.
+    pip: [wait(5), walk(-8,70), wait(2), walk(-8,74), wait(3), walk(-8,71)],
     orrin: [wait(12), walk(20,60), walk(35,60), wait(4), walk(20,60), walk(20,58)],
   },
   // Indoors, while her hour has her in (src/game/resident-cycle.ts).
@@ -46,6 +47,13 @@ export const ROUTINES: Readonly<Record<string, Readonly<Record<string, readonly 
 export const APPROACH = 88
 /** Past this, they take up their routine again. */
 export const DEPART = 112
+/**
+ * Within this many px of a resident out on their route (inside the 34-px
+ * talk reach, so where they stop you can talk), they stop where they are,
+ * turn to you and can be talked to there; past PAUSE_RELEASE they walk on.
+ */
+export const PAUSE = 30
+export const PAUSE_RELEASE = 44
 /** Walking pace, px a second (the hero runs at about three times this). */
 export const NPC_SPEED = 24
 /** A seated resident's feet sit this far below the bench's base (px; the sit pose's legs hang over the front). */
@@ -67,10 +75,14 @@ export interface Walker {
   returning: boolean
   /** Where they sat (bench seat, px), while seated. */
   seat: { x: number; y: number } | null
+  /** Stopped on their route because you're beside them. */
+  paused: boolean
+  /** You talked while they were stopped: they walk on, until you step away. */
+  excused: boolean
 }
 
 export function newWalker(home: { x: number; y: number }): Walker {
-  return { x: home.x, y: home.y, facing: 'down', mode: 'stand', step: 0, t: 0, trail: [], returning: false, seat: null }
+  return { x: home.x, y: home.y, facing: 'down', mode: 'stand', step: 0, t: 0, trail: [], returning: false, seat: null, paused: false, excused: false }
 }
 
 function faceTo(dx: number, dy: number, fallback: Facing): Facing {
@@ -107,6 +119,18 @@ export function atHome(w: Walker, home: { x: number; y: number }): boolean {
  * moves, but they keep facing you.
  */
 export function tickWalker(w: Walker, routine: readonly Step[] | undefined, home: { x: number; y: number }, hero: { x: number; y: number } | null, dt: number, still: boolean): void {
+  // Beside them on their route: they stop and turn to you (not on the bench,
+  // and not at home, where you talk anyway). A talk while stopped lets them
+  // go on their way; stepping off frees them to stop for you again.
+  const beside = hero ? Math.hypot(hero.x - w.x, hero.y - w.y) : Infinity
+  if (w.excused && beside > PAUSE_RELEASE) w.excused = false
+  if (still && w.paused) w.excused = true
+  w.paused = !w.excused && w.mode !== 'sit' && (w.x !== home.x || w.y !== home.y) && beside < (w.paused ? PAUSE_RELEASE : PAUSE)
+  if (w.paused) {
+    w.mode = 'stand'
+    w.facing = faceTo(hero!.x - w.x, hero!.y - w.y, w.facing)
+    return
+  }
   const near = !!hero && Math.hypot(hero.x - home.x, hero.y - home.y) < APPROACH
   if (near && !w.returning) {
     w.returning = true

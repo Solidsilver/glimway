@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { HEAL_BAND, flattenFamily, healFamily, seam, seamStep, type Rgba } from '../scripts/lib/ground-heal.ts'
 import { BASE_TILES, baseTile, classGrid, edgeKey, groundField, neighbourhood, parseEdgeKey, paintEdge, type GroundClass } from '../src/game/area/ground-field.ts'
-import { APPROACH, ROUTINES, atHome, newWalker, tickWalker, type Step } from '../src/game/npc-routines.ts'
+import { APPROACH, PAUSE, PAUSE_RELEASE, ROUTINES, atHome, newWalker, tickWalker, type Step } from '../src/game/npc-routines.ts'
 import { tileFeet } from '../src/lib/tile.ts'
 import { facingOf } from '../src/game/people.ts'
 import { buildArea } from '../src/game/worlds.ts'
@@ -224,6 +224,54 @@ test('routines: a resident strolls when you are away and is home by the time you
   const w3 = newWalker(home)
   for (let t = 0; t < 30; t += 0.05) tickWalker(w3, routine, home, far, 0.05, true)
   assert.ok(atHome(w3, home))
+})
+
+test('routines: out on a long route, a resident stops beside you, turns to you, and walks on when you leave or after a talk', () => {
+  // Orrin's road check: 15 tiles out along Lantern Road, far from his spot.
+  const home = tileFeet(20, 58)
+  const routine = ROUTINES.hearthwick.orrin
+  const w = newWalker(home)
+  const far = { x: home.x, y: home.y + 400 }
+  const tick = (hero: { x: number; y: number } | null, s: number, still = false) => {
+    for (let t = 0; t < s; t += 0.05) tickWalker(w, routine, home, hero, 0.05, still)
+  }
+  tick(far, 20)
+  assert.equal(w.mode, 'walk', 'out on the road')
+  assert.ok(Math.hypot(w.x - home.x, w.y - home.y) > APPROACH, 'well past where coming near their spot would call them home')
+  // You come up beside them (just below, in talk reach): they stop and look at you.
+  const beside = { x: w.x, y: w.y + 20 }
+  const at = { x: w.x, y: w.y }
+  tick(beside, 5)
+  assert.equal(w.paused, true)
+  assert.equal(w.mode, 'stand')
+  assert.equal(w.facing, 'down', 'turned to you')
+  assert.deepEqual({ x: w.x, y: w.y }, at, 'stood still the whole time')
+  // You walk away: they go on.
+  tick(far, 1)
+  assert.equal(w.paused, false)
+  assert.notDeepEqual({ x: w.x, y: w.y }, at, 'on their way again')
+  // Stopped again, then a talk (the world held): after it they walk on, though you're still there…
+  const again = { x: w.x + 18, y: w.y }
+  tick(again, 1)
+  assert.equal(w.paused, true)
+  const talkedAt = { x: w.x, y: w.y }
+  tick(again, 3, true)
+  tick(again, 1)
+  assert.equal(w.paused, false)
+  assert.notDeepEqual({ x: w.x, y: w.y }, talkedAt, 'excused after the talk')
+  // …until you've stepped off; then they stop for you again.
+  tick(far, 0.1)
+  tick({ x: w.x, y: w.y + 20 }, 0.5)
+  assert.equal(w.paused, true)
+  assert.ok(PAUSE < 34 && PAUSE_RELEASE > 34, 'they stop inside talk reach, and stay stopped while you stand in it')
+})
+
+test('routines: a resident at home or on the bench is never paused (you talk at their spot)', () => {
+  const home = tileFeet(9, 63)
+  const w = newWalker(home)
+  tickWalker(w, ROUTINES.hearthwick.hazel, home, { x: home.x + 10, y: home.y }, 0.05, false)
+  assert.equal(w.paused, false)
+  assert.ok(atHome(w, home))
 })
 
 test('facing: the larger axis wins', () => {

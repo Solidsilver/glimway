@@ -146,3 +146,20 @@ test('with the spade in hand, a fern three rows north takes the prompt from the 
   // Half a tile further south the fern is out of reach, and the thicket (still in its own) has the prompt.
   assert.equal(it.pick({ x: feet.x, y: feet.y + 8 })?.id, 'wilds:path-clear');
 });
+
+test('a resident out on their route is talked to where they are, not at their spot', () => {
+  const it = new Interactables(scene, { reducedMotion: true });
+  it.register({ name: 'people' }, [point('orrin', 100, 100), point('touch:sign', 500, 500)]);
+  let out: { x: number; y: number } | null = { x: 300, y: 296 };
+  it.setWhere((id) => (id === 'orrin' ? out : null));
+  // (read through a function: an assertion on the field narrows it for the rest of the test)
+  const target = () => it.currentTarget?.id ?? null;
+  it.update(hero, 0);
+  assert.equal(target(), null, 'nobody at the spot while Orrin is down the road');
+  it.update({ x: 300, y: 310 }, 0);
+  assert.equal(target(), 'orrin', 'beside him on the road');
+  assert.equal(it.debugTarget({ x: 300, y: 310 }, true).target?.x, 300);
+  out = null;
+  it.update(hero, 0);
+  assert.equal(target(), 'orrin', 'home again: at his spot');
+});

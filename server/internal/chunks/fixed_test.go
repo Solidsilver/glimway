@@ -19,9 +19,9 @@ import (
 // Hashes pin served bytes to their cache identity. A shipped layout edit
 // must bump the revision and add a new hash, never rewrite an old revision.
 var fixedGolden = map[string]string{
-	"fixed:hearthwick@2": "349b1551f5c95f8905a337fc69d82d507de219a6117c93c9a684c2f4df263cdc",
-	"fixed:lots-west@3":  "45531ae3c2a2c0bf204ed741f12cddb83ec00386ae5e792675e427db14ad0246",
-	"fixed:lots-east@3":  "d147a2bb7109b62d2aac268eb398edfadf0f28ec0c0a70dd219dd40516f9df33",
+	"fixed:hearthwick@2": "60bd2eb96368c8919e2c19ca316837002b0a2e36e86e62f655af1c2a3c2ae948",
+	"fixed:lots-west@3":  "81d082706f907be232a6766ed152d8c34dc2dcf01bd7abe3292c5035de0274d9",
+	"fixed:lots-east@3":  "2dbad2eaf657928d11a497e7332f749e8e983856408ae54f9abca898bf64ee1a",
 }
 
 func servedBytes(t *testing.T, c *contract.WorldChunk) []byte {
