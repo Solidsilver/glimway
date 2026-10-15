@@ -112,7 +112,8 @@ for (const [name, vp] of sizes) {
       await new Promise((r) => setTimeout(r, 1500))
       await route.continue()
     })
-    await warp(page, 'outdoors', 10, 61)
+    // One tile off the well's rank-1 chore so the lantern is the nearest in reach.
+    await warp(page, 'outdoors', 10, 62)
     await openTalk(page, 'Rest by the lantern')
     await untilChoices(page)
     await expect(page.locator('.choice', { hasText: 'Rest by the flame' })).toBeVisible()

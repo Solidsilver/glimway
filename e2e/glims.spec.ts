@@ -64,7 +64,8 @@ test('a warm rest spends glims from the world, and Habitica syncs bring them', a
 
   // Get hurt, then rest by the village lantern.
   await page.evaluate(() => (window as unknown as { __fsDevHurt: (n: number) => void }).__fsDevHurt(6))
-  await warp(page, 'outdoors', 10, 61)
+  // One tile off the well's rank-1 chore so the lantern is the nearest in reach.
+  await warp(page, 'outdoors', 10, 62)
   await openTalk(page, 'Rest by the lantern')
   await untilChoices(page)
   const choice = page.locator('.choice', { hasText: 'Rest by the flame' })

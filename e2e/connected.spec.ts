@@ -143,7 +143,8 @@ test('a rest is paid on the server, and the world waits for its answer', async (
   await hurt(page, 6)
   // The hurt goes up with the next report (about every 10 s).
   await expect.poll(async () => (await serverState(page)).body.state.hp, { timeout: 15_000 }).toBeLessThan(41)
-  await warp(page, 'outdoors', 10, 61)
+  // One tile off the well's rank-1 chore so the lantern is the nearest in reach.
+  await warp(page, 'outdoors', 10, 62)
   await lanternReplies(page)
   const choice = page.locator('.choice', { hasText: 'Rest by the flame' })
   await expect(choice).toBeEnabled()
@@ -251,8 +252,9 @@ test('offline play keeps going, spends wait for a connection, and reconnecting u
   // Story still moves offline.
   await warp(page, 'outdoors', 14, 62)
   await talkThrough(page, /Talk to Mara/)
-  // Spends say they need a connection.
-  await warp(page, 'outdoors', 10, 61)
+  // Spends say they need a connection. One tile off the well's rank-1 chore so
+  // the lantern is the nearest in reach.
+  await warp(page, 'outdoors', 10, 62)
   await lanternReplies(page)
   const choice = page.locator('.choice', { hasText: 'Rest by the flame' })
   await expect(choice).toBeDisabled()
