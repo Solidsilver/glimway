@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { expectStage, frames, holdUntil, player, settleWarden, talkThrough, warp, waitForArea, world, expectAreaCard } from './helpers'
+import { expectStage, frames, holdUntil, player, settleWarden, talkThrough, warp, waitForArea, world, expectAreaCard, exitOf, atTile, talkSpotOf } from './helpers'
 import { freshPlayer } from './home-helpers'
 
 const TILE = 16
@@ -9,8 +9,8 @@ const areaNow = (page: Page) => page.evaluate(() => (window as unknown as { __fs
 test('the whole quest can be played from a fresh start to the ending', async ({ page }) => {
   await freshPlayer(page)
 
-  // Mara, just south of her spot by the well.
-  await warp(page, 'outdoors', 14, 62)
+  // Mara, just south of her post.
+  await atTile(page, talkSpotOf('mara'))
   await talkThrough(page, /Talk to Mara/)
   await expectStage(page, 'accepted')
 
@@ -29,7 +29,7 @@ test('the whole quest can be played from a fresh start to the ending', async ({ 
   await expectStage(page, 'lantern-lit')
 
   // Home to Mara for the ending.
-  await warp(page, 'outdoors', 14, 62)
+  await atTile(page, talkSpotOf('mara'))
   await talkThrough(page, /Talk to Mara/)
   await expectStage(page, 'complete')
   await expect(page.getByRole('dialog', { name: 'The Road Is Lit' })).toBeVisible({ timeout: 15_000 })
@@ -39,15 +39,19 @@ test('exits connect left-to-right and you come back the way you came', { tag: '@
   await freshPlayer(page)
 
   // Brackenwood Arch → arrive on Brackenwood's west side.
-  await warp(page, 'outdoors', 42, 62)
-  await holdUntil(page, 'ArrowDown', async () => (await areaNow(page)) !== 'outdoors')
+  // The Woodland exit is authored north of Lantern Road; approach from the south.
+  const exit = exitOf('woodland')
+  const approachX = exit.tx + Math.floor(exit.tw / 2)
+  const approachY = exit.ty + exit.th
+  await warp(page, 'outdoors', approachX, approachY)
+  await holdUntil(page, 'ArrowUp', async () => (await areaNow(page)) !== 'outdoors')
   await waitForArea(page, 'woodland')
   expect((await player(page)).x).toBeLessThan(6 * TILE)
 
   // Brackenwood west edge → arrive at the Brackenwood Arch in Hearthwick.
   await holdUntil(page, 'ArrowLeft', async () => (await areaNow(page)) !== 'woodland')
   await waitForArea(page, 'outdoors')
-  expect(Math.floor((await player(page)).x / TILE)).toBe(42)
+  expect(Math.floor((await player(page)).x / TILE)).toBe(approachX)
 })
 
 test('the hero is confined to each map', async ({ page }) => {

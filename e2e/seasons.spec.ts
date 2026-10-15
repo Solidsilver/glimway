@@ -2,7 +2,7 @@ import { expect, test, type Page } from './fixtures'
 import { residentsOut } from './room-helpers'
 import { seasonOf, serverState } from './connected'
 import { earnGlims, freshPlayer, fund, giveInstance } from './home-helpers'
-import { expectToast, openTalk, readDialogue, untilChoices, waitForLive, warp } from './helpers'
+import { expectToast, openTalk, readDialogue, untilChoices, waitForLive, warp, atTile, talkSpotOf, standOf, objectOf } from './helpers'
 import { calendarAt } from '../src/lib/calendar.ts'
 import { sellerFor } from '../src/lib/items.ts'
 
@@ -53,7 +53,7 @@ test('Hazel sells a lump of tallow for a glim, in her own words', async ({ page 
 
   // Hazel in the square with her basket (her seller row follows her: the world's clock too).
   await residentsOut(page, { server: true })
-  await warp(page, 'outdoors', 11, 64)
+  await atTile(page, talkSpotOf('hazel'))
   await openTalk(page, 'Talk to Hazel')
   const choices = await untilChoices(page)
   expect(choices.map((c) => c.text)).toContain(tallow.label)
@@ -76,7 +76,7 @@ test('Hazel sells a lump of tallow for a glim, in her own words', async ({ page 
  */
 async function breakTheIce(page: Page, calendar: number, pick: string): Promise<void> {
   expect(calendarAt(calendar).mark).toBe('Quiet')
-  await warp(page, 'outdoors', 39, 75)
+  await atTile(page, standOf('pond-ice'))
   await page.evaluate((t) => (window as unknown as { __fsDevCalendar: (t: number) => void }).__fsDevCalendar(t), calendar)
   await packReads(page, async () => (await usesLeft(page, pick)) === 30)
   // The pick in hand: the belt's second slot (the weapon, then the pick).
@@ -101,12 +101,14 @@ test('in the Quiet the frozen pond breaks for frost-glass, by the server’s own
   await expect.poll(async () => stack(page, 'frost-glass')).toBeGreaterThanOrEqual(1)
   await expect.poll(async () => usesLeft(page, pick)).toBe(29)
   // The ice stays standing (the day's caps hold you, not the map).
-  expect((await gather(page))?.spots.some((s) => s.target === 'pond-ice' && s.tx === 38 && s.ty === 75)).toBe(true)
+  const ice = objectOf('pond-ice')
+  expect((await gather(page))?.spots.some((s) => s.target === 'pond-ice' && s.tx === ice.tx && s.ty === ice.ty)).toBe(true)
 })
 
 test('out of the Quiet the server refuses the ice a stale screen still shows: no wear, nothing gathered', async ({ page }) => {
   test.setTimeout(150_000)
   const id = await freshPlayer(page, 'Wren')
+  const ice = objectOf('pond-ice')
   // The world's clock outside the Quiet, the screen's moved into it on purpose (a stale map).
   const world = await seasonOf(page, id, 'Quiet', { outside: true })
   const pick = giveInstance(id, 'bench-pick', { max: 90 })
@@ -117,5 +119,5 @@ test('out of the Quiet the server refuses the ice a stale screen still shows: no
   await expect.poll(async () => (await gather(page))?.last).toBe('refused:not-in-season')
   expect(await usesLeft(page, pick)).toBe(30)
   expect(await stack(page, 'frost-glass')).toBe(0)
-  expect((await gather(page))?.spots.some((s) => s.target === 'pond-ice' && s.tx === 38 && s.ty === 75)).toBe(true)
+  expect((await gather(page))?.spots.some((s) => s.target === 'pond-ice' && s.tx === ice.tx && s.ty === ice.ty)).toBe(true)
 })

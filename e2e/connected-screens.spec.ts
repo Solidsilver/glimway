@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
 import { allow, CONTRACT, linkStatus, newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, TOKEN, waitForWorld } from './connected'
-import { openTalk, talkThrough, untilChoices, warp, expectToast } from './helpers'
+import { openTalk, talkThrough, untilChoices, warp, expectToast, atTile, standOf, talkSpotOf } from './helpers'
 
 /**
  * Layout checks and screenshots for the connected-play screens, at desktop
@@ -113,7 +113,7 @@ for (const [name, vp] of sizes) {
       await route.continue()
     })
     // One tile off the well's rank-1 chore so the lantern is the nearest in reach.
-    await warp(page, 'outdoors', 10, 62)
+    await atTile(page, standOf('hearth'))
     await openTalk(page, 'Rest by the lantern')
     await untilChoices(page)
     await expect(page.locator('.choice', { hasText: 'Rest by the flame' })).toBeVisible()
@@ -131,7 +131,7 @@ for (const [name, vp] of sizes) {
     await expect(page.getByTestId('net-offline')).toBeVisible({ timeout: 15_000 })
     await fits(page, vp)
     await shot(page, '10-hud-offline')
-    await warp(page, 'outdoors', 14, 62)
+    await atTile(page, talkSpotOf('mara'))
     await talkThrough(page, /Talk to Mara/)
 
     // Another device plays meanwhile; back online this one is asked to take over.

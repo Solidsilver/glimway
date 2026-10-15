@@ -88,10 +88,44 @@ func plantsOf(h homeView, raw []homePlantView, now int64) []homePlantView {
 			taken[to]++
 			x, y = to[0], to[1]
 		}
+		// Still on its start, which a newer plant shares (it was set there
+		// once this one had stepped off): boxed in or lit, this one never
+		// left it today. The newer keeps the tile it was set on; this one
+		// stands aside. raw is in planting order, so the newer comes later.
+		if taken[[2]int{x, y}] > 1 {
+			if to, ok := standAside(open, taken, p.X, p.Y); ok {
+				taken[[2]int{x, y}]--
+				taken[to]++
+				x, y = to[0], to[1]
+			}
+		}
 		p.X, p.Y, p.Lit = x, y, land.Lit(lights, x, y)
 		out = append(out, p)
 	}
 	return out
+}
+
+// standAside: the nearest free plant tile to a plant's start, within its
+// reach if one is free there, otherwise anywhere on the ground. Nearest by
+// steps, then the top-most, then the left-most.
+func standAside(open map[[2]int]bool, taken map[[2]int]int, x0, y0 int) ([2]int, bool) {
+	far := 0
+	for t := range open {
+		far = max(far, abs(t[0]-x0)+abs(t[1]-y0))
+	}
+	for _, reach := range []int{plantWanderReach, far} {
+		for r := 1; r <= far; r++ {
+			for dy := -r; dy <= r; dy++ {
+				dx := r - abs(dy)
+				for _, to := range [][2]int{{x0 - dx, y0 + dy}, {x0 + dx, y0 + dy}} {
+					if abs(to[0]-x0) <= reach && abs(to[1]-y0) <= reach && open[to] && taken[to] == 0 {
+						return to, true
+					}
+				}
+			}
+		}
+	}
+	return [2]int{}, false
 }
 
 func abs(n int) int {

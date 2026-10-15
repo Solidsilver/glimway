@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { expectStage, frames, player, stepToWarden, strikeAll, talkThrough, waitForLive, waitFrames, warden, warp, expectToast } from './helpers'
+import { expectStage, frames, player, stepToWarden, strikeAll, talkThrough, waitForLive, waitFrames, warden, warp, expectToast, windowWhole, atTile, talkSpotOf } from './helpers'
 import { freshPlayer } from './home-helpers'
 
 type EnemyView = { x: number; y: number; state: string; hp: number; type: string; locked: boolean; body: { x: number; y: number; w: number; h: number } }
@@ -112,8 +112,9 @@ test('a beetle telegraphs its scuttle, and a roll sideways slips it', async ({ p
 
 test('Shift rolls the hero and starts the roll cooldown', async ({ page }) => {
   await freshPlayer(page)
-  const before = await player(page)
   await waitForLive(page)
+  await windowWhole(page)
+  const before = await player(page)
   await page.keyboard.down('ArrowRight')
   await page.keyboard.press('Shift')
   await expect(page.locator('.actionbar .slot.roll .sweep')).toBeVisible()
@@ -155,7 +156,7 @@ test('knockback never leaves an enemy on a wall, tree or water tile', async ({ p
 
 test('the warden: blows never settle it, speaking the naming does', async ({ page }) => {
   await freshPlayer(page)
-  await warp(page, 'outdoors', 14, 62)
+  await atTile(page, talkSpotOf('mara'))
   await talkThrough(page, /Talk to Mara/)
   await warp(page, 'ruin', 15, 3)
   await talkThrough(page, /Copy the naming from the stone/)
@@ -193,7 +194,7 @@ test('the warden: blows never settle it, speaking the naming does', async ({ pag
   expect(await enemies(page)).toHaveLength(0)
 
   // Come back later: it is on its post, at rest.
-  await warp(page, 'outdoors', 14, 62)
+  await atTile(page, talkSpotOf('mara'))
   await warp(page, 'ruin', 3, 13)
   g = await warden(page)
   expect(g.state).toBe('settled')

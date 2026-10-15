@@ -6,7 +6,9 @@ import {
   readDialogue,
   untilChoices,
   waitForLive,
-  warp
+  warp,
+  atTile,
+  talkSpotOf
 } from './helpers'
 import { freshPlayer, fund } from './home-helpers'
 import { setHour } from './room-helpers'
@@ -48,7 +50,7 @@ test.describe('heirloom story beats', () => {
     })
 
     // Stand by Orrin in Village
-    await warp(page, 'outdoors', 17, 58)
+    await atTile(page, talkSpotOf('orrin'))
     await expect(page.locator('.prompt')).toContainText('Talk to Orrin')
     await waitForLive(page)
 
@@ -84,7 +86,7 @@ test.describe('heirloom story beats', () => {
 
     // Stand by Silas out in his yard (his cycle: minute 10 of the hour), by the sawhorse
     await setHour(page, { minute: 10, server: true })
-    await warp(page, 'outdoors', 29, 37)
+    await atTile(page, talkSpotOf('silas'))
     await expect(page.locator('.prompt')).toContainText('Talk to Silas')
     await waitForLive(page)
 
@@ -114,7 +116,7 @@ test.describe('heirloom story beats', () => {
     await packHolds(page, 'hearth-oil')
 
     // Stand by Ada in Village
-    await warp(page, 'outdoors', 32, 56)
+    await atTile(page, talkSpotOf('ada'))
     await expect(page.locator('.prompt')).toContainText('Talk to Ada')
     await waitForLive(page)
 

@@ -1,6 +1,6 @@
 import { devices } from '@playwright/test'
 import { expect, test, type Page } from './fixtures'
-import { player, steady, stepToWarden, talkThrough, waitForLive, warden, warp } from './helpers'
+import { player, steady, stepToWarden, talkThrough, waitForLive, warden, warp, atTile, talkSpotOf } from './helpers'
 import { freshPlayer } from './home-helpers'
 
 test.use({ ...devices['iPhone 13'], browserName: 'chromium' })
@@ -62,7 +62,7 @@ test.describe('a narrow phone (320 px)', () => {
 
 test('phone: the action button speaks the naming to the warden', async ({ page }) => {
   await freshPlayer(page)
-  await warp(page, 'outdoors', 14, 62)
+  await atTile(page, talkSpotOf('mara'))
   await talkThrough(page, /Talk to Mara/)
   await warp(page, 'ruin', 15, 3)
   await talkThrough(page, /Copy the naming from the stone/)

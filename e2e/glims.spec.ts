@@ -1,5 +1,5 @@
 import { expect, test } from './fixtures'
-import { expectStage, openTalk, readDialogue, settleWarden, talkThrough, untilChoices, warp } from './helpers'
+import { expectStage, openTalk, readDialogue, settleWarden, talkThrough, untilChoices, warp, atTile, talkSpotOf, standOf } from './helpers'
 import { earnGlims, freshPlayer } from './home-helpers'
 import { serverState } from './connected'
 
@@ -19,7 +19,7 @@ test('quest glims light a road lantern; the chest says what it needs', async ({ 
   // can outlast the default timeout.
   test.slow()
   await freshPlayer(page)
-  await warp(page, 'outdoors', 14, 62)
+  await atTile(page, talkSpotOf('mara'))
   await talkThrough(page, /Talk to Mara/)
   await warp(page, 'ruin', 15, 3)
   await talkThrough(page, /Copy the naming from the stone/)
@@ -42,7 +42,7 @@ test('quest glims light a road lantern; the chest says what it needs', async ({ 
   await warp(page, 'ruin', 17, 12)
   await talkThrough(page, /Light the lantern/)
   await expectStage(page, 'lantern-lit')
-  await warp(page, 'outdoors', 14, 62)
+  await atTile(page, talkSpotOf('mara'))
   await talkThrough(page, /Talk to Mara/)
   await expectStage(page, 'complete')
   await page.getByRole('button', { name: 'Keep exploring' }).click()
@@ -65,7 +65,7 @@ test('a warm rest spends glims from the world, and Habitica syncs bring them', a
   // Get hurt, then rest by the village lantern.
   await page.evaluate(() => (window as unknown as { __fsDevHurt: (n: number) => void }).__fsDevHurt(6))
   // One tile off the well's rank-1 chore so the lantern is the nearest in reach.
-  await warp(page, 'outdoors', 10, 62)
+  await atTile(page, standOf('hearth'))
   await openTalk(page, 'Rest by the lantern')
   await untilChoices(page)
   const choice = page.locator('.choice', { hasText: 'Rest by the flame' })

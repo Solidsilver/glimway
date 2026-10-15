@@ -1,7 +1,7 @@
 import { devices } from '@playwright/test'
 import { expect, test, type Page } from './fixtures'
 import { allow, newUser, openTitleGuide, pasteAndConnect, reenter, routeHabitica, serverState, syncFromMenu, waitForWorld } from './connected'
-import { talkThrough, warp, expectToast } from './helpers'
+import { talkThrough, warp, expectToast, atTile, talkSpotOf } from './helpers'
 import { freshPlayer } from './home-helpers'
 
 /**
@@ -17,7 +17,7 @@ test.describe('the world', () => {
   test('the journal checklist copies the naming and settles the warden', async ({ page }) => {
     await freshPlayer(page)
     // Steps show as they are reached: accept the quest, copy the naming.
-    await go(page, 'outdoors', 14, 62)
+    await atTile(page, talkSpotOf('mara'))
     await talkThrough(page, /Talk to Mara/)
     await go(page, 'ruin', 15, 3)
     await talkThrough(page, /Copy the naming from the stone/)

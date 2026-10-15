@@ -666,4 +666,26 @@ func TestPlantsNeverShareATile(t *testing.T) {
 			t.Fatalf("day %d: two plants on %d,%d", d-day0, got[0].X, got[0].Y)
 		}
 	}
+
+	// Dev CI 38807033640: plants set later on all four sides box the start
+	// in, so neither walk replayed against today's land ever leaves it. The
+	// newer plant keeps the tile it was set on; the older stands aside.
+	boxed := []homePlantView{q, p}
+	for _, s := range [][2]int{{0, 1}, {0, -1}, {1, 0}, {-1, 0}} {
+		boxed = append(boxed, homePlantView{ID: fmt.Sprintf("n%d%d", s[0], s[1]), ItemDef: "wild-thyme", X: r[0] + s[0], Y: r[1] + s[1], PlantedDay: back + 5})
+	}
+	got := plantsOf(h, boxed, at(back+5))
+	seen := map[[2]int]bool{}
+	for _, g := range got {
+		if seen[[2]int{g.X, g.Y}] {
+			t.Fatalf("boxed in: two plants on %d,%d: %v", g.X, g.Y, got)
+		}
+		seen[[2]int{g.X, g.Y}] = true
+		if !open[[2]int{g.X, g.Y}] || abs(g.X-r[0]) > plantWanderReach || abs(g.Y-r[1]) > plantWanderReach {
+			t.Fatalf("boxed in: %s stood aside to %d,%d, off the ground or out of reach", g.ID, g.X, g.Y)
+		}
+	}
+	if got[1].X != r[0] || got[1].Y != r[1] {
+		t.Fatalf("boxed in: the newer plant left the tile it was set on for %d,%d", got[1].X, got[1].Y)
+	}
 }
