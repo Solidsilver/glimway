@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import type { Browser, BrowserContext } from '@playwright/test'
 import { allow, CONTRACT, newUser, openTitleGuide, pasteAndConnect, reenter, routeHabitica, serverState, setHabitica, syncFromMenu, waitForWorld } from './connected'
-import { exitTo, frames, holdUntil, inCommons, parkCreatures, player, waitForWilds, waitGame, warp, wildsWindow } from './helpers'
+import { exitTo, frames, holdUntil, inCommons, parkCreatures, player, waitForWilds, waitGame, warp, wildsWindow, windowWhole } from './helpers'
 import { setHour } from './room-helpers'
 import { go, homes, throughGate } from './home-helpers'
 
@@ -366,4 +366,40 @@ test('walking from the Tangle waits for fixed collision before crossing or savin
   await walkTo(page, 'ArrowDown', 26 * TILE)
   expect(await inCommons(page)).toBe(true)
   await page.unroute(fixedRoute)
+})
+
+/** Median brightness (0–255) of a screenshot's columns `x0`–`x1` (fractions of its width), decoded in the page. */
+async function medianLuma(page: Page, png: Buffer, x0: number, x1: number): Promise<number> {
+  return page.evaluate(async ({ b64, x0, x1 }) => {
+    const img = await createImageBitmap(await (await fetch(`data:image/png;base64,${b64}`)).blob())
+    const c = new OffscreenCanvas(img.width, img.height)
+    const ctx = c.getContext('2d')!
+    ctx.drawImage(img, 0, 0)
+    const from = Math.floor(img.width * x0)
+    const d = ctx.getImageData(from, 0, Math.floor(img.width * x1) - from, img.height).data
+    const luma: number[] = []
+    for (let i = 0; i < d.length; i += 4) luma.push(0.299 * d[i]! + 0.587 * d[i + 1]! + 0.114 * d[i + 2]!)
+    luma.sort((a, b) => a - b)
+    return luma[luma.length >> 1]!
+  }, { b64: png.toString('base64'), x0, x1 })
+}
+
+test('Hearthwick and the lots both draw their ground, whichever painted its tileset last', async ({ page, context }) => {
+  // Each footprint paints its own ground tileset; under one shared texture
+  // key the second paint destroyed the first's, and its ground drew black.
+  await connected(page, context)
+  // On the lane where the lots (west) meet Hearthwick (east, from world tile x = -24).
+  await warp(page, 'outdoors', -25, 69)
+  await parkCreatures(page)
+  await windowWhole(page)
+  await expect.poll(async () => (await win(page)).fixed).toEqual(expect.arrayContaining(['-2,2', '-1,2']))
+  await page.waitForFunction(() => (window as unknown as { __fsGround?: () => { complete?: boolean } | null }).__fsGround?.()?.complete === true, undefined, { timeout: 60_000 })
+  await frames(page, 2)
+  // A band across the middle of the screen, clear of the HUD.
+  const vp = page.viewportSize()!
+  const png = await page.screenshot({ clip: { x: 0, y: Math.round(vp.height * 0.35), width: vp.width, height: Math.round(vp.height * 0.4) } })
+  const lots = await medianLuma(page, png, 0, 0.3)
+  const town = await medianLuma(page, png, 0.7, 1)
+  expect(lots, 'the lots’ ground is drawn').toBeGreaterThan(20)
+  expect(town, 'Hearthwick’s ground is drawn').toBeGreaterThan(20)
 })

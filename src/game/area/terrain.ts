@@ -71,6 +71,13 @@ export function groundChunks(width: number, height: number, max = GROUND_CHUNK_T
 
 /** Texture key of the ground tileset built at boot (`groundTileset`). */
 export const GROUND_TILESET_KEY = 'ground-tiles'
+/**
+ * Texture key of an area's painted tileset (`tiledGround`). Each area has
+ * its own: the open map lays two footprints' grounds at once (Hearthwick
+ * and the lots), and a shared key let the second paint destroy the
+ * texture the first one's tilemap draws with.
+ */
+export const paintedTilesetKey = (areaId: string) => `${GROUND_TILESET_KEY}:${areaId}`
 /** The path-edge overlays the tileset carries after the 16 terrain cells. */
 const EDGE_FRAMES = (['cobble', 'dirt'] as const).flatMap((m) =>
   ['edge-n', 'edge-s', 'edge-e', 'edge-w', 'corner-ne', 'corner-nw', 'corner-se', 'corner-sw'].map((e) => `path-${m}-${e}`),
@@ -286,6 +293,8 @@ export interface GroundView {
   edges: number
   animated: number
   tileset: [number, number]
+  /** Its texture key (`paintedTilesetKey`). */
+  key: string
   density: number
   /** The area painted, and whether its transitions are all in (they're painted off the main thread). */
   area: string
@@ -336,8 +345,14 @@ interface PaintedTileset {
   /** The transitions are in (painted off the main thread after the base tiles). */
   complete: boolean
   done: Promise<void>
+  /** The texture keys showing this canvas (an area's; two areas with the same ground share it). */
+  keys: Set<string>
 }
-/** Recent tilesets, keyed by the paint's inputs (a player visits a few areas). */
+/**
+ * Recent tilesets, keyed by the paint's inputs (a player visits a few
+ * areas). One scene lays at most two (the open map's footprints), so an
+ * evicted one is no scene's: its textures go with it.
+ */
 const paintedTilesets = new Map<string, PaintedTileset>()
 const PAINTED_TILESETS = 4
 
@@ -405,8 +420,12 @@ function tiledGround(scene: Phaser.Scene, world: GroundGrid): GroundTiles | null
     paintedTilesets.delete(sig)
     paintedTilesets.set(sig, painted)
   } else {
-    const eldest = paintedTilesets.keys().next()
-    if (paintedTilesets.size >= PAINTED_TILESETS && !eldest.done) paintedTilesets.delete(eldest.value)
+    const eldest = paintedTilesets.entries().next()
+    if (paintedTilesets.size >= PAINTED_TILESETS && !eldest.done) {
+      paintedTilesets.delete(eldest.value[0])
+      const gone = eldest.value[1]
+      for (const key of gone.keys) if (scene.textures.exists(key) && scene.textures.get(key).getSourceImage() === gone.canvas) scene.textures.remove(key)
+    }
     const water = grid.some((row) => row.includes('water'))
     painted = paintTileset(scene, packed, sheet, oldNames, edges, cell, k, art, water)
     paintedTilesets.set(sig, painted)
@@ -415,9 +434,11 @@ function tiledGround(scene: Phaser.Scene, world: GroundGrid): GroundTiles | null
 
   // A texture is the game's own (scenes and games come and go): (re)add the
   // painted canvas unless the texture under the key already shows it.
-  const existing = scene.textures.exists(GROUND_TILESET_KEY) ? scene.textures.get(GROUND_TILESET_KEY) : null
-  if (!existing || existing.getSourceImage() !== canvas) addArtCanvas(scene, GROUND_TILESET_KEY, canvas, 1)
-  const texture = scene.textures.get(GROUND_TILESET_KEY) as Phaser.Textures.CanvasTexture
+  const key = paintedTilesetKey(world.areaId)
+  const existing = scene.textures.exists(key) ? scene.textures.get(key) : null
+  if (!existing || existing.getSourceImage() !== canvas) addArtCanvas(scene, key, canvas, 1)
+  painted.keys.add(key)
+  const texture = scene.textures.get(key) as Phaser.Textures.CanvasTexture
   // Every build that shows a pending paint uploads it again when the
   // transitions land: this texture, if it still shows this canvas (a newer
   // area, or a new game, has its own).
@@ -429,7 +450,7 @@ function tiledGround(scene: Phaser.Scene, world: GroundGrid): GroundTiles | null
 
   const depth = Math.max(...stacks.flat().map((s) => s.length))
   const map = scene.make.tilemap({ width: world.width, height: world.height, tileWidth: cell, tileHeight: cell })
-  const tiles = map.addTilesetImage(GROUND_TILESET_KEY, GROUND_TILESET_KEY, cell, cell, 1, 2)
+  const tiles = map.addTilesetImage(key, key, cell, cell, 1, 2)
   if (!tiles) {
     map.destroy()
     return null
@@ -440,7 +461,7 @@ function tiledGround(scene: Phaser.Scene, world: GroundGrid): GroundTiles | null
     c.y += TIE_BIAS
   }
   const layers = Array.from({ length: depth }, (_, l) => stacks.map((row) => row.map((s) => (s[l] ? index.get(s[l]) ?? -1 : -1))))
-  lastView = { cells: names.length, edges: edgeCount, animated: animated.length, tileset: [canvas.width, canvas.height], density: k, area: world.areaId, complete: painted.complete, canvas }
+  lastView = { cells: names.length, edges: edgeCount, animated: animated.length, tileset: [canvas.width, canvas.height], key, density: k, area: world.areaId, complete: painted.complete, canvas }
   // Read-only, for playtests.
   expose('__fsGround', groundView, scene)
   const pending = painted.complete ? null : painted.done
@@ -589,7 +610,7 @@ function paintTileset(
   const image = new ImageData(tileset.data, canvas.width, canvas.height)
   ctx.putImageData(image, 0, 0)
 
-  const painted: PaintedTileset = { canvas, names, index, animated, edgeCount: edges.size, complete: false, done: Promise.resolve() }
+  const painted: PaintedTileset = { canvas, names, index, animated, edgeCount: edges.size, complete: false, done: Promise.resolve(), keys: new Set() }
   const jobs: EdgeJob[] = []
   for (const [key, water] of edges) for (let f = 0; f < (water ? WATER_FRAME_COUNT : 1); f++) jobs.push({ key, f, i: edgeStart.get(key)! + f })
   if (jobs.length === 0) {

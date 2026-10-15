@@ -68,7 +68,11 @@ async function arrive(page: Page): Promise<{ tasks: LongTask[]; ground: unknown;
 /** The ground tileset's hash, once its transitions are all in. */
 async function tilesetHash(page: Page): Promise<string | null> {
   await page.waitForFunction(() => (window as unknown as { __fsGround?: () => { complete?: boolean } | null }).__fsGround?.()?.complete === true, undefined, { timeout: 60_000 })
-  return page.evaluate(() => (window as unknown as { __fsDevTextureHash: (k: string) => string | null }).__fsDevTextureHash('ground-tiles'))
+  return page.evaluate(() => {
+    const w = window as unknown as { __fsGround: () => { key: string } | null; __fsDevTextureHash: (k: string) => string | null }
+    const key = w.__fsGround()?.key
+    return key ? w.__fsDevTextureHash(key) : null
+  })
 }
 const mainThreadHash = (page: Page) => page.evaluate(() => (window as unknown as { __fsDevGroundMainThreadHash: () => Promise<string | null> }).__fsDevGroundMainThreadHash())
 const longest = (tasks: LongTask[]) => Math.max(0, ...tasks.map((t) => t.duration))

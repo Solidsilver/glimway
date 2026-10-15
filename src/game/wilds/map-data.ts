@@ -21,6 +21,7 @@ import type { Session } from '../session.ts'
 import { cachedTerrain, loadChunk } from './chunks.ts'
 import { chunkKey, chunkOfPixel, isWildsArea, parseChunkKey } from './coords.ts'
 import { epochKindAt } from '../../lib/wilds/coords.ts'
+import { sourceOf } from '../../lib/location.ts'
 import { gameNow } from '../clock.ts'
 import { effectiveTerrain, type ChunkTerrain } from './terrain.ts'
 import { groundChanges, knownPlaces, readRequested, refreshNear, wickEnded, wildsView } from './store.ts'
@@ -114,7 +115,9 @@ export async function loadMap(session: Session, opts: { read?: boolean } = {}): 
   const wickEpoch = { ...view.wick }
   const frontier = { ...view.frontier }
   const cache: ScopeCache = current?.scope === scope ? current : (current = { scope, built: new Map(), chunks: new Map(), located: new Map() })
+  // Fixed ground has no generated epoch (its chunks come from ./fixed.ts).
   const epochOf = (cx: number, cy: number) => {
+    if (sourceOf(cx, cy).kind === 'fixed') return null
     const e = epochKindAt(cx, cy) === 'still' ? still : wickEpoch
     return e.id ? e : null
   }
