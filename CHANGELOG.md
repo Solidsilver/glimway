@@ -13,20 +13,31 @@ the game can show the first part as "What's new":
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-10-15
+
 ### For players
 
-- **The whole town is one walk.** Hearthwick and the eight homestead lots are part of the open map. Walk straight from the Town Square through the Carters' Apron, out the four town gates, or along the lanes to the homestead lots without loading screens or portals.
-- Town recovery, seasonal gathering, mill-wheel art, resident window lights, Pip’s arrival and road guidance now respect the streamed town’s positions.
-- Homestead lots now grow world-specific land beside Hearthwick, with camps, cottages, furnishings and stables that stream in as you approach.
-- Hearthwick’s streamed town chunks now draw residents, pond fishing, the mill wheel, project lights and seasonal gatherings; their decorations and interactions leave with each chunk.
-- Hearthwick now offers rest, pond fishing and town story beats outdoors; new arrivals start in the Square, and falls return you to the well.
-- Paths around Hearthwick now reach the southern outskirts and cross the Wend west of the homesteads.
-- Hearthwick brings the village and Carters’ Apron together, with roads north, east, south and west.
+- **Hearthwick is one town, part of the open map.** Walk from the Tangle into town, through its lanes and out to the Wilds with no loading screens or portals.
+- **A market town round the Wick Tree.** A great old oak stands in the round square with the town's hearth-stone at its foot. Around it are shops, the inn, the smithy, the guildhouse, Pell's land office and rows of cottages, with Southfields' farm, barn, mill and spring to the south.
+- **Your lot is at the edge of the woods.** The eight homestead lots stand in two rows of four either side of town, their gates on the Lot Rows and their backs open to the Wilds. Footpaths run between neighbouring lots, and plot services work inside your fence.
+- **The town looks like the Wilds.** The town and the lots share the Wilds' painted ground and follow the seasons. The north edge thins into the woods; the south opens into meadow, with the roads running on as paths.
+- Residents walking their rounds stop to talk when you come near.
+- Brackenwood and Ashwatch are reached through a living portal in a glade off Lantern Road.
+- Pip's garden has its hedges and flowers back, and Silas has a new farmhouse.
+- Stepping onto the open map is about a second faster.
 
 ### Technical
 
-- **Deploy note:** migration 037 moves saved player places (`village`, `commons`, legacy outdoor places, and `home:*`) onto the outdoors grid, applying a version barrier. Outdoor homestead furniture, clears, stumps, and plants shift to match the new lot frame; pieces that do not fit, stand on blocked ground, or lose connected light return to home storage. Displaced plants return a seed to storage and their history is archived; stored stables keep their stalls and mounts for re-placement. Untagged old local saves already labelled outdoors keep their coordinates; new local saves carry a layout tag. The current wick epoch expires: unclaimed camp falls, camp claims, personal claims and discoveries reset as at a season change. Fallen way-lamps have no source item; full records and owners are preserved in `one_town_lantern_archive` instead of minting items. Still-epoch state remains intact. Let the game sync before updating.
-- One-town cutover (T5): retired standalone `village` and `home:<g>` outdoor spaces in favour of `outdoors`. Dropped deprecated village builder, standalone homeland scene, and legacy commons shims.
+- **Deploy note:** migration 037 runs once at startup and can't be redone, so back up the database first.
+  - Saved places (`village`, `commons`, legacy outdoor places and `home:<g>`) move onto the outdoors grid: the town spawn, or your lot's doorstep in the new west and east lot columns.
+  - Outdoor homestead furniture, clears, stumps and plants shift into the new lot frame. Pieces that don't fit, stand on blocked ground or lose connected light go to home storage; displaced plants return a seed, and their history is archived. Stored stables keep their stalls and mounts.
+  - The current wick epoch expires: unclaimed camp falls, camp claims, personal claims and discoveries reset as at a season change. Fallen way-lamps are kept in `one_town_lantern_archive`. Still-epoch (Tangle) state is untouched.
+  - Live homestead gates must be below 8. Let clients sync before updating.
+- `village` and `home:<g>` are retired as outdoor areas in favour of `outdoors`. Hearthwick is a 3×4-chunk fixed place (`hearthwick@4`), and the lots are `lots-west`/`lots-east` (`@5`, `PLOT_REVISION` 5).
+- Fixed chunks (town and lots) are painted by the Wilds ground painter in the paint workers, from one ground source shared with generated chunks. The eager tileset build at scene start is gone. Paint jobs settle on worker errors and after a 2 s deadline.
+- The generator mirrors open fixed edges, feathers woods back beside them, keeps camps 6 tiles from every mouth, leans to woods west and meadow east and south of the block, and runs routes out of every gate, lane end and verge.
+- E2E specs read positions from content (`e2e/positions.ts`). The full E2E job has 45 minutes.
+- Fixed: two plants could share a tile when an older plant was boxed in.
 
 ## [0.10.0] - 2026-10-14
 
@@ -734,7 +745,8 @@ The first public release.
   under its own licence; contributions under the DCO.
 - Unit tests, Go tests and Playwright playtests.
 
-[Unreleased]: https://github.com/Solidsilver/glimway/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/Solidsilver/glimway/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/Solidsilver/glimway/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/Solidsilver/glimway/compare/v0.9.1...v0.10.0
 [0.9.1]: https://github.com/Solidsilver/glimway/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/Solidsilver/glimway/compare/v0.8.0...v0.9.0
