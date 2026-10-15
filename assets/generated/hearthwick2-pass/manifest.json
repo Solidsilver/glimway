@@ -1,0 +1,1749 @@
+{
+  "id": "hearthwick2-pass",
+  "date": "2026-10-15",
+  "tool": "built-in image_gen + Pillow crop/quantize builder",
+  "density": 64,
+  "sources": [
+    {
+      "key": "wick-trees-source",
+      "file": "sheets/generated-wick-trees.png"
+    },
+    {
+      "key": "houses-main-source",
+      "file": "sheets/generated-houses-1.png"
+    },
+    {
+      "key": "houses-trades-source",
+      "file": "sheets/generated-houses-2.png"
+    },
+    {
+      "key": "lot-pieces-source",
+      "file": "sheets/generated-lot-animated.png"
+    },
+    {
+      "key": "town-props-source",
+      "file": "sheets/generated-town-props.png"
+    },
+    {
+      "key": "anvil-sign-source",
+      "file": "sheets/generated-anvil-sign.png"
+    },
+    {
+      "key": "wilds-small-source",
+      "file": "sheets/generated-wilds-small.png"
+    }
+  ],
+  "frames": [
+    {
+      "key": "wick-tree-mudrise",
+      "source": "wick-trees-source",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 768,
+        "h": 512
+      },
+      "canvasSize": {
+        "w": 512,
+        "h": 576
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 172,
+        "w": 504,
+        "h": 404
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "footPoint": {
+        "x": 256,
+        "y": 576
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "natural-tree",
+      "file": "frames/wick-tree-mudrise.png"
+    },
+    {
+      "key": "wick-tree-carting",
+      "source": "wick-trees-source",
+      "sourceRect": {
+        "x": 768,
+        "y": 0,
+        "w": 768,
+        "h": 512
+      },
+      "canvasSize": {
+        "w": 512,
+        "h": 576
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 172,
+        "w": 504,
+        "h": 404
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "footPoint": {
+        "x": 256,
+        "y": 576
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "natural-tree",
+      "file": "frames/wick-tree-carting.png"
+    },
+    {
+      "key": "wick-tree-amberfall",
+      "source": "wick-trees-source",
+      "sourceRect": {
+        "x": 0,
+        "y": 512,
+        "w": 768,
+        "h": 512
+      },
+      "canvasSize": {
+        "w": 512,
+        "h": 576
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 184,
+        "w": 504,
+        "h": 392
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "footPoint": {
+        "x": 256,
+        "y": 576
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "natural-tree",
+      "file": "frames/wick-tree-amberfall.png"
+    },
+    {
+      "key": "wick-tree-quiet",
+      "source": "wick-trees-source",
+      "sourceRect": {
+        "x": 768,
+        "y": 512,
+        "w": 768,
+        "h": 512
+      },
+      "canvasSize": {
+        "w": 512,
+        "h": 576
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 187,
+        "w": 504,
+        "h": 389
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "footPoint": {
+        "x": 256,
+        "y": 576
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "natural-tree",
+      "file": "frames/wick-tree-quiet.png"
+    },
+    {
+      "key": "townhouse-a",
+      "source": "houses-main-source",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 384,
+        "h": 512
+      },
+      "canvasSize": {
+        "w": 256,
+        "h": 384
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 43,
+        "w": 248,
+        "h": 341
+      },
+      "footprint": [
+        4,
+        4
+      ],
+      "footPoint": {
+        "x": 128,
+        "y": 384
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "building",
+      "file": "frames/townhouse-a.png"
+    },
+    {
+      "key": "townhouse-b",
+      "source": "houses-main-source",
+      "sourceRect": {
+        "x": 384,
+        "y": 0,
+        "w": 384,
+        "h": 512
+      },
+      "canvasSize": {
+        "w": 256,
+        "h": 384
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 44,
+        "w": 248,
+        "h": 340
+      },
+      "footprint": [
+        4,
+        4
+      ],
+      "footPoint": {
+        "x": 128,
+        "y": 384
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "building",
+      "file": "frames/townhouse-b.png"
+    },
+    {
+      "key": "townhouse-c",
+      "source": "houses-main-source",
+      "sourceRect": {
+        "x": 704,
+        "y": 0,
+        "w": 448,
+        "h": 512
+      },
+      "canvasSize": {
+        "w": 256,
+        "h": 384
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 53,
+        "w": 248,
+        "h": 331
+      },
+      "footprint": [
+        4,
+        4
+      ],
+      "footPoint": {
+        "x": 128,
+        "y": 384
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "building",
+      "file": "frames/townhouse-c.png"
+    },
+    {
+      "key": "cottage-a",
+      "source": "houses-main-source",
+      "sourceRect": {
+        "x": 1088,
+        "y": 132,
+        "w": 428,
+        "h": 368
+      },
+      "canvasSize": {
+        "w": 320,
+        "h": 384
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 116,
+        "w": 312,
+        "h": 268
+      },
+      "footprint": [
+        5,
+        4
+      ],
+      "footPoint": {
+        "x": 160,
+        "y": 384
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "building",
+      "file": "frames/cottage-a.png"
+    },
+    {
+      "key": "cottage-b",
+      "source": "houses-main-source",
+      "sourceRect": {
+        "x": 4,
+        "y": 584,
+        "w": 348,
+        "h": 364
+      },
+      "canvasSize": {
+        "w": 320,
+        "h": 384
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 59,
+        "w": 312,
+        "h": 325
+      },
+      "footprint": [
+        5,
+        4
+      ],
+      "footPoint": {
+        "x": 160,
+        "y": 384
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "building",
+      "file": "frames/cottage-b.png"
+    },
+    {
+      "key": "cottage-c",
+      "source": "houses-main-source",
+      "sourceRect": {
+        "x": 348,
+        "y": 584,
+        "w": 360,
+        "h": 364
+      },
+      "canvasSize": {
+        "w": 320,
+        "h": 384
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 67,
+        "w": 312,
+        "h": 317
+      },
+      "footprint": [
+        5,
+        4
+      ],
+      "footPoint": {
+        "x": 160,
+        "y": 384
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "building",
+      "file": "frames/cottage-c.png"
+    },
+    {
+      "key": "inn",
+      "source": "houses-main-source",
+      "sourceRect": {
+        "x": 684,
+        "y": 532,
+        "w": 460,
+        "h": 420
+      },
+      "canvasSize": {
+        "w": 512,
+        "h": 448
+      },
+      "destinationRect": {
+        "x": 14,
+        "y": 8,
+        "w": 483,
+        "h": 440
+      },
+      "footprint": [
+        8,
+        5
+      ],
+      "footPoint": {
+        "x": 256,
+        "y": 448
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "building",
+      "file": "frames/inn.png"
+    },
+    {
+      "key": "barn",
+      "source": "houses-main-source",
+      "sourceRect": {
+        "x": 1088,
+        "y": 512,
+        "w": 448,
+        "h": 512
+      },
+      "canvasSize": {
+        "w": 512,
+        "h": 448
+      },
+      "destinationRect": {
+        "x": 43,
+        "y": 8,
+        "w": 425,
+        "h": 440
+      },
+      "footprint": [
+        8,
+        5
+      ],
+      "footPoint": {
+        "x": 256,
+        "y": 448
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "building",
+      "file": "frames/barn.png"
+    },
+    {
+      "key": "chandler",
+      "source": "houses-trades-source",
+      "sourceRect": {
+        "x": 0,
+        "y": 32,
+        "w": 480,
+        "h": 476
+      },
+      "canvasSize": {
+        "w": 256,
+        "h": 384
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 140,
+        "w": 248,
+        "h": 244
+      },
+      "footprint": [
+        4,
+        4
+      ],
+      "footPoint": {
+        "x": 128,
+        "y": 384
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "building",
+      "file": "frames/chandler.png"
+    },
+    {
+      "key": "land-office",
+      "source": "houses-trades-source",
+      "sourceRect": {
+        "x": 476,
+        "y": 56,
+        "w": 488,
+        "h": 452
+      },
+      "canvasSize": {
+        "w": 320,
+        "h": 384
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 96,
+        "w": 312,
+        "h": 288
+      },
+      "footprint": [
+        5,
+        4
+      ],
+      "footPoint": {
+        "x": 160,
+        "y": 384
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "building",
+      "file": "frames/land-office.png"
+    },
+    {
+      "key": "smithy",
+      "source": "houses-trades-source",
+      "sourceRect": {
+        "x": 968,
+        "y": 12,
+        "w": 568,
+        "h": 504
+      },
+      "canvasSize": {
+        "w": 384,
+        "h": 384
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 51,
+        "w": 376,
+        "h": 333
+      },
+      "footprint": [
+        6,
+        4
+      ],
+      "footPoint": {
+        "x": 192,
+        "y": 384
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "building",
+      "file": "frames/smithy.png"
+    },
+    {
+      "key": "guildhouse",
+      "source": "houses-trades-source",
+      "sourceRect": {
+        "x": 0,
+        "y": 512,
+        "w": 704,
+        "h": 512
+      },
+      "canvasSize": {
+        "w": 448,
+        "h": 384
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 60,
+        "w": 440,
+        "h": 324
+      },
+      "footprint": [
+        7,
+        4
+      ],
+      "footPoint": {
+        "x": 224,
+        "y": 384
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "building",
+      "file": "frames/guildhouse.png"
+    },
+    {
+      "key": "workshop-orrin",
+      "source": "houses-trades-source",
+      "sourceRect": {
+        "x": 648,
+        "y": 512,
+        "w": 524,
+        "h": 480
+      },
+      "canvasSize": {
+        "w": 320,
+        "h": 384
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 100,
+        "w": 312,
+        "h": 284
+      },
+      "footprint": [
+        5,
+        4
+      ],
+      "footPoint": {
+        "x": 160,
+        "y": 384
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "building",
+      "file": "frames/workshop-orrin.png"
+    },
+    {
+      "key": "hearth-stone-0",
+      "source": "lot-pieces-source",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 362,
+        "h": 362
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 96
+      },
+      "destinationRect": {
+        "x": 20,
+        "y": 8,
+        "w": 87,
+        "h": 88
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 96
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "animated-prop",
+      "file": "frames/hearth-stone-0.png"
+    },
+    {
+      "key": "hearth-stone-1",
+      "source": "lot-pieces-source",
+      "sourceRect": {
+        "x": 362,
+        "y": 0,
+        "w": 362,
+        "h": 362
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 96
+      },
+      "destinationRect": {
+        "x": 20,
+        "y": 8,
+        "w": 87,
+        "h": 88
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 96
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "animated-prop",
+      "file": "frames/hearth-stone-1.png"
+    },
+    {
+      "key": "hearth-stone-2",
+      "source": "lot-pieces-source",
+      "sourceRect": {
+        "x": 724,
+        "y": 0,
+        "w": 362,
+        "h": 362
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 96
+      },
+      "destinationRect": {
+        "x": 20,
+        "y": 8,
+        "w": 87,
+        "h": 88
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 96
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "animated-prop",
+      "file": "frames/hearth-stone-2.png"
+    },
+    {
+      "key": "forge-glow-0",
+      "source": "lot-pieces-source",
+      "sourceRect": {
+        "x": 1086,
+        "y": 0,
+        "w": 362,
+        "h": 362
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 96
+      },
+      "destinationRect": {
+        "x": 34,
+        "y": 8,
+        "w": 59,
+        "h": 88
+      },
+      "footprint": [
+        0,
+        0
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 96
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "animation-overlay",
+      "file": "frames/forge-glow-0.png"
+    },
+    {
+      "key": "forge-glow-1",
+      "source": "lot-pieces-source",
+      "sourceRect": {
+        "x": 0,
+        "y": 362,
+        "w": 362,
+        "h": 362
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 96
+      },
+      "destinationRect": {
+        "x": 28,
+        "y": 8,
+        "w": 71,
+        "h": 88
+      },
+      "footprint": [
+        0,
+        0
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 96
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "animation-overlay",
+      "file": "frames/forge-glow-1.png"
+    },
+    {
+      "key": "forge-glow-2",
+      "source": "lot-pieces-source",
+      "sourceRect": {
+        "x": 362,
+        "y": 362,
+        "w": 362,
+        "h": 362
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 96
+      },
+      "destinationRect": {
+        "x": 35,
+        "y": 8,
+        "w": 57,
+        "h": 88
+      },
+      "footprint": [
+        0,
+        0
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 96
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "animation-overlay",
+      "file": "frames/forge-glow-2.png"
+    },
+    {
+      "key": "washing-line-0",
+      "source": "lot-pieces-source",
+      "sourceRect": {
+        "x": 724,
+        "y": 362,
+        "w": 362,
+        "h": 362
+      },
+      "canvasSize": {
+        "w": 192,
+        "h": 96
+      },
+      "destinationRect": {
+        "x": 35,
+        "y": 8,
+        "w": 122,
+        "h": 88
+      },
+      "footprint": [
+        3,
+        1
+      ],
+      "footPoint": {
+        "x": 96,
+        "y": 96
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "animated-prop",
+      "file": "frames/washing-line-0.png"
+    },
+    {
+      "key": "washing-line-1",
+      "source": "lot-pieces-source",
+      "sourceRect": {
+        "x": 1086,
+        "y": 362,
+        "w": 362,
+        "h": 362
+      },
+      "canvasSize": {
+        "w": 192,
+        "h": 96
+      },
+      "destinationRect": {
+        "x": 36,
+        "y": 8,
+        "w": 119,
+        "h": 88
+      },
+      "footprint": [
+        3,
+        1
+      ],
+      "footPoint": {
+        "x": 96,
+        "y": 96
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "animated-prop",
+      "file": "frames/washing-line-1.png"
+    },
+    {
+      "key": "lantern-stake-0",
+      "source": "lot-pieces-source",
+      "sourceRect": {
+        "x": 0,
+        "y": 724,
+        "w": 362,
+        "h": 362
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 96
+      },
+      "destinationRect": {
+        "x": 12,
+        "y": 8,
+        "w": 39,
+        "h": 88
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 96
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "lot-prop",
+      "file": "frames/lantern-stake-0.png"
+    },
+    {
+      "key": "lantern-stake-1",
+      "source": "lot-pieces-source",
+      "sourceRect": {
+        "x": 362,
+        "y": 724,
+        "w": 362,
+        "h": 362
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 96
+      },
+      "destinationRect": {
+        "x": 10,
+        "y": 8,
+        "w": 43,
+        "h": 88
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 96
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "lot-prop",
+      "file": "frames/lantern-stake-1.png"
+    },
+    {
+      "key": "lot-gatepost-side",
+      "source": "lot-pieces-source",
+      "sourceRect": {
+        "x": 724,
+        "y": 724,
+        "w": 362,
+        "h": 362
+      },
+      "canvasSize": {
+        "w": 56,
+        "h": 176
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 121,
+        "w": 48,
+        "h": 55
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "footPoint": {
+        "x": 28,
+        "y": 176
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "lot-prop",
+      "file": "frames/lot-gatepost-side.png"
+    },
+    {
+      "key": "wildgate-arch",
+      "source": "lot-pieces-source",
+      "sourceRect": {
+        "x": 1086,
+        "y": 724,
+        "w": 362,
+        "h": 362
+      },
+      "canvasSize": {
+        "w": 160,
+        "h": 192
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 59,
+        "w": 152,
+        "h": 133
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "footPoint": {
+        "x": 80,
+        "y": 192
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "edge-prop",
+      "file": "frames/wildgate-arch.png"
+    },
+    {
+      "key": "shop-sign-bread",
+      "source": "town-props-source",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 384,
+        "h": 256
+      },
+      "canvasSize": {
+        "w": 48,
+        "h": 48
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 19,
+        "w": 40,
+        "h": 29
+      },
+      "footprint": [
+        0,
+        0
+      ],
+      "footPoint": {
+        "x": 24,
+        "y": 48
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "sign",
+      "file": "frames/shop-sign-bread.png"
+    },
+    {
+      "key": "shop-sign-mug",
+      "source": "town-props-source",
+      "sourceRect": {
+        "x": 384,
+        "y": 0,
+        "w": 384,
+        "h": 256
+      },
+      "canvasSize": {
+        "w": 48,
+        "h": 48
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 20,
+        "w": 40,
+        "h": 28
+      },
+      "footprint": [
+        0,
+        0
+      ],
+      "footPoint": {
+        "x": 24,
+        "y": 48
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "sign",
+      "file": "frames/shop-sign-mug.png"
+    },
+    {
+      "key": "shop-sign-candle",
+      "source": "town-props-source",
+      "sourceRect": {
+        "x": 768,
+        "y": 0,
+        "w": 384,
+        "h": 256
+      },
+      "canvasSize": {
+        "w": 48,
+        "h": 48
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 20,
+        "w": 40,
+        "h": 28
+      },
+      "footprint": [
+        0,
+        0
+      ],
+      "footPoint": {
+        "x": 24,
+        "y": 48
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "sign",
+      "file": "frames/shop-sign-candle.png"
+    },
+    {
+      "key": "shop-sign-scroll",
+      "source": "town-props-source",
+      "sourceRect": {
+        "x": 0,
+        "y": 256,
+        "w": 384,
+        "h": 256
+      },
+      "canvasSize": {
+        "w": 48,
+        "h": 48
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 18,
+        "w": 40,
+        "h": 30
+      },
+      "footprint": [
+        0,
+        0
+      ],
+      "footPoint": {
+        "x": 24,
+        "y": 48
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "sign",
+      "file": "frames/shop-sign-scroll.png"
+    },
+    {
+      "key": "shop-sign-wheel",
+      "source": "town-props-source",
+      "sourceRect": {
+        "x": 384,
+        "y": 256,
+        "w": 384,
+        "h": 256
+      },
+      "canvasSize": {
+        "w": 48,
+        "h": 48
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 19,
+        "w": 40,
+        "h": 29
+      },
+      "footprint": [
+        0,
+        0
+      ],
+      "footPoint": {
+        "x": 24,
+        "y": 48
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "sign",
+      "file": "frames/shop-sign-wheel.png"
+    },
+    {
+      "key": "barrel",
+      "source": "town-props-source",
+      "sourceRect": {
+        "x": 768,
+        "y": 256,
+        "w": 384,
+        "h": 256
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 80
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 16,
+        "w": 56,
+        "h": 64
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 80
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "prop",
+      "file": "frames/barrel.png"
+    },
+    {
+      "key": "crate-stack",
+      "source": "town-props-source",
+      "sourceRect": {
+        "x": 1152,
+        "y": 256,
+        "w": 384,
+        "h": 256
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 80
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 40,
+        "w": 56,
+        "h": 40
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 80
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "prop",
+      "file": "frames/crate-stack.png"
+    },
+    {
+      "key": "sack-pile",
+      "source": "town-props-source",
+      "sourceRect": {
+        "x": 0,
+        "y": 512,
+        "w": 384,
+        "h": 256
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 80
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 38,
+        "w": 56,
+        "h": 42
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 80
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "prop",
+      "file": "frames/sack-pile.png"
+    },
+    {
+      "key": "handcart",
+      "source": "town-props-source",
+      "sourceRect": {
+        "x": 384,
+        "y": 512,
+        "w": 384,
+        "h": 256
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 96
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 20,
+        "w": 120,
+        "h": 76
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 96
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "prop",
+      "file": "frames/handcart.png"
+    },
+    {
+      "key": "water-trough",
+      "source": "town-props-source",
+      "sourceRect": {
+        "x": 768,
+        "y": 512,
+        "w": 384,
+        "h": 256
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 80
+      },
+      "destinationRect": {
+        "x": 7,
+        "y": 8,
+        "w": 113,
+        "h": 72
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 80
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "prop",
+      "file": "frames/water-trough.png"
+    },
+    {
+      "key": "haystack",
+      "source": "town-props-source",
+      "sourceRect": {
+        "x": 0,
+        "y": 768,
+        "w": 384,
+        "h": 256
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 128
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 29,
+        "w": 120,
+        "h": 99
+      },
+      "footprint": [
+        2,
+        2
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "natural-farm-prop",
+      "file": "frames/haystack.png"
+    },
+    {
+      "key": "scarecrow",
+      "source": "town-props-source",
+      "sourceRect": {
+        "x": 384,
+        "y": 768,
+        "w": 384,
+        "h": 256
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 128
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 71,
+        "w": 56,
+        "h": 57
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "farm-prop",
+      "file": "frames/scarecrow.png"
+    },
+    {
+      "key": "shop-sign-anvil",
+      "source": "anvil-sign-source",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 1536,
+        "h": 1024
+      },
+      "canvasSize": {
+        "w": 48,
+        "h": 48
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 16,
+        "w": 40,
+        "h": 32
+      },
+      "footprint": [
+        0,
+        0
+      ],
+      "footPoint": {
+        "x": 24,
+        "y": 48
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "sign",
+      "file": "frames/shop-sign-anvil.png"
+    },
+    {
+      "key": "fruit-tree-mudrise",
+      "source": "wilds-small-source",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 384,
+        "h": 512
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 160
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 30,
+        "w": 120,
+        "h": 130
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 160
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "natural-tree",
+      "file": "frames/fruit-tree-mudrise.png"
+    },
+    {
+      "key": "fruit-tree-carting",
+      "source": "wilds-small-source",
+      "sourceRect": {
+        "x": 384,
+        "y": 0,
+        "w": 384,
+        "h": 512
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 160
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 35,
+        "w": 120,
+        "h": 125
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 160
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "natural-tree",
+      "file": "frames/fruit-tree-carting.png"
+    },
+    {
+      "key": "fruit-tree-amberfall",
+      "source": "wilds-small-source",
+      "sourceRect": {
+        "x": 768,
+        "y": 0,
+        "w": 384,
+        "h": 512
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 160
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 31,
+        "w": 120,
+        "h": 129
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 160
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "natural-tree",
+      "file": "frames/fruit-tree-amberfall.png"
+    },
+    {
+      "key": "fruit-tree-quiet",
+      "source": "wilds-small-source",
+      "sourceRect": {
+        "x": 1152,
+        "y": 0,
+        "w": 384,
+        "h": 512
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 160
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 30,
+        "w": 120,
+        "h": 130
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 160
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "natural-tree",
+      "file": "frames/fruit-tree-quiet.png"
+    },
+    {
+      "key": "allotment-bed",
+      "source": "wilds-small-source",
+      "sourceRect": {
+        "x": 0,
+        "y": 512,
+        "w": 384,
+        "h": 512
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 64
+      },
+      "destinationRect": {
+        "x": 42,
+        "y": 8,
+        "w": 44,
+        "h": 56
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 64
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "natural-farm-prop",
+      "file": "frames/allotment-bed.png"
+    },
+    {
+      "key": "spring-stones-0",
+      "source": "wilds-small-source",
+      "sourceRect": {
+        "x": 384,
+        "y": 512,
+        "w": 384,
+        "h": 512
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 128
+      },
+      "destinationRect": {
+        "x": 10,
+        "y": 8,
+        "w": 108,
+        "h": 120
+      },
+      "footprint": [
+        2,
+        2
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "natural-water",
+      "file": "frames/spring-stones-0.png"
+    },
+    {
+      "key": "spring-stones-1",
+      "source": "wilds-small-source",
+      "sourceRect": {
+        "x": 768,
+        "y": 512,
+        "w": 384,
+        "h": 512
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 128
+      },
+      "destinationRect": {
+        "x": 9,
+        "y": 8,
+        "w": 110,
+        "h": 120
+      },
+      "footprint": [
+        2,
+        2
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "natural-water",
+      "file": "frames/spring-stones-1.png"
+    }
+  ],
+  "animations": [
+    {
+      "key": "hearth-stone-embers",
+      "frames": [
+        "hearth-stone-0",
+        "hearth-stone-1",
+        "hearth-stone-2"
+      ],
+      "frameRate": 3,
+      "repeat": -1
+    },
+    {
+      "key": "forge-glow",
+      "frames": [
+        "forge-glow-0",
+        "forge-glow-1",
+        "forge-glow-2"
+      ],
+      "frameRate": 6,
+      "repeat": -1
+    },
+    {
+      "key": "washing-line-sway",
+      "frames": [
+        "washing-line-0",
+        "washing-line-1"
+      ],
+      "frameRate": 1.5,
+      "repeat": -1
+    },
+    {
+      "key": "spring-ripple",
+      "frames": [
+        "spring-stones-0",
+        "spring-stones-1"
+      ],
+      "frameRate": 2,
+      "repeat": -1
+    }
+  ],
+  "notes": [
+    "Source sheets are preserved at full generated resolution.",
+    "Frame crops are alpha-trimmed and reduced to 32 colors with nearest-neighbor 2x texel blocks.",
+    "Every sprite foot point is at the bottom centre of its native transparent canvas."
+  ]
+}
