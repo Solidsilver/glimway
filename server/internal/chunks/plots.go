@@ -11,7 +11,7 @@ import (
 )
 
 // PlotRevision changes only with a deliberately versioned plot-byte format.
-const PlotRevision = 2
+const PlotRevision = 3
 
 // InsideLot excludes the public lane and fence bands; the gate row belongs inside.
 func InsideLot(x, y int) bool {

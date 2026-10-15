@@ -1,4 +1,4 @@
-export const PLOT_REVISION = 2;
+export const PLOT_REVISION = 3;
 
 /** A town lot uses local 24×24 coordinates for home data and world coordinates for walking. */
 export function lotAt(cx: number, cy: number): number | null { return cx >= -3 && cx <= -2 && cy >= 1 && cy <= 4 ? (cy - 1) * 2 + cx + 3 : null }

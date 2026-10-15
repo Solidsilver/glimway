@@ -123,6 +123,10 @@ class FakeScene {
     added: [] as string[],
     exists: (_key?: string) => true,
     get: () => ({ customData: { density: 0, w: 7, resolution: 1 }, has: () => true, get: () => ({ height: 32, width: 32 }) }),
+    createCanvas: (key: string) => {
+      this.textures.added.push(key);
+      return { context: { createImageData: (w: number, h: number) => ({ data: new Uint8ClampedArray(w * h * 4) }), putImageData() {} }, refresh() {} };
+    },
     addCanvas: (key: string) => {
       this.textures.added.push(key);
       return { customData: {} };
@@ -1230,7 +1234,7 @@ test('a late plot read from a previous world cannot replace the new world footpr
   assert.equal(waiting.filter((w) => w.epoch.startsWith('plot:new-world:')).length, 8);
   answer('new-world');
   await fresh;
-  assert.equal(footprint('homestead-lots')?.epoch, 'plot:new-world@2');
+  assert.equal(footprint('homestead-lots')?.epoch, 'plot:new-world@3');
   forgetFixed(); forgetChunks(); serveFixtureCommons(); serveFixtureLots();
 });
 
@@ -1566,4 +1570,28 @@ test('fixed chunk attach makes no new textures after pre-warming, including when
   } finally {
     globalThis.document = originalDocument;
   }
+});
+
+test('claimed lot shade reaches the fence and rear edge, replaces one texture, and leaves public lanes clear', () => {
+  const scene = new FakeScene();
+  let claimed = true;
+  const home = { scene, deps: {}, land: { width: 24, height: 24, gridOrigin: { x: -1152, y: 384 } }, here: () => claimed ? { items: [], desolate: false } : null };
+  const art = new HomesteadArt(home as never);
+  const created: number[][] = [];
+  const make = scene.textures.createCanvas;
+  scene.textures.createCanvas = (key: string, ...size: number[]) => { created.push(size); return make(key); };
+  art.drawShade();
+  const image = scene.children.list.find((o) => o.texture.key.startsWith('lot-shade:'))!;
+  assert.deepEqual([image.x, image.y], [-1120, 384], 'shade starts at the fence margin and back edge');
+  assert.deepEqual(created, [[320, 320]], 'ends at x22/y20 before the public spine/cross-lane');
+  art.drawShade();
+  assert.equal(scene.textures.added.filter((key) => key.startsWith('lot-shade:')).length, 1);
+  assert.equal(image.alive, false, 'redraw destroys the old image before its texture');
+  claimed = false;
+  art.drawShade();
+  assert.equal(scene.textures.added.filter((key) => key.startsWith('lot-shade:')).length, 0, 'no home means no lamp shade');
+  claimed = true;
+  art.drawShade();
+  art.destroyLand();
+  assert.equal(scene.textures.added.filter((key) => key.startsWith('lot-shade:')).length, 0, 'detach releases the generated texture');
 });

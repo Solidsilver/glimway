@@ -31,7 +31,7 @@ func TestPlotChunks(t *testing.T) {
 			} else {
 				t.Fatal("shared epoch")
 			}
-			base := Fixed(FixedEpoch("homestead-lots", 2), c.Cx, c.Cy)
+			base := Fixed(FixedEpoch("homestead-lots", PlotRevision), c.Cx, c.Cy)
 			solid := func(c []byte, x, y int) bool { return c[(y*24+x)/8]&(1<<uint((y*24+x)%8)) != 0 }
 			for y := 0; y < 24; y++ {
 				for x := 0; x < 24; x++ {
@@ -118,6 +118,33 @@ func TestPlotGeometryMatchesAuthoredContent(t *testing.T) {
 				shift := uint(4 * (i % 2))
 				if c.Palette[(c.Ground[i/2]>>shift)&15] != b.Palette[(b.Ground[i/2]>>shift)&15] || (c.Solid[i/8]>>uint(i%8))&1 != (b.Solid[i/8]>>uint(i%8))&1 {
 					t.Fatalf("mirrored seam %d %d,%d", gate, x, y)
+				}
+			}
+		}
+	}
+}
+
+func TestPlotRearJoinsMatchVisibleBoundaries(t *testing.T) {
+	for gate := 0; gate < 8; gate++ {
+		c := Plot("rear-edge", gate)
+		solid := func(c []byte, x, y int) bool { return c[(y*24+x)/8]&(1<<uint((y*24+x)%8)) != 0 }
+		for x := 3; x <= 20; x++ {
+			if gate < 2 {
+				// The outer pair backs onto visible woods, not a cross-lane.
+				if !solid(c.Solid, x, 0) || !solid(c.Solid, x, 1) {
+					t.Fatalf("outer wooded seam opened at lot %d x%d", gate, x)
+				}
+				continue
+			}
+			north := Plot("rear-edge", gate-2)
+			for _, y := range []int{0, 1} {
+				if solid(c.Solid, x, y) {
+					t.Fatalf("invisible rear wall at lot %d %d,%d", gate, x, y)
+				}
+			}
+			for _, y := range []int{22, 23} {
+				if solid(north.Solid, x, y) {
+					t.Fatalf("blocked cross-lane above lot %d %d,%d", gate, x, y)
 				}
 			}
 		}
