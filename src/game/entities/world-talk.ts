@@ -24,6 +24,7 @@ import { greetingFor, heardDay, heardStory, markDay, markStory } from '../heard'
 import { meetResident, residentContext } from '../residents'
 import { itemsFor } from '../items'
 import { keepsakeAsk } from '../keepsakes'
+import { elsewhereLine, returnReaches, sellsHere } from '../resident-reach'
 import type { Village } from '../village'
 import { HEIRLOOM_GUEST_LINES, NORTH_BRIDGE_DONE, countAdaOilGifts } from '../../content/heirlooms'
 import { heirloomBeat } from '../heirloom-beats'
@@ -224,11 +225,18 @@ export class WorldTalk {
     // A paper to hand over rides at the end of the NPC's usual lines.
     const handover = !isGlimSpot(id) && id in NPC_NAMES ? papers?.handover(id) : null
     if (handover) payload = { ...payload, lines: [...payload.lines, ...handover] }
-    // Carrying a resident's keepsake adds the quiet line (give it back / not yet).
+    // Carrying a resident's keepsake adds the quiet line (give it back / not
+    // yet). Hand-overs the server measures from their post (a return, a
+    // sale) are offered only within its reach; stopped out on their route,
+    // they say where to find them instead (./resident-reach.ts).
+    let elsewhere = false
     const ask = isResident(id)
-      ? keepsakeAsk(id, session.state.flags, itemsFor(session).view?.stacks.map((s) => s.itemDef) ?? [])
+      ? keepsakeAsk(id, session.state.flags, itemsFor(session).view?.stacks.map((s) => s.itemDef) ?? [], returnReaches(session, id))
       : null
-    if (ask) payload = { ...payload, lines: [...payload.lines, ask.line], choices: ask.choices }
+    if (ask) {
+      payload = { ...payload, lines: [...payload.lines, ask.line], choices: ask.choices.length ? ask.choices : payload.choices }
+      if (!ask.choices.length) elsewhere = true
+    }
     // One more choice, and a single "Not yet" at the end (an earlier one,
     // e.g. a keepsake's with its own reply, is kept in its place).
     const withChoiceAndNotYet = (existing: DialogueChoice[] | undefined, newChoice: DialogueChoice): DialogueChoice[] => {
@@ -244,10 +252,13 @@ export class WorldTalk {
     // at its one price in glims (silas-yard.md 1.6).
     const seller = (ITEMS.sellers ?? []).find((sl) => sl.npc.toLowerCase() === id && !sl.festival)
     if (seller && session.link) {
-      for (const c of sellerChoices(seller, { reply: true })) {
-        payload = { ...payload, choices: withChoiceAndNotYet(payload.choices, c) }
-      }
+      if (sellsHere(session, seller.id)) {
+        for (const c of sellerChoices(seller, { reply: true })) {
+          payload = { ...payload, choices: withChoiceAndNotYet(payload.choices, c) }
+        }
+      } else elsewhere = true
     }
+    if (elsewhere) payload = { ...payload, lines: [...payload.lines, elsewhereLine(id)] }
 
     // Heirloom beats: Orrin's mason pick and Ada's garden spade
     if (id === 'orrin' && this.deps.village.hasWorldFlag(NORTH_BRIDGE_DONE) && !session.state.flags.includes('heirloom:orrins-mason-pick')) {

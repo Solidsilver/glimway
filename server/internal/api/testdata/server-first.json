@@ -11242,7 +11242,7 @@
     "name": "glimway.v1.WorldChunk",
     "case": "valid-fixed",
     "json": {
-      "epochId": "fixed:hearthwick@2",
+      "epochId": "fixed:hearthwick@3",
       "realm": "hearthwick",
       "layer": 0,
       "cx": 0,
@@ -11266,7 +11266,7 @@
       "land": "",
       "places": [],
       "source": "CHUNK_SOURCE_FIXED",
-      "layoutRevision": 2,
+      "layoutRevision": 3,
       "objects": [
         {
           "id": "house-west",

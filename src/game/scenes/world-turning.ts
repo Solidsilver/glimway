@@ -31,6 +31,9 @@ import type { WildsWindow } from '../wilds/window.ts'
 import type { WildsEntities } from '../wilds/entities.ts'
 import { roadStep } from '../../lib/quests.ts'
 
+/** The longest the veil waits for the new land's window (ms): its paints settle within paint-worker.ts's deadline. */
+export const LAND_WAIT_MS = 8000
+
 export interface TurningDeps {
   session: Session
   world: WorldData
@@ -168,7 +171,12 @@ export class Turning {
         const w = this.deps.window()
         w?.update(0)
         w?.settle()
-        void (w?.ready() ?? Promise.resolve()).then(() => this.landed(loud, parts))
+        // The window's ready, or LAND_WAIT_MS at most: a chunk that never
+        // comes in can't keep the veil down and the hero held.
+        const waited = new Promise<void>((resolve) => this.scene.time.delayedCall(LAND_WAIT_MS, resolve))
+        void Promise.race([w?.ready() ?? Promise.resolve(), waited]).then(() => {
+          if (this.scene.sys.isActive()) this.landed(loud, parts)
+        })
       })
     })
   }

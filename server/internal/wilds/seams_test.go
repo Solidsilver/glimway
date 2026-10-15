@@ -1,6 +1,10 @@
 package wilds
 
-import "testing"
+import (
+	"testing"
+
+	"glimway/content"
+)
 
 // The seams beside the fixed block (hearthwick-2.md §5), over whole
 // frontiers.
@@ -99,7 +103,7 @@ func TestV3LotVerges(t *testing.T) {
 // keepOutTiles of an open fixed edge, and the keep-out covers every lot
 // back, both wildgates and the town's south mouths.
 func TestV3KeepOut(t *testing.T) {
-	for _, mouth := range [][2]int{{-49, 30}, {72, 100}, {-49, 71}, {72, 72}, {12, 120}, {-23, 120}, {46, 120}} {
+	for _, mouth := range [][2]int{{-49, 30}, {72, 100}, {-49, 71}, {72, 72}, {12, 120}, {-23, 120}, {46, 120}, {-10, 120}, {32, 120}} {
 		for _, d := range [][2]int{{0, 0}, {-5, 0}, {5, 0}, {0, 5}} {
 			x, y := mouth[0]+d[0], mouth[1]+d[1]
 			if FixedFootprintAt(floorDiv(x, chunkSize()), floorDiv(y, chunkSize())) == nil && !keptOut(x, y) {
@@ -144,7 +148,12 @@ func TestV3KeepOut(t *testing.T) {
 func TestV3SideLean(t *testing.T) {
 	woods, meadow := landIndex("woods"), landIndex("meadow")
 	if woods != sideWoods || meadow != sideMeadow {
-		t.Fatalf("side lands %d %d, homestead sides %d %d", woods, meadow, sideWoods, sideMeadow)
+		t.Fatalf("side lands %d %d, want woods %d and meadow %d", sideWoods, sideMeadow, woods, meadow)
+	}
+	// The lot columns are still painted as the lands the generator leans to
+	// (homestead.json land.sides; the generator doesn't read them).
+	if sides := content.HomeRules.GetLand().GetSides(); landIndex(sides["west"].GetGround()) != woods || landIndex(sides["east"].GetGround()) != meadow {
+		t.Fatalf("the lot columns' sides %v no longer match the generator's lean", sides)
 	}
 	ring := int(contentRules().GetTierRingChunks()) * chunkSize()
 	type share struct{ hit, n int }
@@ -210,5 +219,88 @@ func TestSeamsOnWickGround(t *testing.T) {
 	}
 	if b := fixedBlocks(); len(b) != 1 || b[0] != tileBox(-48, 24, 71, 119) {
 		t.Fatalf("the fixed places make blocks %v, want the one 5×4 block", b)
+	}
+}
+
+// openEdges is every walkable fixed edge tile beside a generated wick
+// chunk, with the way out of it (as seams() finds them).
+func openEdges() [][4]int {
+	S := chunkSize()
+	generated := func(tx, ty int) bool {
+		cx, cy := floorDiv(tx, S), floorDiv(ty, S)
+		return FixedFootprintAt(cx, cy) == nil && EpochKindAt(cx, cy) == EpochWick
+	}
+	var out [][4]int
+	for _, p := range content.PlacesRules.GetFixed() {
+		x0, y0, x1, y1 := content.FixedChunks(p)
+		for cy := y0; cy <= y1; cy++ {
+			for cx := x0; cx <= x1; cx++ {
+				for _, d := range dirs4 {
+					if !generated((cx+d[0])*S, (cy+d[1])*S) {
+						continue
+					}
+					for off := 0; off < S; off++ {
+						fx, fy := edgeTile(cx, cy, d[0], d[1], off)
+						if walk, _ := fixedTile(p, fx, fy); walk {
+							out = append(out, [4]int{fx, fy, d[0], d[1]})
+						}
+					}
+				}
+			}
+		}
+	}
+	return out
+}
+
+// TestV3OpenEdgesLeadOut: every gap in the block's edge toward the
+// generated Wilds (the town's porous south rim, the lot backs, the verges, the wildgates, the South Gate and the lane ends) leads
+// out: walking only the Wilds in front of it, within a few tiles either side,
+// you get softDepth+3 tiles out. No gap opens into a pocket.
+func TestV3OpenEdgesLeadOut(t *testing.T) {
+	const side, out = 16, softDepth + 3
+	edges := openEdges()
+	south := 0
+	for _, e := range edges {
+		if e[3] > 0 && e[1] == 119 && e[0] > -24 && e[0] < 47 {
+			south++
+		}
+	}
+	// The town's south rim is open but for its trunks (export-hearthwick.ts).
+	if south < 40 {
+		t.Fatalf("only %d open tiles on the town's south rim", south)
+	}
+	for _, ws := range v3Worlds(24) {
+		m := buildFrontier(t, ws[0], ws[1])
+		for _, e := range edges {
+			fx, fy, dx, dy := e[0], e[1], e[2], e[3]
+			// The Wilds in front of the gap, up to `side` tiles along the edge either way.
+			inside := func(x, y int) bool {
+				depth := (x-fx)*dx + (y-fy)*dy
+				along := (x-fx)*dy + (y-fy)*dx
+				return depth >= 1 && depth <= out+2 && along >= -side && along <= side && m.walkable(x, y)
+			}
+			start := [2]int{fx + dx, fy + dy}
+			if !inside(start[0], start[1]) {
+				t.Fatalf("%s: the gap at %d,%d faces a wall", ws[0], fx, fy)
+			}
+			seen := map[[2]int]bool{start: true}
+			q := [][2]int{start}
+			ok := false
+			for len(q) > 0 && !ok {
+				p := q[0]
+				q = q[1:]
+				ok = (p[0]-fx)*dx+(p[1]-fy)*dy >= out
+				for _, d := range dirs4 {
+					n := [2]int{p[0] + d[0], p[1] + d[1]}
+					if !seen[n] && inside(n[0], n[1]) {
+						seen[n] = true
+						q = append(q, n)
+					}
+				}
+			}
+			if !ok {
+				t.Fatalf("%s: the gap at %d,%d (out %d,%d) opens into a pocket", ws[0], fx, fy, dx, dy)
+			}
+		}
 	}
 }

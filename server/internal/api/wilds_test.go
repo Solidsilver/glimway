@@ -290,7 +290,7 @@ func TestWildsNearMakesEpochsAndChunks(t *testing.T) {
 	for _, ch := range commons.Chunks {
 		listed[[2]int32{ch.Chunk.Cx, ch.Chunk.Cy}] = ch.Source + " " + ch.Epoch
 	}
-	if len(listed) != 25 || listed[[2]int32{0, 1}] != "fixed fixed:hearthwick@2" || listed[[2]int32{1, 2}] != "fixed fixed:hearthwick@2" || listed[[2]int32{-2, 3}] != "fixed fixed:lots-west@3" || listed[[2]int32{2, 1}] != "fixed fixed:lots-east@3" || listed[[2]int32{0, 0}] != "generated "+n.Still.Id || listed[[2]int32{2, -1}] != "generated "+n.Wick.Id {
+	if len(listed) != 25 || listed[[2]int32{0, 1}] != "fixed fixed:hearthwick@3" || listed[[2]int32{1, 2}] != "fixed fixed:hearthwick@3" || listed[[2]int32{-2, 3}] != "fixed fixed:lots-west@4" || listed[[2]int32{2, 1}] != "fixed fixed:lots-east@4" || listed[[2]int32{0, 0}] != "generated "+n.Still.Id || listed[[2]int32{2, -1}] != "generated "+n.Wick.Id {
 		t.Fatal("the window's chunks", listed)
 	}
 	for _, e := range commons.Entities {
