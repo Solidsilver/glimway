@@ -1343,3 +1343,22 @@ test('flower touches belong to visible authored flowers and detach with their ch
   touches.attachFlowers(owner, []);
   assert.equal(picker.list.length, 0, 'a picked generated flower loses its touch');
 });
+
+test('the owner can open the placed shelf from inside the gate to put it away', async () => {
+  serveFixtureCommons();
+  serveFixtureLots();
+  const { HomesteadTalk } = await import('../src/game/entities/homestead-talk.ts');
+  const { Interactables } = await import('../src/game/entities/interactables.ts');
+  const slot = commonsLane()!.gates[0]!;
+  const hero = { x: (slot.tx + 1) * 16 + 8, y: slot.ty * 16 + 8 };
+  const scene = new FakeScene();
+  const talk = new HomesteadTalk({ scene, deps: { world: { areaId: 'outdoors', npcs: [] }, hero: () => hero }, commons: commonsLane(),
+    homes: { gateInfo: (gate: number) => ({ mine: gate === 0, shelf: gate === 0 }) },
+  } as never);
+  const picker = new Interactables(scene as never, { reducedMotion: true });
+  picker.register({}, [...talk.interactionList(), { id: 'home:mail', x: hero.x + 16, y: hero.y - 16, label: 'Open the mailbox', activate() {} }]);
+  assert.equal(picker.pick(hero)?.label, 'Look at the gift shelf', 'management must be reachable where removal is permitted');
+  hero.y += 16;
+  const management = picker.list.find((p) => p.id === 'home:manage-shelf:0')!;
+  assert.equal(management.available?.(), false, 'the priority management point stops at the fence');
+});

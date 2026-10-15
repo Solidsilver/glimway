@@ -280,6 +280,11 @@ export class HomesteadTalk {
       const info = this.home.homes.gateInfo(slot.gate)
       if (info?.shelf) {
         out.push({ id: `home:shelf:${slot.gate}`, ...at(slot.shelf, 2), label: 'Look at the gift shelf', verb: 'Look', markerOffset: 16, activate: panel('shelf', slot.gate) })
+        if (info.mine) {
+          // Management needs private presence: reach it from the gate opening,
+          // ahead of the mailbox, while travellers keep the public shelf point.
+          out.push({ id: `home:manage-shelf:${slot.gate}`, ...at(slot.shelf, 2), label: 'Look at the gift shelf', verb: 'Look', markerOffset: 16, rank: 1, reach: 52, clickReach: 52, available: () => this.insideGate(slot.gate), activate: panel('shelf', slot.gate) })
+        }
       } else if (info?.mine) {
         const unplaced = this.home.homes.mine?.items.find((i) => i.itemDef === 'gate-shelf' && i.scene === null)
         if (unplaced) {

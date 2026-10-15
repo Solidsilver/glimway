@@ -1,4 +1,4 @@
-import { calendarAt } from '../src/lib/calendar.ts'
+import { wickStart } from '../tests/helpers/calendar.ts'
 import { devices } from '@playwright/test'
 import { expect, test, type Page } from './fixtures'
 import { holdUntil, readDialogue, toastAfter, toastCount, warp, waitForArea, waitForLive, expectLine } from './helpers'
@@ -21,8 +21,7 @@ const thought = (page: Page) => page.evaluate(() => (window as unknown as { __fs
 const manaMeter = (page: Page) => page.getByRole('meter', { name: 'Mana' })
 /** Bloom's authored flowers at Hearthwick (world tiles 11..13, 37..38). */
 async function visitFlowers(page: Page): Promise<void> {
-  let t = Date.UTC(2026, 0, 1) / 1000
-  while (calendarAt(t).mark !== 'Bloom') t += 86400
+  const t = wickStart('Bloom')
   await page.evaluate((t) => (window as unknown as { __fsDevCalendar: (t: number) => void }).__fsDevCalendar(t), t)
   await warp(page, 'outdoors', 12, 38)
   await waitForLive(page)

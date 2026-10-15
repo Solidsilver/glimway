@@ -207,8 +207,8 @@ test('gate shelf: place shelf on Commons lane, stock it, traveller takes gift, d
   await ctxOne.close()
   await ctxTwo.close()
 
-  // Wren can put the now-empty shelf away from its panel.
-  await place(page, shelfPx, shelfPy)
+  // Wren manages the now-empty shelf from inside the gate, as removal requires.
+  await place(page, (slotWren.tx + 1) * 16 + 8, slotWren.ty * 16 + 8)
   await expect(page.locator('.prompt')).toContainText('Look at the gift shelf')
   await openShelfPanel(page)
   const ownerShelf = page.getByRole('dialog', { name: /Gift Shelf/ })
