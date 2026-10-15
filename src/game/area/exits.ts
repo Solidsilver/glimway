@@ -10,6 +10,7 @@
 import type Phaser from 'phaser'
 import { areaInfo } from '../../content/world.ts'
 import { TILE, tileBottom } from '../../lib/tile.ts'
+import { signLabel } from './sign-labels.ts'
 import type { ExitDef, WorldData } from '../worlds.ts'
 
 /** Destination name for an exit label (areas registered later may lack an entry). */
@@ -99,17 +100,7 @@ export function exitSign(scene: Phaser.Scene, world: Pick<WorldData, 'height'>, 
     out.push(scene.add.image(post.x, post.y, 'fingersnap-props', 'trail-sign').setOrigin(0.5, 1).setScale(GATE_SIGN_H / f.height).setFlipX(edge === 'west').setDepth(post.y))
   }
   out.push(
-    scene.add
-      .text(lx, ly, text, {
-        fontFamily: '"Pixelify Sans", monospace',
-        fontSize: '7px',
-        color: '#fff3c4',
-        stroke: '#2b1d1a',
-        strokeThickness: 3,
-        resolution: 8
-      })
-      .setOrigin(stair || vertical ? 0.5 : edge === 'west' ? 0 : 1, 0.5)
-      .setDepth(5501)
+    signLabel(scene, lx, ly, text, { fontFamily: '"Pixelify Sans", monospace', fontSize: 7, color: '#fff3c4', stroke: '#2b1d1a', strokeThickness: 3, resolution: 8 }, stair || vertical ? 0.5 : edge === 'west' ? 0 : 1, 0.5).setDepth(5501)
   )
   return out
 }

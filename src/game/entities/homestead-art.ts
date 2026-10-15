@@ -7,6 +7,7 @@
  */
 import Phaser from 'phaser'
 import { solidBox } from '../area/collision'
+import { signLabel } from '../area/sign-labels'
 import { HOMESTEAD_DATA, grownItem, homeItem, rotatedFootprint, type HomeInstance, type HomeItem, type HomeScene } from '../../lib/homestead'
 import { drawStable } from './homestead-stable'
 import { crArt } from '../crafts-art'
@@ -228,19 +229,7 @@ export class HomesteadArt {
     if (kind === 'weathered') sign.setTint(0x9a9a9a)
     this.add(
       d,
-      this.scene.add
-        .text(x, y - 15, text, {
-          fontFamily: '"Pixelify Sans", monospace',
-          fontSize: '6px',
-          color: kind === 'open' ? '#ffe9a8' : kind === 'weathered' ? '#c8c0b0' : '#fff3c4',
-          stroke: '#2b1d1a',
-          strokeThickness: 2,
-          align: 'center',
-          lineSpacing: -2,
-          resolution: 10
-        })
-        .setOrigin(0.5, 0.5)
-        .setDepth(y + 0.5)
+      signLabel(this.scene, x, y - 15, text, { fontFamily: '"Pixelify Sans", monospace', fontSize: 6, color: kind === 'open' ? '#ffe9a8' : kind === 'weathered' ? '#c8c0b0' : '#fff3c4', stroke: '#2b1d1a', strokeThickness: 2, align: 'center', lineSpacing: -2, resolution: 10 }, 0.5, 0.5).setDepth(y + 0.5)
     )
     // A weathered sign leans and has gone grey: the place has been empty a while.
     if (kind === 'weathered') sign.setAngle(slot.side === 'west' ? -5 : 5)

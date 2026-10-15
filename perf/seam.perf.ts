@@ -3,7 +3,7 @@ import type { CDPSession } from '@playwright/test'
 import { expect, test, type Page } from '../e2e/fixtures'
 import { CONTRACT, pinWorld, serverState, waitForWorld } from '../e2e/connected'
 import { freshPlayer, throughGate } from '../e2e/home-helpers'
-import { exitTo, holdUntil, parkCreatures, player, waitForWilds, warp, windowWhole } from '../e2e/helpers'
+import { parkCreatures, player, waitForWilds, warp, windowWhole } from '../e2e/helpers'
 
 const OUT = process.env.PERF_OUT || 'test-results/perf'
 const LABEL = process.env.PERF_LABEL || 'seam'
@@ -17,12 +17,14 @@ const phase = (page: Page, name: string) => page.evaluate((n) => window.__fsPerf
 const report = (page: Page) => page.evaluate(() => window.__fsPerf!())
 const reset = (page: Page) => page.evaluate(() => window.__fsPerfReset!())
 
-async function enter(page: Page): Promise<void> {
+async function enter(page: Page): Promise<number> {
   await freshPlayer(page)
   await pinWorld(page, 'perf-seam')
   await page.goto('/?perf=1')
+  const begun = Date.now()
   await page.getByTestId('continue-world').click()
   await waitForWorld(page)
+  return Date.now() - begun
 }
 
 async function resources(page: Page, cdp: CDPSession) {
@@ -115,18 +117,23 @@ for (const mode of ['desktop', 'phone'] as const) {
 
     test('repeated straight, diagonal and turn-back crossings, plus chunk churn', async ({ page }) => {
       const cdp = await page.context().newCDPSession(page)
-      await enter(page)
+      const bootToPlayableMs = await enter(page)
       if (mode === 'phone') await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 })
-      await warp(page, 'outdoors', 2, 26)
+      await warp(page, 'outdoors', 2, -12)
       await parkCreatures(page)
       await windowWhole(page)
       const arrival = await report(page)
       const id = await page.evaluate(() => window.__fsWildsWindow!()!.id)
       await reset(page)
-      // Warm both sides' slack before comparing identical resident windows.
+      await phase(page, 'first-crossing')
+      // First walk into the Commons attaches every fixed chunk on walking frames;
+      // then warm both sides' slack before comparing identical resident windows.
+      expect(await walkTo(page, { minTx: 2, maxTx: 2, minTy: 26, maxTy: 26 })).toBe(true)
       await walk(page, [[2, 21], [2, 26]])
       await windowWhole(page)
       await page.waitForTimeout(1500)
+      const firstCrossing = await report(page)
+      await phase(page, 'start')
       await reset(page)
       const start = await resources(page, cdp)
       const checkpoints = []
@@ -157,7 +164,7 @@ for (const mode of ['desktop', 'phone'] as const) {
       await page.waitForTimeout(1500)
       const end = await resources(page, cdp)
       const r = await report(page)
-      write(mode, { mode, cpuThrottle: mode === 'phone' ? 4 : 1, viewport: page.viewportSize(), dpr: await page.evaluate(() => devicePixelRatio), crossingsPerPattern: { straight: CROSSINGS, diagonal: CROSSINGS, 'turn-back': CROSSINGS * 2 }, buildBudgetMs: 4, arrival, ...r, resources: { start, checkpoints, churnResources, end } })
+      write(mode, { mode, cpuThrottle: mode === 'phone' ? 4 : 1, viewport: page.viewportSize(), dpr: await page.evaluate(() => devicePixelRatio), crossingsPerPattern: { straight: CROSSINGS, diagonal: CROSSINGS, 'turn-back': CROSSINGS * 2 }, buildBudgetMs: 4, bootToPlayableMs, arrival, firstCrossing, ...r, resources: { start, checkpoints, churnResources, end } })
       console.log(`seam ${mode}: ${JSON.stringify(r.phases)}; heap ${start.heap}→${end.heap}, list ${start.list}→${end.list}, textures ${start.textures}→${end.textures}`)
       expect(end.textures).toBe(start.textures)
       expect(end.listeners).toBe(start.listeners)
@@ -206,10 +213,10 @@ for (const mode of ['desktop', 'phone'] as const) {
   })
 }
 
-for (const network of ['slow-network', 'fixed-only'] as const) for (const from of ['boot', 'home', 'tangle'] as const) {
+for (const network of ['slow-network', 'fixed-only'] as const) for (const from of ['boot', 'lot', 'tangle'] as const) {
   test(`seam arrival ${from}, ${network}`, async ({ page }) => {
     await enter(page)
-    if (from === 'home') await throughGate(page, 0)
+    if (from === 'lot') await throughGate(page, 0)
     else await warp(page, 'outdoors', 2, from === 'boot' ? 26 : 22)
     await expect.poll(() => page.evaluate(() => window.__fsDevSaved!().pending)).toBe(false)
     const before = await player(page)
@@ -233,7 +240,8 @@ for (const network of ['slow-network', 'fixed-only'] as const) for (const from o
     let releaseReads!: () => void
     const gate = new Promise<void>((resolve) => { releaseReads = resolve })
     await page.route('**/api/wilds/chunk/**', async (route) => {
-      if (!decodeURIComponent(route.request().url()).includes('fixed:')) return route.continue()
+      const url = decodeURIComponent(route.request().url())
+      if (!url.includes('fixed:') && !url.includes('plot:')) return route.continue()
       const read = { url: route.request().url(), start: Date.now(), end: undefined as number | undefined }
       reads.push(read)
       if (network === 'fixed-only') {
@@ -251,7 +259,7 @@ for (const network of ['slow-network', 'fixed-only'] as const) for (const from o
     })
     const begun = Date.now()
     await page.getByTestId('continue-world').click()
-    await waitForWorld(page, from === 'home' ? 'home:0' : 'outdoors')
+    await waitForWorld(page, 'outdoors')
     const visibleAt = Date.now()
     const release = setTimeout(releaseReads, 6000)
     // Measure visible pop-in independently of the three-second position
@@ -260,7 +268,7 @@ for (const network of ['slow-network', 'fixed-only'] as const) for (const from o
     const whole = (async () => {
       await page.waitForFunction(() => window.__fsWorld?.().areaId === 'outdoors' && !window.__fsSafety?.()?.transitioning && !!window.__fsWildsWindow?.())
       outdoorVisibleAt = Date.now()
-      const key = from === 'home' ? '-1,1' : '0,1'
+      const key = from === 'lot' ? '-3,1' : '0,1'
       await page.waitForFunction((key) => {
         const w = window.__fsWildsWindow?.()
         return !!w?.ready && w.fixed.includes(key)
@@ -275,21 +283,15 @@ for (const network of ['slow-network', 'fixed-only'] as const) for (const from o
       const key = `${Math.floor(h.x / 384)},${Math.floor(h.y / 384)}`
       return { t: performance.now(), x: h.x, y: h.y, savedX: s.position.x, savedY: s.position.y, ground: window.__fsGroundAt!(Math.floor(h.x / 16), Math.floor(h.y / 16)), attached: !!w?.attached.includes(key), whole: !!w?.ready }
     })
-    if (from === 'home') {
-      const exit = await exitTo(page, 'outdoors')
-      await page.evaluate((e) => window.__fsDevPlace!((e.tx + e.tw / 2) * 16, (e.ty - 1) * 16 + 8), exit)
-      await holdUntil(page, 'ArrowDown', async () => (await page.evaluate(() => window.__fsWorld!().areaId)) === 'outdoors')
-    }
-    if (from !== 'home') {
-      // Step towards fixed ground while its reads are held, then complete the walk.
-      if (from === 'tangle') await page.keyboard.down('ArrowDown')
-      try {
-        for (let i = 0; i < 12; i++) {
-          samples.push(await sample())
-          await page.waitForTimeout(250)
-        }
-      } finally { if (from === 'tangle') await page.keyboard.up('ArrowDown') }
-    }
+    // Both town and lot arrivals stay on outdoors; only the Tangle walks
+    // towards the held fixed ground. Lots no longer have an exit transition.
+    if (from === 'tangle') await page.keyboard.down('ArrowDown')
+    try {
+      for (let i = 0; i < 12; i++) {
+        samples.push(await sample())
+        await page.waitForTimeout(250)
+      }
+    } finally { if (from === 'tangle') await page.keyboard.up('ArrowDown') }
     samples.push(await sample())
     await waitForWilds(page)
     await windowWhole(page, 30_000)
@@ -301,18 +303,21 @@ for (const network of ['slow-network', 'fixed-only'] as const) for (const from o
     write(`arrival-${from}-${network}`, { before, visibleMs: visibleAt - begun, outdoorVisibleMs: outdoorVisibleAt - begun, postDeliveryMs, elapsedMs: Date.now() - begun, reads, samples, perf: await report(page) })
     for (const s of samples) {
       expect(Math.hypot(s.x - s.savedX, s.y - s.savedY)).toBeLessThan(120)
-      if (from === 'boot' && !s.attached) {
+      if ((from === 'boot' || from === 'lot') && !s.attached) {
         expect(Math.hypot(s.x - before.x, s.y - before.y)).toBeLessThan(1)
         expect(Math.hypot(s.savedX - before.x, s.savedY - before.y)).toBeLessThan(1)
       }
       if (from === 'tangle' && s.ground === null) expect(s.y).toBeLessThan(384)
     }
     const after = await player(page)
-    const expected = from === 'home' ? { tx: -1, ty: 33 } : { tx: 2, ty: 26 }
+    const expected = from === 'lot' ? { tx: -61, ty: 32 } : { tx: 2, ty: 26 }
     expect(Math.floor(after.x / 16)).toBe(expected.tx)
     expect(Math.floor(after.y / 16)).toBe(expected.ty)
     expect(await page.evaluate(() => window.__fsTileSolid!(Math.floor(window.__fsPlayer!().x / 16), Math.floor(window.__fsPlayer!().y / 16)))).toBe(false)
-    await expect.poll(() => page.evaluate(() => window.__fsDevSaved!().pending)).toBe(false)
+    await expect.poll(async () => {
+      const s = await page.evaluate(() => window.__fsDevSaved!())
+      return !s.pending && Math.hypot(s.position.x - after.x, s.position.y - after.y) < 5
+    }).toBe(true)
     const saved = await page.evaluate(() => window.__fsDevSaved!())
     expect(Math.hypot(saved.position.x - after.x, saved.position.y - after.y)).toBeLessThan(5)
     await expect.poll(async () => {

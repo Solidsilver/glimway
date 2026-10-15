@@ -4,7 +4,7 @@
  * covers them (docs/art-requests.md). One 16-px overlay per repair, drawn at
  * its spot only while the chore is open; the two scripted repairs keep a
  * mended overlay (the well's new rope, the pegged rail) because the change
- * is the reward. Made on demand (`ensureRepairTexture`), like the mill.
+ * is the reward. Generated once at boot (`generateRepairArt`).
  */
 import type Phaser from 'phaser'
 
@@ -123,30 +123,29 @@ function drawHameBroken(c: C): void {
   c.globalAlpha = 1
 }
 
+const REPAIRS: readonly [string, (c: C) => void][] = [
+  ['repair-well-broken', drawRopeBroken],
+  ['repair-well-mended', drawRopeMended],
+  ['repair-fence-broken', drawFenceBroken],
+  ['repair-fence-mended', drawFenceMended],
+  ['repair-library-broken', drawRoofBroken],
+  ['repair-bench-broken', drawBenchBroken],
+  ['repair-lamp-broken', drawLampBroken],
+  ['repair-hame-broken', drawHameBroken]
+]
+
+/** Register every repair overlay texture once (BootScene, and fixed-footprint pre-warming). */
+export function generateRepairArt(scene: Phaser.Scene): void {
+  for (const [key, draw] of REPAIRS) make(scene, key, 16, 16, draw)
+}
+
 /**
  * Make a repair texture by key when asked (false: not a repair key). Keys:
  * `repair-<target>-broken`, `repair-<target>-mended` (well, fence only).
  */
 export function ensureRepairTexture(scene: Phaser.Scene, key: string): boolean {
-  if (scene.textures.exists(key)) return key.startsWith('repair-')
-  const m = /^repair-([a-z]+)-(broken|mended)$/.exec(key)
-  if (!m) return false
-  const [, target, state] = m
-  const draw
-    = target === 'well'
-      ? state === 'broken' ? drawRopeBroken : drawRopeMended
-      : target === 'fence'
-        ? state === 'broken' ? drawFenceBroken : drawFenceMended
-        : target === 'library'
-          ? state === 'broken' ? drawRoofBroken : null
-          : target === 'bench'
-            ? state === 'broken' ? drawBenchBroken : null
-            : target === 'lamp'
-              ? state === 'broken' ? drawLampBroken : null
-              : target === 'hame'
-                ? state === 'broken' ? drawHameBroken : null
-                : null
-  if (!draw) return false
-  make(scene, key, 16, 16, draw)
+  const entry = REPAIRS.find(([k]) => k === key)
+  if (!entry) return false
+  if (!scene.textures.exists(key)) make(scene, key, 16, 16, entry[1])
   return true
 }

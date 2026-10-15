@@ -41,6 +41,7 @@ its architecture. This folder holds two kinds of document:
 | [items/](items/overview.md) | Items: [overview](items/overview.md), [catalogue](items/catalogue.md), [crafting and repair](items/crafting-and-repair.md) |
 | [lore/chronicle.md](lore/chronicle.md) | The canon. `lore/texts/` holds the papers' source (`npm run papers`); `lore/drafts/` is unpublished writing |
 | [scaling.md](scaling.md) | Notes on scaling, for later (not needed yet) |
+| [standalone-clients.md](standalone-clients.md) | A possible future: a content-only edition with native clients (Bevy), for later |
 | [ideas.md](ideas.md) | A canvas of ideas; nothing there is planned |
 
 **Habitica, licences and deploys**
