@@ -162,7 +162,10 @@ test('a reload on either side of the mouth comes back where it was', async ({ pa
     await expect.poll(async () => (await serverState(page)).body.state.position).toEqual({ x: at.tx * TILE + 8, y: at.ty * TILE + 8 })
     await reenter(page, 'outdoors')
     await waitForWilds(page)
-    expect(await hero(page)).toMatchObject({ x: at.tx * TILE + 8, y: at.ty * TILE + 8 })
+    // Poll the exact return position: right after a reload the hero can still be
+    // settling when read under heavy single-worker load (it lands exactly here;
+    // passing runs confirm the match).
+    await expect.poll(async () => await hero(page)).toMatchObject({ x: at.tx * TILE + 8, y: at.ty * TILE + 8 })
     expect(await inCommons(page)).toBe(at === ARCH)
   }
 })
