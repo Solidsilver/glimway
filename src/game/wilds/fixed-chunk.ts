@@ -4,10 +4,11 @@
  * is in the 3×3 around the hero and destroyed when it leaves, as the
  * generated chunks are (./window-chunk.ts).
  *
- * Its ground is a rectangle of the footprint's painted tileset (one per
- * footprint and scene: ../area/terrain.ts groundTiles), laid as tilemap
- * layers; its collision the merged runs of its solid tiles and the bases of
- * what stands on open ground. Both go in at once; the rest is built a few
+ * Its ground is one image painted by the Wilds' painter, off the main
+ * thread, like a generated chunk's (./ground-paint.ts, ./fixed-ground.ts:
+ * docs/design/hearthwick-2.md 4, 5); its collision the merged runs of its
+ * solid tiles and the bases of what stands on open ground. Both go in at
+ * once; the rest is built a few
  * milliseconds a frame through the window's queue: trees and their
  * canopies, the drawn pieces, props and lamps, then its workable pieces,
  * front doors and the homestead fixtures it owns (the gates' signs and
@@ -21,7 +22,6 @@ import { addAll, destroyAll, destroyStatics, enableStatics, looseImage } from '.
 import { staticBox } from '../area/collision.ts'
 import { ensureSceneryArt } from '../area/props.ts'
 import { exitSign } from '../area/exits.ts'
-import { layGround, type GroundTiles } from '../area/terrain.ts'
 import type { Occluder } from '../area/foreground.ts'
 import type { LightProp } from '../area/lanterns.ts'
 import { TILE_DATA, type TileArt } from '../area/tile-art.ts'
@@ -54,8 +54,8 @@ export interface FixedChunkDeps {
   gathering: () => Gathering | null
   occluders: { add(list: Occluder[]): void; remove(images: readonly Phaser.GameObjects.Image[]): void }
   interactables: Interactables
-  /** The footprint's painted ground (its tileset and cells). */
-  ground: GroundTiles
+  /** The chunk's painted ground: a texture key (./window.ts paints it). */
+  ground: string
   /** What the calendar has out (festival-tagged pieces). */
   day: () => FixedDay
   /** Light the chunk's lamps (../area/lanterns.ts refreshLanternVisuals). */
@@ -73,9 +73,6 @@ const BASE: Record<string, [number, number]> = { tree: [12, 6], bush: [12, 8], r
 
 const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now())
 
-/** Layer names must be unique on the footprint's tilemap, across attaches. */
-let laid = 0
-
 export class FixedChunk implements Buildable {
   readonly key: string
   /** Its ways out, in world tiles (the scene checks them as the hero walks). */
@@ -85,7 +82,9 @@ export class FixedChunk implements Buildable {
   /** Its exits' chevrons, labels and posts (their pulses die with them). */
   private signs: Phaser.GameObjects.GameObject[] = []
   private images: Phaser.GameObjects.GameObject[] = []
-  private layers: Phaser.Tilemaps.TilemapLayer[] = []
+  private ground: Phaser.GameObjects.Image | null = null
+  /** The paint its ground image shows (the window's signature: a repaint lands on it). */
+  sig = ''
   private bodies: Phaser.Physics.Arcade.Image[] = []
   private artTiles: { tx: number; ty: number }[] = []
   private fading: Phaser.GameObjects.Image[] = []
@@ -103,7 +102,8 @@ export class FixedChunk implements Buildable {
     const lx = cx * CHUNK_TILES - fp.tx
     const ly = cy * CHUNK_TILES - fp.ty
     perfTime('attach:fixed:ground', () => {
-      this.layers = layGround(deps.ground, { tx: lx, ty: ly, tw: CHUNK_TILES, th: CHUNK_TILES }, { x: cx * CHUNK_TILES * TILE, y: cy * CHUNK_TILES * TILE }, GROUND_DEPTH, `fixed-${this.key}-${++laid}`)
+      this.ground = deps.scene.add.image(cx * CHUNK_TILES * TILE, cy * CHUNK_TILES * TILE, deps.ground).setOrigin(0, 0).setDepth(GROUND_DEPTH)
+      this.images.push(this.ground)
     })
     perfTime('attach:fixed:collision', () => this.collide(lx, ly))
     let next = 0
@@ -188,6 +188,11 @@ export class FixedChunk implements Buildable {
       this.todo.push((deadline) => this.buildFixtures(deadline))
       this.deps.builds?.add(this)
     }
+  }
+
+  /** A repainted ground image takes the old one's place. */
+  setGround(key: string): void {
+    this.ground?.setTexture(key)
   }
 
   /** Everything built. */
@@ -348,10 +353,9 @@ export class FixedChunk implements Buildable {
     this.signs = []
     const kept = this.artTiles.flatMap(({ tx, ty }) => this.deps.tileArt.take(tx, ty))
     destroyAll(scene, [...this.images, ...kept])
-    for (const l of this.layers) l.destroy()
     destroyStatics(scene.physics.world as never, this.deps.solids as never, this.bodies as never)
     this.images = []
-    this.layers = []
+    this.ground = null
     this.bodies = []
     this.artTiles = []
     this.fading = []

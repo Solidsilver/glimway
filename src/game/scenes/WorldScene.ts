@@ -54,7 +54,7 @@ import { villageFor } from '../village'
 import { VillageLayer } from '../entities/village-life'
 import { Touches } from '../entities/touches'
 import { ROOM_ENTRY, homeRoomArea, parseHomeRoom } from '../cottage'
-import { commonsLane, fixedPlaceOf } from '../wilds/fixed'
+import { commonsLane, fixedPlaceOf, footprintAt } from '../wilds/fixed'
 import { FixedLife } from '../wilds/fixed-life'
 import { isSafeArea } from '../../lib/habitica/sync'
 import { fingerInBracken } from '../../lib/quests'
@@ -827,26 +827,27 @@ export class WorldScene extends Phaser.Scene {
     const ready = (x: number, y: number) => this.fixedReady(x, y)
     const h = this.hero.sprite
     if (!ready(h.x, h.y)) {
+      const at = { x: h.x, y: h.y }
       if (this.fixedSpot && ready(this.fixedSpot.x, this.fixedSpot.y)) {
         ;(h.body as Phaser.Physics.Arcade.Body).reset(this.fixedSpot.x, this.fixedSpot.y)
       } else {
         ;(h.body as Phaser.Physics.Arcade.Body).reset(h.x, h.y)
         this.hero.halt()
       }
-      this.waitForCommons()
+      this.waitForCommons(at.x, at.y)
       return
     }
     this.fixedSpot = { x: h.x, y: h.y }
     const body = h.body as Phaser.Physics.Arcade.Body
     const next = { x: h.x + body.position.x - body.prevFrame.x, y: h.y + body.position.y - body.prevFrame.y }
     if (!ready(next.x, next.y)) {
-      this.waitForCommons()
+      this.waitForCommons(next.x, next.y)
       const at = holdOnSafe(ready, h, next)
       body.reset(at.x, at.y)
       return
     }
     const v = stopAtEdge(ready, next, body.velocity, Math.max(dt, 1 / 30) * 1.5)
-    if (v.x !== body.velocity.x || v.y !== body.velocity.y) this.waitForCommons()
+    if (v.x !== body.velocity.x || v.y !== body.velocity.y) this.waitForCommons(next.x, next.y)
     body.setVelocity(v.x, v.y)
   }
 
@@ -855,8 +856,17 @@ export class WorldScene extends Phaser.Scene {
     return !this.window || !fixedPlaceOf(at.cx, at.cy) || this.window.hasFixed(at.cx, at.cy)
   }
 
-  private waitForCommons(): void {
+  /**
+   * Say the town's ground hasn't come yet. Not while it is only being
+   * painted (its chunks are here: a few frames, off the main thread); the
+   * hero is held either way, and a wait past four seconds is always said.
+   */
+  private waitForCommons(x?: number, y?: number): void {
     if (this.commonsWaitSaid) return
+    if (x !== undefined && y !== undefined) {
+      const at = chunkOfPixel(x, y)
+      if (footprintAt(at.cx, at.cy)) return
+    }
     this.commonsWaitSaid = true
     bus.emit(EV.toast, { text: 'Waiting for the Commons…', icon: 'map', kind: 'thought' })
   }

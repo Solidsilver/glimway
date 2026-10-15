@@ -16,6 +16,12 @@
  * ./window-chunk.ts). Pure: it writes RGBA into a buffer, so node tests can
  * paint and time it. Tiles nothing is known about (past the frontier) read
  * as deep woods.
+ *
+ * Fixed ground (the town and the lots: docs/design/hearthwick-2.md 4, 5)
+ * is painted here too, by its own rows of the table (./fixed-ground.ts),
+ * with two grounds of its own: the town's cobbles, with a worn verge where
+ * grass meets them, and tilled fields in furrows. It is settled ground: the
+ * white quiet's drifts thin out over it.
  */
 import { TILE } from '../../lib/tile.ts'
 import { latticeNoise, smoothField, valueNoise } from './noise.ts'
@@ -24,7 +30,7 @@ import { hash01 } from '../../lib/hash.ts'
 
 type RGB = [number, number, number]
 
-export type GroundCat = 'woods' | 'moss' | 'trodden' | 'road' | 'water' | 'meadow' | 'bank' | 'ford' | 'paving' | 'laid'
+export type GroundCat = 'woods' | 'moss' | 'trodden' | 'road' | 'water' | 'meadow' | 'bank' | 'ford' | 'paving' | 'laid' | 'cobble' | 'tilled'
 
 /** What the painter reads: the ground and solidity at any world tile (null: nothing known there). */
 export interface GroundSource {
@@ -32,14 +38,19 @@ export interface GroundSource {
   solid(tx: number, ty: number): boolean
 }
 
-/** How a ground paints, and how much trodden line it carries. */
+/** How a ground paints, how much trodden line it carries, and whether it is settled (fixed ground: no white quiet). */
 export interface GroundPaint {
   cat: GroundCat
   trail: number
+  settled?: boolean
 }
 
-/** TERRAIN id → its paint (./ground-table.ts builds it from content; the worker gets it with each job). */
-export type PaintTable = readonly (readonly [number, GroundCat, number])[]
+/**
+ * Paint id → its paint, its trodden line and (1) whether it is settled
+ * (./ground-table.ts builds it from content and ./fixed-ground.ts; the
+ * worker gets it with each job).
+ */
+export type PaintTable = readonly (readonly [number, GroundCat, number, number?])[]
 
 /** Content ground id → how it paints, and how much trodden line it carries. */
 export const PAINT: Record<string, GroundPaint> = {
@@ -62,7 +73,7 @@ export const PAINT: Record<string, GroundPaint> = {
 export function paintOf(table: PaintTable, terrain: number | null): GroundPaint {
   if (terrain === null) return PAINT.woods
   const row = table.find((r) => r[0] === terrain)
-  return row ? { cat: row[1], trail: row[2] } : PAINT.moss
+  return row ? { cat: row[1], trail: row[2], ...(row[3] ? { settled: true } : {}) } : PAINT.moss
 }
 
 /** 4×4 Bayer matrix (0..15) for ordered dithering. */
@@ -110,6 +121,13 @@ export function paintGround(out: Uint8ClampedArray, x0: number, y0: number, w: n
   const ty0 = Math.floor(y0 / TILE) - CONTEXT
   const tw = Math.floor((x0 + w - 1) / TILE) - tx0 + 1 + CONTEXT
   const th = Math.floor((y0 + h - 1) / TILE) - ty0 + 1 + CONTEXT
+  const rows = new Map<number, GroundPaint>()
+  const paintAt = (g: number | null): GroundPaint => {
+    if (g === null) return PAINT.woods
+    let p = rows.get(g)
+    if (!p) rows.set(g, (p = paintOf(table, g)))
+    return p
+  }
   const cats: GroundCat[] = new Array(tw * th)
   const trails = new Float32Array(tw * th)
   const trods = new Float32Array(tw * th)
@@ -117,13 +135,17 @@ export function paintGround(out: Uint8ClampedArray, x0: number, y0: number, w: n
   const banks = new Float32Array(tw * th)
   const woodses = new Float32Array(tw * th)
   const pavings = new Float32Array(tw * th)
+  const cobbles = new Float32Array(tw * th)
+  const tilleds = new Float32Array(tw * th)
+  // The Wilds (1) or settled ground (0): the white quiet lies only on the Wilds.
+  const wilds = new Float32Array(tw * th)
   const solids = new Uint8Array(tw * th)
   // Meadow or not, where a tile says (-1: a path, water or the like says nothing).
   const meadowSays = new Float32Array(tw * th)
   for (let y = 0; y < th; y++)
     for (let x = 0; x < tw; x++) {
       const g = src.ground(tx0 + x, ty0 + y)
-      const p = paintOf(table, g)
+      const p = paintAt(g)
       const k = y * tw + x
       cats[k] = p.cat
       trails[k] = p.trail
@@ -132,6 +154,9 @@ export function paintGround(out: Uint8ClampedArray, x0: number, y0: number, w: n
       banks[k] = p.cat === 'bank' ? 1 : 0
       woodses[k] = p.cat === 'woods' ? 1 : 0
       pavings[k] = p.cat === 'paving' ? 1 : 0
+      cobbles[k] = p.cat === 'cobble' ? 1 : 0
+      tilleds[k] = p.cat === 'tilled' ? 1 : 0
+      wilds[k] = p.settled ? 0 : 1
       solids[k] = g === null || src.solid(tx0 + x, ty0 + y) ? 1 : 0
       meadowSays[k] = p.cat === 'meadow' ? 1 : (p.cat === 'moss' && p.trail === 0) || p.cat === 'woods' ? 0 : -1
     }
@@ -193,6 +218,10 @@ export function paintGround(out: Uint8ClampedArray, x0: number, y0: number, w: n
     return a + (b - a) * ay
   }
   const openAt = (wx: number, wy: number): number => smooth(open, wx, wy)
+  // How wild the land around is (the white quiet thins over a few tiles into settled ground).
+  const wildness = G.mist ? blur((k) => wilds[k]!, () => 1) : null
+  // The town's setts: the road's stone warmed toward the earth between them.
+  const setts = G.road.map((c, i) => mix(c, G.trodden[Math.min(i, G.trodden.length - 1)]!, 0.45))
   const catAt = (tx: number, ty: number) => cats[at(tx, ty)]
   const solidAt = (tx: number, ty: number) => solids[at(tx, ty)] === 1
 
@@ -221,7 +250,7 @@ export function paintGround(out: Uint8ClampedArray, x0: number, y0: number, w: n
       // (paths wind), trodden earth (camps' edges are soft); what is left is
       // grass, moss blending into meadow with the land around.
       let grassMeadow = false
-      if (cat !== 'road' && cat !== 'laid') {
+      if (cat !== 'road' && cat !== 'laid' && cat !== 'cobble') {
         const sx = wx + jx * 0.6
         const sy = wy + jy * 0.6
         // One set of bilinear weights for every field at this point.
@@ -241,8 +270,11 @@ export function paintGround(out: Uint8ClampedArray, x0: number, y0: number, w: n
         else if (read(banks) > edge) cat = 'bank'
         else if (read(woodsFloor) > edge) cat = 'woods'
         else if (read(pavings) > edge) cat = 'paving'
+        else if (read(tilleds) > edge) cat = 'tilled'
         else if ((trail = read(trails)) > 0.5) cat = 'path'
         else if (read(trods) > edge) cat = 'trodden'
+        // A worn verge where grass meets the town's cobbles.
+        else if (read(cobbles) > 0.14 + bayer(wx, wy) * 0.3) cat = 'trodden'
         else {
           cat = 'grass'
           const m = read(meadowness)
@@ -283,6 +315,12 @@ export function paintGround(out: Uint8ClampedArray, x0: number, y0: number, w: n
         }
         else if (n > 0.988) col = G.pebble
         else if (n < 0.012) col = ramp[0]
+      } else if (cat === 'cobble') {
+        // The town's setts: tidy rows, broken only where the lens frays the edge.
+        const fray = catAt(Math.floor((wx + jx * 1.8) / TILE), Math.floor((wy + jy * 1.8) / TILE)) !== 'cobble'
+        col = fray && n < 0.4 ? G.trodden[Math.max(0, Math.min(5, Math.round(level - 0.5)))] : sett(wx, wy, level, setts, G)
+      } else if (cat === 'tilled') {
+        col = furrow(wx, wy, level, n, G)
       } else if (cat === 'road') {
         // Broken cobbles: gaps grow toward the road's ragged edges.
         const fray = catAt(Math.floor((wx + jx * 1.8) / TILE), Math.floor((wy + jy * 1.8) / TILE)) !== 'road'
@@ -302,9 +340,9 @@ export function paintGround(out: Uint8ClampedArray, x0: number, y0: number, w: n
       }
       const i = (py * w + px) * 4
       // The white quiet: pale drifts lying across the outer Wilds.
-      if (G.mist && cat !== 'water' && cat !== 'ford') {
+      if (wildness && G.mist && cat !== 'water' && cat !== 'ford') {
         const q = quiet26(wx, wy) + (bayer(wx, wy) - 0.5) * 0.08
-        if (q > 0.62) {
+        if (q > 0.62 + (1 - smooth(wildness, wx, wy)) * 0.6) {
           const a = q > 0.72 ? 0.28 : 0.15
           const m = G.mist
           out[i] = Math.round(col[0] + (m[0] - col[0]) * a)
@@ -326,7 +364,10 @@ function rampOf(G: GroundPalette, cat: GroundCat | 'path'): RGB[] {
   switch (cat) {
     case 'paving':
     case 'laid':
+    case 'tilled':
       return G.trodden
+    case 'cobble':
+      return G.road
     case 'ford':
       return G.water
     default:
@@ -347,6 +388,58 @@ function cobble(wx: number, wy: number, level: number, G: GroundPalette): RGB | 
   if (hash01(col, row, 15) < 0.25 && hash01(wx, wy, 16) < 0.6) return G.jointMoss[Math.floor(hash01(wx, wy, 17) * 2)]
   const tone = Math.round(level - 1 + (hash01(col, row, 14) - 0.5) * 2 + (cy === 1 ? 1 : cy === 4 ? -1 : 0))
   return G.road[Math.max(0, Math.min(G.road.length - 1, tone))]
+}
+
+const mix = (a: RGB, b: RGB, t: number): RGB => [Math.round(a[0] + (b[0] - a[0]) * t), Math.round(a[1] + (b[1] - a[1]) * t), Math.round(a[2] + (b[2] - a[2]) * t)]
+
+/** Size of the cells the town's setts are scattered on (world px). */
+const SETT = 6
+
+/**
+ * The town's cobbles: rounded stones of uneven size (each the pixels nearest
+ * one point of a jittered grid), lit from the upper left, earth in the
+ * joints and now and then moss.
+ */
+function sett(wx: number, wy: number, level: number, setts: RGB[], G: GroundPalette): RGB {
+  const gx = Math.floor(wx / SETT)
+  const gy = Math.floor(wy / SETT)
+  let d1 = Infinity
+  let d2 = Infinity
+  let sx = 0
+  let sy = 0
+  let ox = 0
+  let oy = 0
+  for (let j = -1; j <= 1; j++)
+    for (let i = -1; i <= 1; i++) {
+      const cx = gx + i
+      const cy = gy + j
+      const dx = wx + 0.5 - (cx + 0.2 + hash01(cx, cy, 44) * 0.6) * SETT
+      const dy = wy + 0.5 - (cy + 0.2 + hash01(cx, cy, 45) * 0.6) * SETT
+      const d = dx * dx + dy * dy
+      if (d < d1) {
+        d2 = d1
+        d1 = d
+        sx = cx
+        sy = cy
+        ox = dx
+        oy = dy
+      } else if (d < d2) d2 = d
+    }
+  // The joint: where two stones are nearly as near.
+  if (Math.sqrt(d2) - Math.sqrt(d1) < 1.1) return hash01(wx, wy, 41) < 0.14 ? G.jointMoss[Math.floor(hash01(wx, wy, 43) * 2)]! : G.trodden[Math.max(0, Math.min(5, Math.round(level - 1.8)))]!
+  const lit = ox + oy < -2.2 ? 0.9 : ox + oy > 2.2 ? -0.7 : 0
+  const tone = Math.round(level - 0.2 + (hash01(sx, sy, 42) - 0.5) * 1.6 + lit)
+  return setts[Math.max(0, Math.min(setts.length - 1, tone))]!
+}
+
+/** Tilled ground: furrows running east–west, a dark trench between ridges of turned earth, a few shoots on the ridges. */
+function furrow(wx: number, wy: number, level: number, n: number, G: GroundPalette): RGB {
+  const f = (((wy + Math.round((hash01(wx >> 3, wy >> 3, 51) - 0.5) * 1.2)) % 5) + 5) % 5
+  const at = (ramp: RGB[], l: number) => ramp[Math.max(0, Math.min(ramp.length - 1, Math.round(l)))]!
+  if (f === 0) return at(G.path, level - 2.5)
+  if (f === 4) return at(G.path, level - 1.2)
+  if (f === 2 && n > 0.86) return at(G.moss, level + 0.5)
+  return at(G.trodden, level + (f === 1 ? 0.6 : 0))
 }
 
 // ---------------------------------------------------------------- the drift

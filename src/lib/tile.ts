@@ -34,7 +34,9 @@ export const TERRAIN = {
   cobble: 22,
   cobble_moss: 23,
   planks: 24,
-  planks_dark: 25
+  planks_dark: 25,
+  /** A tilled field (fixed ground only: the Wilds' painter draws its furrows). */
+  tilled: 26
 } as const
 
 /** The px coordinate of a tile's middle, along one axis. */

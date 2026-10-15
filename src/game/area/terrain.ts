@@ -51,7 +51,8 @@ const TERRAIN_TO_EXPANSION: Record<number, string> = {
   [TERRAIN.cobble]: 'cobblestone',
   [TERRAIN.cobble_moss]: 'mossy-cobblestone',
   [TERRAIN.planks]: 'wood-planks',
-  [TERRAIN.planks_dark]: 'dark-wood-planks'
+  [TERRAIN.planks_dark]: 'dark-wood-planks',
+  [TERRAIN.tilled]: 'packed-dirt'
 }
 
 /**

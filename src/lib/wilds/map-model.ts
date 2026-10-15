@@ -134,6 +134,7 @@ const CURATED_COLOURS: Record<string, string> = {
   path_b: '#c4a874',
   cobble: '#a59c88',
   cobble_moss: '#9a9a80',
+  tilled: '#a4805a',
 };
 /** Colour for each TERRAIN id the open map uses (the curated grounds fixed ground uses, then the Wilds' own). */
 const TERRAIN_COLOUR = new Map<number, RGB>([

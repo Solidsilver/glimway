@@ -419,6 +419,7 @@ About 55 frames in all.
 | *Later:* **Lot lanterns** | §6 with the holds engine | holds | — |
 
 - H1, H3 and H0 can start at once. H2 and H4 start as soon as H1's helpers and places land.
+- **H3, as built.** Fixed chunks are painted like generated ones, per chunk, in the paint workers. The painter reads one source for the whole open map (`src/game/wilds/fixed-ground.ts` `paintSource`): a fixed tile is read under an id of its place's style (`town`, `lot-west`, `lot-east`) and painted by that style's row in `FIXED_GROUNDS`, so a new layout grid needs no code, only a row for a new terrain. The painter gained `cobble` (setts, with a worn verge where grass meets them) and `tilled` (furrows; the new curated terrain `tilled`); fixed ground is settled, so the white quiet's drifts thin out over it. The palette is the outskirts': `outer` in the wick's Mark. A lot's cleared tiles paint as trodden earth. The constructor no longer builds any footprint's tileset; the first window paints its 3×3 across up to three workers behind the fade, and a fixed chunk's last paints are kept for the page.
 - The other lane's lot fixes (stuck behind a lot; the overlay not reaching the edges) touch the same lot geometry. Merge them first and rebase H1 on them. Their tests should move with the new bounds.
 
 ---

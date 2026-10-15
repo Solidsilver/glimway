@@ -27,7 +27,7 @@ var CuratedTerrains = []string{
 	"grass_a", "grass_b", "grass_c", "flowers", "path_a", "path_b", "dirt", "sand",
 	"water_a", "water_b", "bridge", "stone_a", "stone_b", "stone_crack", "wall_stone", "wall_moss",
 	"roof", "roof_edge", "wall_house", "door", "window", "fence", "cobble", "cobble_moss",
-	"planks", "planks_dark",
+	"planks", "planks_dark", "tilled",
 }
 
 // DecodeLayout reads one layout's JSON into the generated types, refusing

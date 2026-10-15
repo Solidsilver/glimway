@@ -285,6 +285,24 @@ test('the painter thread’s fallback: settled once each, the normal painter’s
       assert.equal((await paintAway(job, src)).thread, 'main');
       assert.equal(FakeWorker.made.length, 1);
     });
+    await tc.test('the first window’s lanes: each its own worker, the same pixels; one failing sends them all here', async () => {
+      const { paintAway, paintHere, lanes } = await painter();
+      const { src, job } = riverJob();
+      const n = lanes();
+      assert.ok(n >= 1 && n <= 3, `${n} lanes`);
+      const jobs = Array.from({ length: n }, (_, i) => paintAway({ ...job, x0: job.x0 - 32 * i }, src, i));
+      assert.equal(FakeWorker.made.length, n, 'one worker a lane');
+      FakeWorker.made.forEach((w) => w.reply(0));
+      const rs = await Promise.all(jobs);
+      rs.forEach((r, i) => assert.deepEqual(r.rgba, paintHere({ ...job, x0: job.x0 - 32 * i }, src).rgba));
+      // A lane past the last shares the last lane's worker.
+      void paintAway(job, src, n + 5);
+      assert.equal(FakeWorker.made.length, n);
+      FakeWorker.made[0]!.fail();
+      assert.ok(FakeWorker.made.every((w) => w.terminated), 'every lane stops');
+      assert.equal(lanes(), 1);
+      assert.equal((await paintAway(job, src, 2)).thread, 'main');
+    });
     await tc.test('a job that can’t be posted: painted here, and the worker still paints the next', async () => {
       const { paintAway, paintHere } = await painter({ post: false });
       const { src, job } = riverJob();

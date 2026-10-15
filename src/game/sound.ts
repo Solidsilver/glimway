@@ -165,7 +165,8 @@ const GROUND: Record<number, Ground> = {
   [TERRAIN.stone_b]: 'stone',
   [TERRAIN.stone_crack]: 'stone',
   [TERRAIN.cobble]: 'stone',
-  [TERRAIN.cobble_moss]: 'stone'
+  [TERRAIN.cobble_moss]: 'stone',
+  [TERRAIN.tilled]: 'path'
 }
 
 /** The step for a terrain id: grass (and anything soft) unless it's path, stone or wood. */

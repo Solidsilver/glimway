@@ -42,6 +42,7 @@ export const GROUND_CLASS: Readonly<Record<number, GroundClass>> = {
   [TERRAIN.bridge]: 'water',
   [TERRAIN.cobble_moss]: 'road',
   [TERRAIN.cobble]: 'flag',
+  [TERRAIN.tilled]: 'dirt',
 }
 
 export function classOf(id: number): Ground {
