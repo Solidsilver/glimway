@@ -23,6 +23,7 @@
 import { DECOR_ART, type DecorKind } from './wilds/decor.ts'
 import { HOMESTEAD_DATA } from '../lib/homestead.ts'
 import type { CommonsPassFrame } from './commons-pass.ts'
+import type { PassAnimation } from './art-pass.ts'
 import { TANGLE_VARIANTS } from './wilds/tangle-key.ts'
 import { GROUND_TILES, POND_SOURCE } from './ground-tiles.ts'
 
@@ -139,6 +140,8 @@ export interface PackedManifest {
   glims: PackedCanvasPack
   /** The 0.8 open map pass (assets/generated/open-map-pass/): meadow props, landmarks, fords, road and laid-path tiles, the lamp stone, the frontier veil; 64 texels per world tile. */
   openMap: PackedCanvasPack
+  /** The Hearthwick 2 pass (assets/generated/hearthwick2-pass/): the Wick Tree, the new buildings, the town and farm dressing, the lot stakes and gates, with its loops; 64 texels per world tile. */
+  hearthwick2: PackedCanvasPack & { animations: PassAnimation[] }
   /** The 16 terrain cells, 4×4, each `cell` texels a side (one 16-px world tile at `density`). */
   terrain: { image: string; size: [number, number]; cell: number; density: number }
   ground: PackedGround

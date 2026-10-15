@@ -31,7 +31,7 @@ test('a place’s name: one name, two, or the lot', () => {
   const m = (displayName: string) => ({ id: displayName, displayName });
   assert.equal(deedPlaceName({ members: [m('Tansy')] }, 2), 'Tansy’s Place');
   assert.equal(deedPlaceName({ members: [m('Tansy'), m('Bram')] }, 2), 'Tansy & Bram’s Place');
-  assert.equal(deedPlaceName(null, 2), 'Lot 3');
+  assert.equal(deedPlaceName(null, 2), 'West Row 2');
 });
 
 test('offers: yours waiting on them, theirs signed while yours lapsed, and deeds offered to you', () => {

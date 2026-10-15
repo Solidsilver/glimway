@@ -87,7 +87,7 @@ func TestAccounts026NoSessionAndStateBridge027(t *testing.T) {
 				t.Fatal("identity or balances changed")
 			}
 			if nullOrigin {
-				if snap.State.Area != "outdoors" || snap.State.Position != (rules.Position{X: 72, Y: 968}) || snap.State.HP != 32 || snap.Version != 10 || snap.State.GlimXP != rules.LifetimeXP(2, 5) {
+				if snap.State.Area != "outdoors" || snap.State.Position != (rules.Position{X: 88, Y: 968}) || snap.State.HP != 32 || snap.Version != 10 || snap.State.GlimXP != rules.LifetimeXP(2, 5) {
 					t.Fatal("fresh checkpoint baseline", JSON(snap))
 				}
 			} else if snap.State.Area != "woodland" || !strings.Contains(JSON(snap.State.Flags), "seen:retained") || snap.Version != 8 {

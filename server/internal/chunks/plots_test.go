@@ -31,11 +31,11 @@ func TestPlotChunks(t *testing.T) {
 			} else {
 				t.Fatal("shared epoch")
 			}
-			base := Fixed(FixedEpoch("homestead-lots", PlotRevision), c.Cx, c.Cy)
+			base := Fixed(FixedEpoch(LotLayout(gate), PlotRevision), c.Cx, c.Cy)
 			solid := func(c []byte, x, y int) bool { return c[(y*24+x)/8]&(1<<uint((y*24+x)%8)) != 0 }
 			for y := 0; y < 24; y++ {
 				for x := 0; x < 24; x++ {
-					if x < 3 || x > 20 || y == 0 || y >= 19 || gate < 2 && y == 1 {
+					if x < 1 || x > 22 || y < 2 || y > 21 {
 						if solid(c.Solid, x, y) != solid(base.Solid, x, y) {
 							t.Fatalf("public seam changed %d/%d,%d", gate, x, y)
 						}
@@ -49,14 +49,14 @@ func TestPlotChunks(t *testing.T) {
 					}
 				}
 			}
-			for y := 9; y <= 19; y++ {
+			for y := 9; y <= 12; y++ {
 				for x := 11; x <= 12; x++ {
 					if solid(c.Solid, x, y) {
 						t.Fatal("blocked entrance")
 					}
 				}
 			}
-			l := land.Generate(land.Seed(world, gate, content.HomeRules.Land), content.HomeRules.Land)
+			l := land.GenerateLot(land.Seed(world, gate, content.HomeRules.Land), content.HomeRules.Land, gate)
 			if l.Width != 24 || l.Height != 24 {
 				t.Fatal("size")
 			}
@@ -93,25 +93,34 @@ func TestPlotClientFixtures(t *testing.T) {
 func TestPlotGeometryMatchesAuthoredContent(t *testing.T) {
 	var found bool
 	for _, f := range content.PlacesRules.GetFixed() {
-		if f.GetId() != "homestead-lots" {
+		if !IsLotLayout(f.GetId()) {
 			continue
 		}
 		found = true
-		if f.GetRevision() != PlotRevision || f.GetOrigin().GetTx() != -72 || f.GetOrigin().GetTy() != 24 || f.GetWidth() != 2 || f.GetHeight() != 4 {
+		// The place, its layout and PlotRevision move together, or Plot serves nothing.
+		if l := content.Layouts[f.GetLayout()]; l == nil || l.GetRevision() != PlotRevision {
+			t.Fatalf("layout %s is not at PlotRevision %d", f.GetLayout(), PlotRevision)
+		}
+		if f.GetRevision() != PlotRevision || (f.GetOrigin().GetTx() != -48 && f.GetOrigin().GetTx() != 48) || f.GetOrigin().GetTy() != 24 || f.GetWidth() != 1 || f.GetHeight() != 4 {
 			t.Fatal("update versioned plot geometry with content", f)
 		}
 	}
 	if !found {
 		t.Fatal("missing lots footprint")
 	}
+	for gate := 0; gate < 8; gate++ {
+		if Plot("revision-check", gate) == nil {
+			t.Fatalf("no plot bytes for lot %d at PlotRevision %d", gate, PlotRevision)
+		}
+	}
 	// Pin every mirrored outer band, including ground as well as collision.
 	// Internal horizontal seams between lots are not mirrored by generated land.
 	for gate := 0; gate < 8; gate++ {
 		c := Plot("seam-check", gate)
-		b := Fixed(FixedEpoch("homestead-lots", PlotRevision), c.Cx, c.Cy)
+		b := Fixed(FixedEpoch(LotLayout(gate), PlotRevision), c.Cx, c.Cy)
 		for y := 0; y < 24; y++ {
 			for x := 0; x < 24; x++ {
-				if !(x < 2 || x >= 22 || y >= 22 || gate < 2 && y < 2) {
+				if !(x == 0 || x == 23 || y >= 22 || y < 2) {
 					continue
 				}
 				i := y*24 + x
@@ -124,27 +133,24 @@ func TestPlotGeometryMatchesAuthoredContent(t *testing.T) {
 	}
 }
 
+// Open backs have no invisible rear wall; side fences continue beside the public wildgate.
 func TestPlotRearJoinsMatchVisibleBoundaries(t *testing.T) {
 	for gate := 0; gate < 8; gate++ {
 		c := Plot("rear-edge", gate)
-		solid := func(c []byte, x, y int) bool { return c[(y*24+x)/8]&(1<<uint((y*24+x)%8)) != 0 }
-		for x := 3; x <= 20; x++ {
-			if gate < 2 {
-				// The outer pair backs onto visible woods, not a cross-lane.
-				if !solid(c.Solid, x, 0) || !solid(c.Solid, x, 1) {
-					t.Fatalf("outer wooded seam opened at lot %d x%d", gate, x)
-				}
-				continue
+		back := 0
+		if gate%2 == 1 {
+			back = 23
+		}
+		solid := func(x, y int) bool { return c.Solid[(y*24+x)/8]&(1<<uint((y*24+x)%8)) != 0 }
+		for y := 2; y <= 21; y++ {
+			if solid(back, y) {
+				t.Fatalf("invisible rear wall lot %d %d,%d", gate, back, y)
 			}
-			north := Plot("rear-edge", gate-2)
-			for _, y := range []int{0, 1} {
-				if solid(c.Solid, x, y) {
-					t.Fatalf("invisible rear wall at lot %d %d,%d", gate, x, y)
-				}
-			}
-			for _, y := range []int{22, 23} {
-				if solid(north.Solid, x, y) {
-					t.Fatalf("blocked cross-lane above lot %d %d,%d", gate, x, y)
+		}
+		for x := 0; x < 24; x++ {
+			for _, y := range []int{1, 22} {
+				if !solid(x, y) {
+					t.Fatalf("side fence lot %d %d,%d", gate, x, y)
 				}
 			}
 		}

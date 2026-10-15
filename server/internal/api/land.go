@@ -26,7 +26,7 @@ func (w wildsService) Land(ctx context.Context, tx *sql.Tx, world string, gate i
 		return nil, sql.ErrNoRows
 	}
 	cfg := content.HomeRules.GetLand()
-	l := land.Generate(land.Seed(world, int(gate), cfg), cfg)
+	l := land.GenerateLot(land.Seed(world, int(gate), cfg), cfg, int(gate))
 	out := &contract.HomesteadLand{Width: uint32(l.Width), Height: uint32(l.Height), GeneratorVersion: LandGeneratorVersion, Cells: make([]string, len(l.Tiles))}
 	for i, k := range l.Tiles {
 		out.Cells[i] = land.CellNames[k]

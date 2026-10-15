@@ -34,7 +34,7 @@ async function refuseReportFrom(page: Page, area: string): Promise<void> {
     // A moment later than a world would answer, so the room is seen to settle first.
     await new Promise((r) => setTimeout(r, 1500))
     const { state } = await (await page.request.get('/api/state', CONTRACT)).json()
-    state.place = { ...state.place, area: 'outdoors', x: -11 * 16 + 8, y: 59 * 16 + 8 }
+    state.place = { ...state.place, area: 'outdoors', x: 6 * 16 + 8, y: 54 * 16 + 8 }
     await route.fulfill({ status: 409, contentType: 'application/json', body: JSON.stringify({ error: { code: 'invalid-position' }, state }) })
   })
 }
@@ -173,7 +173,7 @@ test('a room place the world refuses: the hero is put back where the world says,
   // The arrival's report is refused: back outside, by the world's place (where the server holds the hero).
   await settled(page, { area: 'outdoors' })
   const at = await player(page)
-  expect(Math.hypot(at.x - (-11 * 16 + 8), at.y - (59 * 16 + 8)), 'on the place the world said').toBeLessThan(24)
+  expect(Math.hypot(at.x - (6 * 16 + 8), at.y - (54 * 16 + 8)), 'on the place the world said').toBeLessThan(24)
   // The next report names that place, so the world holds it, and a reload starts there.
   await page.unroute('**/api/report')
   await expect.poll(async () => (await serverState(page)).body.state.area, { timeout: 20_000 }).toBe('outdoors')

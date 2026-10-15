@@ -95,7 +95,7 @@ test('a bench axe wears to nothing and breaks; an heirloom blunts, and Silas men
   // mends it for glims while you talk; the materials stay in the pack.
   seedGlims(id, 4)
   await setHour(page, { minute: 10, server: true })
-  await go(page, 'outdoors', 29, 37)
+  await go(page, 'outdoors', -16, 109)
   await openInventory(page, /Tools/)
   await pick(page, `inst:${brack}`)
   await brackRow.getByRole('button', { name: 'Mend…' }).click()
@@ -160,7 +160,7 @@ test('a twist mends you; the fox goes in a pocket, and the lantern rides in the 
 
 test('things lying in the world can be picked up, once', { tag: '@smoke' }, async ({ page }) => {
   await freshPlayer(page, 'Moss')
-  await go(page, 'outdoors', 9, 58)
+  await go(page, 'outdoors', 5, 66)
   await expect.poll(() => page.evaluate(() => (window as unknown as { __fsPickups: () => string[] }).__fsPickups())).toContain('well-rope-coil')
   await expect(page.locator('.prompt')).toContainText('Pick up the coil of rope')
   if (process.env.SCREENS) await page.waitForTimeout(2500) // the area title fades

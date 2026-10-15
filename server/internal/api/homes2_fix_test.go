@@ -24,7 +24,7 @@ func (l testLand) open(x, y int) bool {
 	if !land.Buildable(l.g.land.Effective(l.g.cleared, x, y)) {
 		return false
 	}
-	for _, r := range content.HomeRules.GetOutdoorReserved() {
+	for _, r := range content.HomeOutdoorReserved(l.h.Gate) {
 		if x >= int(r.GetX()) && x < int(r.GetX())+int(r.GetW()) && y >= int(r.GetY()) && y < int(r.GetY())+int(r.GetH()) {
 			return false
 		}

@@ -42,5 +42,5 @@ func onPrivateLot(s *store.Snapshot, gate int) bool {
 		return false
 	}
 	ox, oy := chunks.LotOrigin(gate)
-	return chunks.InsideLot(int(math.Floor(s.State.Position.X/16))-ox, int(math.Floor(s.State.Position.Y/16))-oy)
+	return chunks.InsideLot(int(math.Floor(s.State.Position.X/16))-ox, int(math.Floor(s.State.Position.Y/16))-oy, gate)
 }

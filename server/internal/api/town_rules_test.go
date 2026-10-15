@@ -66,7 +66,7 @@ func TestTownRuleVectors(t *testing.T) {
 		if len(c.Tile) == 2 {
 			x, y := c.Tile[0], c.Tile[1]
 			cx, cy := wilds.FloorDiv(x, 24), wilds.FloorDiv(y, 24)
-			got = fixedGatherAt(&s, chunks.Fixed(chunks.FixedEpoch("hearthwick", 1), int32(cx), int32(cy)), c.Target, x, y)
+			got = fixedGatherAt(&s, chunks.Fixed(chunks.FixedEpoch("hearthwick", 4), int32(cx), int32(cy)), c.Target, x, y)
 		}
 		if got != c.Allowed {
 			t.Fatalf("%s: fixed gather %v", c.Name, got)
@@ -117,8 +117,8 @@ func TestTownRestBoundariesThroughAPI(t *testing.T) {
 	}{
 		{"square", "outdoors", 72, 968, true}, {"apron", "outdoors", 40, 392, true},
 		{"library", "in:village:library", 80, 80, true}, {"Tangle", "outdoors", 40, 376, false},
-		{"south", "outdoors", 152, 1544, false}, {"west", "outdoors", -1544, 1112, false},
-		{"lot", "outdoors", -952, 712, false},
+		{"south", "outdoors", 200, 1928, false}, {"west", "outdoors", -1544, 1112, false},
+		{"lot", "outdoors", -584, 520, false},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			x := newRig(t)

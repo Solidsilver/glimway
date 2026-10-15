@@ -27,7 +27,7 @@ test('served land: the LAND vocabulary, its site, path and gate mouth clear', ()
   const land = FIXTURE_LAND;
   assert.equal(land.tiles.length, land.width * land.height);
   for (let y = site.y; y < site.y + site.h; y++) for (let x = site.x; x < site.x + site.w; x++) assert.equal(landAt(land, x, y), LAND.GRASS);
-  for (let y = site.y + site.h; y < land.height; y++) for (let x = gate.x; x < gate.x + gate.w; x++) assert.equal(landAt(land, x, y), LAND.PATH);
+  for (let y = site.y + site.h; y <= 12; y++) for (let x = gate.x; x < gate.x + gate.w; x++) assert.equal(landAt(land, x, y), LAND.PATH);
   assert.throws(() => landFromCells({ width: 1, height: 1, cells: ['lava'] }));
   assert.throws(() => landFromCells({ width: 2, height: 1, cells: ['grass'] }));
 });
@@ -46,9 +46,9 @@ test('lantern posts cost more each time', () => {
 });
 
 test('gates alternate sides down the lane and reject invalid lots', () => {
-  assert.deepEqual(gateTile(0), { tx: -61, ty: 43, side: 'west' });
+  assert.deepEqual(gateTile(0), { tx: -25, ty: 35, side: 'west' });
   assert.equal(gateTile(1).side, 'east');
-  assert.equal(gateTile(7).ty, 115);
+  assert.equal(gateTile(7).ty, 107);
   assert.throws(() => gateTile(8));
 });
 
@@ -60,7 +60,7 @@ test('placement outdoors needs lit, open ground and posts hold up the land past 
   const home = { tier: 0, items: [stool] as HomeInstance[] };
   // Inside the home's light, off the reserved site and path.
   assert.equal(checkPlacement(home, stool, 'outdoor', s.x + 3, s.y + 3, 0), null);
-  const far = 20, farY = 11;
+  const far = 20, farY = 13;
   assert.equal(checkPlacement(home, stool, 'outdoor', far, farY, 0), 'unlit');
   // A post at the edge of the light lights the ground beyond it.
   const p1 = post('p1', 18, 9);

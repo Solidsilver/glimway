@@ -63,7 +63,7 @@ test('a quest step shows at once, and its answer brings what the server granted'
   const [sent] = r.server.sent('POST /api/quest/step');
   assert.equal(sent.body.to, 'accepted');
   assert.equal(sent.body.quest, 'lantern-road');
-  assert.deepEqual(sent.body.where, { area: 'outdoors', x: 72, y: 968 });
+  assert.deepEqual(sent.body.where, { area: 'outdoors', x: 88, y: 968 });
   assert.equal(sent.body.op.lease, 'L1');
   assert.ok(!('baseRev' in sent.body) && !('progress' in sent.body));
   assert.equal(r.link.outbox.length, 0);
@@ -258,7 +258,7 @@ test('a domain mutation carries op and where, and a lost answer is replayed befo
   assert.deepEqual(lost, { ok: false, code: 'pending' });
   assert.ok(r.link.pendingOperation);
   const [body] = r.server.sent('POST /api/craft').map((c) => c.body);
-  assert.deepEqual(body.where, { area: 'outdoors', x: 72, y: 968 });
+  assert.deepEqual(body.where, { area: 'outdoors', x: 88, y: 968 });
   assert.equal(body.recipeId, 'plank');
   assert.ok(!('baseRev' in body) && !('progress' in body));
 
@@ -308,7 +308,7 @@ test('idempotency-mismatch, a different payload committed: that action is not th
   r.link.mark('seen:a');
   r.link.mark('seen:b');
   const key = r.link.outbox[0]!.key;
-  r.server.on(lookupPath('/api/story/mark', key), lookup({ route: '/api/story/mark', key, payload: { mark: 'seen:other', where: { area: 'outdoors', x: 72, y: 968 } }, payloadHash: 'h', version: 1, result: { mark: 'seen:other', added: true }, resultCase: 'mark', resultType: 'glimway.v1.MarkResult' }));
+  r.server.on(lookupPath('/api/story/mark', key), lookup({ route: '/api/story/mark', key, payload: { mark: 'seen:other', where: { area: 'outdoors', x: 88, y: 968 } }, payloadHash: 'h', version: 1, result: { mark: 'seen:other', added: true }, resultCase: 'mark', resultType: 'glimway.v1.MarkResult' }));
   await r.link.flush();
   assert.deepEqual(r.session.state.flags, ['seen:b'], 'the mismatched mark is not claimed');
   assert.equal(r.link.outbox.length, 0);
@@ -322,7 +322,7 @@ test('idempotency-mismatch, the same payload after all: its stored result settle
   r.server.on('POST /api/story/mark', refuse('idempotency-mismatch', S({ version: 2, marks: ['seen:a'] })));
   r.link.mark('seen:a');
   const key = r.link.outbox[0]!.key;
-  r.server.on(lookupPath('/api/story/mark', key), lookup({ route: '/api/story/mark', key, payload: { mark: 'seen:a', where: { area: 'outdoors', x: 72, y: 968 } }, payloadHash: 'h', version: 2, result: { mark: 'seen:a', added: true }, resultCase: 'mark', resultType: 'glimway.v1.MarkResult' }, S({ version: 2, marks: ['seen:a'] })));
+  r.server.on(lookupPath('/api/story/mark', key), lookup({ route: '/api/story/mark', key, payload: { mark: 'seen:a', where: { area: 'outdoors', x: 88, y: 968 } }, payloadHash: 'h', version: 2, result: { mark: 'seen:a', added: true }, resultCase: 'mark', resultType: 'glimway.v1.MarkResult' }, S({ version: 2, marks: ['seen:a'] })));
   await r.link.flush();
   assert.equal(r.link.outbox.length, 0);
   assert.deepEqual(r.session.state.flags, ['seen:a']);
@@ -340,7 +340,7 @@ test('idempotency-mismatch, the same payload after all: the recovered fall keeps
   // operation's actual result fields in their oneof case, its type beside
   // them — the storage wrapper the row keeps never reaches the client.
   r.server.on(lookupPath('/api/fall', key), lookup({
-    route: '/api/fall', key, payload: { where: { area: 'outdoors', x: 72, y: 968 } }, payloadHash: 'h', version: 1,
+    route: '/api/fall', key, payload: { where: { area: 'outdoors', x: 88, y: 968 } }, payloadHash: 'h', version: 1,
     result: { vitals: { hp: 13, mana: 10, vitalsSetVersion: 1 }, place: { area: 'outdoors', placeSetVersion: 1 }, lantern: 'fallen:wilds:outer-1:4', reason: 'fell', lanternId: 'wilds:outer-1:4', epoch: 'inner-1' },
     resultCase: 'fall', resultType: 'glimway.v1.FallResult',
   }, S({ version: 2 })));
@@ -357,7 +357,7 @@ test('idempotency-mismatch, the same payload after all: the recovered mark carri
   r.server.on('POST /api/story/mark', refuse('idempotency-mismatch', S({ version: 2, marks: ['seen:a'] })));
   r.link.mark('seen:a');
   const key = r.link.outbox[0]!.key;
-  r.server.on(lookupPath('/api/story/mark', key), lookup({ route: '/api/story/mark', key, payload: { mark: 'seen:a', where: { area: 'outdoors', x: 72, y: 968 } }, payloadHash: 'h', version: 2, result: { added: true, mark: 'seen:a' }, resultCase: 'mark', resultType: 'glimway.v1.MarkResult' }, S({ version: 2, marks: ['seen:a'] })));
+  r.server.on(lookupPath('/api/story/mark', key), lookup({ route: '/api/story/mark', key, payload: { mark: 'seen:a', where: { area: 'outdoors', x: 88, y: 968 } }, payloadHash: 'h', version: 2, result: { added: true, mark: 'seen:a' }, resultCase: 'mark', resultType: 'glimway.v1.MarkResult' }, S({ version: 2, marks: ['seen:a'] })));
   await r.link.flush();
   assert.equal(r.link.outbox.length, 0);
   assert.deepEqual(r.session.state.flags, ['seen:a']);
@@ -398,7 +398,7 @@ test('idempotency-mismatch on a domain action the caller awaits: a different act
   await online(r);
   r.server.on('POST /api/craft', refuse('idempotency-mismatch', S({ version: 2 })));
   r.server.beforeSend.push((c) => {
-    if (c.path === '/api/craft') r.server.on(lookupPath('/api/craft', c.body.op.key), lookup({ route: '/api/craft', key: c.body.op.key, payload: { recipeId: 'chair', qty: 1, where: { area: 'outdoors', x: 72, y: 968 } }, payloadHash: 'h', version: 1, result: {}, resultCase: 'result', resultType: '' }));
+    if (c.path === '/api/craft') r.server.on(lookupPath('/api/craft', c.body.op.key), lookup({ route: '/api/craft', key: c.body.op.key, payload: { recipeId: 'chair', qty: 1, where: { area: 'outdoors', x: 88, y: 968 } }, payloadHash: 'h', version: 1, result: {}, resultCase: 'result', resultType: '' }));
   });
   const res = await r.link.mutate({ kind: 'craft', fields: { recipeId: 'plank', qty: 1 } });
   assert.deepEqual(res, { ok: false, code: 'idempotency-mismatch' });
@@ -496,7 +496,7 @@ test('reports carry place, vitals and summed casts; the clamped answer keeps wha
   r.link.reportSoon();
   await r.link.flush();
   const [rep] = r.server.sent('POST /api/report').map((c) => c.body);
-  assert.deepEqual({ seq: rep.seq, casts: rep.casts, hp: rep.hp, mana: rep.mana, client: rep.client, generation: rep.generation, place: rep.place }, { seq: 1, casts: 2, hp: 30, mana: 8, client: 'rc', generation: 'gen-1', place: { area: 'outdoors', x: 72, y: 968 } });
+  assert.deepEqual({ seq: rep.seq, casts: rep.casts, hp: rep.hp, mana: rep.mana, client: rep.client, generation: rep.generation, place: rep.place }, { seq: 1, casts: 2, hp: 30, mana: 8, client: 'rc', generation: 'gen-1', place: { area: 'outdoors', x: 88, y: 968 } });
   assert.equal(r.session.state.hp, 25, 'the hit after capture stays');
   assert.equal(r.session.state.mana, 5, 'the clamp is adopted');
 });
@@ -569,7 +569,7 @@ test('a fall is predicted at once, queues offline, and the next report waits for
   await r.link.flush();
   const order = r.server.calls.map((c) => c.path).filter((p) => p !== '/api/play');
   assert.deepEqual(order, ['/api/fall', '/api/report']);
-  assert.deepEqual(r.server.sent('POST /api/fall')[0]!.body.where, { area: 'woodland', x: 72, y: 968 }, 'where the hero fell');
+  assert.deepEqual(r.server.sent('POST /api/fall')[0]!.body.where, { area: 'woodland', x: 88, y: 968 }, 'where the hero fell');
   const rep = r.server.sent('POST /api/report')[0]!.body;
   assert.equal(rep.basis, 3, 'reported against the fall');
   assert.equal(r.session.state.hp, 9, 'the hurt after waking is kept');
@@ -616,7 +616,7 @@ test('idempotency reconciliation of a stored refusal settles as refused and roll
   r.server.on('POST /api/story/mark', refuse('idempotency-mismatch', S({ version: 2 })));
   r.link.mark('seen:a');
   const key = r.link.outbox[0]!.key;
-  r.server.on(lookupPath('/api/story/mark', key), lookup({ route: '/api/story/mark', key, payload: { mark: 'seen:a', where: { area: 'outdoors', x: 72, y: 968 } }, version: 1, refused: 'unknown-mark', result: null, resultCase: 'result' }, S({ version: 2 })));
+  r.server.on(lookupPath('/api/story/mark', key), lookup({ route: '/api/story/mark', key, payload: { mark: 'seen:a', where: { area: 'outdoors', x: 88, y: 968 } }, version: 1, refused: 'unknown-mark', result: null, resultCase: 'result' }, S({ version: 2 })));
   await r.link.flush();
   assert.equal(r.link.outbox.length, 0);
   assert.deepEqual(r.session.state.flags, []);

@@ -9,20 +9,20 @@ import { parseInviteList } from '../src/lib/api/invites.ts';
 
 test('a move starts only from safe ground (the village, the Commons, a home), online, with nothing pending or on the road, a day after the last', () => {
   // From a home you arrive at its gate on the new world's Commons (the server's anchor).
-  assert.deepEqual(moveBlocks({ area: 'outdoors', position: { x: -976, y: 512 }, outgoing: 0, online: true, pending: false }), [], 'lot 0 doorstep');
+  assert.deepEqual(moveBlocks({ area: 'outdoors', position: { x: -584, y: 512 }, outgoing: 0, online: true, pending: false }), [], 'lot 0 doorstep');
   assert.deepEqual(moveBlocks({ area: 'in:home:0', outgoing: 0, online: true, pending: false }), []);
   assert.deepEqual(moveBlocks({ area: 'outdoors', position: { x: 40, y: 424 }, outgoing: 0, online: true, pending: false }), [], 'the Commons');
-  assert.deepEqual(moveBlocks({ area: 'outdoors', position: { x: 72, y: 968 }, outgoing: 0, online: true, pending: false }), []);
+  assert.deepEqual(moveBlocks({ area: 'outdoors', position: { x: 88, y: 968 }, outgoing: 0, online: true, pending: false }), []);
   for (const area of ['cottage', 'woodland', 'outdoors', 'home:0', 'chunk:inner-1:0:0']) {
     assert.deepEqual(moveBlocks({ area, outgoing: 0, online: true, pending: false }), ['area'], area);
   }
   assert.deepEqual(moveBlocks({ area: 'woodland', outgoing: 2, online: false, pending: true }), ['offline', 'pending', 'area', 'mail']);
   // One move a day: blocked while seconds remain (counted on this device from
   // the server's figure), and always after the server refused for it.
-  assert.deepEqual(moveBlocks({ area: 'outdoors', position: { x: 72, y: 968 }, outgoing: 0, online: true, pending: false, opensIn: 1 }), ['cooldown']);
-  assert.deepEqual(moveBlocks({ area: 'outdoors', position: { x: 72, y: 968 }, outgoing: 0, online: true, pending: false, opensIn: 0 }), []);
-  assert.deepEqual(moveBlocks({ area: 'outdoors', position: { x: 72, y: 968 }, outgoing: 0, online: true, pending: false, opensIn: 0, cooled: true }), ['cooldown']);
-  assert.deepEqual(moveBlocks({ area: 'outdoors', position: { x: 72, y: 968 }, outgoing: 0, online: true, pending: false }), []);
+  assert.deepEqual(moveBlocks({ area: 'outdoors', position: { x: 88, y: 968 }, outgoing: 0, online: true, pending: false, opensIn: 1 }), ['cooldown']);
+  assert.deepEqual(moveBlocks({ area: 'outdoors', position: { x: 88, y: 968 }, outgoing: 0, online: true, pending: false, opensIn: 0 }), []);
+  assert.deepEqual(moveBlocks({ area: 'outdoors', position: { x: 88, y: 968 }, outgoing: 0, online: true, pending: false, opensIn: 0, cooled: true }), ['cooldown']);
+  assert.deepEqual(moveBlocks({ area: 'outdoors', position: { x: 88, y: 968 }, outgoing: 0, online: true, pending: false }), []);
 });
 
 test('server refusals map to what the move screen says', () => {

@@ -28,6 +28,8 @@ import (
 //  7. An edge gap, in the two edge tiles each side.
 //  8. The land's floor: solid where its thicketPermille says (woods: all),
 //     else open, by the world-coordinate land field, edge tiles included.
+//     Beside an open fixed edge, the soft band and the feather past it
+//     (seams.go) thin it.
 //     Among the edge tiles, open land that would be shut in is shut
 //     (edgeOpen), so neither chunk is left with open ground it may not
 //     carve to.
@@ -46,6 +48,8 @@ const (
 	bRoute
 	bBank
 	bGap
+	bSoft      // the soft band beside an open fixed edge (seams.go)
+	bSeamFixed // a seam tile mirroring the fixed block's edge
 )
 
 type baseTile struct {
@@ -270,6 +274,9 @@ func (w *world) fillRaw(x0, y0, x1, y1 int, kept *keptReader) []baseTile {
 			if mx, my, ok := w.seamMirror(tx, ty); ok {
 				walk, g := kept.tile(mx, my)
 				t.walk, t.ground, t.kind = walk, g, bSeam
+				if FixedFootprintAt(floorDiv(mx, S), floorDiv(my, S)) != nil {
+					t.kind = bSeamFixed
+				}
 				if walk && (wet || banked || groundSurface[g] == "water" || groundSurface[g] == "ford") {
 					t.ground = groundRiverBank
 				}
@@ -306,6 +313,10 @@ func (w *world) fillRaw(x0, y0, x1, y1 int, kept *keptReader) []baseTile {
 					}
 				}
 			}
+			if w.apronAt(tx, ty) {
+				t.walk, t.kind, t.ground = true, bRoute, lg.path
+				continue
+			}
 			if routeD >= 0 && routeD <= routeVerge*routeVerge {
 				t.walk, t.kind = true, bRoute
 				t.ground = lg.verge
@@ -324,7 +335,22 @@ func (w *world) fillRaw(x0, y0, x1, y1 int, kept *keptReader) []baseTile {
 			}
 			t.kind = bField
 			t.ground = lg.floor
-			t.walk = !w.thicketAt(tx, ty, int(landData(land).GetThicketPermille()))
+			permille := int(landData(land).GetThicketPermille())
+			if s, ok := w.softAt(tx, ty); ok {
+				if s.depth == softDepth {
+					t.kind = bSoft
+					t.walk = !w.softSolid(s) || !w.thicketAt(tx, ty, permille)
+					if t.walk {
+						t.ground = lg.open
+					}
+					continue
+				}
+				if t.walk = !w.thicketAt(tx, ty, permille*featherPermille[s.depth-softDepth-1]/1000); t.walk {
+					t.ground = lg.open
+				}
+				continue
+			}
+			t.walk = !w.thicketAt(tx, ty, permille)
 		}
 	}
 	return out

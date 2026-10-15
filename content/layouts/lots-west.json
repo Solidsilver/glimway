@@ -1,0 +1,2148 @@
+{
+  "id": "lots-west",
+  "revision": 5,
+  "tx": 0,
+  "ty": 0,
+  "width": 24,
+  "height": 96,
+  "palette": {
+    ".": "grass_a",
+    ",": "grass_b",
+    ":": "path_a",
+    "-": "path_b",
+    "=": "cobble",
+    "+": "stone_a",
+    "t": "dirt",
+    "f": "tilled",
+    "~": "water_b"
+  },
+  "ground": [
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,::::::::,,,,,,,,",
+    ",,,,,,,,::::::::,,,,,,,,",
+    ",,,,,,,,::::::::,,,,,,,,",
+    ",,,,,,,,::::::::,,,,,,,,",
+    ",,,,,,,,::::::::,,,,,,,,",
+    ",,,,,,,,::::::::,,,,,,,,",
+    ",,,,,,,,,,,::,,,,,,,,,,,",
+    ",,,,,,,,,,,::,,,,,,,,,,,",
+    ",,,,,,,,,,,:::::::::::::",
+    ",,,,,,,,,,,:::::::::::::",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    "::::::::::::::::::::::::",
+    "::::::::::::::::::::::::",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,::::::::,,,,,,,,",
+    ",,,,,,,,::::::::,,,,,,,,",
+    ",,,,,,,,::::::::,,,,,,,,",
+    ",,,,,,,,::::::::,,,,,,,,",
+    ",,,,,,,,::::::::,,,,,,,,",
+    ",,,,,,,,::::::::,,,,,,,,",
+    ",,,,,,,,,,,::,,,,,,,,,,,",
+    ",,,,,,,,,,,::,,,,,,,,,,,",
+    ",,,,,,,,,,,:::::::::::::",
+    ",,,,,,,,,,,:::::::::::::",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    "------------------------",
+    "------------------------",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,::::::::,,,,,,,,",
+    ",,,,,,,,::::::::,,,,,,,,",
+    ",,,,,,,,::::::::,,,,,,,,",
+    ",,,,,,,,::::::::,,,,,,,,",
+    ",,,,,,,,::::::::,,,,,,,,",
+    ",,,,,,,,::::::::,,,,,,,,",
+    ",,,,,,,,,,,::,,,,,,,,,,,",
+    ",,,,,,,,,,,::,,,,,,,,,,,",
+    ",,,,,,,,,,,:::::::::::::",
+    ",,,,,,,,,,,:::::::::::::",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    "::::::::::::::::::::::::",
+    "::::::::::::::::::::::::",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,::::::::,,,,,,,,",
+    ",,,,,,,,::::::::,,,,,,,,",
+    ",,,,,,,,::::::::,,,,,,,,",
+    ",,,,,,,,::::::::,,,,,,,,",
+    ",,,,,,,,::::::::,,,,,,,,",
+    ",,,,,,,,::::::::,,,,,,,,",
+    ",,,,,,,,,,,::,,,,,,,,,,,",
+    ",,,,,,,,,,,::,,,,,,,,,,,",
+    ",,,,,,,,,,,:::::::::::::",
+    ",,,,,,,,,,,:::::::::::::",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,",
+    ",,,,,,,,,,,,,,,,,,,,,,,,"
+  ],
+  "solid": [
+    "########################",
+    "########################",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    "........................",
+    "........................",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    "########################",
+    "........................",
+    "........................",
+    "########################",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    "........................",
+    "........................",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    "########################",
+    "........................",
+    "........................",
+    "########################",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    "........................",
+    "........................",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    "########################",
+    "........................",
+    "........................",
+    "########################",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    "........................",
+    "........................",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    ".......................#",
+    "########################",
+    "########################"
+  ],
+  "objects": [
+    {
+      "id": "lot:0:gate",
+      "kind": "gate",
+      "tx": 23,
+      "ty": 11,
+      "tw": 1,
+      "th": 2,
+      "gate": 0,
+      "side": "west",
+      "target": "lot-entry"
+    },
+    {
+      "id": "lot:0:sign",
+      "kind": "sign",
+      "tx": 23,
+      "ty": 9,
+      "gate": 0
+    },
+    {
+      "id": "lot:0:shelf",
+      "kind": "shelf",
+      "tx": 23,
+      "ty": 14,
+      "gate": 0
+    },
+    {
+      "id": "lot:0:fence:1",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 1,
+      "variant": "fence-h-24",
+      "art": {
+        "ox": 0,
+        "oy": 16,
+        "originLeft": true
+      }
+    },
+    {
+      "id": "lot:0:fence:22",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 22,
+      "variant": "fence-h-24",
+      "art": {
+        "ox": 0,
+        "oy": 16,
+        "originLeft": true
+      }
+    },
+    {
+      "id": "lot:0:front:2",
+      "kind": "scenery",
+      "tx": 23,
+      "ty": 10,
+      "variant": "fence-v-9",
+      "art": {
+        "ox": 0,
+        "oy": 16,
+        "originLeft": true
+      }
+    },
+    {
+      "id": "lot:0:front:13",
+      "kind": "scenery",
+      "tx": 23,
+      "ty": 21,
+      "variant": "fence-v-9",
+      "art": {
+        "ox": 0,
+        "oy": 16,
+        "originLeft": true
+      }
+    },
+    {
+      "id": "lot:0:stake:2",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 2,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:0:stake:4",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 4,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:0:stake:6",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 6,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:0:stake:8",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 8,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:0:stake:10",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 10,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:0:stake:12",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 12,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:0:stake:14",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 14,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:0:stake:16",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 16,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:0:stake:18",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 18,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:0:stake:20",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 20,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:2:gate",
+      "kind": "gate",
+      "tx": 23,
+      "ty": 35,
+      "tw": 1,
+      "th": 2,
+      "gate": 2,
+      "side": "west",
+      "target": "lot-entry"
+    },
+    {
+      "id": "lot:2:sign",
+      "kind": "sign",
+      "tx": 23,
+      "ty": 33,
+      "gate": 2
+    },
+    {
+      "id": "lot:2:shelf",
+      "kind": "shelf",
+      "tx": 23,
+      "ty": 38,
+      "gate": 2
+    },
+    {
+      "id": "lot:2:fence:1",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 25,
+      "variant": "fence-h-24",
+      "art": {
+        "ox": 0,
+        "oy": 16,
+        "originLeft": true
+      }
+    },
+    {
+      "id": "lot:2:fence:22",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 46,
+      "variant": "fence-h-24",
+      "art": {
+        "ox": 0,
+        "oy": 16,
+        "originLeft": true
+      }
+    },
+    {
+      "id": "lot:2:front:2",
+      "kind": "scenery",
+      "tx": 23,
+      "ty": 34,
+      "variant": "fence-v-9",
+      "art": {
+        "ox": 0,
+        "oy": 16,
+        "originLeft": true
+      }
+    },
+    {
+      "id": "lot:2:front:13",
+      "kind": "scenery",
+      "tx": 23,
+      "ty": 45,
+      "variant": "fence-v-9",
+      "art": {
+        "ox": 0,
+        "oy": 16,
+        "originLeft": true
+      }
+    },
+    {
+      "id": "lot:2:stake:2",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 26,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:2:stake:4",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 28,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:2:stake:6",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 30,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:2:stake:8",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 32,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:2:stake:10",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 34,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:2:stake:12",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 36,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:2:stake:14",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 38,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:2:stake:16",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 40,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:2:stake:18",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 42,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:2:stake:20",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 44,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:4:gate",
+      "kind": "gate",
+      "tx": 23,
+      "ty": 59,
+      "tw": 1,
+      "th": 2,
+      "gate": 4,
+      "side": "west",
+      "target": "lot-entry"
+    },
+    {
+      "id": "lot:4:sign",
+      "kind": "sign",
+      "tx": 23,
+      "ty": 57,
+      "gate": 4
+    },
+    {
+      "id": "lot:4:shelf",
+      "kind": "shelf",
+      "tx": 23,
+      "ty": 62,
+      "gate": 4
+    },
+    {
+      "id": "lot:4:fence:1",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 49,
+      "variant": "fence-h-24",
+      "art": {
+        "ox": 0,
+        "oy": 16,
+        "originLeft": true
+      }
+    },
+    {
+      "id": "lot:4:fence:22",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 70,
+      "variant": "fence-h-24",
+      "art": {
+        "ox": 0,
+        "oy": 16,
+        "originLeft": true
+      }
+    },
+    {
+      "id": "lot:4:front:2",
+      "kind": "scenery",
+      "tx": 23,
+      "ty": 58,
+      "variant": "fence-v-9",
+      "art": {
+        "ox": 0,
+        "oy": 16,
+        "originLeft": true
+      }
+    },
+    {
+      "id": "lot:4:front:13",
+      "kind": "scenery",
+      "tx": 23,
+      "ty": 69,
+      "variant": "fence-v-9",
+      "art": {
+        "ox": 0,
+        "oy": 16,
+        "originLeft": true
+      }
+    },
+    {
+      "id": "lot:4:stake:2",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 50,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:4:stake:4",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 52,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:4:stake:6",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 54,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:4:stake:8",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 56,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:4:stake:10",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 58,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:4:stake:12",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 60,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:4:stake:14",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 62,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:4:stake:16",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 64,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:4:stake:18",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 66,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:4:stake:20",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 68,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:6:gate",
+      "kind": "gate",
+      "tx": 23,
+      "ty": 83,
+      "tw": 1,
+      "th": 2,
+      "gate": 6,
+      "side": "west",
+      "target": "lot-entry"
+    },
+    {
+      "id": "lot:6:sign",
+      "kind": "sign",
+      "tx": 23,
+      "ty": 81,
+      "gate": 6
+    },
+    {
+      "id": "lot:6:shelf",
+      "kind": "shelf",
+      "tx": 23,
+      "ty": 86,
+      "gate": 6
+    },
+    {
+      "id": "lot:6:fence:1",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 73,
+      "variant": "fence-h-24",
+      "art": {
+        "ox": 0,
+        "oy": 16,
+        "originLeft": true
+      }
+    },
+    {
+      "id": "lot:6:fence:22",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 94,
+      "variant": "fence-h-24",
+      "art": {
+        "ox": 0,
+        "oy": 16,
+        "originLeft": true
+      }
+    },
+    {
+      "id": "lot:6:front:2",
+      "kind": "scenery",
+      "tx": 23,
+      "ty": 82,
+      "variant": "fence-v-9",
+      "art": {
+        "ox": 0,
+        "oy": 16,
+        "originLeft": true
+      }
+    },
+    {
+      "id": "lot:6:front:13",
+      "kind": "scenery",
+      "tx": 23,
+      "ty": 93,
+      "variant": "fence-v-9",
+      "art": {
+        "ox": 0,
+        "oy": 16,
+        "originLeft": true
+      }
+    },
+    {
+      "id": "lot:6:stake:2",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 74,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:6:stake:4",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 76,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:6:stake:6",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 78,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:6:stake:8",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 80,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:6:stake:10",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 82,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:6:stake:12",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 84,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:6:stake:14",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 86,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:6:stake:16",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 88,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:6:stake:18",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 90,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "lot:6:stake:20",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 92,
+      "variant": "hw2:lantern-stake-0",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "wildgate:arch",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 48,
+      "variant": "hw2:wildgate-arch-side",
+      "art": {
+        "ox": 16,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:oak:0,0:mudrise",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Mudrise",
+      "frame": "oak-3",
+      "festival": "Mudrise",
+      "art": {
+        "ox": 10,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:oak:0,0:carting",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Carting",
+      "frame": "oak-3",
+      "festival": "Carting",
+      "art": {
+        "ox": 10,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:oak:0,0:amberfall",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Amberfall",
+      "frame": "oak-3",
+      "festival": "Amberfall",
+      "art": {
+        "ox": 10,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:oak:0,0:quiet",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Quiet",
+      "frame": "oak-3",
+      "festival": "Quiet",
+      "art": {
+        "ox": 10,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:thicket:1,0:mudrise",
+      "kind": "scenery",
+      "tx": 1,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Mudrise",
+      "frame": "thicket-2",
+      "festival": "Mudrise",
+      "art": {
+        "ox": 11,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:thicket:1,0:carting",
+      "kind": "scenery",
+      "tx": 1,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Carting",
+      "frame": "thicket-2",
+      "festival": "Carting",
+      "art": {
+        "ox": 11,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:thicket:1,0:amberfall",
+      "kind": "scenery",
+      "tx": 1,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Amberfall",
+      "frame": "thicket-2",
+      "festival": "Amberfall",
+      "art": {
+        "ox": 11,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:thicket:1,0:quiet",
+      "kind": "scenery",
+      "tx": 1,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Quiet",
+      "frame": "thicket-2",
+      "festival": "Quiet",
+      "art": {
+        "ox": 11,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:pine:4,0:mudrise",
+      "kind": "scenery",
+      "tx": 4,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Mudrise",
+      "frame": "pine-1",
+      "festival": "Mudrise",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:pine:4,0:carting",
+      "kind": "scenery",
+      "tx": 4,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Carting",
+      "frame": "pine-1",
+      "festival": "Carting",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:pine:4,0:amberfall",
+      "kind": "scenery",
+      "tx": 4,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Amberfall",
+      "frame": "pine-1",
+      "festival": "Amberfall",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:pine:4,0:quiet",
+      "kind": "scenery",
+      "tx": 4,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Quiet",
+      "frame": "pine-1",
+      "festival": "Quiet",
+      "art": {
+        "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:oak:8,0:mudrise",
+      "kind": "scenery",
+      "tx": 8,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Mudrise",
+      "frame": "oak-0",
+      "festival": "Mudrise",
+      "art": {
+        "ox": 5,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:oak:8,0:carting",
+      "kind": "scenery",
+      "tx": 8,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Carting",
+      "frame": "oak-0",
+      "festival": "Carting",
+      "art": {
+        "ox": 5,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:oak:8,0:amberfall",
+      "kind": "scenery",
+      "tx": 8,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Amberfall",
+      "frame": "oak-0",
+      "festival": "Amberfall",
+      "art": {
+        "ox": 5,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:oak:8,0:quiet",
+      "kind": "scenery",
+      "tx": 8,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Quiet",
+      "frame": "oak-0",
+      "festival": "Quiet",
+      "art": {
+        "ox": 5,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:thicket:9,0:mudrise",
+      "kind": "scenery",
+      "tx": 9,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Mudrise",
+      "frame": "thicket-0",
+      "festival": "Mudrise",
+      "art": {
+        "ox": 9,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:thicket:9,0:carting",
+      "kind": "scenery",
+      "tx": 9,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Carting",
+      "frame": "thicket-0",
+      "festival": "Carting",
+      "art": {
+        "ox": 9,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:thicket:9,0:amberfall",
+      "kind": "scenery",
+      "tx": 9,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Amberfall",
+      "frame": "thicket-0",
+      "festival": "Amberfall",
+      "art": {
+        "ox": 9,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:thicket:9,0:quiet",
+      "kind": "scenery",
+      "tx": 9,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Quiet",
+      "frame": "thicket-0",
+      "festival": "Quiet",
+      "art": {
+        "ox": 9,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:thicket:10,0:mudrise",
+      "kind": "scenery",
+      "tx": 10,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Mudrise",
+      "frame": "thicket-1",
+      "festival": "Mudrise",
+      "art": {
+        "ox": 9,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:thicket:10,0:carting",
+      "kind": "scenery",
+      "tx": 10,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Carting",
+      "frame": "thicket-1",
+      "festival": "Carting",
+      "art": {
+        "ox": 9,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:thicket:10,0:amberfall",
+      "kind": "scenery",
+      "tx": 10,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Amberfall",
+      "frame": "thicket-1",
+      "festival": "Amberfall",
+      "art": {
+        "ox": 9,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:thicket:10,0:quiet",
+      "kind": "scenery",
+      "tx": 10,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Quiet",
+      "frame": "thicket-1",
+      "festival": "Quiet",
+      "art": {
+        "ox": 9,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:oak:11,0:mudrise",
+      "kind": "scenery",
+      "tx": 11,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Mudrise",
+      "frame": "oak-3",
+      "festival": "Mudrise",
+      "art": {
+        "ox": 10,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:oak:11,0:carting",
+      "kind": "scenery",
+      "tx": 11,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Carting",
+      "frame": "oak-3",
+      "festival": "Carting",
+      "art": {
+        "ox": 10,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:oak:11,0:amberfall",
+      "kind": "scenery",
+      "tx": 11,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Amberfall",
+      "frame": "oak-3",
+      "festival": "Amberfall",
+      "art": {
+        "ox": 10,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:oak:11,0:quiet",
+      "kind": "scenery",
+      "tx": 11,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Quiet",
+      "frame": "oak-3",
+      "festival": "Quiet",
+      "art": {
+        "ox": 10,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:oak:12,0:mudrise",
+      "kind": "scenery",
+      "tx": 12,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Mudrise",
+      "frame": "oak-0",
+      "festival": "Mudrise",
+      "art": {
+        "ox": 10,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:oak:12,0:carting",
+      "kind": "scenery",
+      "tx": 12,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Carting",
+      "frame": "oak-0",
+      "festival": "Carting",
+      "art": {
+        "ox": 10,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:oak:12,0:amberfall",
+      "kind": "scenery",
+      "tx": 12,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Amberfall",
+      "frame": "oak-0",
+      "festival": "Amberfall",
+      "art": {
+        "ox": 10,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:oak:12,0:quiet",
+      "kind": "scenery",
+      "tx": 12,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Quiet",
+      "frame": "oak-0",
+      "festival": "Quiet",
+      "art": {
+        "ox": 10,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:thicket:14,0:mudrise",
+      "kind": "scenery",
+      "tx": 14,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Mudrise",
+      "frame": "thicket-2",
+      "festival": "Mudrise",
+      "art": {
+        "ox": 10,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:thicket:14,0:carting",
+      "kind": "scenery",
+      "tx": 14,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Carting",
+      "frame": "thicket-2",
+      "festival": "Carting",
+      "art": {
+        "ox": 10,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:thicket:14,0:amberfall",
+      "kind": "scenery",
+      "tx": 14,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Amberfall",
+      "frame": "thicket-2",
+      "festival": "Amberfall",
+      "art": {
+        "ox": 10,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:thicket:14,0:quiet",
+      "kind": "scenery",
+      "tx": 14,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Quiet",
+      "frame": "thicket-2",
+      "festival": "Quiet",
+      "art": {
+        "ox": 10,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:thicket:16,0:mudrise",
+      "kind": "scenery",
+      "tx": 16,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Mudrise",
+      "frame": "thicket-0",
+      "festival": "Mudrise",
+      "art": {
+        "ox": 9,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:thicket:16,0:carting",
+      "kind": "scenery",
+      "tx": 16,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Carting",
+      "frame": "thicket-0",
+      "festival": "Carting",
+      "art": {
+        "ox": 9,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:thicket:16,0:amberfall",
+      "kind": "scenery",
+      "tx": 16,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Amberfall",
+      "frame": "thicket-0",
+      "festival": "Amberfall",
+      "art": {
+        "ox": 9,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:thicket:16,0:quiet",
+      "kind": "scenery",
+      "tx": 16,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Quiet",
+      "frame": "thicket-0",
+      "festival": "Quiet",
+      "art": {
+        "ox": 9,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:oak:17,0:mudrise",
+      "kind": "scenery",
+      "tx": 17,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Mudrise",
+      "frame": "oak-3",
+      "festival": "Mudrise",
+      "art": {
+        "ox": 8,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:oak:17,0:carting",
+      "kind": "scenery",
+      "tx": 17,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Carting",
+      "frame": "oak-3",
+      "festival": "Carting",
+      "art": {
+        "ox": 8,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:oak:17,0:amberfall",
+      "kind": "scenery",
+      "tx": 17,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Amberfall",
+      "frame": "oak-3",
+      "festival": "Amberfall",
+      "art": {
+        "ox": 8,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:oak:17,0:quiet",
+      "kind": "scenery",
+      "tx": 17,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Quiet",
+      "frame": "oak-3",
+      "festival": "Quiet",
+      "art": {
+        "ox": 8,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:birch:19,0:mudrise",
+      "kind": "scenery",
+      "tx": 19,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Mudrise",
+      "frame": "birch-0",
+      "festival": "Mudrise",
+      "art": {
+        "ox": 6,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:birch:19,0:carting",
+      "kind": "scenery",
+      "tx": 19,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Carting",
+      "frame": "birch-0",
+      "festival": "Carting",
+      "art": {
+        "ox": 6,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:birch:19,0:amberfall",
+      "kind": "scenery",
+      "tx": 19,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Amberfall",
+      "frame": "birch-0",
+      "festival": "Amberfall",
+      "art": {
+        "ox": 6,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:birch:19,0:quiet",
+      "kind": "scenery",
+      "tx": 19,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Quiet",
+      "frame": "birch-0",
+      "festival": "Quiet",
+      "art": {
+        "ox": 6,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:oak:21,0:mudrise",
+      "kind": "scenery",
+      "tx": 21,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Mudrise",
+      "frame": "oak-3",
+      "festival": "Mudrise",
+      "art": {
+        "ox": 11,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:oak:21,0:carting",
+      "kind": "scenery",
+      "tx": 21,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Carting",
+      "frame": "oak-3",
+      "festival": "Carting",
+      "art": {
+        "ox": 11,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:oak:21,0:amberfall",
+      "kind": "scenery",
+      "tx": 21,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Amberfall",
+      "frame": "oak-3",
+      "festival": "Amberfall",
+      "art": {
+        "ox": 11,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:oak:21,0:quiet",
+      "kind": "scenery",
+      "tx": 21,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Quiet",
+      "frame": "oak-3",
+      "festival": "Quiet",
+      "art": {
+        "ox": 11,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:thicket:22,0:mudrise",
+      "kind": "scenery",
+      "tx": 22,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Mudrise",
+      "frame": "thicket-0",
+      "festival": "Mudrise",
+      "art": {
+        "ox": 11,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:thicket:22,0:carting",
+      "kind": "scenery",
+      "tx": 22,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Carting",
+      "frame": "thicket-0",
+      "festival": "Carting",
+      "art": {
+        "ox": 11,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:thicket:22,0:amberfall",
+      "kind": "scenery",
+      "tx": 22,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Amberfall",
+      "frame": "thicket-0",
+      "festival": "Amberfall",
+      "art": {
+        "ox": 11,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:thicket:22,0:quiet",
+      "kind": "scenery",
+      "tx": 22,
+      "ty": 0,
+      "variant": "wilds-decor-outer-Quiet",
+      "frame": "thicket-0",
+      "festival": "Quiet",
+      "art": {
+        "ox": 11,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:thicket:0,95:mudrise",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 95,
+      "variant": "wilds-decor-outer-Mudrise",
+      "frame": "thicket-3",
+      "festival": "Mudrise",
+      "art": {
+        "ox": 9,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:thicket:0,95:carting",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 95,
+      "variant": "wilds-decor-outer-Carting",
+      "frame": "thicket-3",
+      "festival": "Carting",
+      "art": {
+        "ox": 9,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:thicket:0,95:amberfall",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 95,
+      "variant": "wilds-decor-outer-Amberfall",
+      "frame": "thicket-3",
+      "festival": "Amberfall",
+      "art": {
+        "ox": 9,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:thicket:0,95:quiet",
+      "kind": "scenery",
+      "tx": 0,
+      "ty": 95,
+      "variant": "wilds-decor-outer-Quiet",
+      "frame": "thicket-3",
+      "festival": "Quiet",
+      "art": {
+        "ox": 9,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:oak:2,95:mudrise",
+      "kind": "scenery",
+      "tx": 2,
+      "ty": 95,
+      "variant": "wilds-decor-outer-Mudrise",
+      "frame": "oak-1",
+      "festival": "Mudrise",
+      "art": {
+        "ox": 9,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:oak:2,95:carting",
+      "kind": "scenery",
+      "tx": 2,
+      "ty": 95,
+      "variant": "wilds-decor-outer-Carting",
+      "frame": "oak-1",
+      "festival": "Carting",
+      "art": {
+        "ox": 9,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:oak:2,95:amberfall",
+      "kind": "scenery",
+      "tx": 2,
+      "ty": 95,
+      "variant": "wilds-decor-outer-Amberfall",
+      "frame": "oak-1",
+      "festival": "Amberfall",
+      "art": {
+        "ox": 9,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:oak:2,95:quiet",
+      "kind": "scenery",
+      "tx": 2,
+      "ty": 95,
+      "variant": "wilds-decor-outer-Quiet",
+      "frame": "oak-1",
+      "festival": "Quiet",
+      "art": {
+        "ox": 9,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:oak:3,95:mudrise",
+      "kind": "scenery",
+      "tx": 3,
+      "ty": 95,
+      "variant": "wilds-decor-outer-Mudrise",
+      "frame": "oak-3",
+      "festival": "Mudrise",
+      "art": {
+        "ox": 10,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:oak:3,95:carting",
+      "kind": "scenery",
+      "tx": 3,
+      "ty": 95,
+      "variant": "wilds-decor-outer-Carting",
+      "frame": "oak-3",
+      "festival": "Carting",
+      "art": {
+        "ox": 10,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:oak:3,95:amberfall",
+      "kind": "scenery",
+      "tx": 3,
+      "ty": 95,
+      "variant": "wilds-decor-outer-Amberfall",
+      "frame": "oak-3",
+      "festival": "Amberfall",
+      "art": {
+        "ox": 10,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:oak:3,95:quiet",
+      "kind": "scenery",
+      "tx": 3,
+      "ty": 95,
+      "variant": "wilds-decor-outer-Quiet",
+      "frame": "oak-3",
+      "festival": "Quiet",
+      "art": {
+        "ox": 10,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:thicket:7,95:mudrise",
+      "kind": "scenery",
+      "tx": 7,
+      "ty": 95,
+      "variant": "wilds-decor-outer-Mudrise",
+      "frame": "thicket-1",
+      "festival": "Mudrise",
+      "art": {
+        "ox": 10,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:thicket:7,95:carting",
+      "kind": "scenery",
+      "tx": 7,
+      "ty": 95,
+      "variant": "wilds-decor-outer-Carting",
+      "frame": "thicket-1",
+      "festival": "Carting",
+      "art": {
+        "ox": 10,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:thicket:7,95:amberfall",
+      "kind": "scenery",
+      "tx": 7,
+      "ty": 95,
+      "variant": "wilds-decor-outer-Amberfall",
+      "frame": "thicket-1",
+      "festival": "Amberfall",
+      "art": {
+        "ox": 10,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:thicket:7,95:quiet",
+      "kind": "scenery",
+      "tx": 7,
+      "ty": 95,
+      "variant": "wilds-decor-outer-Quiet",
+      "frame": "thicket-1",
+      "festival": "Quiet",
+      "art": {
+        "ox": 10,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:thicket:8,95:mudrise",
+      "kind": "scenery",
+      "tx": 8,
+      "ty": 95,
+      "variant": "wilds-decor-outer-Mudrise",
+      "frame": "thicket-0",
+      "festival": "Mudrise",
+      "art": {
+        "ox": 10,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:thicket:8,95:carting",
+      "kind": "scenery",
+      "tx": 8,
+      "ty": 95,
+      "variant": "wilds-decor-outer-Carting",
+      "frame": "thicket-0",
+      "festival": "Carting",
+      "art": {
+        "ox": 10,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:thicket:8,95:amberfall",
+      "kind": "scenery",
+      "tx": 8,
+      "ty": 95,
+      "variant": "wilds-decor-outer-Amberfall",
+      "frame": "thicket-0",
+      "festival": "Amberfall",
+      "art": {
+        "ox": 10,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:thicket:8,95:quiet",
+      "kind": "scenery",
+      "tx": 8,
+      "ty": 95,
+      "variant": "wilds-decor-outer-Quiet",
+      "frame": "thicket-0",
+      "festival": "Quiet",
+      "art": {
+        "ox": 10,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:birch:10,95:mudrise",
+      "kind": "scenery",
+      "tx": 10,
+      "ty": 95,
+      "variant": "wilds-decor-outer-Mudrise",
+      "frame": "birch-1",
+      "festival": "Mudrise",
+      "art": {
+        "ox": 11,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:birch:10,95:carting",
+      "kind": "scenery",
+      "tx": 10,
+      "ty": 95,
+      "variant": "wilds-decor-outer-Carting",
+      "frame": "birch-1",
+      "festival": "Carting",
+      "art": {
+        "ox": 11,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:birch:10,95:amberfall",
+      "kind": "scenery",
+      "tx": 10,
+      "ty": 95,
+      "variant": "wilds-decor-outer-Amberfall",
+      "frame": "birch-1",
+      "festival": "Amberfall",
+      "art": {
+        "ox": 11,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:birch:10,95:quiet",
+      "kind": "scenery",
+      "tx": 10,
+      "ty": 95,
+      "variant": "wilds-decor-outer-Quiet",
+      "frame": "birch-1",
+      "festival": "Quiet",
+      "art": {
+        "ox": 11,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:oak:18,95:mudrise",
+      "kind": "scenery",
+      "tx": 18,
+      "ty": 95,
+      "variant": "wilds-decor-outer-Mudrise",
+      "frame": "oak-0",
+      "festival": "Mudrise",
+      "art": {
+        "ox": 6,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:oak:18,95:carting",
+      "kind": "scenery",
+      "tx": 18,
+      "ty": 95,
+      "variant": "wilds-decor-outer-Carting",
+      "frame": "oak-0",
+      "festival": "Carting",
+      "art": {
+        "ox": 6,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:oak:18,95:amberfall",
+      "kind": "scenery",
+      "tx": 18,
+      "ty": 95,
+      "variant": "wilds-decor-outer-Amberfall",
+      "frame": "oak-0",
+      "festival": "Amberfall",
+      "art": {
+        "ox": 6,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:oak:18,95:quiet",
+      "kind": "scenery",
+      "tx": 18,
+      "ty": 95,
+      "variant": "wilds-decor-outer-Quiet",
+      "frame": "oak-0",
+      "festival": "Quiet",
+      "art": {
+        "ox": 6,
+        "oy": 16
+      }
+    },
+    {
+      "id": "edge:birch:20,95:mudrise",
+      "kind": "scenery",
+      "tx": 20,
+      "ty": 95,
+      "variant": "wilds-decor-outer-Mudrise",
+      "frame": "birch-1",
+      "festival": "Mudrise",
+      "art": {
+        "ox": 6,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:birch:20,95:carting",
+      "kind": "scenery",
+      "tx": 20,
+      "ty": 95,
+      "variant": "wilds-decor-outer-Carting",
+      "frame": "birch-1",
+      "festival": "Carting",
+      "art": {
+        "ox": 6,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:birch:20,95:amberfall",
+      "kind": "scenery",
+      "tx": 20,
+      "ty": 95,
+      "variant": "wilds-decor-outer-Amberfall",
+      "frame": "birch-1",
+      "festival": "Amberfall",
+      "art": {
+        "ox": 6,
+        "oy": 16,
+        "flip": true
+      }
+    },
+    {
+      "id": "edge:birch:20,95:quiet",
+      "kind": "scenery",
+      "tx": 20,
+      "ty": 95,
+      "variant": "wilds-decor-outer-Quiet",
+      "frame": "birch-1",
+      "festival": "Quiet",
+      "art": {
+        "ox": 6,
+        "oy": 16,
+        "flip": true
+      }
+    }
+  ]
+}

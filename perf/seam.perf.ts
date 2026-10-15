@@ -17,14 +17,20 @@ const phase = (page: Page, name: string) => page.evaluate((n) => window.__fsPerf
 const report = (page: Page) => page.evaluate(() => window.__fsPerf!())
 const reset = (page: Page) => page.evaluate(() => window.__fsPerfReset!())
 
-async function enter(page: Page): Promise<number> {
+/** A fresh player continues into the world: ms until playable (the scene is up), and until shown (the fade lifted on a whole window). */
+async function enter(page: Page): Promise<{ playable: number; shown: number }> {
   await freshPlayer(page)
   await pinWorld(page, 'perf-seam')
   await page.goto('/?perf=1')
   const begun = Date.now()
   await page.getByTestId('continue-world').click()
   await waitForWorld(page)
-  return Date.now() - begun
+  const playable = Date.now() - begun
+  await page.waitForFunction(() => {
+    const f = (window as unknown as { __fsFrame?: () => { fading: boolean } }).__fsFrame?.()
+    return !!f && !f.fading && window.__fsWildsWindow?.()?.ready === true
+  }, undefined, { timeout: 30_000, polling: 'raf' })
+  return { playable, shown: Date.now() - begun }
 }
 
 async function resources(page: Page, cdp: CDPSession) {
@@ -117,7 +123,7 @@ for (const mode of ['desktop', 'phone'] as const) {
 
     test('repeated straight, diagonal and turn-back crossings, plus chunk churn', async ({ page }) => {
       const cdp = await page.context().newCDPSession(page)
-      const bootToPlayableMs = await enter(page)
+      const { playable: bootToPlayableMs, shown: bootToShownMs } = await enter(page)
       if (mode === 'phone') await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 })
       await warp(page, 'outdoors', 2, -12)
       await parkCreatures(page)
@@ -164,7 +170,7 @@ for (const mode of ['desktop', 'phone'] as const) {
       await page.waitForTimeout(1500)
       const end = await resources(page, cdp)
       const r = await report(page)
-      write(mode, { mode, cpuThrottle: mode === 'phone' ? 4 : 1, viewport: page.viewportSize(), dpr: await page.evaluate(() => devicePixelRatio), crossingsPerPattern: { straight: CROSSINGS, diagonal: CROSSINGS, 'turn-back': CROSSINGS * 2 }, buildBudgetMs: 4, bootToPlayableMs, arrival, firstCrossing, ...r, resources: { start, checkpoints, churnResources, end } })
+      write(mode, { mode, cpuThrottle: mode === 'phone' ? 4 : 1, viewport: page.viewportSize(), dpr: await page.evaluate(() => devicePixelRatio), crossingsPerPattern: { straight: CROSSINGS, diagonal: CROSSINGS, 'turn-back': CROSSINGS * 2 }, buildBudgetMs: 4, bootToPlayableMs, bootToShownMs, arrival, firstCrossing, ...r, resources: { start, checkpoints, churnResources, end } })
       console.log(`seam ${mode}: ${JSON.stringify(r.phases)}; heap ${start.heap}→${end.heap}, list ${start.list}→${end.list}, textures ${start.textures}→${end.textures}`)
       expect(end.textures).toBe(start.textures)
       expect(end.listeners).toBe(start.listeners)

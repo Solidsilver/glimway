@@ -52,7 +52,7 @@ function validateFixedChunk(chunk: WorldChunk): WorldChunk {
   const size = chunk.size;
   const src = sourceOf(chunk.cx, chunk.cy);
   if (size !== CHUNK_SIZE || chunk.realm !== w.realm || chunk.layer !== 0 || chunk.generatorVersion !== 0 || !Number.isInteger(chunk.cx) || !Number.isInteger(chunk.cy)) throw new Error('invalid chunk identity');
-  if (src.kind !== 'fixed' || (plotIdentity(chunk.epochId) ? src.layout !== 'homestead-lots' || src.revision !== PLOT_REVISION || plotIdentity(chunk.epochId)!.gate !== lotAt(chunk.cx, chunk.cy) : chunk.epochId !== fixedEpoch(src.layout, src.revision)) || chunk.layoutRevision !== src.revision) throw new Error('unknown layout');
+  if (src.kind !== 'fixed' || (plotIdentity(chunk.epochId) ? !['lots-west', 'lots-east'].includes(src.layout) || src.revision !== PLOT_REVISION || plotIdentity(chunk.epochId)!.gate !== lotAt(chunk.cx, chunk.cy) : chunk.epochId !== fixedEpoch(src.layout, src.revision)) || chunk.layoutRevision !== src.revision) throw new Error('unknown layout');
   if ((chunk.look && !(plotIdentity(chunk.epochId) && chunk.look === 'tangle')) || chunk.mark || chunk.tier || chunk.land || chunk.decor || chunk.sites.length || chunk.entities.length || chunk.places.length) throw new Error('a fixed chunk carries generated geometry');
   if (!chunk.palette.length || chunk.palette.length > 16 || chunk.ground.length !== size * size / 2 || chunk.solid.length !== size * size / 8) throw new Error('invalid cell packing');
   if (chunk.palette.some((p) => !Object.hasOwn(TERRAIN, p))) throw new Error('unknown terrain');

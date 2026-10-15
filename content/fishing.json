@@ -27,7 +27,7 @@
       "id": "water:village:mill-pond",
       "area": "hearthwick",
       "habitat": "still",
-      "tiles": 27,
+      "tiles": 57,
       "capacity": 12,
       "recoverySeconds": 600,
       "banks": [
@@ -35,24 +35,36 @@
           "id": "north",
           "tiles": [
             {
-              "tx": 34,
-              "ty": 72
+              "tx": 25,
+              "ty": 98
             },
             {
-              "tx": 35,
-              "ty": 72
+              "tx": 26,
+              "ty": 98
             },
             {
-              "tx": 36,
-              "ty": 72
+              "tx": 27,
+              "ty": 98
             },
             {
-              "tx": 37,
-              "ty": 72
+              "tx": 28,
+              "ty": 98
             },
             {
-              "tx": 38,
-              "ty": 72
+              "tx": 29,
+              "ty": 98
+            },
+            {
+              "tx": 30,
+              "ty": 98
+            },
+            {
+              "tx": 31,
+              "ty": 98
+            },
+            {
+              "tx": 32,
+              "ty": 98
             }
           ],
           "facing": "south",
@@ -64,20 +76,28 @@
           "id": "east",
           "tiles": [
             {
-              "tx": 39,
-              "ty": 73
+              "tx": 34,
+              "ty": 99
             },
             {
-              "tx": 39,
-              "ty": 74
+              "tx": 34,
+              "ty": 100
             },
             {
-              "tx": 39,
-              "ty": 75
+              "tx": 34,
+              "ty": 101
             },
             {
-              "tx": 39,
-              "ty": 76
+              "tx": 34,
+              "ty": 102
+            },
+            {
+              "tx": 34,
+              "ty": 103
+            },
+            {
+              "tx": 34,
+              "ty": 104
             }
           ],
           "facing": "west",
@@ -89,8 +109,8 @@
           "id": "race",
           "tiles": [
             {
-              "tx": 32,
-              "ty": 73
+              "tx": 24,
+              "ty": 100
             }
           ],
           "facing": "south",

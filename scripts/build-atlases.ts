@@ -74,6 +74,7 @@ import { cellOf, flattenFamily, healFamily, setCell, type Rgba } from './lib/gro
 import type { CommonsPassManifest } from '../src/game/commons-pass.ts'
 import type { RuntimeArtManifest } from '../src/game/runtime-art.ts'
 import type { ItemsPassManifest } from '../src/game/items-pass.ts'
+import type { PassAnimation } from '../src/game/art-pass.ts'
 import { installDirs, installStaged } from './atlas-install.ts'
 import { decodePng } from './png-decode.ts'
 import { extractFigure, footPoint, grow, layoutFigures, overlap, placeAt, type Box, type Figure, type Rgba as SheetRgba } from '../src/game/figures.ts'
@@ -360,6 +361,19 @@ async function main(): Promise<void> {
     read(src)
     const { w, h } = f.canvas
     return { id, src, s: [0, 0, w, h], w, h, d: [0, 0, w, h], box: true }
+  })
+
+  // The Hearthwick 2 pass (the Wick Tree, the new buildings, the town and
+  // farm dressing, the lot stakes and gates): whole canvases at 64 texels per
+  // world tile, packed like the open map pass; its loops ride in the packed
+  // manifest (src/game/hearthwick2-art.ts).
+  type Hw2Frame = { key: string; file: string; canvasSize: { w: number; h: number } }
+  const hw2 = readJson<{ frames: Hw2Frame[]; animations: PassAnimation[] }>('assets/generated/hearthwick2-pass/manifest.json')
+  const hw2Jobs: Job[] = hw2.frames.map((f) => {
+    const src = `assets/generated/hearthwick2-pass/${f.file}`
+    read(src)
+    const { w, h } = f.canvasSize
+    return { id: f.key, src, s: [0, 0, w, h], w, h, d: [0, 0, w, h], box: true }
   })
 
   // The terrain tileset: 16 named cells → 4×4, one 16-px world tile each at
@@ -765,6 +779,9 @@ async function main(): Promise<void> {
   const omPack = pack(openMapJobs.map((j) => ({ id: j.id, w: j.w, h: j.h })), 0)
   const openMapBaked = await bake(openMapJobs, omPack.at, omPack.size, true)
   const openMapImage = await encodeRawWebp('open-map', Buffer.from(openMapBaked.raw!, 'base64'), omPack.size, true)
+  const hwPack = pack(hw2Jobs.map((j) => ({ id: j.id, w: j.w, h: j.h })), 0)
+  const hw2Baked = await bake(hw2Jobs, hwPack.at, hwPack.size, true)
+  const hw2Image = await encodeRawWebp('hearthwick2', Buffer.from(hw2Baked.raw!, 'base64'), hwPack.size, true)
   const bPack = pack(buildingJobs.map((j) => ({ id: j.id, w: j.w, h: j.h })), 0)
   const buildingsImage = await bakeDenseWebp('buildings', buildingJobs, bPack.at, bPack.size)
   const tAt = new Map(terrainJobs.map((j, i) => [j.id, [(i % 4) * TILE, Math.floor(i / 4) * TILE] as [number, number]]))
@@ -980,6 +997,7 @@ async function main(): Promise<void> {
     purse: { image: purseImage, size: puPack.size, density: 64, frames: rects(purseJobs, puPack.at) },
     glims: { image: glimsImage, size: glPack.size, density: 64, frames: rects(glimsJobs, glPack.at) },
     openMap: { image: openMapImage, size: omPack.size, density: 64, frames: rects(openMapJobs, omPack.at) },
+    hearthwick2: { image: hw2Image, size: hwPack.size, density: 64, frames: rects(hw2Jobs, hwPack.at), animations: hw2.animations },
     terrain: { image: terrainImage, size: [TILE * 4, TILE * 4], cell: TILE, density: ART_DENSITY },
     ground: { image: groundImage, size: gSize, cell: TILE, density: ART_DENSITY, cols: GROUND_COLS, tiles: Object.fromEntries(GROUND_TILES.map((t, i) => [t, i])), healed: heal },
     people,
@@ -989,7 +1007,7 @@ async function main(): Promise<void> {
   }
   writeFileSync(join(OUT, 'atlases.json'), JSON.stringify(manifest, null, 1) + '\n')
   installStaged(PACKED, DIRS)
-  console.log(`packed ${commonsJobs.length} + ${blitJobs.length} commons, ${runtimeJobs.length} runtime, ${itemsJobs.length} items, 16 terrain cells, ${groundJobs.length} ground tiles (${heal ? "healed" : "NOT healed"}), ${peopleJobs.length} people frames, ${buildingJobs.length} buildings, ${craftsJobs.length} crafts, ${purseJobs.length} purse, ${glimsJobs.length} glims, ${openMapJobs.length} open map, ${scaled.length} scaled atlases, ${BACKDROPS.length} backdrops → ${PACKED}`)
+  console.log(`packed ${commonsJobs.length} + ${blitJobs.length} commons, ${runtimeJobs.length} runtime, ${itemsJobs.length} items, 16 terrain cells, ${groundJobs.length} ground tiles (${heal ? "healed" : "NOT healed"}), ${peopleJobs.length} people frames, ${buildingJobs.length} buildings, ${craftsJobs.length} crafts, ${purseJobs.length} purse, ${glimsJobs.length} glims, ${openMapJobs.length} open map, ${hw2Jobs.length} Hearthwick 2, ${scaled.length} scaled atlases, ${BACKDROPS.length} backdrops → ${PACKED}`)
 }
 
 try {

@@ -100,13 +100,13 @@ const DESIGN: Record<string, Design> = {
   'silas-pine-offcut-scrap': { style: 'scrap', source: { kind: 'commons', hook: 'Silas’s firebox, after you help him hang a door-fox on a new lintel' } },
   'pip-copybook-warden-corrections': {
     style: 'notebook',
-    source: { kind: 'placed', area: 'hearthwick', tx: 7, ty: 72, look: 'folded', spot: 'Inside the garden fence, in the far corner from the gap' },
+    source: { kind: 'placed', area: 'hearthwick', tx: -10, ty: 72, look: 'folded', spot: 'Inside the garden fence, in the far corner from the gap' },
   },
   // ---- Bedtime Stories
   'the-boy-who-ran-faster-than-the-wick': { style: 'page', source: { kind: 'library-start' } },
   'why-the-tide-fox-has-one-long-ear': {
     style: 'page',
-    source: { kind: 'placed', area: 'hearthwick', tx: 36, ty: 49, look: 'folded', spot: 'Blown into the north-east corner, behind the houses' },
+    source: { kind: 'placed', area: 'hearthwick', tx: -12, ty: 43, look: 'folded', spot: 'Blown into the quiet north-west block, beside Ada’s house' },
   },
   'the-mudrise-fleet-lullaby': { style: 'song', source: { kind: 'library-start' } },
   'the-ashwatch-skipping-game': {
@@ -115,7 +115,7 @@ const DESIGN: Record<string, Design> = {
   },
   'elaras-note-in-pips-copybook': {
     style: 'notebook',
-    source: { kind: 'placed', area: 'hearthwick', tx: 40, ty: 76, look: 'folded', spot: 'Caught in the reeds on the pond’s far side' },
+    source: { kind: 'placed', area: 'hearthwick', tx: 35, ty: 104, look: 'folded', spot: 'Caught in the reeds on the pond’s far side' },
   },
   // ---- The Liar's Art
   'failed-grid-of-sector-4': { style: 'notebook', source: { kind: 'wilds-poi', hook: 'A surveyor’s abandoned camp beside a tight-ringed stump' } },

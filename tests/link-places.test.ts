@@ -27,7 +27,7 @@ test('a report whose place the world refuses: the hero goes where the world says
   r.link.reportSoon();
   await r.link.flush();
   assert.equal(r.session.state.area, 'outdoors', 'back outside');
-  assert.deepEqual(r.session.state.position, { x: 72, y: 968 });
+  assert.deepEqual(r.session.state.position, { x: 88, y: 968 });
   assert.equal(r.link.status, 'online', 'a refused place is not server trouble');
   // The refused report is gone; the next one names the world's place.
   r.server.on('POST /api/report', (c: Call) => env(S({ version: 3 }), { report: { seq: c.body.seq, accepted: true, staleBasis: false, casts: 0, client: c.body.client, generation: c.body.generation, basis: c.body.basis, placeIgnored: false, abilityCasts: {}, allyHeal: 0 } }));
@@ -51,7 +51,7 @@ test('a reload after a refused place starts where the world says, not in the roo
   const record = await store.load('fixture-account', 'dev');
   const next = await rig(t, { store, record, state: S({ version: 2 }) });
   assert.equal(next.session.state.area, 'outdoors');
-  assert.deepEqual(next.session.state.position, { x: 72, y: 968 });
+  assert.deepEqual(next.session.state.position, { x: 88, y: 968 });
 });
 
 test('a reload that replays a room report the world then refuses ends outside too', async (t) => {

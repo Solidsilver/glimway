@@ -43,8 +43,16 @@ var footprints037 = map[string][2]int{
 	"writing-desk":     {2, 1},
 }
 
-func reserved037(x, y int) bool {
-	return x < 3 || x > 20 || y < 2 || y > 18 || x >= 8 && x <= 15 && y >= 3 && y <= 8 || x >= 11 && x <= 12 && y >= 9 || x == 13 && y == 18
+// Lot-local Hearthwick 2 reservations: outside the private ground (the fences,
+// verges, back lantern line, gate, sign and shelf), the home site, the L-path to
+// the front gate (east on even lots, west on odd) and the mailbox.
+func reserved037(gate, x, y int) bool {
+	pathLo, pathHi, mailbox := 13, 22, 21
+	if gate%2 == 1 {
+		pathLo, pathHi, mailbox = 1, 10, 2
+	}
+	return x < 1 || x > 22 || y < 2 || y > 21 || x >= 8 && x <= 15 && y >= 3 && y <= 8 ||
+		x >= 11 && x <= 12 && y >= 9 && y <= 12 || x >= pathLo && x <= pathHi && y >= 11 && y <= 12 || x == mailbox && y == 10
 }
 
 type piece037 struct {
@@ -59,6 +67,25 @@ type landRow037 struct {
 }
 
 func moveHomes037(tx *sql.Tx) error {
+	gates := map[string]int{}
+	rows, err := tx.Query(`SELECT id,gate FROM homesteads`)
+	if err != nil {
+		return err
+	}
+	for rows.Next() {
+		var id string
+		var gate int
+		if err = rows.Scan(&id, &gate); err != nil {
+			rows.Close()
+			return err
+		}
+		gates[id] = gate
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return err
+	}
 	// Explicit columns keep archived row shape stable if the live schema grows.
 	for _, table := range []string{"homestead_cleared", "homestead_stumps", "homestead_plants"} {
 		columns := "homestead_id,x,y"
@@ -98,7 +125,7 @@ func moveHomes037(tx *sql.Tx) error {
 		}
 		for _, r := range records {
 			x, y := r.x-8, r.y-3
-			if reserved037(x, y) {
+			if reserved037(gates[r.home], x, y) {
 				identity := fmt.Sprintf("%d,%d", r.x, r.y)
 				payload := []any{r.home, r.x, r.y}
 				if table == "homestead_stumps" {
@@ -134,7 +161,7 @@ func moveHomes037(tx *sql.Tx) error {
 			}
 		}
 	}
-	rows, err := tx.Query(`SELECT i.id,i.homestead_id,i.item_def,i.x,i.y,i.rotation,COALESCE(i.stalls,1),h.world_id,h.gate FROM homestead_items i JOIN homesteads h ON h.id=i.homestead_id WHERE i.location='placed' AND i.scene='outdoor' ORDER BY i.id`)
+	rows, err = tx.Query(`SELECT i.id,i.homestead_id,i.item_def,i.x,i.y,i.rotation,COALESCE(i.stalls,1),h.world_id,h.gate FROM homestead_items i JOIN homesteads h ON h.id=i.homestead_id WHERE i.location='placed' AND i.scene='outdoor' ORDER BY i.id`)
 	if err != nil {
 		return err
 	}
@@ -194,7 +221,7 @@ func moveHomes037(tx *sql.Tx) error {
 		p.keep = known
 		for y := p.y; y < p.y+p.h; y++ {
 			for x := p.x; x < p.x+p.w; x++ {
-				if reserved037(x, y) {
+				if reserved037(p.gate, x, y) {
 					p.keep = false
 					continue
 				}
@@ -262,6 +289,9 @@ func lights037(pieces []piece037, home, except string) [][3]int {
 	return out
 }
 
+// generate037 freezes land.GenerateLot at generator 2 for Hearthwick 2: the
+// path runs from the site to the front gate (x 23 on even lots, x 0 on odd),
+// the back column is the open lantern line, and each side has its own scatter.
 func generate037(world string, gateIndex int) []byte {
 	const (
 		Grass byte = iota
@@ -274,12 +304,12 @@ func generate037(world string, gateIndex int) []byte {
 		Edge
 		Path
 	)
-	W, H := int(24), int(24)
+	const W, H = 24, 24
 	tiles := make([]byte, W*H)
 	at := func(x, y int) byte { return tiles[y*W+x] }
 	put := func(x, y int, k byte) { tiles[y*W+x] = k }
-	siteX, siteY, siteW, siteH, gateX, gateW := 8, 3, 8, 6, 11, 2
-	siteBottom := int(siteY) + int(siteH)
+	siteX, siteY, siteW, siteH := 8, 3, 8, 6
+	siteBottom := siteY + siteH
 	for y := 0; y < H; y++ {
 		for x := 0; x < W; x++ {
 			if x == 0 || y == 0 || x == W-1 || y == H-1 {
@@ -289,14 +319,28 @@ func generate037(world string, gateIndex int) []byte {
 			}
 		}
 	}
-	for y := siteBottom; y < H; y++ {
-		for x := int(gateX); x < int(gateX)+int(gateW); x++ {
+	for y := siteBottom; y <= 12; y++ {
+		for x := 11; x <= 12; x++ {
 			put(x, y, Path)
 		}
 	}
+	front, back, mailbox := 23, 0, 21
+	trees, stumps, boulders := 44, 6, 4
+	if gateIndex%2 == 1 {
+		front, back, mailbox = 0, 23, 2
+		trees, stumps, boulders = 14, 3, 3
+	}
+	for y := 11; y <= 12; y++ {
+		for x := min(front, 11); x <= max(front, 12); x++ {
+			put(x, y, Path)
+		}
+	}
+	for y := 2; y <= 21; y++ {
+		put(back, y, Grass)
+	}
 	protected := func(x, y int) bool {
-		return (2 == 2 && (x < 3 || x > 20 || y < 2 || y > 18 || x == 13 && y == 18)) || (x >= int(siteX)-1 && x <= int(siteX)+int(siteW) && y >= int(siteY)-1 && y <= siteBottom) ||
-			(x >= int(gateX)-1 && x <= int(gateX)+int(gateW) && y >= siteBottom)
+		return x < 1 || x > 22 || y < 2 || y > 21 || at(x, y) == Path || x == mailbox && y == 10 ||
+			(x >= siteX-1 && x <= siteX+siteW && y >= siteY-1 && y <= siteBottom)
 	}
 	seed := seed037(world, gateIndex)
 	nextInt := func(n int) int {
@@ -306,17 +350,10 @@ func generate037(world string, gateIndex int) []byte {
 		t = (t + ((t ^ (t >> 7)) * (t | 61))) ^ t
 		return int((t ^ (t >> 14)) % uint32(n))
 	}
-	if nextInt(1000) < int(350) {
-		side := nextInt(2)
-		lo, hi := 2, 9
-		if 2 == 2 {
-			lo, hi = 3, 6
-		}
-		if side != 0 {
-			lo, hi = W-10, W-3
-			if 2 == 2 {
-				lo, hi = 17, 20
-			}
+	if nextInt(1000) < 350 {
+		lo, hi := 3, 6
+		if nextInt(2) != 0 {
+			lo, hi = 17, 20
 		}
 		x := lo + nextInt(hi-lo+1)
 		ford := 3 + nextInt(H-6)
@@ -336,7 +373,7 @@ func generate037(world string, gateIndex int) []byte {
 			}
 		}
 	}
-	if nextInt(1000) < int(350) {
+	if nextInt(1000) < 350 {
 		y0 := 2 + nextInt(3)
 		x0 := 2 + nextInt(W/3)
 		n := 8 + nextInt(10)
@@ -358,9 +395,9 @@ func generate037(world string, gateIndex int) []byte {
 			}
 		}
 	}
-	scatter(int(48), Tree)
-	scatter(int(6), Stump)
-	scatter(int(4), Boulder)
+	scatter(trees, Tree)
+	scatter(stumps, Stump)
+	scatter(boulders, Boulder)
 	return tiles
 }
 

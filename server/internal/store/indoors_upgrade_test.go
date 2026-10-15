@@ -47,7 +47,7 @@ func TestQuestTree029Upgrade(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if s.State.Glims != balance || s.State.XPGlims != earned || s.State.Area != "outdoors" || s.State.Position != (rules.Position{X: -968, Y: 520}) {
+			if s.State.Glims != balance || s.State.XPGlims != earned || s.State.Area != "outdoors" || s.State.Position != (rules.Position{X: -584, Y: 520}) {
 				t.Fatal(s)
 			}
 			for query, want := range map[string]int{"SELECT count(*) FROM ledger": ledger, "SELECT count(*) FROM outcomes": outcomes, "SELECT COALESCE(SUM(delta),0) FROM ledger": ledgerSum} {
@@ -209,7 +209,7 @@ func TestRemovedCommonsRoomRecoversToAnchors(t *testing.T) {
 		}
 	}
 	// The yard's doorstep is the door's entry carried onto the grid.
-	if _, x, y := doorstep(); x != float64(34*16+8) || y != float64(35*16+8) {
+	if _, x, y := doorstep(); x != float64(-14*16+8) || y != float64(104*16+8) {
 		t.Fatal("yard-door anchor moved", x, y)
 	}
 }

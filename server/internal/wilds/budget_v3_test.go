@@ -14,8 +14,9 @@ import (
 // Budgets (open-map.md section 4) and goldens for generator v3.
 
 // goldenV3 are the chunks pinned whole: a few worlds and wicks, every
-// chunk kind (the Tangle, the Whitequiet, the ring, the road, the river),
-// and coordinates on both sides of zero.
+// chunk kind (the Tangle, the Whitequiet, the ring, the road, the river,
+// the seams beside the fixed block: a west lot back and its wildgate, an
+// east one, the South Gate), and coordinates on both sides of zero.
 func goldenV3() []struct {
 	seed, season string
 	cx, cy       int
@@ -25,7 +26,7 @@ func goldenV3() []struct {
 		cx, cy       int
 	}
 	for _, w := range [][2]string{{"review-seed", "t:1790812800:1792022400"}, {"oak-7", "t:1792022400:1793232000"}, {"灰烬之路", "t:1795000000:1796209600"}} {
-		for _, c := range [][2]int{{0, 0}, {-1, -2}, {1, -1}, {0, -3}, {1, -5}, {-4, -8}, {4, -8}, {-3, -1}, {3, 0}, {2, -6}, {-2, -5}, {0, -7}} {
+		for _, c := range [][2]int{{0, 0}, {-1, -2}, {1, -1}, {0, -3}, {1, -5}, {-4, -8}, {4, -8}, {-3, -1}, {3, 0}, {2, -6}, {-2, -5}, {0, -7}, {-3, 2}, {3, 3}, {0, 5}} {
 			out = append(out, struct {
 				seed, season string
 				cx, cy       int

@@ -82,7 +82,7 @@ func TestFixedPresenceRoomsOnGrid(t *testing.T) {
 			t.Fatal("fixed room refused", room)
 		}
 	}
-	for _, room := range []string{"outdoors:5:4", "outdoors:5:1", "outdoors:01:1", "outdoors", "wilds:0:0"} {
+	for _, room := range []string{"outdoors:6:4", "outdoors:6:1", "outdoors:01:1", "outdoors", "wilds:0:0"} {
 		if validPresenceRoom(room) {
 			t.Fatal("off-grid or malformed room admitted", room)
 		}

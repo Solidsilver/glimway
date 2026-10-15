@@ -206,11 +206,12 @@ func TestTownPositionsOnTheGrid(t *testing.T) {
 func TestLotAnchors(t *testing.T) {
 	for g := 0; g < 8; g++ {
 		space, x, y, ok := Anchor(fmt.Sprintf("hearthwick:lot:%d", g))
-		tx, ty := -60+24*(g%2), 44+24*(g/2)
+		tx, ty := -23, 35+24*(g/2)
+ if g%2==1 {tx=46}
 		if !ok || space != Outdoors || x != float64(tx*16+8) || y != float64(ty*16+8) {
 			t.Fatalf("lot %d: %s %v,%v", g, space, x, y)
 		}
-		if id := At(space, x, y).ID; id != fmt.Sprintf("lot:%d", g) {
+		if id := At(space, x, y).ID; id != "hearthwick" {
 			t.Fatalf("lot %d is %s", g, id)
 		}
 	}

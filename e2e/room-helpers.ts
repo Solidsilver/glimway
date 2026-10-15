@@ -12,9 +12,11 @@ export type RoomId = 'in:village:bakery' | 'in:village:mill' | 'in:village:mill:
 
 /** Each front door's doorstep in the village (the tile you press the door from). */
 export const DOORSTEP: Readonly<Record<string, [number, number]>> = {
-  'in:village:bakery': [-11, 59],
-  'in:village:mill': [29, 77],
-  'in:village:library': [-11, 77]
+  'in:village:bakery': [6, 54],
+  'in:village:mill': [21, 104],
+  'in:village:library': [0, 66],
+  'in:commons:yard': [-14, 104],
+  'in:commons:yard:deeds': [23, 59]
 }
 
 export type RoomView = {

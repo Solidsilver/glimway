@@ -23,7 +23,7 @@ test('the Tolley mill: its wheel groans round, Finn is at the door, the hopper k
   await freshPlayer(page)
   // Finn's hour at his door (he's inside at the stones for part of it).
   await residentsOut(page)
-  await warp(page, 'outdoors', 29, 72)
+  await warp(page, 'outdoors', 23, 104)
   const first = await mill(page)
   expect(first).not.toBeNull()
   expect(first!.mended).toBe(false)
@@ -31,12 +31,12 @@ test('the Tolley mill: its wheel groans round, Finn is at the door, the hopper k
   await expect.poll(async () => (await mill(page))!.turns, { timeout: 10_000 }).toBeGreaterThan(0)
   await shot(page, 'mill-desktop')
   // Finn stands at his door.
-  await warp(page, 'outdoors', 30, 78)
+  await warp(page, 'outdoors', 21, 106)
   await shot(page, 'mill-finn-desktop')
   const finn = await readThrough(page, /Talk to Finn/)
   expect(finn).toMatch(/This is the mill: Dad’s, then mine/)
   // The hopper on the west wall.
-  await warp(page, 'outdoors', 27, 77)
+  await warp(page, 'outdoors', 19, 104)
   const hopper = await readThrough(page, /Look at the hopper/)
   expect(hopper).toMatch(/tallies in clusters of five/)
   expect(hopper).not.toMatch(/fox|Aldo/)
@@ -49,7 +49,7 @@ test.describe('in a world', () => {
     const id = await freshPlayer(page)
     await residentsOut(page)
     fund(id, { materials: { timber: 120, fiber: 60 } })
-    await go(page, 'outdoors', 12, 57)
+    await go(page, 'outdoors', 17, 56)
     await expect(page.locator('.prompt')).toContainText('Read the notice board')
     await waitForLive(page)
     await page.keyboard.press('e')
@@ -61,12 +61,12 @@ test.describe('in a world', () => {
     await expect(card.locator('.msg.ok')).toContainText('Finished!')
     await page.keyboard.press('Escape')
     // The wheel is mended where it stands.
-    await go(page, 'outdoors', 29, 72)
+    await go(page, 'outdoors', 23, 104)
     await expect.poll(async () => (await mill(page))?.mended).toBe(true)
     await expect.poll(async () => (await mill(page))!.turns, { timeout: 10_000 }).toBeGreaterThan(0)
     await shot(page, 'mill-mended-desktop')
     // Finn hears the difference. (His late papers wait for the lit road.)
-    await go(page, 'outdoors', 30, 78)
+    await go(page, 'outdoors', 21, 106)
     const finn = await readThrough(page, /Talk to Finn/)
     expect(finn).toMatch(/This is the mill/)
     const flags = (await serverState(page)).body.state.flags as string[]

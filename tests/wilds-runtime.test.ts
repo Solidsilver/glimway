@@ -216,7 +216,7 @@ test('walked chunks and seen landmarks are kept per wick on the device', () => {
 test('the frontier reach union spans cx -6..4, cy -8..7', () => {
   let n = 0;
   for (let cy = -10; cy <= 9; cy++) for (let cx = -8; cx <= 6; cx++) if (inside(cx, cy)) n++;
-  assert.equal(n, 161);
+  assert.equal(n, 164);
 });
 
 test('the open map is one area but three places on the HUD: the Tangle, the Whitequiet, beyond', async () => {

@@ -11,21 +11,42 @@ import (
 )
 
 // PlotRevision changes only with a deliberately versioned plot-byte format.
-const PlotRevision = 3
+const PlotRevision = 5
 
-// InsideLot excludes the public lane and fence bands; the gate row belongs inside.
-func InsideLot(x, y int) bool {
-	return x >= 3 && x <= 20 && (y >= 2 && y <= 18 || y == 19 && x >= 11 && x <= 12)
+// InsideLot includes the private ground and two front gate cells; the back lantern line stays public.
+func InsideLot(x, y, gate int) bool {
+	front := 23
+	if gate%2 == 1 {
+		front = 0
+	}
+	return x >= 1 && x <= 22 && y >= 2 && y <= 21 || x == front && y >= 11 && y <= 12
 }
 
 // Lot origins and epoch identity keep immutable land separate from home overlays.
 func LotAt(cx, cy int) int {
-	if cx < -3 || cx > -2 || cy < 1 || cy > 4 {
+	if (cx != -2 && cx != 2) || cy < 1 || cy > 4 {
 		return -1
 	}
-	return (cy-1)*2 + cx + 3
+	side := 0
+	if cx == 2 {
+		side = 1
+	}
+	return (cy-1)*2 + side
 }
-func LotOrigin(gate int) (int, int) { return -72 + (gate%2)*24, 24 + (gate/2)*24 }
+func LotOrigin(gate int) (int, int) {
+	x := -48
+	if gate%2 == 1 {
+		x = 48
+	}
+	return x, 24 + (gate/2)*24
+}
+func LotLayout(gate int) string {
+	if gate%2 == 1 {
+		return "lots-east"
+	}
+	return "lots-west"
+}
+func IsLotLayout(id string) bool { return id == "lots-west" || id == "lots-east" }
 func PlotEpoch(world string, gate int) string {
 	return fmt.Sprintf("plot:%s:%d@%d", world, gate, PlotRevision)
 }
@@ -54,14 +75,14 @@ func Plot(world string, gate int) *contract.WorldChunk {
 	}
 	x0, y0 := LotOrigin(gate)
 	cx, cy := int32(x0/24), int32(y0/24)
-	base := Fixed(FixedEpoch("homestead-lots", PlotRevision), cx, cy)
+	base := Fixed(FixedEpoch(LotLayout(gate), PlotRevision), cx, cy)
 	if base == nil {
 		return nil
 	}
 	c := proto.Clone(base).(*contract.WorldChunk)
 	c.EpochId = PlotEpoch(world, gate)
 	c.Look = "tangle"
-	l := land.Generate(land.Seed(world, gate, content.HomeRules.GetLand()), content.HomeRules.GetLand())
+	l := land.GenerateLot(land.Seed(world, gate, content.HomeRules.GetLand()), content.HomeRules.GetLand(), gate)
 	// These names are the curated equivalents of the Tangle's grass, moss and water.
 	for _, p := range []string{"grass_a", "grass_b", "dirt", "water_a"} {
 		found := false
@@ -82,12 +103,8 @@ func Plot(world string, gate int) *contract.WorldChunk {
 		}
 		panic(p)
 	}
-	for y := 1; y <= 18; y++ {
-		for x := 3; x <= 20; x++ {
-			// The outer two bands are the generator's authoritative closed seam.
-			if cy == 1 && y == 1 {
-				continue
-			}
+	for y := 2; y <= 21; y++ {
+		for x := 1; x <= 22; x++ {
 			k := l.At(x, y)
 			p := "grass_a"
 			blocked := !land.Buildable(k) && k != land.Ford
@@ -122,3 +139,14 @@ func Plot(world string, gate int) *contract.WorldChunk {
 	}
 	return c
 }
+
+// HomeEntrance stands on Lot Row, outside the front gate.
+func HomeEntrance(gate int) (int, int) {
+	_, y := LotOrigin(gate)
+	x := -23
+	if gate%2 == 1 {
+		x = 46
+	}
+	return x, y + 11
+}
+func HomeDoorstep(gate int) (int, int) { x, y := LotOrigin(gate); return x + 11, y + 8 }

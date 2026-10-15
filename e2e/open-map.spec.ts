@@ -480,7 +480,7 @@ test('the Commons’ fixed chunks walked in and out leave nothing behind either'
   expect((await wildsWindow(page))!.fixed.length, 'the Commons attached').toBe(6)
   await campSpritesReady(page)
   const before = await steady(page, () => sceneResources(page), { frames: 5, seconds: 20, message: 'Commons scene counts before churn', ready: z => z.transientTweens === 0 })
-  expect(before.drawn['Image:fingersnap-foreground'] ?? 0, 'the Commons’ canopies are drawn').toBeGreaterThan(0)
+  expect(Object.keys(before.drawn).some((k) => k.startsWith('Image:hw2:') || k.startsWith('Image:commons-')), 'the Commons’ scenery is drawn').toBe(true)
   for (let i = 0; i < 4; i++) {
     await standForChurn(page, b)
     await expect.poll(async () => (await wildsWindow(page))!.fixed, { timeout: 5_000, message: 'the Commons detached' }).toEqual([])

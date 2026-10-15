@@ -27,7 +27,7 @@ var CuratedTerrains = []string{
 	"grass_a", "grass_b", "grass_c", "flowers", "path_a", "path_b", "dirt", "sand",
 	"water_a", "water_b", "bridge", "stone_a", "stone_b", "stone_crack", "wall_stone", "wall_moss",
 	"roof", "roof_edge", "wall_house", "door", "window", "fence", "cobble", "cobble_moss",
-	"planks", "planks_dark",
+	"planks", "planks_dark", "tilled",
 }
 
 // DecodeLayout reads one layout's JSON into the generated types, refusing
@@ -186,7 +186,7 @@ func LayoutsFor(files fs.FS, p *Places, w *Wilds) (map[string]*Layout, error) {
 			return nil, fmt.Errorf("invalid layout %s: the grid is not place %s's footprint", l.GetId(), f.GetId())
 		}
 		capacity := GateCapacity(f)
-		if f.GetId() == "homestead-lots" {
+		if f.GetKind() == "plots" {
 			for _, owner := range p.GetFixed() {
 				if owner.GetId() == "hearthwick" {
 					capacity = GateCapacity(owner)
@@ -201,10 +201,22 @@ func LayoutsFor(files fs.FS, p *Places, w *Wilds) (map[string]*Layout, error) {
 			if gates[o.GetGate()] || int(o.GetGate()) >= capacity {
 				return nil, fmt.Errorf("invalid layout %s: gate %d is past the capacity or twice", l.GetId(), o.GetGate())
 			}
+			if f.GetKind() == "plots" {
+				owns := false
+				for _, z := range f.GetZones() {
+					owns = owns || z.GetPlace() == fmt.Sprintf("lot:%d", o.GetGate())
+				}
+				if !owns {
+					return nil, fmt.Errorf("invalid layout %s: gate %d belongs to another lot column", l.GetId(), o.GetGate())
+				}
+			}
 			gates[o.GetGate()] = true
 		}
+		if f.GetKind() == "plots" {
+			capacity = len(f.GetZones())
+		}
 		if f.GetId() != "hearthwick" && len(gates) != capacity {
-			return nil, fmt.Errorf("invalid layout %s: %d gates for place %s's %d gate anchors", l.GetId(), len(gates), f.GetId(), GateCapacity(f))
+			return nil, fmt.Errorf("invalid layout %s: %d gates for place %s's %d gate anchors", l.GetId(), len(gates), f.GetId(), capacity)
 		}
 	}
 	for id := range out {

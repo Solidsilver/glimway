@@ -2,9 +2,12 @@
 UPDATE players SET version=version+1 WHERE account_id IN
  (SELECT account_id FROM player_place WHERE area='village' OR area='commons'
   OR (area='outdoors' AND y>=384) OR area GLOB 'home:[0-9]*');
+-- Hearthwick 2: village saves go to the spawn (5,60); homes go to their lot
+-- doorstep (origin + (11,8)), west lots at x -48 and east lots at x 48;
+-- Commons and old lot-row saves go to the Tangle Arch anchor (2,26).
 UPDATE player_place SET
- x=CASE WHEN area='village' THEN 72 WHEN area GLOB 'home:[0-9]*' AND CAST(substr(area,6) AS INTEGER) BETWEEN 0 AND 7
-   THEN (-72+24*(CAST(substr(area,6) AS INTEGER)%2)+11)*16+8 ELSE 40 END,
+ x=CASE WHEN area='village' THEN 88 WHEN area GLOB 'home:[0-9]*' AND CAST(substr(area,6) AS INTEGER) BETWEEN 0 AND 7
+   THEN (CASE CAST(substr(area,6) AS INTEGER)%2 WHEN 0 THEN -48 ELSE 48 END+11)*16+8 ELSE 40 END,
  y=CASE WHEN area='village' THEN 968 WHEN area GLOB 'home:[0-9]*' AND CAST(substr(area,6) AS INTEGER) BETWEEN 0 AND 7
    THEN (24+24*(CAST(substr(area,6) AS INTEGER)/2)+8)*16+8 ELSE 424 END,
  area='outdoors',place_set_version=(SELECT version FROM players p WHERE p.account_id=player_place.account_id)

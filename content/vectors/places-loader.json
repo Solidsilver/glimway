@@ -537,13 +537,13 @@
             "fixed",
             0,
             "anchors",
-            10,
+            13,
             "id"
           ],
           "value": "lot:8"
         }
       ],
-      "rule": "hearthwick: gate anchors skip gate:0"
+      "rule": "hearthwick: gate anchors skip gate:1"
     },
     {
       "name": "lot-zone-place",

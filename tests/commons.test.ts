@@ -1,11 +1,11 @@
-import { commonsLane, fixedStand, fixedSolidAt } from '../src/game/wilds/fixed.ts';
-import { homeDoorstep, lotOrigin } from '../src/lib/lots.ts';
+import { commonsLane, fixedStand, fixedSolidAt, footprint as fixedFootprint } from '../src/game/wilds/fixed.ts';
+import { homeDoorstep, lotOrigin, lotLayout, lotService } from '../src/lib/lots.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildRoom, ROOM_DOOR, ROOM_GRID } from '../src/game/cottage.ts';
 import { buildArea, hasAreaKind } from '../src/game/worlds.ts';
 import { buildLand, setLandSource } from '../src/game/lot-land.ts';
-import { HOMESTEAD_DATA, gateTile } from '../src/lib/homestead.ts';
+import { HOMESTEAD_DATA, gateTile, outdoorReserved } from '../src/lib/homestead.ts';
 import { LAND } from '../src/lib/homestead-land.ts';
 import { serveFixtureLand } from './land-fixture.ts';
 import { serveFixtureCommons, serveFixtureLots, servedCommonsFixture, type CommonsView } from './commons-fixture.ts';
@@ -61,8 +61,8 @@ test('gate slots sit exactly where the served lots put their south fence gaps', 
   for (const slot of lane.gates) {
     const o = lotOrigin(slot.gate);
     assert.deepEqual({ tx: slot.tx, ty: slot.ty, side: slot.side }, gateTile(slot.gate));
-    assert.deepEqual(slot.sign, { tx: o.tx + 9, ty: o.ty + 20 });
-    assert.deepEqual(slot.shelf, { tx: o.tx + 14, ty: o.ty + 20 });
+    assert.deepEqual(slot.sign, { tx: o.tx + lotService(slot.gate,'sign').x, ty: o.ty + 9 });
+    assert.deepEqual(slot.shelf, { tx: o.tx + lotService(slot.gate,'shelf').x, ty: o.ty + 14 });
     assert.equal(slot.chunk, `${o.tx / 24},${o.ty / 24}`);
   }
 });
@@ -80,12 +80,12 @@ test('the lane holds exactly eight chunk lots, beyond the old spare count', () =
 });
 
 test('every lot doorstep and gate connects to the public lanes without a gate portal', () => {
-  const fp = serveFixtureLots();
+  serveFixtureLots();
   for (const g of commonsLane()!.gates) {
     assert.deepEqual(fixedStand(g.entry.tx, g.entry.ty), g.entry);
     assert.deepEqual(fixedStand(homeDoorstep(g.gate).tx, homeDoorstep(g.gate).ty), homeDoorstep(g.gate));
-    assert.ok(!fp.objects.get(g.chunk)!.some((o) => o.exit), 'lot entrance is a walk, not a portal');
-    for (const tx of [g.tx, g.tx + 1]) assert.equal(fixedSolidAt(tx, g.ty), false);
+    assert.ok(!fixedFootprint(lotLayout(g.gate))!.objects.get(g.chunk)!.some((o) => o.exit), 'lot entrance is a walk, not a portal');
+    for (const tx of [g.tx]) assert.equal(fixedSolidAt(tx, g.ty), false);
   }
 });
 
@@ -99,9 +99,9 @@ test('a homestead’s land: the site, the path to the gate mouth and the mailbox
     // The home site is open ground (the camp or cottage stands there).
     for (let y = land.site.y; y < land.site.y + land.site.h; y++) for (let x = land.site.x; x < land.site.x + land.site.w; x++) assert.ok(!land.solid[y][x], `site ${x},${y}`);
     // The mailbox and the path are reserved: nobody builds over them.
-    const rect = (x: number, y: number) => HOMESTEAD_DATA.outdoorReserved.some((rr) => x >= rr.x && x < rr.x + rr.w && y >= rr.y && y < rr.y + rr.h);
+    const rect = (x: number, y: number) => outdoorReserved(gate).some((rr) => x >= rr.x && x < rr.x + rr.w && y >= rr.y && y < rr.y + rr.h);
     assert.ok(rect(land.mailbox.tx, land.mailbox.ty));
-    for (let y = land.site.y + land.site.h; y < land.height; y++) for (let x = HOMESTEAD_DATA.land.gate.x; x < HOMESTEAD_DATA.land.gate.x + HOMESTEAD_DATA.land.gate.w; x++) assert.ok(rect(x, y), `path ${x},${y}`);
+    for (let y = land.site.y + land.site.h; y <= 12; y++) for (let x = HOMESTEAD_DATA.land.gate.x; x < HOMESTEAD_DATA.land.gate.x + HOMESTEAD_DATA.land.gate.w; x++) assert.ok(rect(x, y), `path ${x},${y}`);
   }
 });
 

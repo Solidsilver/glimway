@@ -1,6 +1,6 @@
 import type { HomeView, StallView } from '../../lib/api/types.ts'
 import { nextHomecoming } from '../../lib/companions.ts'
-import { lotAt, lotOrigin, lotAtPixel } from '../../lib/lots.ts'
+import { lotAt, lotOrigin, lotAtPixel, lotService } from '../../lib/lots.ts'
 import { TILE } from '../../lib/tile.ts'
 import { buildLand, type LandWorld } from '../lot-land.ts'
 import { HomesteadLayer } from '../entities/homesteads.ts'
@@ -72,7 +72,7 @@ export class LotHomes {
     this.detach(key, true)
     const origin = lotOrigin(gate), gridOrigin = { x: origin.tx * TILE, y: origin.ty * TILE }
     const L = buildLand(gate)
-    Object.assign(L, { gridOrigin, areaId: 'outdoors', origin: { x: L.origin.x + gridOrigin.x, y: L.origin.y + gridOrigin.y }, door: { tx: origin.tx + 11, ty: origin.ty + 7 }, doorstep: { tx: origin.tx + 11, ty: origin.ty + 8 }, mailbox: { tx: origin.tx + 13, ty: origin.ty + 18 } })
+    Object.assign(L, { gridOrigin, areaId: 'outdoors', origin: { x: L.origin.x + gridOrigin.x, y: L.origin.y + gridOrigin.y }, door: { tx: origin.tx + 11, ty: origin.ty + 7 }, doorstep: { tx: origin.tx + 11, ty: origin.ty + 8 }, mailbox: { tx: origin.tx + lotService(gate, 'mailbox').x, ty: origin.ty + 10 } })
     const child = Object.assign(Object.create(HomesteadLayer.prototype), {
       scene: this.root.scene, homes: this.root.homes, village: this.root.village,
       deps: { ...this.root.deps, world: L, commons: null, rebuild: () => this.root.deps.refreshLot?.(key) },

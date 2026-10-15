@@ -210,7 +210,7 @@ func deleteStaleEpochs(ctx context.Context, tx *sql.Tx, world, kind, season stri
 func (c *Chunks) Chunk(ctx context.Context, tx *sql.Tx, world, epoch string, layer, cx, cy int32) (*contract.WorldChunk, error) {
 	if src := location.SourceOf(int(cx), int(cy)); src.Kind == location.SourceFixed || chunks.IsFixedEpoch(epoch) || strings.HasPrefix(epoch, "plot:") {
 		expected := chunks.FixedEpoch(src.Layout, src.Revision)
-		plot := src.Kind == location.SourceFixed && src.Layout == "homestead-lots"
+		plot := src.Kind == location.SourceFixed && chunks.IsLotLayout(src.Layout)
 		if plot {
 			expected = chunks.PlotEpoch(world, chunks.LotAt(int(cx), int(cy)))
 		}
@@ -306,7 +306,7 @@ func (c *Chunks) make(ctx context.Context, tx *sql.Tx, world string, e *contract
 				src := location.SourceOf(nx, ny)
 				if src.Kind == location.SourceFixed {
 					epoch := chunks.FixedEpoch(src.Layout, src.Revision)
-					if src.Layout == "homestead-lots" {
+					if chunks.IsLotLayout(src.Layout) {
 						epoch = chunks.PlotEpoch(world, chunks.LotAt(nx, ny))
 					}
 					m, err := c.Chunk(ctx, tx, world, epoch, 0, int32(nx), int32(ny))

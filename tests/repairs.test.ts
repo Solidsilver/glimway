@@ -164,7 +164,7 @@ test('the world is built from the shared spots the server checks', () => {
   const v = servedTownFixture();
   const well = repairFor('well-rope')!.pos;
   assert.equal(v.features.well.tx, well.tx);
-  assert.equal(v.features.well.ty, well.ty + 1, 'repair is on the well footprint; sprite is anchored to its bottom row');
+  assert.equal(v.features.well.ty, well.ty, 'repair is on the well footprint; sprite is anchored to its bottom row');
   for (const res of ITEM_RULES.residents) {
     // The Commons is fixed ground on the open map: its served layout, in Commons tiles.
     const npc = (res.area === 'hearthwick' ? servedTownFixture() : buildArea(res.area)).npcs.find((n) => n.id === res.id);

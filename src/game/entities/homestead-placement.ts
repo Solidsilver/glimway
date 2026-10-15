@@ -6,7 +6,7 @@ import { lotAtPixel } from '../../lib/lots'
  * a clearable tile can be cleared with Silas's saw.
  */
 import Phaser from 'phaser'
-import { HOMESTEAD_DATA, canRotate, checkPlacement, checkRemoval, grownItem, homeItem as catalogItem, rotatedFootprint, type HomeInstance, type HomeScene, type PlacementGround, type Rotation } from '../../lib/homestead'
+import { HOMESTEAD_DATA, outdoorReserved, canRotate, checkPlacement, checkRemoval, grownItem, homeItem as catalogItem, rotatedFootprint, type HomeInstance, type HomeScene, type PlacementGround, type Rotation } from '../../lib/homestead'
 import { LAND, buildableKind, clearable, clearedSet, effectiveKind, isLit } from '../../lib/homestead-land'
 import { bus, EV } from '../events'
 import { touchVec, uiBlocked, uiState } from '../input'
@@ -313,7 +313,7 @@ export class HomesteadArranging {
     const g = this.ground()
     for (let y = 0; y <= p.rows - h; y++)
       for (let x = 0; x <= p.cols - w; x++) {
-        if (checkPlacement({ tier: Math.max(1, home.tier), items: home.items, plants: home.plants }, it, p.scene, x, y, 0, HOMESTEAD_DATA, g)) continue
+        if (checkPlacement({ gate: home.gate, tier: Math.max(1, home.tier), items: home.items, plants: home.plants }, it, p.scene, x, y, 0, HOMESTEAD_DATA, g)) continue
         const d = Math.hypot(x - cx, (y - cy) * 1.3)
         if (d < bestD) {
           bestD = d
@@ -529,7 +529,7 @@ export class HomesteadArranging {
       g.lineStyle(1, 0xfff3c4, 0.7)
       g.strokeRect(p.ox, p.oy, p.cols * TILE, p.rows * TILE)
     }
-    const reserved = p.scene === 'indoor' ? HOMESTEAD_DATA.indoorReserved : HOMESTEAD_DATA.outdoorReserved
+    const reserved = p.scene === 'indoor' ? HOMESTEAD_DATA.indoorReserved : outdoorReserved(home.gate)
     g.fillStyle(0x2b1d1a, 0.35)
     for (const r of reserved) g.fillRect(p.ox + r.x * TILE, p.oy + r.y * TILE, r.w * TILE, r.h * TILE)
     g.lineStyle(1, 0x2b1d1a, 0.45)

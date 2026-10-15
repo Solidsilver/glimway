@@ -311,7 +311,7 @@ func TestHomeRestAndSafeBoundaries(t *testing.T) {
 	doc = s.State
 	doc.HP = 1
 	doc.Area = "outdoors"
-	doc.Position.X, doc.Position.Y = -968, 520
+	doc.Position.X, doc.Position.Y = -584, 520
 	s = x.reportState(c, s, doc.HP, doc.Mana, testWhere(doc))
 	x.expect("POST", "/api/spend", spendBody(s, "home-rest", "", "bedroll", doc), c, 200)
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
@@ -321,7 +321,7 @@ func TestHomeRestAndSafeBoundaries(t *testing.T) {
 	doc = s.State
 	doc.HP = 1
 	doc.Area = "outdoors"
-	doc.Position.X, doc.Position.Y = -968, 520
+	doc.Position.X, doc.Position.Y = -584, 520
 	s = x.reportState(c, s, doc.HP, doc.Mana, testWhere(doc))
 	if v := x.exp("POST", "/api/spend", spendBody(s, "home-rest", "", "doorstep", doc), c, 409); v.Error.Code != "not-at-own-plot" {
 		t.Fatal("doorstep rest with a cottage", v.Error.Code)
@@ -349,7 +349,7 @@ func TestHomeRestAndSafeBoundaries(t *testing.T) {
 		pos  rules.Position
 	}{
 		{"outdoors", commonsPx(376, 40)},
-		{"outdoors", rules.Position{X: -968, Y: 520}},
+		{"outdoors", rules.Position{X: -584, Y: 520}},
 		{"outdoors", rules.Position{X: -37*16 + 8, Y: 104*16 + 8}},
 		{"in:village:library", rules.Position{X: 80, Y: 80}},
 		{"in:village:mill:2", rules.Position{X: 80, Y: 80}},

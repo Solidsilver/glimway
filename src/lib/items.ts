@@ -371,6 +371,34 @@ export function sellerFor(id: string, now?: number): ItemSeller | null {
   return seller;
 }
 
+/** Within `radiusTiles` of a spot (tile centre), in the same space: the server's nearTile. */
+function withinSpot(at: ResidentPlace, radiusTiles: number, area: string, x: number, y: number, tile: number): boolean {
+  const spot = contentPosition(at.area, at.tx, at.ty);
+  if (spot.space !== area) return false;
+  const dx = x - (spot.tx * tile + tile / 2);
+  const dy = y - (spot.ty * tile + tile / 2);
+  return dx * dx + dy * dy <= (radiusTiles * tile) ** 2;
+}
+
+/**
+ * Whether you stand within reach of the post a resident's cycle has them at
+ * now: what the server measures a keepsake's return from (nearResident),
+ * wherever their route has walked them. The server also allows its grace
+ * either side of a change of post; this asks for the post itself.
+ */
+export function residentReaches(id: string, radiusTiles: number, area: string, x: number, y: number, now: number, tile = 16): boolean {
+  const at = residentAt(id, now);
+  return !!at && withinSpot(at, radiusTiles, area, x, y, tile);
+}
+
+/** Whether a seller's goods sell to you here at `now`: anyone in their shop, else within their reach (the server's market check). */
+export function sellerReaches(id: string, area: string, x: number, y: number, now: number, tile = 16): boolean {
+  const seller = sellerFor(id, now);
+  if (!seller) return false;
+  if (seller.shop && seller.shop === area) return true;
+  return withinSpot(seller, seller.radiusTiles, area, x, y, tile);
+}
+
 /** Any pocketed keepsake gives this help (e.g. papers-glint). */
 export function pocketHelps(pocketed: readonly (string | null)[], type: string): boolean {
   return pocketed.some((id) => !!id && !!itemDef(id)?.pocket?.some((e) => e.type === type));

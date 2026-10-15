@@ -71,7 +71,7 @@ func TestRepairsScriptedProgressionAndMending(t *testing.T) {
 	// 3. Proximity to well (tx: 13, ty: 12) but no fibre-rope in pack
 	wellDoc := s.State
 	wellDoc.Area = "outdoors"
-	wellDoc.Position = rules.Position{X: float64(12*16 + 8), Y: float64(60*16 + 8)}
+	wellDoc.Position = rules.Position{X: float64(7*16 + 8), Y: float64(64*16 + 8)}
 	bad = x.mendRefreshing(c, &s, "well-rope", map[string]any{"progress": wellDoc}, 409)
 	if bad.Error.Code != "insufficient-items" {
 		t.Fatalf("expected insufficient-items, got %s", bad.Error.Code)
@@ -125,7 +125,7 @@ func TestDrawingWaterAtWell(t *testing.T) {
 	// 1. Drawing water when well-rope is broken fails (well-rope-broken)
 	wellDoc := s.State
 	wellDoc.Area = "outdoors"
-	wellDoc.Position = rules.Position{X: float64(12*16 + 8), Y: float64(60*16 + 8)}
+	wellDoc.Position = rules.Position{X: float64(7*16 + 8), Y: float64(64*16 + 8)}
 	bad := x.opRefreshing(c, &s, "use", map[string]any{"instance": bucketID, "action": "draw", "progress": wellDoc}, 409)
 	if bad.Error.Code != "well-rope-broken" {
 		t.Fatalf("expected well-rope-broken, got %s", bad.Error.Code)
@@ -166,7 +166,7 @@ func TestReturningKeepsakes(t *testing.T) {
 
 	adaDoc := s.State
 	adaDoc.Area = "outdoors"
-	adaDoc.Position = rules.Position{X: float64(32*16 + 8), Y: float64(55*16 + 8)}
+	adaDoc.Position = rules.Position{X: float64(-15*16 + 8), Y: float64(49*16 + 8)}
 
 	// Too far away from Ada
 	farDoc := s.State
@@ -288,10 +288,10 @@ func TestRepairsWeatherPacing(t *testing.T) {
 	// The scripted two, mended (their parts seeded; both near the square).
 	wellDoc := s.State
 	wellDoc.Area = "outdoors"
-	wellDoc.Position = rules.Position{X: float64(12*16 + 8), Y: float64(60*16 + 8)}
+	wellDoc.Position = rules.Position{X: float64(7*16 + 8), Y: float64(64*16 + 8)}
 	fenceDoc := s.State
 	fenceDoc.Area = "outdoors"
-	fenceDoc.Position = rules.Position{X: float64(9*16 + 8), Y: float64(76*16 + 8)}
+	fenceDoc.Position = rules.Position{X: float64(-8*16 + 8), Y: float64(76*16 + 8)}
 	for _, chore := range []struct {
 		id   string
 		part string
@@ -320,7 +320,7 @@ func TestRepairsWeatherPacing(t *testing.T) {
 	// Mended, the next wick takes the bench (the roof, mended last, sits out).
 	roofDoc := s.State
 	roofDoc.Area = "outdoors"
-	roofDoc.Position = rules.Position{X: float64(-11*16 + 8), Y: float64(76*16 + 8)}
+	roofDoc.Position = rules.Position{X: float64(0*16 + 8), Y: float64(65*16 + 8)}
 	x.stack(x.account("alice"), "slates", "", 1)
 	x.mendRefreshing(c, &s, "library-roof", map[string]any{"progress": roofDoc}, 200)
 	read = nextWick()
@@ -454,7 +454,7 @@ func TestMendGiftFailureRollsBack(t *testing.T) {
 	x.stack(x.account("alice"), "fibre-rope", "", 1)
 	wellDoc := s.State
 	wellDoc.Area = "outdoors"
-	wellDoc.Position = rules.Position{X: float64(12*16 + 8), Y: float64(60*16 + 8)}
+	wellDoc.Position = rules.Position{X: float64(7*16 + 8), Y: float64(64*16 + 8)}
 	x.mendRefreshing(c, &s, "well-rope", map[string]any{"progress": wellDoc}, 500)
 	x.conserved(x.account("alice"))
 

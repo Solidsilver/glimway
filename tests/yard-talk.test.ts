@@ -102,7 +102,7 @@ test('Pell: no deed yet, the deeds on offer (the first free) and Not today', () 
   const d = pellTalk(pell());
   assert.equal(d.speaker, 'Pell');
   assert.deepEqual(d.lines, [PELL_IDLE]);
-  assert.deepEqual(texts(d), ['The deed to Lot 3', 'The deed to Lot 1', PELL_DEED.notToday]);
+  assert.deepEqual(texts(d), ['The deed to West Row 2', 'The deed to West Row 1', PELL_DEED.notToday]);
   assert.equal(d.choices![0].note, 'First deed: free');
   assert.equal(d.choices![0].action, 'home:claim:2');
   assert.equal(d.choices!.at(-1)!.action, undefined);
@@ -129,14 +129,14 @@ test('Pell: the first meeting comes with the first deed; the pitch plays once ot
 
 test('Pell: an invite to sign and old deeds to take back come first, and are news each time', () => {
   const d = pellTalk(pell({ invite: { homeId: 'h1', gate: 4, from: 'Tansy' }, reclaimable: [1, 6, 7] }));
-  assert.deepEqual(texts(d), ['Sign Tansy’s deed', 'Take back Lot 2', 'Take back Lot 7', 'The deed to Lot 3', 'The deed to Lot 1', PELL_DEED.notToday]);
+  assert.deepEqual(texts(d), ['Sign Tansy’s deed', 'Take back East Row 1', 'Take back West Row 4', 'The deed to West Row 2', 'The deed to West Row 1', PELL_DEED.notToday]);
   assert.equal(d.choices![0].action, 'home:sign:h1');
-  assert.equal(d.choices![0].note, 'Lot 5 · together, at the table');
+  assert.equal(d.choices![0].note, 'West Row 3 · together, at the table');
   assert.equal(d.choices![1].action, 'home:claim:1');
   assert.equal(d.choices![1].note, PELL_DEED.takeBackNote);
-  assert.deepEqual(d.lines, [PELL_IDLE, PELL_DEED.invite('Tansy', 'Lot 5')]);
+  assert.deepEqual(d.lines, [PELL_IDLE, PELL_DEED.invite('Tansy', 'West Row 3')]);
   const back = pellTalk(pell({ reclaimable: [1] }));
-  assert.deepEqual(back.lines, [PELL_IDLE, PELL_DEED.takeBackPitch('Lot 2')]);
+  assert.deepEqual(back.lines, [PELL_IDLE, PELL_DEED.takeBackPitch('East Row 1')]);
   // A long name is cut short on the choice.
   assert.equal(pellTalk(pell({ invite: { homeId: 'h1', gate: 4, from: 'Bartholomew Quill' } })).choices![0].text, 'Sign Bartholomew Q…’s deed');
 });

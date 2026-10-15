@@ -6,18 +6,21 @@ import { inCommons, warp, windowWhole } from './helpers'
 import { freshPlayer, go } from './home-helpers'
 
 /**
- * Entering an area must not freeze the page: the ground tileset
- * (src/game/area/terrain.ts) is painted off the main thread, so no task
- * blocks for long. A `longtask` observer records every main-thread task
- * over 50 ms from the warp until Hearthwick's ground is complete, and the
- * workers' tileset must match a main-thread repaint texel for texel.
+ * Entering an area must not freeze the page: an enclosed area's ground
+ * tileset (src/game/area/terrain.ts) and the open map's chunks (Hearthwick's
+ * too: src/game/wilds/fixed-ground.ts) are painted off the main thread, so
+ * no task blocks for long. A `longtask` observer records every main-thread
+ * task over 50 ms from the warp until Hearthwick's window is whole, and an
+ * enclosed area's workers' tileset must match a main-thread repaint texel
+ * for texel.
  *
  * The Commons was retired by one town: it is now Hearthwick on the open map
  * (`outdoors`), so the entry here walks the hero in from its west edge rather
  * than warping into a separate `commons` area.
  *
  * PERF=1 also measures a phone (390×844, 4× CPU throttle through CDP) and
- * writes the numbers and the tileset hashes to .agent/perf-<tag>.json.
+ * writes the numbers and how Hearthwick's chunks were painted to
+ * test-results/perf-first-paint-*.json.
  */
 
 type LongTask = { start: number; duration: number }
@@ -47,8 +50,8 @@ async function logWebGLRenderer(page: Page): Promise<void> {
 async function arrive(page: Page): Promise<{ tasks: LongTask[]; ground: unknown; ms: number }> {
   await page.evaluate(() => ((window as unknown as { __lt: LongTask[] }).__lt = []))
   const t0 = Date.now()
-  // Just west of Hearthwick's footprint on the open map.
-  await warp(page, 'outdoors', -26, 69)
+  // Just west of Hearthwick's footprint on the open map, on the open wildgate way.
+  await warp(page, 'outdoors', -26, 71)
   // Walk in until the hero stands on Hearthwick.
   await page.keyboard.down('ArrowRight')
   await expect.poll(async () => inCommons(page)).toBe(true)
@@ -58,11 +61,11 @@ async function arrive(page: Page): Promise<{ tasks: LongTask[]; ground: unknown;
   const ms = Date.now() - t0
   // A moment for anything queued behind it.
   await page.waitForTimeout(500)
-  return page.evaluate((ms) => ({
-    tasks: (window as unknown as { __lt: LongTask[] }).__lt,
-    ground: (window as unknown as { __fsGround: () => unknown }).__fsGround(),
-    ms,
-  }), ms)
+  return page.evaluate((ms) => {
+    const w = window.__fsWildsWindow!()!
+    // How the fixed chunks attached now were painted (a worker, the main thread, or kept from before).
+    return { tasks: (window as unknown as { __lt: LongTask[] }).__lt, ground: w.paints.filter((p) => w.fixed.includes(p.chunk)), ms }
+  }, ms)
 }
 
 /** The ground tileset's hash, once its transitions are all in. */
@@ -89,15 +92,13 @@ test('entering the Commons blocks the main thread for no long task', async ({ pa
   await page.setViewportSize({ width: 1280, height: 800 })
   await freshPlayer(page)
   await logWebGLRenderer(page)
-  // The open map's base tileset at spawn (recorded for the report).
-  const village = await tilesetHash(page)
   // Arrive into Hearthwick on the open map and measure its first paint.
   const hearthwick = await arrive(page)
   if (process.env.E2E_LOG_RENDERER) {
     console.log(`First-paint measurement: ${hearthwick.ms} ms total; longest long task ${longest(hearthwick.tasks)} ms`)
   }
   test.info().annotations.push({ type: 'longest task (ms)', description: String(longest(hearthwick.tasks)) })
-  if (process.env.PERF) writeFileSync('test-results/perf-first-paint-desktop.json', JSON.stringify({ hearthwick, hashes: { village } }, null, 1))
+  if (process.env.PERF) writeFileSync('test-results/perf-first-paint-desktop.json', JSON.stringify({ hearthwick }, null, 1))
   // This is a measured browser budget, not a correctness gate. The opt-in
   // browser-performance job sets PERF=1 and records this observation.
   if (process.env.PERF) {
@@ -123,12 +124,10 @@ test.describe('phone, 4× CPU throttle', () => {
     await observe(page)
     await freshPlayer(page)
     await page.waitForFunction(() => (window as unknown as { __fsSafety?: () => { transitioning: boolean } }).__fsSafety?.().transitioning === false)
-    const village = await tilesetHash(page)
     const cdp = await page.context().newCDPSession(page)
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 })
     const hearthwick = await arrive(page)
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 })
-    const hearthwickHash = await tilesetHash(page)
-    writeFileSync('test-results/perf-first-paint-phone.json', JSON.stringify({ hearthwick, hashes: { village, hearthwick: hearthwickHash } }, null, 1))
+    writeFileSync('test-results/perf-first-paint-phone.json', JSON.stringify({ hearthwick }, null, 1))
   })
 })

@@ -23,7 +23,7 @@ func plantGround(h homeView) map[[2]int]bool {
 			}
 		}
 	}
-	for _, v := range content.HomeRules.GetOutdoorReserved() {
+	for _, v := range content.HomeOutdoorReserved(h.Gate) {
 		mark(rect{int(v.GetX()), int(v.GetY()), int(v.GetW()), int(v.GetH())})
 	}
 	for _, v := range placedItems(h) {

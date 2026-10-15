@@ -24,7 +24,7 @@ export function townReachability(): void {
   assert.deepEqual(positions.filter(v=>/^papers\.-?\d+,/.test(v.source)).map(v=>v.tile).sort(),paperTiles.sort());
   for (const o of town.objects) if (['npc-post','gather','exit'].includes(o.kind))
     assert.deepEqual(positions.find(v=>v.source===`layout.${o.id}`)?.tile,[o.tx-24,o.ty+24]);
-  const starts = [[4,60],[2,24],[47,59],[9,95],[-72,69]] as const;
+  const starts = [[5,60],[2,24],[47,59],[12,119],[-48,71],[71,72]] as const;
   for (const [x,y] of starts) {
     assert.ok(open.has(key(x,y)),`flood start ${x},${y} is blocked`);
     const seen = new Set([key(x,y)]), queue: [number,number][] = [[x,y]];
@@ -41,6 +41,6 @@ export function townReachability(): void {
       if(v.kind==='stand') assert.ok(seen.has(key(tx,ty)),`${v.source} ${tx},${ty} unreachable from ${x},${y}`);
       else assert.ok([[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>seen.has(key(tx+dx!,ty+dy!))),`${v.source} has no reachable approach from ${x},${y}`);
     }
-    for(let g=0;g<8;g++) assert.ok(seen.has(key(-61+24*(g%2),32+24*Math.floor(g/2))),`lot:${g} doorstep unreachable`);
+    for(let g=0;g<8;g++) assert.ok(seen.has(key((g%2?48:-48)+11,32+24*Math.floor(g/2))),`lot:${g} doorstep unreachable`);
   }
 }

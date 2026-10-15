@@ -612,11 +612,17 @@ func TestV3Road(t *testing.T) {
 		if a.ground[a.i(ox, oy-3)] != groundPaving {
 			t.Fatalf("%s: no paving north of the lantern-road opening", seed)
 		}
-		_, _, maxCx, _ := frontierChunks()
+		// The frontier's east edge on the road's own rows: the reach is
+		// clipped at its corners, so it lies short of the frontier rectangle
+		// (whose east edge the lot column sets, further south).
+		minCx, _, maxCx, _ := frontierChunks()
 		east := false
 		for ty := a.y0; ty < oy-S; ty++ {
-			if a.ground[a.i((maxCx+1)*S-1, ty)] == groundPaving {
-				east = true
+			for cx := maxCx; cx >= minCx; cx-- {
+				if insideReach(cx, floorDiv(ty, S)) {
+					east = east || a.ground[a.i((cx+1)*S-1, ty)] == groundPaving
+					break
+				}
 			}
 		}
 		if !east {
@@ -762,7 +768,9 @@ func TestV3PlacesAndRumour(t *testing.T) {
 		w := newWorld(e)
 		places := w.rumourPlaces()
 		// Pinned per seed, independent of the enumeration/filter implementation.
-		counts := [...]int{15, 14, 15, 16, 14, 13, 14, 13, 15, 13, 15, 15, 15, 15, 16, 14, 15, 15, 16, 14, 15, 15, 15, 14, 15, 14, 16, 14, 14, 14, 14, 14, 13, 13, 16, 15, 13, 16, 15, 13}
+		// Hearthwick 2's 5×4 block makes cells (1, 1) and (1, 2) footprint
+		// cells and moves the frontier a chunk east.
+		counts := [...]int{12, 13, 16, 15, 14, 12, 12, 17, 14, 12, 13, 14, 13, 14, 13, 15, 12, 13, 13, 13, 11, 13, 14, 11, 13, 12, 11, 15, 14, 13, 12, 10, 14, 10, 11, 13, 13, 14, 11, 12}
 		expected := counts[seedIndex]
 		if len(places) != expected {
 			t.Fatalf("%s: %d rumour places; want %d", seed, len(places), expected)
@@ -1176,15 +1184,20 @@ func TestV3EdgeTilesFollowField(t *testing.T) {
 	}
 }
 
-// Town mouths and the plot spine must join the dry route network on both
-// banks of the Wend, across the larger kept block and its partial cells.
+// The block's exits (hearthwick-2.md §1) must join the dry route network on
+// both banks of the Wend, across the kept 5×4 block and its partial cells:
+// the Tangle Arch, the South Gate, both Lot Row lane ends, both wildgates
+// and a lot's open back on each side.
 func TestV3TownReach(t *testing.T) {
 	S := chunkSize()
 	x0, _, _, _ := frontierChunks()
-	if x0 > -6 {
-		t.Fatal("fewer than two chunks west of the lots")
+	reach := int(contentRules().GetFrontier().GetReach())
+	for _, f := range content.PlacesRules.GetFixed() {
+		if fx0, _, _, _ := content.FixedChunks(f); f.GetId() == "lots-west" && x0 > fx0-reach {
+			t.Fatalf("frontier starts at cx %d, fewer than %d chunks west of the lots", x0, reach)
+		}
 	}
-	starts := [][2]int{{2, 23}, {2, 26}, {47, 59}, {9, 95}, {-72, 69}, {-49, 24}, {-49, 119}}
+	starts := [][2]int{{2, 23}, {2, 26}, {12, 119}, {-23, 119}, {46, 119}, {-48, 71}, {71, 72}, {-48, 30}, {71, 100}}
 	for _, ws := range v3Worlds(10) {
 		m := buildFrontier(t, ws[0], ws[1])
 		w := newWorld(WickEpoch(ws[0], ws[1]))
@@ -1198,10 +1211,21 @@ func TestV3TownReach(t *testing.T) {
 			}
 		}
 
-		for cy := 1; cy <= 4; cy++ {
-			for cx := -3; cx <= 1; cx++ {
-				if FixedFootprintAt(cx, cy) != nil && w.river.crossesChunk(cx, cy) {
-					t.Fatalf("%s: Wend enters fixed chunk %d,%d", ws[0], cx, cy)
+		for _, f := range content.PlacesRules.GetFixed() {
+			fx0, fy0, fx1, fy1 := content.FixedChunks(f)
+			for cy := fy0; cy <= fy1; cy++ {
+				for cx := fx0; cx <= fx1; cx++ {
+					if w.river.crossesChunk(cx, cy) {
+						t.Fatalf("%s: Wend enters fixed chunk %d,%d", ws[0], cx, cy)
+					}
+				}
+			}
+		}
+		// Nor its water or banks the soft band and feather beside the lots.
+		for k := range seams().soft {
+			if m.in(k[0], k[1]) {
+				if g := m.ground[m.i(k[0], k[1])]; g == groundRiverWater || g == groundRiverFord || g == groundRiverBank {
+					t.Fatalf("%s: the Wend at %d,%d, beside the block", ws[0], k[0], k[1])
 				}
 			}
 		}
@@ -1248,26 +1272,68 @@ func TestFrontierExitRequiresFacingTile(t *testing.T) {
 	for _, c := range []struct {
 		x, y int
 		exit bool
-	}{{-132, -48, true}, {-132, -47, false}, {-132, -36, false}, {-144, -36, true}, {-145, -36, false}} {
+	}{
+		// Chunk (-5, -2), the frontier's north-west step: three chunks from
+		// the west lot column (cx -2), four from the Whitequiet's.
+		{-108, -48, true}, {-108, -47, false}, {-108, -36, false}, {-120, -36, true}, {-121, -36, false},
+	} {
 		if got := frontierExitTile(c.x, c.y); got != c.exit {
 			t.Fatalf("%d,%d exit %v", c.x, c.y, got)
 		}
 	}
 }
 func TestTownInternalPortsHaveNoGeneratedRoute(t *testing.T) {
-	w := newWorld(WickEpoch("internal-ports", "t:100:200"))
 	for _, c := range []struct {
-		id string
-		dx int
-	}{{"hearthwick", -1}, {"homestead-lots", 1}} {
+		id     string
+		dx, dy int
+	}{{"hearthwick", -1, 0}, {"hearthwick", 1, 0}, {"lots-west", 1, 0}, {"lots-east", -1, 0}} {
 		var p *content.FixedPlace
 		for _, f := range content.PlacesRules.GetFixed() {
 			if f.GetId() == c.id {
 				p = f
 			}
 		}
-		if _, _, ok := w.fixedPort(p, c.dx, 0); ok {
-			t.Fatal("internal fixed join created generated route", c.id)
+		if p == nil {
+			t.Fatal("no fixed place", c.id)
+		}
+		if ends := fixedPorts(p, c.dx, c.dy); len(ends) != 0 {
+			t.Fatal("internal fixed join created generated route", c.id, c.dx)
+		}
+	}
+}
+
+// The block's public mouths (hearthwick-2.md §1) each get a port: its end
+// one tile outside an open fixed edge tile, on generated wick ground, and
+// its waypoint further out the same way.
+func TestFixedPortsAtTheMouths(t *testing.T) {
+	S := chunkSize()
+	want := map[string][][2]int{
+		"hearthwick": {{12, 119}, {-23, 119}, {46, 119}}, // the South Gate, the Lot Row lane ends
+		// The footpaths between lots 0/2 and 4/6, and the wildgate between 2/4: each between its two rows, on the lower's edge.
+		"lots-west": {{-48, 48}, {-48, 72}, {-48, 96}},
+		"lots-east": {{71, 48}, {71, 72}, {71, 96}},
+	}
+	for _, f := range content.PlacesRules.GetFixed() {
+		var got [][2]int
+		for _, d := range dirs4 {
+			for _, e := range fixedPorts(f, d[0], d[1]) {
+				tx, ty := e.end.tile()
+				fx, fy := tx-d[0], ty-d[1]
+				if FixedFootprintAt(floorDiv(fx, S), floorDiv(fy, S)) != f || FixedFootprintAt(floorDiv(tx, S), floorDiv(ty, S)) != nil || EpochKindAt(floorDiv(tx, S), floorDiv(ty, S)) != EpochWick {
+					t.Fatalf("%s port %d,%d doesn't stand just outside it on wick ground", f.GetId(), tx, ty)
+				}
+				if walk, _ := fixedTile(f, fx, fy); !walk {
+					t.Fatalf("%s port %d,%d faces a wall", f.GetId(), tx, ty)
+				}
+				wx, wy := e.way.tile()
+				if (wx-tx)*d[0] < 8 && (wy-ty)*d[1] < 8 {
+					t.Fatalf("%s port %d,%d: waypoint %d,%d isn't out ahead", f.GetId(), tx, ty, wx, wy)
+				}
+				got = append(got, [2]int{fx, fy})
+			}
+		}
+		if fmt.Sprint(got) != fmt.Sprint(want[f.GetId()]) {
+			t.Fatalf("%s mouths %v, want %v", f.GetId(), got, want[f.GetId()])
 		}
 	}
 }

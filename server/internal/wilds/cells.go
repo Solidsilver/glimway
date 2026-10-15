@@ -120,7 +120,7 @@ func (w *world) place(x, y int) *Place {
 	var best *spot
 	for a := 0; a < placeTries; a++ {
 		s := spot{cx: cx0 + rng.NextInt(n), cy: cy0 + rng.NextInt(n), tx: rng.Between(placeLo, S-1-placeLo), ty: rng.Between(placeLo, S-1-placeLo)}
-		if s.cy > south || FootprintAt(s.cx, s.cy) != nil || FixedFootprintAt(s.cx, s.cy) != nil {
+		if s.cy > south || FootprintAt(s.cx, s.cy) != nil || FixedFootprintAt(s.cx, s.cy) != nil || nearKeepOut(s.cx*S+s.tx, s.cy*S+s.ty, maxClearing) {
 			continue
 		}
 		p := tileCentre(s.cx*S+s.tx, s.cy*S+s.ty)

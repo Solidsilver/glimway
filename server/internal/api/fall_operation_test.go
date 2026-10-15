@@ -27,7 +27,7 @@ func TestFallRecoveryReplayAndMissingGeometry(t *testing.T) {
 	}
 	out := read(req)
 	f := out.GetFall()
-	if f == nil || f.Vitals.Hp != 13 || f.Vitals.Mana != 10 || f.Place.Area != "outdoors" || f.Place.X != 184 || f.Place.Y != 1000 || f.Vitals.VitalsSetVersion != out.State.Version || f.Place.PlaceSetVersion != out.State.Version {
+	if f == nil || f.Vitals.Hp != 13 || f.Vitals.Mana != 10 || f.Place.Area != "outdoors" || f.Place.X != 152 || f.Place.Y != 1048 || f.Vitals.VitalsSetVersion != out.State.Version || f.Place.PlaceSetVersion != out.State.Version {
 		t.Fatal(out)
 	}
 	s = x.expect("GET", "/api/state", nil, c, 200)

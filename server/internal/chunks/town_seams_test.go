@@ -91,20 +91,24 @@ func TestTownFixedSeams(t *testing.T) {
 
 // Kept bytes are authoritative; T4 supplies a world-specific plot base.
 func TestTownSeamUsesSuppliedBytes(t *testing.T) {
-	fixed := proto.Clone(Fixed(FixedEpoch("hearthwick", 1), 0, 3)).(*contract.WorldChunk)
-	i := 23*24 + 5
-	if wilds.Walkable(fixed, 5, 23) {
-		t.Fatal("fixture wall unexpectedly open")
+	epoch := FixedEpoch("hearthwick", content.Layouts["hearthwick"].GetRevision())
+	fixed := proto.Clone(Fixed(epoch, 0, 4)).(*contract.WorldChunk)
+	// The town's south edge is open meadow: close one tile of it in the
+	// supplied copy, and the generated side must mirror the supplied wall.
+	x := 5
+	if !wilds.Walkable(fixed, x, 23) {
+		t.Fatal("fixture edge unexpectedly closed")
 	}
-	fixed.Solid[i/8] &^= 1 << uint(i%8)
-	ch, err := wilds.GenerateV3(wilds.WickEpoch("stored-edge", "t:100:200"), 0, 4, []wilds.Kept{{CX: 0, CY: 3, Chunk: fixed}})
+	i := 23*24 + x
+	fixed.Solid[i/8] |= 1 << uint(i%8)
+	ch, err := wilds.GenerateV3(wilds.WickEpoch("stored-edge", "t:100:200"), 0, 5, []wilds.Kept{{CX: 0, CY: 4, Chunk: fixed}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !wilds.Walkable(fixed, 5, 23) || wilds.Walkable(Fixed(FixedEpoch("hearthwick", 1), 0, 3), 5, 23) {
+	if wilds.Walkable(fixed, x, 23) || !wilds.Walkable(Fixed(epoch, 0, 4), x, 23) {
 		t.Fatal("supplied edit mutated shared fixed cache")
 	}
-	if ch.Solid[5] {
+	if !ch.Solid[x] {
 		t.Fatal("authored fallback replaced supplied fixed edge")
 	}
 }

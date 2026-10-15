@@ -76,7 +76,7 @@ func stableSpot(t *testing.T, h homeView, stalls int) (int, int, [][2]int, bool)
 	g := groundOf(h)
 	lights := connectedLights(placedItems(h), "")
 	open := func(here rect) (bool, [][2]int) {
-		for _, v := range content.HomeRules.GetOutdoorReserved() {
+		for _, v := range content.HomeOutdoorReserved(h.Gate) {
 			if here.overlaps(rect{int(v.GetX()), int(v.GetY()), int(v.GetW()), int(v.GetH())}) {
 				return false, nil
 			}
@@ -135,7 +135,7 @@ func stableEdge(t *testing.T, h homeView, dark bool) (int, int, [][2]int, [][2]i
 		for x := 0; x+6 <= g.land.Width; x++ {
 			here, ext := rect{x, y, 4, 3}, rect{x + 4, y, 2, 3}
 			bad := false
-			for _, v := range content.HomeRules.GetOutdoorReserved() {
+			for _, v := range content.HomeOutdoorReserved(h.Gate) {
 				r := rect{int(v.GetX()), int(v.GetY()), int(v.GetW()), int(v.GetH())}
 				bad = bad || here.overlaps(r) || ext.overlaps(r)
 			}
@@ -226,7 +226,7 @@ func stableGround(t *testing.T, x *rig, c *http.Cookie, h homeView, stalls int) 
 				continue
 			}
 			reserved := false
-			for _, v := range content.HomeRules.GetOutdoorReserved() {
+			for _, v := range content.HomeOutdoorReserved(h.Gate) {
 				if (rect{lx, ly, 1, 1}).overlaps(rect{int(v.GetX()), int(v.GetY()), int(v.GetW()), int(v.GetH())}) {
 					reserved = true
 				}
@@ -366,6 +366,10 @@ func TestStableExtendRefusesStandingGround(t *testing.T) {
 	ac, a := x.ready("alice")
 	x.pinWorld(&a)
 	id := boughtStable(x, ac, &a)
+	lamp := x.homeOpRefreshing(ac, &a, "buy", map[string]any{"itemDef": "lantern-post"}, 200).Result.ItemID
+	clearTiles(t, x, x.home(ac).ID, [][2]int{{6, 10}})
+	x.homeOpRefreshing(ac, &a, "place", map[string]any{"itemId": lamp, "scene": "outdoor", "x": 6, "y": 10, "rotation": 0, "name": "Stable light"}, 200)
+
 	h := x.home(ac)
 	x0, y0, clear, _, ok := stableEdge(t, h, false)
 	if !ok {
@@ -383,6 +387,10 @@ func TestStableExtendRefusesDarkGround(t *testing.T) {
 	ac, a := x.ready("alice")
 	x.pinWorld(&a)
 	id := boughtStable(x, ac, &a)
+	lamp := x.homeOpRefreshing(ac, &a, "buy", map[string]any{"itemDef": "lantern-post"}, 200).Result.ItemID
+	clearTiles(t, x, x.home(ac).ID, [][2]int{{6, 10}})
+	x.homeOpRefreshing(ac, &a, "place", map[string]any{"itemId": lamp, "scene": "outdoor", "x": 6, "y": 10, "rotation": 0, "name": "Stable light"}, 200)
+
 	h := x.home(ac)
 	x0, y0, clear, extClear, ok := stableEdge(t, h, true)
 	if !ok {
@@ -488,6 +496,15 @@ func TestMountOutHomeAndLazyValidity(t *testing.T) {
 	tooFar["where"] = map[string]any{"area": "in:village:library", "x": 80.0, "y": 80.0}
 	if r := x.companionOp("POST", "/api/stable/out", tooFar, ac, 409); r.Error.Code != "too-far-away" {
 		t.Fatal("saddling up from the village", r.Error.Code)
+	}
+	// The lots' retired home:<gate> frame, at the bay's own local pixels:
+	// refused (no longer an area at all, before the stable reads it).
+	local := atBay(h, x0, y0, 1)
+	ox, oy := chunks.LotOrigin(h.Gate)
+	retired := body(a, "retired", map[string]any{"homeId": h.ID, "stall": 1})
+	retired["where"] = map[string]any{"area": fmt.Sprintf("home:%d", h.Gate), "x": local["x"].(float64) - float64(ox*16), "y": local["y"].(float64) - float64(oy*16)}
+	if r := x.companionOp("POST", "/api/stable/out", retired, ac, 409); r.Error.Code != "invalid-position" {
+		t.Fatal("saddling up in the retired home frame", r.Error.Code)
 	}
 	at := body(a, "up", map[string]any{"homeId": h.ID, "stall": 1})
 	at["where"] = atBay(h, x0, y0, 1)

@@ -233,17 +233,18 @@ func TestWildsNearMakesEpochsAndChunks(t *testing.T) {
 	if n.Center.Cx != 0 || n.Center.Cy != -1 || n.Center.Realm != "hearthwick" || n.Center.Layer != 0 || n.Radius != 2 {
 		t.Fatalf("window %+v %d", n.Center, n.Radius)
 	}
-	if r := n.Frontier.Rect; r.MinCx != -6 || r.MinCy != -8 || r.MaxCx != 4 || r.MaxCy != 7 {
+	if r := n.Frontier.Rect; r.MinCx != -5 || r.MinCy != -8 || r.MaxCx != 5 || r.MaxCy != 7 {
 		t.Fatalf("frontier %+v", r)
 	}
-	// The window around (0,-1) is chunks -2..2 by -3..0 inside the frontier:
-	// the Tangle's nine (made with the still epoch) and eleven wick chunks.
-	// It touches the Whitequiet, whose Echoes are dealt over all nine of its
-	// chunks, so its other six are made too.
-	if a, b := count(t, x.db, "SELECT count(*) FROM wilds_chunks WHERE epoch_id=?", n.Still.Id), count(t, x.db, "SELECT count(*) FROM wilds_chunks WHERE epoch_id=?", n.Wick.Id); a != 9 || b != 12+6 {
+	// The window around (0,-1) is chunks -2..2 by -3..1: the Tangle's nine
+	// (made with the still epoch), the fixed block's top row of five (lots,
+	// town, lots: never generated) and eleven wick chunks. It touches the
+	// Whitequiet, whose Echoes are dealt over all nine of its chunks, so its
+	// other six are made too.
+	if a, b := count(t, x.db, "SELECT count(*) FROM wilds_chunks WHERE epoch_id=?", n.Still.Id), count(t, x.db, "SELECT count(*) FROM wilds_chunks WHERE epoch_id=?", n.Wick.Id); a != 9 || b != 11+6 {
 		t.Fatal("window chunks not made on read", a, b)
 	}
-	if len(n.Entities) != 4*21 || len(v.Entities) != len(v.bodies) {
+	if len(n.Entities) != 4*20 || len(v.Entities) != len(v.bodies) { // four a chunk, the nine still and eleven wick
 		t.Fatal("entity states don't match the chunks' bodies", len(n.Entities))
 	}
 	for _, e := range n.Entities {
@@ -268,8 +269,10 @@ func TestWildsNearMakesEpochsAndChunks(t *testing.T) {
 	if again.Still.Id != n.Still.Id || again.Wick.Id != n.Wick.Id || before != count(t, x.db, sum) {
 		t.Fatal("a second read wrote")
 	}
-	// Off the grid: refused, and nothing is made.
-	for _, at := range [][2]int{{5, 0}, {2, 7}, {-7, 1}, {-5, -4}, {0, -9}} {
+	// Off the grid: refused, and nothing is made. East and west of the lot
+	// columns' reach, past the south limit, the clipped north-west corner and
+	// north of the Whitequiet's reach.
+	for _, at := range [][2]int{{6, 0}, {3, 8}, {-7, 1}, {-5, -4}, {0, -9}} {
 		x.near(c, at[0], at[1], 409)
 	}
 	for _, path := range []string{"0", "0/-1/2", "x/1", "01/1", "0/-01", ""} {
@@ -287,7 +290,7 @@ func TestWildsNearMakesEpochsAndChunks(t *testing.T) {
 	for _, ch := range commons.Chunks {
 		listed[[2]int32{ch.Chunk.Cx, ch.Chunk.Cy}] = ch.Source + " " + ch.Epoch
 	}
-	if len(listed) != 25 || listed[[2]int32{0, 1}] != "fixed fixed:hearthwick@1" || listed[[2]int32{1, 2}] != "fixed fixed:hearthwick@1" || listed[[2]int32{0, 0}] != "generated "+n.Still.Id || listed[[2]int32{2, -1}] != "generated "+n.Wick.Id {
+	if len(listed) != 25 || listed[[2]int32{0, 1}] != "fixed fixed:hearthwick@4" || listed[[2]int32{1, 2}] != "fixed fixed:hearthwick@4" || listed[[2]int32{-2, 3}] != "fixed fixed:lots-west@5" || listed[[2]int32{2, 1}] != "fixed fixed:lots-east@5" || listed[[2]int32{0, 0}] != "generated "+n.Still.Id || listed[[2]int32{2, -1}] != "generated "+n.Wick.Id {
 		t.Fatal("the window's chunks", listed)
 	}
 	for _, e := range commons.Entities {
@@ -313,8 +316,9 @@ func TestWildsNearMakesEpochsAndChunks(t *testing.T) {
 		}
 		glimpsed[k] = true
 	}
-	// Within four of the centre and two of the actual reach union.
-	if len(glimpsed) != 26 || count(t, x.db, "SELECT count(*) FROM wilds_chunks WHERE cx<-4 OR cy<-8") != 0 {
+	// Within four of the centre and two of the actual reach union (the west
+	// lot column at cx -2 no longer reaches (-8, -4)).
+	if len(glimpsed) != 25 || count(t, x.db, "SELECT count(*) FROM wilds_chunks WHERE cx<-4 OR cy<-8") != 0 {
 		t.Fatal("glimpse made chunks or missed some", len(glimpsed))
 	}
 	south := x.near(c, 4, 0, 200)
@@ -681,7 +685,7 @@ func TestWildsFallenLanterns(t *testing.T) {
 		{"curated", v.Epoch, &contract.Where{Area: "in:village:library", X: 100, Y: 100}, "not-wilds"},
 		{"no epoch", nil, here, "epoch-missing"},
 		{"wick land on the still epoch", v.Epoch, atTile(2*24+1, -24+1), "invalid-place"},
-		{"outside the frontier", v.Epoch, atTile(5*24, -10), "invalid-place"},
+		{"outside the frontier", v.Epoch, atTile(6*24, -10), "invalid-place"},
 		{"a chunk never made", v.near.Wick, atTile(4*24+1, -8*24+1), "epoch-missing"},
 		{"wall", v.Epoch, atTile(fakegen.Thicket[0], -24+fakegen.Thicket[1]), "invalid-place"},
 	} {

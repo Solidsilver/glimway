@@ -23,10 +23,10 @@ func TestCraftsContent(t *testing.T) {
 		t.Fatal("fishing knobs")
 	}
 	w, ok := WaterFor("water:village:mill-pond")
-	if !ok || w.GetTiles() != 27 || w.GetCapacity() != 12 || w.GetRecoverySeconds() != 600 {
+	if !ok || w.GetTiles() != 57 || w.GetCapacity() != 12 || w.GetRecoverySeconds() != 600 {
 		t.Fatal("mill pond")
 	}
-	if bank, ok := BankFor(w, "race"); !ok || len(bank.GetTiles()) != 1 || bank.GetTiles()[0].GetTx() != 32 || bank.GetTiles()[0].GetTy() != 73 {
+	if bank, ok := BankFor(w, "race"); !ok || len(bank.GetTiles()) != 1 || bank.GetTiles()[0].GetTx() != 24 || bank.GetTiles()[0].GetTy() != 100 {
 		t.Fatal("race bank")
 	}
 	if BandAt(100).GetId() != "healthy" || BandAt(50).GetId() != "healthy" || BandAt(49).GetId() != "low" || BandAt(19).GetId() != "very-low" || BandAt(0).GetId() != "very-low" {

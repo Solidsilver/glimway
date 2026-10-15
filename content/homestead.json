@@ -68,21 +68,37 @@
     "stumps": 6,
     "boulders": 4,
     "streamPermille": 350,
-    "slopePermille": 350
+    "slopePermille": 350,
+    "sides": {
+      "west": {
+        "ground": "woods",
+        "trees": 44,
+        "stumps": 6,
+        "boulders": 4,
+        "flowers": 0
+      },
+      "east": {
+        "ground": "meadow",
+        "trees": 14,
+        "stumps": 3,
+        "boulders": 3,
+        "flowers": 24
+      }
+    }
   },
   "commons": {
     "tileSize": 16,
     "fenceX": [
-      19,
-      28
+      23,
+      96
     ],
     "gateRows": [
-      9,
-      13,
-      28,
-      33
+      11,
+      35,
+      59,
+      83
     ],
-    "rowPitch": 5,
+    "rowPitch": 24,
     "spareGates": 2,
     "deedTable": {
       "area": "in:commons:yard:deeds",
@@ -102,25 +118,7 @@
       "x": 11,
       "y": 9,
       "w": 2,
-      "h": 11
-    },
-    {
-      "x": 13,
-      "y": 18,
-      "w": 1,
-      "h": 1
-    },
-    {
-      "x": 0,
-      "y": 0,
-      "w": 3,
-      "h": 24
-    },
-    {
-      "x": 21,
-      "y": 0,
-      "w": 3,
-      "h": 24
+      "h": 4
     },
     {
       "x": 0,
@@ -130,9 +128,21 @@
     },
     {
       "x": 0,
-      "y": 19,
+      "y": 22,
       "w": 24,
-      "h": 5
+      "h": 2
+    },
+    {
+      "x": 0,
+      "y": 2,
+      "w": 1,
+      "h": 20
+    },
+    {
+      "x": 23,
+      "y": 2,
+      "w": 1,
+      "h": 20
     }
   ],
   "indoorReserved": [

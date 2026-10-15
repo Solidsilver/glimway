@@ -36,7 +36,7 @@ func TestEveryClientMarkNamespaceThroughOperation(t *testing.T) {
 			area, at = outdoorsArea, commonsPx(400, 300)
 		}
 		if ns.Prefix == "home:arrived" {
-			area, at = outdoorsArea, rules.Position{X: -968, Y: 520}
+			area, at = outdoorsArea, rules.Position{X: -584, Y: 520}
 		}
 		if ns.Prefix == "found:" || ns.Prefix == "defeated:" {
 			area = "woodland"

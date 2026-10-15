@@ -16,7 +16,7 @@ const village = (page: Page) => page.evaluate(() => (window as unknown as { __fs
 const EPOCH = Date.parse('2026-01-05T00:00:00Z') / 1000
 
 async function openBoard(page: Page): Promise<ReturnType<Page['getByRole']>> {
-  await go(page, 'outdoors', 12, 57)
+  await go(page, 'outdoors', 17, 56)
   await expect(page.locator('.prompt')).toContainText('Read the notice board')
   await waitForLive(page)
   await page.keyboard.press('e')

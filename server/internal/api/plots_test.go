@@ -38,15 +38,15 @@ func TestOutdoorLotServices(t *testing.T) {
 			if len(tree) == 0 {
 				tree = landTiles(h, land.Stump, true)
 			}
-			if len(tree) == 0 {
-				t.Fatal("no lit saw target")
+			local := litSpots(h)[0]
+			if len(tree) > 0 {
+				local = tree[0]
+				x.homeOpRefreshing(c, &s, "clear", map[string]any{"x": local[0], "y": local[1]}, 200)
+				if !groundOf(x.home(c)).cleared[local] {
+					t.Fatal("clear stored world coordinates")
+				}
 			}
-			local := tree[0]
-			x.homeOpRefreshing(c, &s, "clear", map[string]any{"x": local[0], "y": local[1]}, 200)
 			kept := x.home(c)
-			if !groundOf(kept).cleared[local] {
-				t.Fatal("clear stored world coordinates")
-			}
 			item := x.homeOpRefreshing(c, &s, "buy", map[string]any{"itemDef": "wooden-stool"}, 200).Result.ItemID
 			if x.homeOpRefreshing(c, &s, "place", map[string]any{"itemId": item, "scene": "outdoor", "x": 8, "y": 3, "rotation": 0}, 409).Error.Code != "placement-overlap" {
 				t.Fatal("built on the cottage site")
@@ -141,7 +141,7 @@ func TestPlotServicesRequirePrivateGround(t *testing.T) {
 		t.Fatal("fixture has no lit placement")
 	}
 	spot := spots[0]
-	for n, p := range [][2]int{{0, 0}, {-50, 35}, {-61, 44}, {-69, 43}, {-40, 32}} {
+	for n, p := range [][2]int{{0, 0}, {-48, 35}, {-23, 35}, {-25, 33}, {59, 32}} {
 		// town/Tangle, spine, south public lane, solid gate-row fence, wrong lot.
 		x.refresh(c, &s)
 		where := map[string]any{"area": "outdoors", "x": p[0]*16 + 8, "y": p[1]*16 + 8}

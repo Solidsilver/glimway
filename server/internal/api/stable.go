@@ -9,7 +9,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"glimway/content"
 	"glimway/server/internal/chunks"
 	contract "glimway/server/internal/gen/glimway/v1"
@@ -232,17 +231,14 @@ func (a *Server) mountOut(w http.ResponseWriter, r *http.Request) error {
 		if stable == nil || req.GetStall() < 1 || int(req.GetStall()) > stallCount(*stable) {
 			return nil, fail(409, "no-stable")
 		}
-		// Walk up to the bay: `where` is home:<gate> of this homestead and
-		// within two tiles of the stall (3.3).
+		// Walk up to the bay: `where` is on the open map, in world pixels,
+		// within two tiles of the stall on this homestead's lot (3.3). The
+		// lots' old home:<gate> frame is retired (one town).
 		bay := stallRect(*stable, int(req.GetStall()))
-		area := fmt.Sprintf("home:%d", h.Gate)
-		if req.Where != nil && req.Where.Area == outdoorsArea {
-			ox, oy := chunks.LotOrigin(h.Gate)
-			bay.x += ox
-			bay.y += oy
-			area = outdoorsArea
-		}
-		if req.Where == nil || req.Where.Area != area || !nearStall(req.Where, bay) {
+		ox, oy := chunks.LotOrigin(h.Gate)
+		bay.x += ox
+		bay.y += oy
+		if req.Where == nil || req.Where.Area != outdoorsArea || !nearStall(req.Where, bay) {
 			return nil, fail(409, "too-far-away")
 		}
 		var owner, key string
@@ -383,7 +379,7 @@ func (a *Server) stableExtend(w http.ResponseWriter, r *http.Request) error {
 				}
 			}
 		}
-		for _, v := range content.HomeRules.GetOutdoorReserved() {
+		for _, v := range content.HomeOutdoorReserved(h.Gate) {
 			if ext.overlaps(rect{int(v.GetX()), int(v.GetY()), int(v.GetW()), int(v.GetH())}) {
 				return nil, fail(409, "placement-overlap")
 			}

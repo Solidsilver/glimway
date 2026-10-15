@@ -1,5 +1,6 @@
 import { expect, test } from './fixtures'
 import { freshPlayer } from './home-helpers'
+import { windowWhole } from './helpers'
 
 /**
  * The packed atlases (scripts/build-atlases.ts) are dense: every canvas-pack
@@ -67,16 +68,17 @@ test('the game holds the packed texels, drawn at native world size', async ({ pa
   expect(result.bad).toEqual([])
   expect(result.checked).toBeGreaterThan(700)
 
-  // The playtest-1 ground and people: the village is tiled from the healed
-  // ground at full density with its transitions painted, and the residents
-  // stand on the people atlas.
+  // The town's ground and people: Hearthwick is painted per chunk by the
+  // Wilds' painter (docs/design/hearthwick-2.md 9 #2), off the main thread,
+  // and the residents stand on the people atlas.
+  await windowWhole(page)
   const view = await page.evaluate(() => ({
-    ground: (window as unknown as { __fsGround: () => { cells: number; edges: number; animated: number; density: number } | null }).__fsGround(),
+    window: window.__fsWildsWindow!()!,
     npcs: (window as unknown as { __fsDebug: () => { npcs: { id: string; texture: string; anim: string | null }[] } }).__fsDebug().npcs,
   }))
-  expect(view.ground?.density).toBe(4)
-  expect(view.ground?.edges).toBeGreaterThan(100)
-  expect(view.ground?.animated).toBeGreaterThan(1)
+  expect(view.window.fixed.length).toBeGreaterThan(3)
+  for (const key of view.window.fixed) expect(view.window.painted, `${key} is painted`).toContain(key)
+  expect(view.window.paints.filter((p) => view.window.fixed.includes(p.chunk)).every((p) => p.thread !== 'main'), 'painted off the main thread').toBe(true)
   expect(view.npcs.length).toBeGreaterThan(3)
   for (const n of view.npcs) {
     expect(n.texture).toBe('people')

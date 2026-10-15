@@ -23,16 +23,22 @@ import { onSceneEnd } from '../scene-end.ts'
  * The window also repaints a chunk whose ground changes moved (someone laid
  * stone), and reloads everything at the turning (./world-turning.ts).
  *
- * Fixed chunks (an authored layout's: the Commons, location-seam.md 4) are
- * on the grid too: the window attaches them like the rest, from their
- * footprint's served chunks (./fixed.ts), with their ground laid from the
- * footprint's painted tileset instead of a per-chunk paint (./fixed-chunk.ts).
+ * Fixed chunks (an authored layout's: Hearthwick and the lots,
+ * location-seam.md 4) are on the grid too: the window attaches them like
+ * the rest, from their footprint's served chunks (./fixed.ts), and paints
+ * their ground the same way, per chunk and off the main thread
+ * (./fixed-ground.ts: docs/design/hearthwick-2.md 4, 5). A fixed chunk
+ * never waits for a generated neighbour: it paints with what is known and
+ * paints again once its neighbours are in, so the seam blends. Its last
+ * paints are kept for the page, so coming back out of a door paints nothing.
  * Only chunks on neither the frontier nor a footprint are the drift.
+ *
+ * The first window (behind the scene's fade) paints across a few workers at
+ * once and builds each chunk whole as it attaches.
  */
 import type Phaser from 'phaser'
 import { refreshLanternVisuals } from '../area/lanterns.ts'
 import { ensureSceneryArt } from '../area/props.ts'
-import { groundTiles, type GroundTiles } from '../area/terrain.ts'
 import { calendarAt } from '../../lib/calendar.ts'
 import { seasonMark } from '../../lib/wilds/outer.ts'
 import { gameNow } from '../clock.ts'
@@ -40,7 +46,8 @@ import { bus, EV } from '../events.ts'
 import { generateRepairArt } from '../repairs-art.ts'
 import type { Session } from '../session.ts'
 import { CHUNK_TILES, chunkKey, chunkOfPixel, parseChunkKey } from './coords.ts'
-import { fixedPlaceOf, footprint, footprintAt, prepareFixed, applyLotHome, sceneryOf, type FixedFootprint } from './fixed.ts'
+import { fixedPlaceOf, footprint, footprintAt, prepareFixed, applyLotHome, type FixedFootprint } from './fixed.ts'
+import { fixedChunkHash, paintSource } from './fixed-ground.ts'
 import { FixedChunk, type FixedChunkDeps } from './fixed-chunk.ts'
 import type { ExitDef } from '../worlds.ts'
 import { PLACES, fixedChunks } from '../../lib/places.ts'
@@ -48,8 +55,8 @@ import { chunkSig, effectiveChunk, forgetGround, groundAt, solidAt } from './gro
 import { chunkGather, chunkLandmarks } from './terrain.ts'
 import { crossed, frontierDistance, keepAttached, paintable, planWindow, SLACK_TILES, veilEdges, type WindowPlan } from './window-plan.ts'
 import { AttachedChunk, BuildQueue, DriftChunk, groundTexture, paintDriftChunk, type ChunkDeps } from './window-chunk.ts'
-import { paintAway, paintHere, type PaintJob } from './paint-worker.ts'
-import { groundTable } from './ground-table.ts'
+import { lanes, paintAway, paintHere, paintsAway, type PaintJob } from './paint-worker.ts'
+import { paintTable } from './ground-table.ts'
 import { chunkOrigin } from './terrain.ts'
 import { fnv1a32 } from '../../lib/hash.ts'
 import { TILE } from '../../lib/tile.ts'
@@ -102,6 +109,36 @@ interface PaintedChunk {
   sig: string
 }
 
+/** Where a paint was made: a worker, this thread, or the page's kept fixed paints. */
+type PaintThread = 'worker' | 'main' | 'cache'
+
+/**
+ * Fixed chunks' last paints, by signature, for the page: a scene built again
+ * (out of a door, back from a room) lays the town without painting it. A
+ * dozen chunks, about 7 MB.
+ */
+const keptPaints = new Map<string, Uint8ClampedArray>()
+const KEPT_PAINTS = 12
+
+function keepPaint(sig: string, rgba: Uint8ClampedArray): void {
+  keptPaints.delete(sig)
+  keptPaints.set(sig, rgba)
+  while (keptPaints.size > KEPT_PAINTS) keptPaints.delete(keptPaints.keys().next().value!)
+}
+
+let markSeason: string | null = null
+let markOfSeason: string | null = null
+
+/** The Mark fixed ground is painted in: the wick's, as the outskirts beside it are (read every frame, worked out once a season). */
+function fixedMark(): string | null {
+  const season = wildsEpoch('wick').season
+  if (season !== markSeason) {
+    markSeason = season
+    markOfSeason = seasonMark(season)
+  }
+  return markOfSeason
+}
+
 /** Paint timings (ms), newest last, for the playtest hooks and the budget report. */
 const PAINT_LOG_MAX = 64
 /** How long a frame spends building attached chunks (ms; open-map.md 4's budget is 8 for all the window's work). */
@@ -112,9 +149,8 @@ export class WildsWindow {
   private attached = new Map<string, AttachedChunk>()
   /** Attached fixed chunks (./fixed-chunk.ts). */
   private fixed = new Map<string, FixedChunk>()
-  /** Each footprint's painted ground, laid a chunk at a time (one per footprint and scene). */
-  private fixedGround = new Map<string, GroundTiles>()
-  private failedGround = new Set<string>()
+  /** Footprints whose code-drawn art this window has pre-warmed (or queued). */
+  private prewarmed = new Set<string>()
   /** The attached chunks still being built, in attachment order (./window-chunk.ts BuildQueue). */
   readonly builds = new BuildQueue()
   private drifts = new Map<string, DriftChunk>()
@@ -125,15 +161,17 @@ export class WildsWindow {
   private retryAt = new Map<string, number>()
   /** Chunks a worker is painting now, with the signature they were asked with. */
   private pending = new Map<string, string>()
-  /** Painting on this thread, at once (the first window, behind the scene's fade). */
-  private now = false
+  /** The first window, behind the scene's fade: chunks are built whole as they attach, and paints spread across the workers. */
+  private first = false
+  /** The worker lane the next first-window paint goes to. */
+  private lane = 0
   private lastVersion = -1
   private fixedDaySignature = ''
   private seasonalPending = new Set<string>()
   /** The hero's tile when the window last looked at what it keeps past the 3×3. */
   private heroTile = ''
   private seenTimer = 0
-  private readonly paintLog: { chunk: string; ms: number; drift: boolean; thread: 'worker' | 'main' }[] = []
+  private readonly paintLog: { chunk: string; ms: number; drift: boolean; thread: PaintThread }[] = []
   /** Chunks attached so far, and dropped (playtests: crossing back over an edge builds nothing). */
   private attaches = 0
   private drops = 0
@@ -145,25 +183,19 @@ export class WildsWindow {
   constructor(private deps: WindowDeps) {
     onSceneEnd(deps.scene, () => this.destroy())
     bus.on(EV.fixedReady, this.onFixedReady)
-    // The fixed footprints' ground (its tilemap and cells) and code-drawn
-    // textures are prepared now, behind the scene's fade, not on a walking frame.
-    this.now = true
-    try {
-      for (const p of PLACES.fixed) {
-        const fp = footprint(p.id)
-        if (fp) perfTime('fixed-ground', () => this.groundFor(fp))
-      }
-    } finally {
-      this.now = false
-    }
+    // The fixed footprints' code-drawn textures are made a few milliseconds a
+    // frame from now on, so a first walk onto fixed ground makes none. Their
+    // ground is painted per chunk as it attaches, off the main thread.
+    this.onFixedReady()
   }
 
   private readonly onFixedReady = (): void => {
     if (this.gone || !this.deps.scene?.make) return
     for (const p of PLACES.fixed) {
       const fp = footprint(p.id)
-      if (fp && !this.fixedGround.has(p.id) && !this.failedGround.has(p.id)) {
-        perfTime('fixed-ground', () => this.groundFor(fp))
+      if (fp && !this.prewarmed.has(p.id)) {
+        this.prewarmed.add(p.id)
+        this.prewarm(fp)
       }
     }
   }
@@ -187,9 +219,8 @@ export class WildsWindow {
       if (had && this.plan?.attach.includes(stale)) {
         const { cx, cy } = parseChunkKey(stale)
         const fp = footprintAt(cx, cy)
-        if (fp && !this.failedGround.has(fp.place.id)) {
-          this.attachFixed(fp, cx, cy)
-        }
+        // On its last paint; a lot whose clearing changed is painted again, off the frame.
+        if (fp && this.paints.has(stale)) this.attachFixed(fp, cx, cy)
       }
     }
     const hero = this.deps.hero()
@@ -252,6 +283,7 @@ export class WildsWindow {
     for (const [key, c] of this.fixed) if (!plan.attach.includes(key) && !this.kept(key)) {
       c.destroy()
       this.fixed.delete(key)
+      this.dropPaint(key)
       this.drops++
       // A row can take a long frame to tear down on phones. Drain one
       // chunk per frame, even when the hero has stopped on this tile.
@@ -277,9 +309,7 @@ export class WildsWindow {
 
   /** Resolves once every chunk of the 3×3 inside the frontier is attached (the scene's first frame waits for it). */
   ready(): Promise<void> {
-    const attached = this.isReady() ? Promise.resolve() : new Promise<void>((resolve) => this.waiters.push(resolve))
-    // A fixed footprint's ground transitions are painted off the thread (a first visit).
-    return attached.then(() => Promise.all([...this.fixedGround.values()].map((g) => g.pending)).then(() => undefined))
+    return this.isReady() ? Promise.resolve() : new Promise<void>((resolve) => this.waiters.push(resolve))
   }
 
   private isReady(): boolean {
@@ -289,16 +319,19 @@ export class WildsWindow {
     })
   }
 
-  /** Paint everything the window needs now, in one go (the first build, behind the scene's fade). */
+  /**
+   * Start everything the window needs now, in one go (the first build,
+   * behind the scene's fade): the 3×3's paints go to the workers together
+   * (without workers they are painted here), and each chunk is built whole
+   * as it attaches, until the window is ready.
+   */
   settle(): void {
-    this.now = true
-    try {
-      for (let i = 0; i < 64 && this.step(); i++) {
-        /* each step paints or attaches one chunk */
-      }
-    } finally {
-      this.now = false
+    this.first = true
+    this.lane = 0
+    for (let i = 0; i < 64 && this.step(); i++) {
+      /* each step paints or attaches one chunk */
     }
+    if (this.isReady()) this.release()
   }
 
   private recentre(cx: number, cy: number): void {
@@ -324,7 +357,7 @@ export class WildsWindow {
       this.far.delete(key)
     }
     // Textures of chunks well out of reach are let go.
-    const keepPaint = new Set([...plan.fetch, ...plan.drift, ...this.attached.keys(), ...this.drifts.keys()])
+    const keepPaint = new Set([...plan.fetch, ...plan.drift, ...this.attached.keys(), ...this.fixed.keys(), ...this.drifts.keys()])
     for (const [key, p] of this.paints) if (!keepPaint.has(key)) {
       if (this.deps.scene.textures.exists(p.key)) this.deps.scene.textures.remove(p.key)
       this.paints.delete(key)
@@ -364,17 +397,34 @@ export class WildsWindow {
   private step(): boolean {
     const plan = this.plan
     if (!plan) return false
-    const known = (cx: number, cy: number) => fixedPlaceOf(cx, cy) !== null || !!chunkTerrain(cx, cy)
+    const known = (cx: number, cy: number) => this.known(cx, cy)
     for (const key of plan.attach) {
       const { cx, cy } = parseChunkKey(key)
       if (fixedPlaceOf(cx, cy)) {
-        if (this.fixed.has(key) || this.failedGround.has(fixedPlaceOf(cx, cy)!.id)) continue
-        let fp = footprintAt(cx, cy)
+        const fp = footprintAt(cx, cy)
         if (!fp) {
           this.load(key)
           continue
         }
-        this.attachFixed(fp, cx, cy)
+        const sig = this.sigOf(cx, cy)
+        const p = this.paints.get(key)
+        const had = this.fixed.get(key)
+        if (p?.sig === sig || this.pending.get(key) === sig) {
+          if (had || !p) continue
+          this.attachFixed(fp, cx, cy)
+          return true
+        }
+        // Not painted yet, or painted before its neighbours (or its lot's
+        // clearing) were known: painted now. Its last paint, if any, stands
+        // in until the new one lands.
+        if (!had && p) {
+          this.attachFixed(fp, cx, cy)
+          return true
+        }
+        // A lot is painted with its home's clearing (attaching applies the rest).
+        const gate = had ? null : lotAt(cx, cy)
+        if (gate !== null) applyLotHome(gate, homesteadsFor(this.deps.session).homes.get(gate) ?? null)
+        this.paint(key, gate !== null ? this.sigOf(cx, cy) : sig)
         return true
       }
       const had = this.attached.get(key)
@@ -393,7 +443,7 @@ export class WildsWindow {
       const sig = this.sigOf(cx, cy)
       const p = this.paints.get(key)
       if (!p || p.sig !== sig) {
-        if ((!this.now && this.pending.get(key) === sig) || !paintable(cx, cy, insideNamedFrontier, known)) continue
+        if (this.pending.get(key) === sig || !paintable(cx, cy, insideNamedFrontier, known)) continue
         this.paint(key, sig)
         return true
       }
@@ -436,59 +486,119 @@ export class WildsWindow {
     return false
   }
 
+  /** Is a chunk's ground known (a fixed one once its footprint is here)? */
+  private known(cx: number, cy: number): boolean {
+    return fixedPlaceOf(cx, cy) ? !!footprintAt(cx, cy) : !!chunkTerrain(cx, cy)
+  }
+
+  /**
+   * What a chunk's paint depends on. A generated chunk: its epoch and
+   * changes. A fixed one: where it is, the world seed, its footprint's
+   * revision, the Mark (fixed ground follows the year, as the outskirts do),
+   * what it paints from (a lot's clearing), and each neighbour's own
+   * identity (a fixed one's hash, a generated one's epoch and changes).
+   */
   private sigOf(cx: number, cy: number): string {
+    const fp = fixedPlaceOf(cx, cy) ? footprintAt(cx, cy) : null
+    if (fp) {
+      const around: string[] = []
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (dx || dy) {
+        const nx = cx + dx, ny = cy + dy
+        if (!onWindow(nx, ny)) { around.push('void'); continue }
+        const neighbour = fixedPlaceOf(nx, ny) ? footprintAt(nx, ny) : null
+        if (neighbour) around.push(JSON.stringify([neighbour.epoch, fixedChunkHash(neighbour, nx, ny)]))
+        else {
+          const terrain = chunkTerrain(nx, ny)
+          around.push(terrain ? JSON.stringify([terrain.epochId, chunkSig(nx, ny)]) : '?')
+        }
+      }
+      // Pixel noise uses the world seed and absolute coordinates; edge
+      // blending reads four tiles into the neighbouring chunks.
+      const seed = wildsEpoch('still').worldSeed || wildsEpoch('wick').worldSeed
+      return JSON.stringify(['fixed', cx, cy, fp.epoch, seed, fixedMark(), fixedChunkHash(fp, cx, cy), around])
+    }
     const t = chunkTerrain(cx, cy)
     return `${t?.epochId ?? ''}|${chunkSig(cx, cy)}`
   }
 
   /**
-   * Paint a chunk's ground: off the main thread while walking (the result
-   * lands a frame or so later), here and now for the first window.
+   * Paint a chunk's ground off the main thread (the result lands a frame or
+   * so later; the first window's paints go to the workers together). Where
+   * no worker can start, here and now. A fixed chunk painted before, with
+   * the same signature, is laid from its kept paint.
    */
   private paint(key: string, sig: string): void {
     const { cx, cy } = parseChunkKey(key)
-    const t = effectiveChunk(cx, cy)!
-    const o = chunkOrigin(t)
-    const job: PaintJob = { x0: o.tx * TILE, y0: o.ty * TILE, w: t.size * TILE, h: t.size * TILE, look: t.look, mark: t.mark, seed: fnv1a32(wildsEpoch('still').worldSeed || wildsEpoch('wick').worldSeed), table: groundTable() }
-    const src = { ground: groundAt, solid: solidAt }
-    if (this.now) {
+    const fixed = fixedPlaceOf(cx, cy) !== null
+    const kept = fixed ? keptPaints.get(sig) : undefined
+    if (kept) {
+      this.pending.delete(key)
+      this.painted(key, sig, kept, 0, 'cache')
+      return
+    }
+    const seed = fnv1a32(wildsEpoch('still').worldSeed || wildsEpoch('wick').worldSeed)
+    let job: PaintJob
+    if (fixed) {
+      job = { x0: cx * CHUNK_TILES * TILE, y0: cy * CHUNK_TILES * TILE, w: CHUNK_TILES * TILE, h: CHUNK_TILES * TILE, look: 'outer', mark: fixedMark(), seed, table: paintTable() }
+    } else {
+      const t = effectiveChunk(cx, cy)!
+      const o = chunkOrigin(t)
+      job = { x0: o.tx * TILE, y0: o.ty * TILE, w: t.size * TILE, h: t.size * TILE, look: t.look, mark: t.mark, seed, table: paintTable() }
+    }
+    const done = (r: { rgba: Uint8ClampedArray; ms: number; thread: PaintThread }) => {
+      if (fixed) keepPaint(sig, r.rgba)
+      this.painted(key, sig, r.rgba, r.ms, r.thread)
+    }
+    if (!paintsAway()) {
       // A worker's paint of the same chunk, still in flight, is dropped when it lands.
       this.pending.delete(key)
-      const r = paintHere(job, src)
-      this.painted(key, sig, r.rgba, r.ms, r.thread)
+      done(paintHere(job, paintSource))
       return
     }
     this.pending.set(key, sig)
-    void paintAway(job, src).then((r) => {
+    const lane = this.first ? this.lane++ % lanes() : 0
+    void paintAway(job, paintSource, lane).then((r) => {
       if (this.pending.get(key) !== sig) return
       this.pending.delete(key)
       // Still wanted, and painted from the chunk as it is now.
       if (this.gone || !this.plan?.fetch.includes(key) || this.sigOf(cx, cy) !== sig) return
-      this.painted(key, sig, r.rgba, r.ms, r.thread)
+      done(r)
     })
   }
 
   /** A painted ground lands: its texture, and the chunk (re)attached on it if it is in the 3×3. */
-  private painted(key: string, sig: string, rgba: Uint8ClampedArray, ms: number, thread: 'worker' | 'main'): void {
+  private painted(key: string, sig: string, rgba: Uint8ClampedArray, ms: number, thread: PaintThread): void {
     perfTime('paint-landed', () => this.paintedNow(key, sig, rgba, ms, thread))
   }
 
-  private paintedNow(key: string, sig: string, rgba: Uint8ClampedArray, ms: number, thread: 'worker' | 'main'): void {
+  private paintedNow(key: string, sig: string, rgba: Uint8ClampedArray, ms: number, thread: PaintThread): void {
     const old = this.paints.get(key)
     const texture = groundTexture(this.deps.scene, `wilds-ground:${key}:${old && old.key.endsWith(':a') ? 'b' : 'a'}`, rgba)
     this.logPaint(key, ms, false, thread)
     this.paints.set(key, { key: texture, sig })
-    // A chunk patched in place takes its new image; one whose ground moved
-    // otherwise is rebuilt on it; a chunk of the 3×3 waiting for its image
-    // is attached now.
-    const had = this.attached.get(key)
-    if (had && had.sig === sig) had.setGround(texture)
-    else {
-      if (had) {
-        had.destroy()
-        this.attached.delete(key)
+    const { cx, cy } = parseChunkKey(key)
+    if (fixedPlaceOf(cx, cy)) {
+      // An attached fixed chunk takes its new image where it stands; one of
+      // the 3×3 waiting for its image is attached now.
+      const fixed = this.fixed.get(key)
+      const fp = footprintAt(cx, cy)
+      if (fixed) {
+        fixed.setGround(texture)
+        fixed.sig = sig
+      } else if (fp && this.plan?.attach.includes(key)) this.attachFixed(fp, cx, cy)
+    } else {
+      // A chunk patched in place takes its new image; one whose ground moved
+      // otherwise is rebuilt on it; a chunk of the 3×3 waiting for its image
+      // is attached now.
+      const had = this.attached.get(key)
+      if (had && had.sig === sig) had.setGround(texture)
+      else {
+        if (had) {
+          had.destroy()
+          this.attached.delete(key)
+        }
+        if (had || this.plan?.attach.includes(key)) this.attach(key)
       }
-      if (had || this.plan?.attach.includes(key)) this.attach(key)
     }
     if (this.isReady()) this.release()
     if (old && old.key !== texture && this.deps.scene.textures.exists(old.key)) this.deps.scene.textures.remove(old.key)
@@ -513,20 +623,31 @@ export class WildsWindow {
     this.attached.set(key, c)
     this.attaches++
     // The first window (behind the fade) is built whole at once.
-    if (this.now || perfWithout('spread')) this.builds.finish(c)
+    if (this.first || perfWithout('spread')) this.builds.finish(c)
   }
 
-  /** Attach a fixed chunk: its ground laid from its footprint's painted tileset (painted on first use). */
+  /**
+   * Attach a fixed chunk on its last paint (./fixed-chunk.ts). A lot takes
+   * its home's state first (what is cleared, planted, standing); if that
+   * changed its ground, the window paints it again and the image is
+   * swapped in where it stands.
+   */
   private attachFixed(fp: FixedFootprint, cx: number, cy: number): void {
     perfTime('attach:fixed', () => {
       const { scene, session } = this.deps
+      const key = chunkKey(cx, cy)
+      const painted = this.paints.get(key)
+      if (!painted) return
       const gate = lotAt(cx, cy)
       if (gate !== null) {
         applyLotHome(gate, homesteadsFor(this.deps.session).homes.get(gate) ?? null)
         fp = footprintAt(cx,cy)!
       }
-      const ground = this.groundFor(fp)
-      if (!ground) return
+      const had = this.fixed.get(key)
+      if (had) {
+        had.destroy(true)
+        this.fixed.delete(key)
+      }
       const c = new FixedChunk(
         {
           scene,
@@ -538,7 +659,7 @@ export class WildsWindow {
           reducedMotion: this.deps.reducedMotion,
           enter: this.deps.enter,
           hooks: this.deps.hooks,
-          ground,
+          ground: painted.key,
           day: () => {
             const cal = calendarAt(gameNow())
             return { festival: cal.festival, wick: cal.wick, mark: cal.mark }
@@ -550,9 +671,10 @@ export class WildsWindow {
         cx,
         cy
       )
+      c.sig = painted.sig
       this.fixed.set(c.key, c)
       this.attaches++
-      if (this.now || perfWithout('spread')) this.builds.finish(c)
+      if (this.first || perfWithout('spread')) this.builds.finish(c)
     })
   }
 
@@ -574,29 +696,9 @@ export class WildsWindow {
     return [...this.fixed.keys()]
   }
 
-  /** A footprint's painted ground (painted, or taken from the paint cache, on first use in this scene). */
-  private groundFor(fp: FixedFootprint): GroundTiles | null {
-    const had = this.fixedGround.get(fp.place.id)
-    if (had) return had
-    if (this.failedGround.has(fp.place.id)) return null
-    const g = groundTiles(this.deps.scene, { areaId: fp.place.id, ...(fp.place.id === 'homestead-lots' ? { groundStyle: 'tangle' as const, groundMark: null } : {}), ground: fp.ground, width: fp.w, height: fp.h, scenery: [...fp.objects.values()].flat().flatMap((o) => {
-      const s = sceneryOf(o)
-      if (!s?.groundUnder) return []
-      return [{ ...s, groundUnder: { ...s.groundUnder, tx: s.groundUnder.tx - fp.tx, ty: s.groundUnder.ty - fp.ty } }]
-    }) }, true)
-    if (g) {
-      this.fixedGround.set(fp.place.id, g)
-      this.prewarm(fp)
-    } else {
-      this.failedGround.add(fp.place.id)
-      console.error(`Could not build fixed ground: ${fp.place.id}`)
-    }
-    return g
-  }
-
-  /** Pre-warm a footprint's code-drawn textures: at once behind the fade, or spread across the hold. */
+  /** Pre-warm a footprint's code-drawn textures, a few milliseconds a frame (at once without a build queue). */
   private prewarm(fp: FixedFootprint): void {
-    if (this.now || !this.builds || perfWithout('spread')) {
+    if (!this.builds || perfWithout('spread')) {
       perfTime('fixed-art', () => prewarmFixedArt(this.deps.scene, fp))
       return
     }
@@ -647,12 +749,14 @@ export class WildsWindow {
   }
 
   private release(): void {
+    // The first window is in: chunks from now on are built a slice a frame.
+    this.first = false
     const waiting = this.waiters
     this.waiters = []
     for (const w of waiting) w()
   }
 
-  private logPaint(chunk: string, ms: number, drift: boolean, thread: 'worker' | 'main' = 'main'): void {
+  private logPaint(chunk: string, ms: number, drift: boolean, thread: PaintThread = 'main'): void {
     this.paintLog.push({ chunk, ms: Math.round(ms * 100) / 100, drift, thread })
     if (this.paintLog.length > PAINT_LOG_MAX) this.paintLog.shift()
   }
@@ -702,7 +806,7 @@ export class WildsWindow {
   }
 
   /** Read-only, for playtests: what the window holds and how painting went. */
-  debug(): { id: string; center: { cx: number; cy: number } | null; attached: string[]; fixed: string[]; building: string[]; ready: boolean; attaches: number; drops: number; outer: string[]; drift: string[]; ring: string[]; far: string[]; painted: string[]; paints: { chunk: string; ms: number; drift: boolean; thread: 'worker' | 'main' }[] } {
+  debug(): { id: string; center: { cx: number; cy: number } | null; attached: string[]; fixed: string[]; building: string[]; ready: boolean; attaches: number; drops: number; outer: string[]; drift: string[]; ring: string[]; far: string[]; painted: string[]; paints: { chunk: string; ms: number; drift: boolean; thread: PaintThread }[] } {
     const building = [...this.attached, ...this.fixed].filter(([, c]) => !c.whole).map(([k]) => k)
     return {
       id: this.id,
@@ -732,8 +836,6 @@ export class WildsWindow {
     for (const c of this.attached.values()) c.destroy()
     for (const c of this.fixed.values()) c.destroy()
     for (const c of this.drifts.values()) c.destroy()
-    for (const g of this.fixedGround.values()) g.map.destroy()
-    this.fixedGround.clear()
     this.fixed.clear()
     for (const p of this.paints.values()) if (this.deps.scene.textures.exists(p.key)) this.deps.scene.textures.remove(p.key)
     this.attached.clear()

@@ -4,10 +4,11 @@
  * is in the 3×3 around the hero and destroyed when it leaves, as the
  * generated chunks are (./window-chunk.ts).
  *
- * Its ground is a rectangle of the footprint's painted tileset (one per
- * footprint and scene: ../area/terrain.ts groundTiles), laid as tilemap
- * layers; its collision the merged runs of its solid tiles and the bases of
- * what stands on open ground. Both go in at once; the rest is built a few
+ * Its ground is one image painted by the Wilds' painter, off the main
+ * thread, like a generated chunk's (./ground-paint.ts, ./fixed-ground.ts:
+ * docs/design/hearthwick-2.md 4, 5); its collision the merged runs of its
+ * solid tiles and the bases of what stands on open ground. Both go in at
+ * once; the rest is built a few
  * milliseconds a frame through the window's queue: trees and their
  * canopies, the drawn pieces, props and lamps, then its workable pieces,
  * front doors and the homestead fixtures it owns (the gates' signs and
@@ -21,7 +22,6 @@ import { addAll, destroyAll, destroyStatics, enableStatics, looseImage } from '.
 import { staticBox } from '../area/collision.ts'
 import { ensureSceneryArt } from '../area/props.ts'
 import { exitSign } from '../area/exits.ts'
-import { layGround, type GroundTiles } from '../area/terrain.ts'
 import type { Occluder } from '../area/foreground.ts'
 import type { LightProp } from '../area/lanterns.ts'
 import { TILE_DATA, type TileArt } from '../area/tile-art.ts'
@@ -35,6 +35,8 @@ import { exitOf, objectOut, sceneryOf, type FixedDay, type FixedFootprint, type 
 import type { Buildable, BuildQueue } from './window-chunk.ts'
 import { GROUND_DEPTH } from './window-chunk.ts'
 import { perfSpan, perfTime } from '../perf.ts'
+import { drawScale, fadesOver, loopOf } from '../hearthwick2-art.ts'
+import { fnv1a32 } from '../../lib/hash.ts'
 
 /**
  * What another layer (the homestead layer: the gates' signs and shelves, the
@@ -54,8 +56,8 @@ export interface FixedChunkDeps {
   gathering: () => Gathering | null
   occluders: { add(list: Occluder[]): void; remove(images: readonly Phaser.GameObjects.Image[]): void }
   interactables: Interactables
-  /** The footprint's painted ground (its tileset and cells). */
-  ground: GroundTiles
+  /** The chunk's painted ground: a texture key (./window.ts paints it). */
+  ground: string
   /** What the calendar has out (festival-tagged pieces). */
   day: () => FixedDay
   /** Light the chunk's lamps (../area/lanterns.ts refreshLanternVisuals). */
@@ -71,10 +73,22 @@ export interface FixedChunkDeps {
 /** Collision bases of the pieces that stand on open ground (as ../area/collision.ts makes them). */
 const BASE: Record<string, [number, number]> = { tree: [12, 6], bush: [12, 8], rock: [12, 8] }
 
-const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now())
+/** The kinds drawn only as scenery: one whose art is missing draws nothing. */
+const DRAWN = new Set(['scenery', 'well', 'board'])
 
-/** Layer names must be unique on the footprint's tilemap, across attaches. */
-let laid = 0
+const warned = new Set<string>()
+/**
+ * A drawn piece names a texture no pass made: it is left out, which is easy
+ * to miss (H1's town placeholders named `tool-crate`, a frame of the props
+ * atlas, not a texture). Said once a key, in development.
+ */
+function missingArt(key: string): void {
+  if (!import.meta.env?.DEV || warned.has(key)) return
+  warned.add(key)
+  console.warn(`[glimway] no art for fixed scenery ${key}`)
+}
+
+const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now())
 
 export class FixedChunk implements Buildable {
   readonly key: string
@@ -85,7 +99,9 @@ export class FixedChunk implements Buildable {
   /** Its exits' chevrons, labels and posts (their pulses die with them). */
   private signs: Phaser.GameObjects.GameObject[] = []
   private images: Phaser.GameObjects.GameObject[] = []
-  private layers: Phaser.Tilemaps.TilemapLayer[] = []
+  private ground: Phaser.GameObjects.Image | null = null
+  /** The paint its ground image shows (the window's signature: a repaint lands on it). */
+  sig = ''
   private bodies: Phaser.Physics.Arcade.Image[] = []
   private artTiles: { tx: number; ty: number }[] = []
   private fading: Phaser.GameObjects.Image[] = []
@@ -103,7 +119,8 @@ export class FixedChunk implements Buildable {
     const lx = cx * CHUNK_TILES - fp.tx
     const ly = cy * CHUNK_TILES - fp.ty
     perfTime('attach:fixed:ground', () => {
-      this.layers = layGround(deps.ground, { tx: lx, ty: ly, tw: CHUNK_TILES, th: CHUNK_TILES }, { x: cx * CHUNK_TILES * TILE, y: cy * CHUNK_TILES * TILE }, GROUND_DEPTH, `fixed-${this.key}-${++laid}`)
+      this.ground = deps.scene.add.image(cx * CHUNK_TILES * TILE, cy * CHUNK_TILES * TILE, deps.ground).setOrigin(0, 0).setDepth(GROUND_DEPTH)
+      this.images.push(this.ground)
     })
     perfTime('attach:fixed:collision', () => this.collide(lx, ly))
     let next = 0
@@ -190,6 +207,11 @@ export class FixedChunk implements Buildable {
     }
   }
 
+  /** A repainted ground image takes the old one's place. */
+  setGround(key: string): void {
+    this.ground?.setTexture(key)
+  }
+
   /** Everything built. */
   get whole(): boolean {
     return !this.todo.length
@@ -218,7 +240,8 @@ export class FixedChunk implements Buildable {
     }
     for (const o of this.objects) {
       const base = BASE[o.kind] ?? (o.prop ? ([o.prop.bodyW, o.prop.bodyH] as [number, number]) : null)
-      if (!base) continue
+      // A prop without a base stands on its solid tiles (the hearth-stone).
+      if (!base || !base[0] || !base[1]) continue
       // On a solid tile its run already covers the base (every verge tree stands on one).
       if (!o.prop && fp.solid[o.ty - fp.ty]?.[o.tx - fp.tx]) continue
       bodies.push(staticBox(scene, tileMid(o.tx), tileBottom(o.ty) - base[1] / 2, base[0], base[1]))
@@ -279,12 +302,20 @@ export class FixedChunk implements Buildable {
       const o = list[i]!
       const s = sceneryOf(o)
       if (s && ensureSceneryArt(scene, s.key)) {
-        const img = scene.add.image(s.x, s.y, s.key, s.frame).setOrigin(s.originX ?? 0.5, 1).setFlipX(s.flipX ?? false)
-        img.setDepth(typeof s.depth === 'number' ? s.depth : s.y)
+        // A looping piece (the hearth's embers, the forge, the spring) plays its loop, unless motion is reduced.
+        const loop = this.deps.reducedMotion ? null : loopOf(s.key)
+        const img = (loop ? (scene.add.sprite(s.x, s.y, s.key).play({ key: loop, startFrame: fnv1a32(o.id) % 2 }) as unknown as Phaser.GameObjects.Image) : scene.add.image(s.x, s.y, s.key, s.frame)).setOrigin(s.originX ?? 0.5, 1).setFlipX(s.flipX ?? false)
+        img.setDepth(typeof s.depth === 'number' ? s.depth : s.y).setScale(drawScale(s.key))
         if (s.tint !== undefined) img.setTint(s.tint)
         if (s.tx !== undefined && s.ty !== undefined) this.keep(s.tx, s.ty, img)
         else this.images.push(img)
-      }
+        if (fadesOver(s.key, s.frame)) {
+          fading.push({ image: img, bounds: img.getBounds(), footY: s.y })
+          this.fading.push(img)
+        }
+        // A lamp drawn as scenery (the hearth-stone) lights like an atlas lamp.
+        if (o.prop?.light && !props?.has(o.variant)) this.lights.push({ id: o.prop.light, sprite: img, gx: s.x, gy: s.y - o.prop.h * 0.72, glow: null })
+      } else if (s && DRAWN.has(o.kind)) missingArt(s.key)
       if (o.prop && props?.has(o.variant)) {
         const frame = props.get(o.variant)!
         const x = tileMid(o.tx)
@@ -348,10 +379,9 @@ export class FixedChunk implements Buildable {
     this.signs = []
     const kept = this.artTiles.flatMap(({ tx, ty }) => this.deps.tileArt.take(tx, ty))
     destroyAll(scene, [...this.images, ...kept])
-    for (const l of this.layers) l.destroy()
     destroyStatics(scene.physics.world as never, this.deps.solids as never, this.bodies as never)
     this.images = []
-    this.layers = []
+    this.ground = null
     this.bodies = []
     this.artTiles = []
     this.fading = []

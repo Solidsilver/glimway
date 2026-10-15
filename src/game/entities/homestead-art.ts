@@ -26,6 +26,7 @@ import { HOME_FLAGS, SILAS, lotName, signText } from '../homestead'
 import type { HomesteadDeps, HomesteadLayer } from './homesteads'
 import { canvasRatio } from '../viewport'
 import { shadePixels } from '../lot-shade.ts'
+import { SIDE_GATEPOST, SIDE_GATEPOST_FOOT } from '../hearthwick2-art.ts'
 
 /** The cottage's height on its land (its collision body follows it). */
 const COTTAGE_H = 92
@@ -197,9 +198,15 @@ export class HomesteadArt {
       const d = this.gateDrawn.get(slot.gate) ?? { objects: [], bodies: [] }
       this.clear(d)
       this.gateDrawn.set(slot.gate, d)
-      for (const tx of [slot.tx - 1, slot.tx + 2]) {
-        const x = tileMid(tx), y = tileBottom(slot.ty)
-        this.add(d, this.scene.add.image(x, y, 'gatepost-small').setOrigin(0.5, 1).setDepth(y))
+      // The side gate's posts (the Hearthwick 2 pass draws one with its lantern hook to the right: toward the Lot Row, mirrored for the east lots).
+      const side = this.scene.textures.exists(SIDE_GATEPOST)
+      for (const ty of [slot.ty - 1, slot.ty + 2]) {
+        const x = tileMid(slot.tx), y = tileBottom(ty)
+        const post = this.scene.add.image(x, y, side ? SIDE_GATEPOST : 'gatepost-small').setDepth(y)
+        // The post stands in the left of its canvas: its foot on the tile's middle.
+        if (side) post.setFlipX(slot.side === 'east').setOrigin(slot.side === 'east' ? 1 - SIDE_GATEPOST_FOOT : SIDE_GATEPOST_FOOT, 1)
+        else post.setOrigin(0.5, 1)
+        this.add(d, post)
       }
       this.drawGateSign(d, slot)
       this.drawGateShelf(d, slot)
@@ -357,7 +364,7 @@ export class HomesteadArt {
     const home = this.home.here()
     if (!home) return
     // Fence margins belong visually to the plot; cross-lanes and the spine do not.
-    const bounds = L.gridOrigin ? { x: 2, y: 0, w: L.width - 4, h: L.height - 4 } : { x: 1, y: 1, w: L.width - 2, h: L.height - 2 }
+    const bounds = L.gridOrigin ? { x: 0, y: 1, w: L.width, h: L.height - 2 } : { x: 1, y: 1, w: L.width - 2, h: L.height - 2 }
     const key = `lot-shade:${shadeId++}`
     const texture = this.scene.textures.createCanvas(key, bounds.w * TILE, bounds.h * TILE)!
     const ctx = texture.context

@@ -283,13 +283,13 @@ export class HomesteadTalk {
         if (info.mine) {
           // Management needs private presence: reach it from the gate opening,
           // ahead of the mailbox, while travellers keep the public shelf point.
-          out.push({ id: `home:manage-shelf:${slot.gate}`, ...at(slot.shelf, 2), label: 'Look at the gift shelf', verb: 'Look', markerOffset: 16, rank: 1, reach: 52, clickReach: 52, available: () => this.insideGate(slot.gate), activate: panel('shelf', slot.gate) })
+          out.push({ id: `home:manage-shelf:${slot.gate}`, ...at(slot, 2), label: 'Look at the gift shelf', verb: 'Look', markerOffset: 16, rank: 1, reach: 52, clickReach: 52, available: () => this.insideGate(slot.gate), activate: panel('shelf', slot.gate) })
         }
       } else if (info?.mine) {
         const unplaced = this.home.homes.mine?.items.find((i) => i.itemDef === 'gate-shelf' && i.scene === null)
         if (unplaced) {
           // Beat the nearer mailbox while the owner is inside the gate.
-          out.push({ id: `home:place-shelf:${unplaced.id}`, rank: 1, ...at(slot.shelf, 2), label: 'Set out your gate shelf', verb: 'Place', markerOffset: 16, reach: 52, clickReach: 52, available: () => this.insideGate(slot.gate), activate: () => void this.placeGateShelf(unplaced.id) })
+          out.push({ id: `home:place-shelf:${unplaced.id}`, rank: 1, ...at(slot, 2), label: 'Set out your gate shelf', verb: 'Place', markerOffset: 16, reach: 52, clickReach: 52, available: () => this.insideGate(slot.gate), activate: () => void this.placeGateShelf(unplaced.id) })
         }
       }
     }

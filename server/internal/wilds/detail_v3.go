@@ -44,6 +44,8 @@ type detail struct {
 	solid []bool
 	decor []Decor
 	taken []bool
+
+	held []bool // the soft band's few solid tiles: never carved (seams.go)
 }
 
 func newDetail(S int, seed uint32, base []baseTile, outer bool, home Tile) *detail {
@@ -52,10 +54,18 @@ func newDetail(S int, seed uint32, base []baseTile, outer bool, home Tile) *deta
 		wind: noise{seed}, jag: noise{seed ^ 0x5bd1e995}, brush: noise{seed ^ 0x2545f491},
 		base: base, walk: make([]bool, S*S), ground: make([]Ground, S*S), land: make([]int8, S*S),
 		bare: make([]bool, S*S), blocked: make([]bool, S*S), network: make([]bool, S*S),
-		specialAt: make([]bool, S*S), taken: make([]bool, S*S),
+		specialAt: make([]bool, S*S), taken: make([]bool, S*S), held: make([]bool, S*S),
 	}
+	woods := int8(landIndex("woods"))
 	for i, t := range base {
 		d.walk[i], d.ground[i], d.land[i] = t.walk, t.ground, t.land
+		d.held[i] = t.kind == bSoft && !t.walk
+		// The fixed block's closed edge, mirrored, stands as the edge of a
+		// wood whatever the land: in meadow, a stone or thicket stand on
+		// every tile of it lined up into a hedge (playtest 3).
+		if t.kind == bSeamFixed && !t.walk && woods >= 0 {
+			d.land[i] = woods
+		}
 		if t.kind == bWater || (!t.walk && groundSurface[t.ground] == "water") {
 			d.blocked[i] = true
 		}
@@ -92,7 +102,7 @@ func (d *detail) woodsAt(x, y int) bool {
 
 // carve opens an interior tile and raises its ground (never lowers it).
 func (d *detail) carve(x, y int, g Ground) {
-	if !d.openable(x, y) {
+	if !d.openable(x, y) || d.held[d.at(x, y)] {
 		return
 	}
 	i := d.at(x, y)
@@ -374,7 +384,7 @@ func (d *detail) mouths() {
 
 func (d *detail) stepCost(x, y int) int {
 	i := d.at(x, y)
-	if d.blocked[i] {
+	if d.blocked[i] || d.held[i] {
 		return -1
 	}
 	if !d.interior(x, y) {
@@ -779,6 +789,8 @@ func (d *detail) ensureReach() {
 			return 1
 		case !d.interior(x, y):
 			return -1
+		case d.held[i]:
+			return 400 // only where nothing else joins
 		}
 		return 10
 	}

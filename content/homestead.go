@@ -268,3 +268,14 @@ func HomeItemFor(id string) (*HomeItem, bool) {
 	}
 	return nil, false
 }
+
+// HomeOutdoorReserved adds the side's gate approach and mailbox to the shared site/fence bands.
+func HomeOutdoorReserved(gate int) []*HomeRect {
+	out := append([]*HomeRect{}, HomeRules.GetOutdoorReserved()...)
+	x, w, m := int32(13), int32(10), int32(21)
+	if gate%2 == 1 {
+		x, w, m = 1, 10, 2
+	}
+	out = append(out, &HomeRect{X: proto.Int32(x), Y: proto.Int32(11), W: proto.Int32(w), H: proto.Int32(2)}, &HomeRect{X: proto.Int32(m), Y: proto.Int32(10), W: proto.Int32(1), H: proto.Int32(1)})
+	return out
+}

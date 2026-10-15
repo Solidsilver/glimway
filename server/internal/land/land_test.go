@@ -82,7 +82,7 @@ func TestEveryLandKeepsItsSitePathAndGateClear(t *testing.T) {
 	seen := map[string]bool{}
 	for _, world := range []string{"guest", "w1", "w2"} {
 		for g := range 40 {
-			l := Generate(Seed(world, g, cfg), cfg)
+			l := GenerateLot(Seed(world, g, cfg), cfg, g)
 			for y := int(site.GetY()); y < int(site.GetY())+int(site.GetH()); y++ {
 				for x := int(site.GetX()); x < int(site.GetX())+int(site.GetW()); x++ {
 					if l.At(x, y) != Grass {
@@ -90,7 +90,7 @@ func TestEveryLandKeepsItsSitePathAndGateClear(t *testing.T) {
 					}
 				}
 			}
-			for y := int(site.GetY()) + int(site.GetH()); y < l.Height; y++ {
+			for y := int(site.GetY()) + int(site.GetH()); y <= 12; y++ {
 				for x := int(gate.GetX()); x < int(gate.GetX())+int(gate.GetW()); x++ {
 					if l.At(x, y) != Path {
 						t.Fatalf("%s/%d: path tile %d,%d is %c", world, g, x, y, Chars[l.At(x, y)])

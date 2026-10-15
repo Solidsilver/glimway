@@ -162,7 +162,7 @@ func validateFixed(c *contract.WorldChunk) error {
 	layout, revision, ok := ParseFixedEpoch(c.EpochId)
 	_, _, isPlot := PlotIdentity(c.EpochId)
 	if _, gate, plot := PlotIdentity(c.EpochId); plot {
-		layout, revision, ok = "homestead-lots", PlotRevision, LotAt(int(c.Cx), int(c.Cy)) == gate
+		layout, revision, ok = LotLayout(gate), PlotRevision, LotAt(int(c.Cx), int(c.Cy)) == gate
 	}
 	if !ok || c.Size != S || c.Realm != content.WildsRules.GetRealm() || c.Layer != 0 || c.GeneratorVersion != 0 || c.LayoutRevision != uint32(revision) {
 		return fmt.Errorf("invalid chunk identity")

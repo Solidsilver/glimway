@@ -222,7 +222,7 @@ test('the walk at a change: to the doorway, the stairs, or the front door outsid
   // ...and from the loft out to his door: down through the opening, from its north side.
   assert.deepEqual(doorFor('finn', 'in:village:mill:2', 'hearthwick'), { step: { tx: 1, ty: 3 }, door: { tx: 1, ty: 4 } });
   // Outside, Hazel comes and goes by her front door.
-  assert.deepEqual(doorFor('hazel', 'hearthwick', 'in:village:bakery'), { step: { tx: -11, ty: 59 }, door: { tx: -11, ty: 58 } });
+  assert.deepEqual(doorFor('hazel', 'hearthwick', 'in:village:bakery'), { step: { tx: 6, ty: 54 }, door: { tx: 6, ty: 53 } });
   // Two legs, across then up or down, ending on the target's feet.
   const legs = twoLegs({ tx: 12, ty: 15 }, { tx: 7, ty: 8 });
   assert.deepEqual(legs, [tileFeet(7, 15), tileFeet(7, 8)]);

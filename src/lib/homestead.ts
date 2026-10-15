@@ -1,3 +1,4 @@
+import { lotService } from './lots.ts';
 import { lotOrigin } from './lots.ts';
 import raw from '../../content/homestead.json' with { type: 'json' };
 import { ITEMS_SHAPE } from './items-shape.ts';
@@ -24,9 +25,10 @@ export interface HomeGrid { width: number; height: number }
 /**
  * Every homestead's wild land (generated per gate: src/lib/homestead-land.ts,
  * server/internal/land): its size, the home site (camp/cottage), the gate
- * mouth in the south edge, the home's own light, and how wild it is.
+ * shared vertical path stem, the home's own light, and how wild it is.
  */
 export interface HomeLand {
+  sides: Record<string, {ground: string; trees: number; stumps: number; boulders: number; flowers: number}>;
   generator: number;
   width: number;
   height: number;
@@ -41,7 +43,7 @@ export interface HomeLand {
 }
 /**
  * The gates along the Commons lane, in the client's tiles (`tileSize` px).
- * Gate g is in fence column fenceX[g % 2] and row floor(g / 2): the listed
+ * In the 120×96 block frame (world +48,-24), gate g is in fence column fenceX[g % 2] and row floor(g / 2): the listed
  * rows, then one more every `rowPitch` tiles. The deed table (a point in
  * Pell's office, `area`, in px) is where a joint deed is signed: both
  * partners within `radius`.
@@ -158,7 +160,7 @@ function landGrid(data: HomesteadData = HOMESTEAD_DATA): HomeGrid {
 export function gateTile(gate: number, _data: HomesteadData = HOMESTEAD_DATA): { tx: number; ty: number; side: 'west' | 'east' } {
   if (!Number.isInteger(gate) || gate < 0 || gate >= 8) throw new Error('invalid lot');
   const o = lotOrigin(gate);
-  return { tx: o.tx + 11, ty: o.ty + 19, side: gate % 2 ? 'east' : 'west' };
+  return { tx: o.tx + (gate % 2 ? 0 : 23), ty: o.ty + 11, side: gate % 2 ? 'east' : 'west' };
 }
 
 export function homeItem(id: string): HomeItem | undefined {
@@ -268,7 +270,7 @@ function everythingLit(items: readonly HomeInstance[], data: HomesteadData = HOM
  * the land outdoors (omitted: only the grid rules are checked).
  */
 export function checkPlacement(
-  home: { tier: number; items: readonly HomeInstance[]; plants?: readonly { x: number; y: number }[] },
+  home: { gate?: number; tier: number; items: readonly HomeInstance[]; plants?: readonly { x: number; y: number }[] },
   instance: HomeInstance,
   scene: HomeScene,
   x: number,
@@ -289,7 +291,7 @@ export function checkPlacement(
   const [w, h] = rotatedFootprint(grownItem(def, instance, data), rotation);
   if (x < 0 || y < 0 || x > grid.width - w || y > grid.height - h) return 'out-of-bounds';
   const here = { x, y, w, h };
-  const reserved = scene === 'indoor' ? data.indoorReserved : data.outdoorReserved;
+  const reserved = scene === 'indoor' ? data.indoorReserved : outdoorReserved(home.gate ?? 0, data);
   if (reserved.some((r) => overlaps(here, r))) return 'placement-overlap';
   for (const other of home.items) {
     if (other.id === instance.id || other.scene !== scene) continue;
@@ -317,7 +319,7 @@ export function checkPlacement(
  * `placement-overlap`, `plant-in-the-way`, `land-blocked`, `unlit`).
  */
 export function stallGroundProblem(
-  home: { tier: number; items: readonly HomeInstance[]; plants?: readonly { x: number; y: number }[] },
+  home: { gate?: number; tier: number; items: readonly HomeInstance[]; plants?: readonly { x: number; y: number }[] },
   stable: HomeInstance,
   data: HomesteadData = HOMESTEAD_DATA,
   ground?: PlacementGround
@@ -349,7 +351,7 @@ export function plantable(home: PlantLand, tx: number, ty: number, data: Homeste
   if (!land) return false;
   if (effectiveKind(land, clearedSet(home.cleared), tx, ty) !== LAND.GRASS) return false;
   const here = { x: tx, y: ty, w: 1, h: 1 };
-  if (data.outdoorReserved.some((r) => overlaps(here, r))) return false;
+  if (outdoorReserved(home.gate,data).some((r) => overlaps(here, r))) return false;
   for (const it of home.items) {
     if (it.scene !== 'outdoor') continue;
     const r = footprintRect(it, data);
@@ -389,4 +391,9 @@ export function cleanPostName(raw: string, data: HomesteadData = HOMESTEAD_DATA)
   const name = raw.split(/[\u0009-\u000d\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+/u).filter(Boolean).join(' ');
   if (!name || [...name].length > data.lanternPosts.nameMax) return null;
   return name;
+}
+
+export function outdoorReserved(gate: number, data: HomesteadData = HOMESTEAD_DATA): HomeRect[] {
+ const m = lotService(gate, 'mailbox')
+ return [...data.outdoorReserved, { x: gate % 2 ? 1 : 13, y: 11, w: 10, h: 2 }, { ...m, w: 1, h: 1 }]
 }

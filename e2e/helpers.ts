@@ -499,14 +499,14 @@ export async function warp(page: Page, area: AreaId, tx?: number, ty?: number): 
   await waitForArea(page, area)
 }
 
-/** Is the hero on Hearthwick (the open map, on its footprint: world tiles x -24..47, y 24..95)? */
+/** Is the hero on Hearthwick (the open map, on its footprint: world tiles x -24..47, y 24..119)? */
 export async function inCommons(page: Page): Promise<boolean> {
   return page.evaluate(() => {
     const s = window.__fsSafety?.()
     if (!s || s.areaId !== 'outdoors' || !s.position) return false
     const tx = Math.floor(s.position.x / 16)
     const ty = Math.floor(s.position.y / 16)
-    return tx >= -24 && tx < 48 && ty >= 24 && ty < 96
+    return tx >= -24 && tx < 48 && ty >= 24 && ty < 120
   })
 }
 

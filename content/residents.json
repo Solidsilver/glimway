@@ -14,7 +14,7 @@
         },
         "square": {
           "area": "hearthwick",
-          "tx": 11,
+          "tx": 9,
           "ty": 63
         }
       },
@@ -46,8 +46,8 @@
         },
         "door": {
           "area": "hearthwick",
-          "tx": 30,
-          "ty": 77
+          "tx": 21,
+          "ty": 105
         }
       },
       "cycle": [
@@ -70,8 +70,8 @@
       "spots": {
         "window": {
           "area": "hearthwick",
-          "tx": 32,
-          "ty": 55
+          "tx": -15,
+          "ty": 49
         }
       },
       "cycle": [
@@ -121,8 +121,8 @@
         },
         "yard": {
           "area": "hearthwick",
-          "tx": 29,
-          "ty": 36
+          "tx": -16,
+          "ty": 108
         }
       },
       "cycle": [

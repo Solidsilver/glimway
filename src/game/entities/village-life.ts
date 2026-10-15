@@ -1,3 +1,4 @@
+import { ROOMS } from '../../lib/rooms.ts'
 import { onSceneEnd } from '../scene-end.ts'
 /**
  * Village life in the scene: the notice boards, festival touches on their
@@ -49,7 +50,7 @@ export interface VillageDeps {
 }
 
 /** Ada Cooley's house: the east house (its window), per the village layout. */
-const ADA_HOUSE_WINDOW = { tx: 35, ty: 6 }
+const ADA_HOUSE_WINDOW = { tx: -15, ty: 46 }
 
 /** Festival greetings already shown (per day and area) this page load. */
 const greeted = new Set<string>()
@@ -160,6 +161,11 @@ export class VillageLayer {
     }
     for (const o of fp.objects.get(key) ?? []) {
       if (name === 'Closure Night' && o.prop?.light) steps.push(() => this.glow(tileMid(o.tx), tileBottom(o.ty) - o.prop!.h * 0.72, 1.1, 0.9))
+    }
+    if (fp.place.id === 'hearthwick' && (name === 'Amberwake' || name === 'Closure Night')) {
+      // Ground now carries painter categories only; windows belong to the buildings.
+      const windows = [ADA_HOUSE_WINDOW, ...ROOMS.rooms.flatMap(r => r.parent === 'hearthwick' && r.outside?.window ? [r.outside.window] : [])]
+      for (const w of windows) at(w.tx, w.ty, () => this.windowGlow(tileMid(w.tx), w.ty * TILE + 6))
     }
     for (let ty = cy * CHUNK_TILES; ty < (cy + 1) * CHUNK_TILES; ty++) for (let tx = cx * CHUNK_TILES; tx < (cx + 1) * CHUNK_TILES; tx++) {
       const terrain = fp.ground[ty - fp.ty]![tx - fp.tx]
@@ -374,8 +380,7 @@ export class VillageLayer {
     const mill = find('mill'), ada = find('house-ada')
     if (!mill || !ada) return null
     const wheel = { tx: mill.tx + mill.tw, ty: mill.ty }
-    let window = { tx: ada.tx, ty: ada.ty - ada.th + 1 }
-    for (let ty = ada.ty - ada.th + 1; ty <= ada.ty; ty++) for (let tx = ada.tx; tx < ada.tx + ada.tw; tx++) if (fp.ground[ty - fp.ty]?.[tx - fp.tx] === TERRAIN.window) window = { tx, ty }
+    const window = ADA_HOUSE_WINDOW
     return { board: find('town-board'), well: find('town-well'), window, mill: { hopper: find('mill-hopper'), wheel: { ...wheel, x: wheel.tx * TILE + 7, y: wheel.ty * TILE + 4 } } }
   }
 
