@@ -71,6 +71,8 @@ export interface FixedFootprint {
   objects: Map<string, FixedObject[]>
   /** Tiles joined to an arrival anchor over open ground (footprint-local, row-major; 1 = joined). */
   reach: Uint8Array
+  /** A lot's cleared tiles (footprint-local): painted as trodden earth (./fixed-ground.ts). */
+  cleared?: readonly (readonly [number, number])[]
 }
 
 /** One homestead gate on the lane, in world tiles. */
@@ -466,6 +468,10 @@ export function applyLotHome(gate: number, home: HomeView | null): void {
     return [object]
   })
   for (const [x,y] of home?.cleared ?? []) if (insideLot(o.tx+x,o.ty+y,gate) && base.objects.get(key)?.some((p) => p.id === `land:${x},${y}`)) fp.solid[o.ty-fp.ty+y]![o.tx-fp.tx+x] = false
+  // Its clearings show on the ground (the other lots' stay as they were).
+  const lx0 = o.tx - fp.tx, ly0 = o.ty - fp.ty
+  const mine = ([x, y]: readonly [number, number]) => x >= lx0 && x < lx0 + 24 && y >= ly0 && y < ly0 + 24
+  fp.cleared = [...(current.cleared ?? []).filter((t) => !mine(t)), ...(home?.cleared ?? []).filter(([x, y]) => insideLot(o.tx+x,o.ty+y,gate)).map(([x, y]) => [lx0 + x, ly0 + y] as const)]
   const decor = (id: string, tx: number, ty: number, frame: string, tint?: number): FixedObject => ({
     id, kind: 'scenery', tx, ty, tw: 0, th: 0, variant: 'tangle-decor', frame,
     festival: '', width: 0, gate, side: '', npc: '', spot: '', target: '', label: '',

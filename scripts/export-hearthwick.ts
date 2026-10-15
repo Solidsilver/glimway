@@ -19,8 +19,9 @@ const places = {
  ...(['west','east'] as const).map((side,i)=>({id:`lots-${side}`,name:`${side==='west'?'West':'East'} Row`,kind:'plots',layout:`lots-${side}`,revision:3,origin:tile(i?48:-48,24),cx:i?2:-2,cy:1,width:1,height:4,rules:rules('home'),zones:Array.from({length:4},(_,row)=>({id:`lot-${row*2+i}`,place:`lot:${row*2+i}`,tx:0,ty:row*24,w:24,h:24,rules:rules('home')})),anchors:[]})),
  ],generated:{safe:false,ride:true,sync:false,rest:'none'},spaces:{woodland:{safe:false,ride:true,sync:false,rest:'none'},ruin:{safe:false,ride:true,sync:false,rest:'none'}},
 };
-// Curated wire IDs map to painter categories in H3: meadow, woods, trodden, road, paving, cobble, tilled, water.
-const palette = {'.':'grass_a', ',':'grass_b', ':':'path_a', '-':'path_b', '=':'cobble', '+':'stone_a', 't':'dirt', '~':'water_b'};
+// Curated wire IDs map to painter categories in H3 (src/game/wilds/fixed-ground.ts): meadow, woods, trodden,
+// road, paving, cobble, tilled fields, water; a placeholder building's footprint box is bare earth.
+const palette = {'.':'grass_a', ',':'grass_b', ':':'path_a', '-':'path_b', '=':'cobble', '+':'stone_a', 't':'dirt', 'f':'tilled', '~':'water_b'};
 const ground=Array.from({length:96},()=>Array<string>(72).fill('.'));
 const solid=Array.from({length:96},()=>Array<string>(72).fill('.'));
 const objects:ObjectData[]=[];
@@ -77,7 +78,7 @@ row([46,50,54],21);row([63,67,71],21);row([45],26,5);row([45],31);row([72],26);r
 row([45,49],43);row([46,50,54],48);row([63,67,71],48);row([44,48,52],13);row([63,67,71,75],13);
 row([37],20,5);row([30,35],30,5);row([40],30,3);row([30,35],40,5);row([80,85],20,5);row([80,85],30,5);
 row([33,38,43,48],57);row([64,68,72,76,80,85],57);
-rect(-17,106,0,111,':');rect(-17,113,6,118,'t');rect(16,110,43,117,'t');rect(-18,88,7,93,'t');rect(31,67,41,74,'t');
+rect(-17,106,0,111,':');rect(-17,113,6,118,'f');rect(16,110,43,117,'f');rect(-18,88,7,93,'f');rect(31,67,41,74,'f');
 piece('sawhorse','sawhorse',-16,107);prop('toolbox','tool-crate',-1,107);piece('firebox','firebox',-1,110);piece('timber-stack','timber-stack',-5,109);piece('skids','skids',-8,109);piece('woodpile','woodpile',-12,110);
 // Centrepiece placeholder canopy and hearth: retain stable repair/rest IDs for H5.
 rect(12,60,13,61,'.',true);object('wick-tree','tree',12,61,{variant:'oak-canopy',width:128});

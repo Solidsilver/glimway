@@ -200,12 +200,13 @@ function fakeGround() {
   return { layers, ground: { map, tiles: {}, layers: [[[0]]].concat(), density: 1, pending: null } };
 }
 
+/** The painted ground texture every rig chunk is laid on. */
+const FIXED_GROUND = 'wilds-ground:fixed';
+
 function rig() {
   const scene = new FakeScene();
   const fp = footprint('hearthwick') ?? serveFixtureCommons();
   const g = fakeGround();
-  // Every tile laid with one cell: a layer per attached chunk.
-  g.ground.layers = [Array.from({ length: fp.h }, () => Array<number>(fp.w).fill(0))];
   const tileArt = new TileArt<FakeObject>();
   const points = new Map<object, unknown[]>();
   const gatherChunks = new Map<string, unknown[]>();
@@ -220,7 +221,7 @@ function rig() {
     occluders: { add: (l: { image: unknown }[]) => l.forEach((o) => occluders.add(o.image)), remove: (l: unknown[]) => l.forEach((o) => occluders.delete(o)) },
     interactables: { invalidatePrompt() {}, register: (owner: object, p: unknown[]) => (p.length ? points.set(owner, p) : points.delete(owner)) },
     reducedMotion: false,
-    ground: g.ground,
+    ground: FIXED_GROUND,
     day: () => ({ festival: 'Carting Day', wick: 'Bloom' }),
     light: (lamps: never[]) => refreshLanternVisuals(scene as never, lamps, 'new', {} as never),
     enter: () => {},
@@ -239,7 +240,7 @@ const snapshot = (r: Rig) => ({
   bodies: r.scene.bodies.size,
   solids: r.scene.solids.members.size,
   textures: r.scene.textures.added.length,
-  layers: r.g.layers.size,
+  grounds: r.scene.children.list.filter((o) => o.alive && o.texture.key === FIXED_GROUND).length,
   points: r.points.size,
   gathered: r.gatherChunks.size,
   occluders: r.occluders.size,
@@ -264,7 +265,7 @@ test('every Commons chunk attaches every kind of object it owns and detaches lea
     assert.ok(during.objects > before.objects + 50, 'trees, canopies, pieces, signs drawn');
     assert.ok(during.tweens > before.tweens, 'lamp glows and exit chevrons pulse');
     assert.ok(during.solids > 0 && during.bodies > 0, 'collision');
-    assert.equal(during.layers, 12, 'one ground layer a chunk');
+    assert.equal(during.grounds, 12, 'one ground image a chunk');
     assert.ok(during.points >= 1, 'the Yard’s door');
     assert.ok(during.gathered >= 1, 'the Bloom patches, out today');
     assert.ok(during.occluders > 0, 'canopies and overhangs fade');
@@ -895,9 +896,10 @@ test('drain keeps the chunk under the hero and reattaches a returned fixed chunk
   const hero = { x: 40, y: 428 };
   const c = new FixedChunk(r.deps as never, r.fp, 0, 1);
   Object.assign(w, { deps: { ...r.deps, hero: () => hero, session: {} }, builds: r.builds,
-    fixed: new Map([['0,1', c]]), attached: new Map(), drifts: new Map(), far: new Map(),
-    fixedGround: new Map([['hearthwick', r.g.ground]]), failedGround: new Set(),
-    plan: { attach: [], drift: [], ring: [] }, waiters: [], heroTile: '', drops: 0, attaches: 1 });
+    fixed: new Map([['0,1', c]]), attached: new Map(), drifts: new Map(), far: new Map(), paints: new Map(), pending: new Map(),
+    plan: { attach: [], drift: [], ring: [], fetch: ['0,1'] }, waiters: [], heroTile: '', drops: 0, attaches: 1 });
+  // Painted once, and kept while it is in the fetched ring.
+  w['paints'].set('0,1', { key: FIXED_GROUND, sig: w['sigOf'](0, 1) });
   w['dropBehind']();
   assert.equal(w.hasFixed(0, 1), true, 'ground under hero is retained outside plan');
   hero.y = -1000;
@@ -906,10 +908,10 @@ test('drain keeps the chunk under the hero and reattaches a returned fixed chunk
   r.builds.step(Infinity);
   assert.equal(c.whole, true, 'destroy clears its pending stages');
   hero.y = 428;
-  Object.assign(w, { plan: { attach: ['0,1'], drift: [], ring: [] } });
+  Object.assign(w, { plan: { attach: ['0,1'], drift: [], ring: [], fetch: ['0,1'] } });
   w['step']();
   w['step']();
-  assert.equal(w['attaches'], 2, 'one replacement attachment');
+  assert.equal(w['attaches'], 2, 'one replacement attachment, on the kept paint');
   assert.equal(w['fixed'].size, 1);
   w['fixed'].get('0,1')!.destroy();
 });
@@ -919,29 +921,44 @@ test('window shutdown destroys chunks still waiting in the drain', () => {
   const dropped: string[] = [];
   const chunks = (key: string) => new Map([[key, { destroy: () => dropped.push(key) }]]);
   Object.assign(w, { attached: chunks('generated'), fixed: chunks('fixed'), drifts: chunks('drift'),
-    fixedGround: new Map(), paints: new Map(), far: new Map(), waiters: [] });
+    paints: new Map(), far: new Map(), waiters: [] });
   w['destroy']();
   w['destroy']();
   assert.deepEqual(dropped, ['generated', 'fixed', 'drift']);
 });
 
-test('null fixed ground reports once and is never rebuilt each frame', (t) => {
-  let maps = 0, destroyed = 0;
-  const errors: unknown[][] = [];
-  t.mock.method(console, 'error', (...args: unknown[]) => errors.push(args));
-  const scene = { sys: { game: { renderer: { type: 1 } } }, textures: { exists: () => true },
-    cache: { json: { get: () => null } }, make: { tilemap: () => {
-      maps++;
-      return { addTilesetImage: () => null, destroy: () => { destroyed++; } };
-    } } };
+test('a fixed chunk attaches only on its painted ground, and a repaint lands on it where it stands', () => {
+  const r = rig();
   const w = Object.create(WildsWindow.prototype) as InstanceType<typeof WildsWindow>;
-  Object.assign(w, { deps: { scene }, fixedGround: new Map(), failedGround: new Set(), fixed: new Map() });
+  Object.assign(w, { deps: { ...r.deps, session: {} }, builds: r.builds, fixed: new Map(), attached: new Map(), paints: new Map(), pending: new Map(),
+    paintLog: [], plan: { attach: ['0,1'], drift: [], ring: [], fetch: ['0,1'] }, waiters: [], attaches: 0, first: false });
   const fp = footprint('hearthwick')!;
-  for (let i = 0; i < 60; i++) w['attachFixed'](fp, 0, 1);
-  assert.equal(maps, 1);
-  assert.equal(destroyed, 1, 'failed tilemap is released');
-  assert.equal(errors.length, 1);
-  assert.equal(w.hasFixed(0, 1), false);
+  w['attachFixed'](fp, 0, 1);
+  assert.equal(w.hasFixed(0, 1), false, 'nothing to stand on until it is painted');
+  w['paints'].set('0,1', { key: FIXED_GROUND, sig: 'before' });
+  w['attachFixed'](fp, 0, 1);
+  const c = w['fixed'].get('0,1')!;
+  assert.equal(c.sig, 'before');
+  const grounds = () => r.scene.children.list.filter((o) => o.alive && o.texture.key.startsWith('wilds-ground:'));
+  assert.deepEqual(grounds().map((o) => o.texture.key), [FIXED_GROUND]);
+  // A paint lands (its neighbours came in): the image is swapped, nothing is rebuilt.
+  const originalDocument = globalThis.document;
+  const originalImageData = (globalThis as { ImageData?: unknown }).ImageData;
+  globalThis.document = { createElement: () => ({ width: 0, height: 0, getContext: () => ({ putImageData() {} }) }) } as unknown as Document;
+  (globalThis as { ImageData?: unknown }).ImageData = class { data: Uint8ClampedArray; constructor(data: Uint8ClampedArray) { this.data = data; } };
+  try {
+    w['paintedNow']('0,1', 'after', new Uint8ClampedArray(384 * 384 * 4), 3, 'worker');
+  } finally {
+    globalThis.document = originalDocument;
+    (globalThis as { ImageData?: unknown }).ImageData = originalImageData;
+  }
+  assert.equal(w['fixed'].get('0,1'), c, 'the same chunk');
+  assert.equal(w['attaches'], 1);
+  assert.equal(c.sig, 'after');
+  assert.deepEqual(grounds().map((o) => o.texture.key), ['wilds-ground:0,1:a']);
+  assert.equal(r.scene.textures.added.includes(FIXED_GROUND), false, 'the old image is let go');
+  c.destroy();
+  assert.deepEqual(grounds(), []);
 });
 
 test('all eight lot anchors seed their physical footprint and preserve saved world pixels', async () => {
@@ -1319,10 +1336,9 @@ test('real window chunks slice three lot facades, defer Arrange refresh and clea
   }) as InstanceType<typeof HomesteadLayer>;
   Object.assign(root, { lots: new LotHomes(root), art: new HomesteadArt(root), talk: new HomesteadTalk(root) });
 
-  // Only the tilemap renderer is faked. Window plans, chunk construction,
-  // the build queue, facade drawing and scene shutdown are production paths.
-  const groundProto = WildsWindow.prototype as unknown as { groundFor: () => unknown };
-  t.mock.method(groundProto, 'groundFor', () => r.g.ground);
+  // Only the ground's painting is skipped (each lot is laid on a paint made
+  // for it). Window plans, chunk construction, the build queue, facade
+  // drawing and scene shutdown are production paths.
   let following = true;
   r.scene.cameras.main.stopFollow = () => { following = false; };
   r.scene.cameras.main.startFollow = () => { following = true; };
@@ -1332,6 +1348,10 @@ test('real window chunks slice three lot facades, defer Arrange refresh and clea
   hero.x=-48*TILE; hero.y=60*TILE;
   w['recentre'](-2,2);
   w['plan']!.attach = w['plan']!.attach.filter((key) => key.startsWith('-2,'));
+  for (const key of w['plan']!.attach) {
+    const [cx, cy] = key.split(',').map(Number) as [number, number];
+    w['paints'].set(key, { key: FIXED_GROUND, sig: w['sigOf'](cx, cy) });
+  }
   for (let i=0;i<3;i++) assert.equal(w['step'](),true);
   assert.equal(w['fixed'].size,3);
   assert.equal(root.lots!['lots'].size,0,'fixture stage has not run synchronously');

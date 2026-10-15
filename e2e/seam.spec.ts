@@ -384,16 +384,17 @@ async function medianLuma(page: Page, png: Buffer, x0: number, x1: number): Prom
   }, { b64: png.toString('base64'), x0, x1 })
 }
 
-test('Hearthwick and the lots both draw their ground, whichever painted its tileset last', async ({ page, context }) => {
-  // Each footprint paints its own ground tileset; under one shared texture
-  // key the second paint destroyed the first's, and its ground drew black.
+test('Hearthwick and the lots both draw their ground', async ({ page, context }) => {
+  // Each fixed chunk is painted by the Wilds' painter, per chunk (once each
+  // footprint's shared tileset key let the second paint destroy the first's,
+  // and its ground drew black).
   await connected(page, context)
-  // On the lane where the lots (west) meet Hearthwick (east, from world tile x = -24).
-  await warp(page, 'outdoors', -25, 69)
+  // On Lot Row West, where the west lots (to x = -25) meet Hearthwick (from world tile x = -24).
+  await warp(page, 'outdoors', -23, 69)
   await parkCreatures(page)
   await windowWhole(page)
   await expect.poll(async () => (await win(page)).fixed).toEqual(expect.arrayContaining(['-2,2', '-1,2']))
-  await page.waitForFunction(() => (window as unknown as { __fsGround?: () => { complete?: boolean } | null }).__fsGround?.()?.complete === true, undefined, { timeout: 60_000 })
+  await expect.poll(async () => (await win(page)).painted).toEqual(expect.arrayContaining(['-2,2', '-1,2']))
   await frames(page, 2)
   // A band across the middle of the screen, clear of the HUD.
   const vp = page.viewportSize()!

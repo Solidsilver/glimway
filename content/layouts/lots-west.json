@@ -13,6 +13,7 @@
     "=": "cobble",
     "+": "stone_a",
     "t": "dirt",
+    "f": "tilled",
     "~": "water_b"
   },
   "ground": [

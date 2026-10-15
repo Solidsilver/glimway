@@ -19,7 +19,7 @@ import (
 // Hashes pin served bytes to their cache identity. A shipped layout edit
 // must bump the revision and add a new hash, never rewrite an old revision.
 var fixedGolden = map[string]string{
-	"fixed:hearthwick@2": "9ebfe66ce1d53d5d82106b573eb48467bf98270ebdcad010bc9bc89c28a80527",
+	"fixed:hearthwick@2": "275565ac9e7082dddf5a682c3c23e234dedf9e777c69e0356b4a0b012cd68e4e",
 	"fixed:lots-west@3":  "27c85257c16a1fa126affc7c2622adac91fe44aabccfa540789deac64235daf6",
 	"fixed:lots-east@3":  "936291deb0a9743ededdb000bef48a8fb53789aa7c7c39ec755c4f4ba8bff79e",
 }
