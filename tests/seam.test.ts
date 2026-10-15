@@ -529,7 +529,7 @@ test('the mouth is the seam: safe on the Commons side, not on the Tangle’s; th
 });
 
 test('fixed chunks are cached per layout revision under their pseudo-epoch', () => {
-  assert.equal(fixedEpoch(COMMONS_PLACE.layout, COMMONS_PLACE.revision), 'fixed:hearthwick@3');
+  assert.equal(fixedEpoch(COMMONS_PLACE.layout, COMMONS_PLACE.revision), 'fixed:hearthwick@4');
   assert.match(chunkCacheKey(fixedEpoch('hearthwick', 2), 0, 1), /:fixed:hearthwick@2:0:1$/);
   assert.notEqual(chunkCacheKey(fixedEpoch('hearthwick', 2), 0, 1), chunkCacheKey(fixedEpoch('hearthwick', 3), 0, 1));
 });
@@ -1264,7 +1264,7 @@ test('a late plot read from a previous world cannot replace the new world footpr
   assert.equal(waiting.filter((w) => w.epoch.startsWith('plot:new-world:')).length, 8);
   answer('new-world');
   await fresh;
-  assert.equal(footprint('lots-west')?.epoch, 'plot:new-world@4');
+  assert.equal(footprint('lots-west')?.epoch, 'plot:new-world@5');
   forgetFixed(); forgetChunks(); serveFixtureCommons(); serveFixtureLots();
 });
 

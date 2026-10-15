@@ -144,7 +144,7 @@ func TestV3KeepOut(t *testing.T) {
 }
 
 // TestV3SideLean: beside the block the land leans to the lots' sides, woods
-// west and meadow east, and fades out over ring 1.
+// west and meadow east, meadow south, and fades out over ring 1.
 func TestV3SideLean(t *testing.T) {
 	woods, meadow := landIndex("woods"), landIndex("meadow")
 	if woods != sideWoods || meadow != sideMeadow {
@@ -174,7 +174,25 @@ func TestV3SideLean(t *testing.T) {
 			}
 		}
 	}
+	// South of the block, meadow too (Southfields runs on into it: playtest 3).
+	var south [3]share
+	for _, ws := range v3Worlds(10) {
+		w := newWorld(WickEpoch(ws[0], ws[1]))
+		for tx := -21; tx <= 44; tx += 2 {
+			for d := 1; d <= ring; d += 3 {
+				band := (d - 1) * 3 / ring
+				if w.landOne(tx, 119+d) == meadow {
+					south[band].hit++
+				}
+				south[band].n++
+			}
+		}
+	}
 	pc := func(s share) int { return s.hit * 100 / s.n }
+	t.Logf("meadow south %d%% %d%% %d%%", pc(south[0]), pc(south[1]), pc(south[2]))
+	if pc(south[0]) < 75 || pc(south[0]) < pc(south[2])+20 {
+		t.Fatalf("no meadow lean south of the block: %d%% near, %d%% at ring 1's edge", pc(south[0]), pc(south[2]))
+	}
 	t.Logf("woods west %d%% %d%% %d%%, meadow east %d%% %d%% %d%%", pc(west[0]), pc(west[1]), pc(west[2]), pc(east[0]), pc(east[1]), pc(east[2]))
 	for _, side := range [][3]share{west, east} {
 		if pc(side[0]) < 75 || pc(side[0]) < pc(side[2])+20 {

@@ -1,6 +1,7 @@
 package wilds
 
 import (
+	"strings"
 	"sync"
 
 	"glimway/content"
@@ -46,8 +47,20 @@ type softTile struct {
 type seamData struct {
 	soft    map[[2]int]softTile
 	keepOut map[[2]int]bool
-	blocks  []box // the fixed places, touching ones merged (fp)
+	blocks  []box   // the fixed places, touching ones merged (fp)
+	aprons  []apron // the town's south mouths
 }
+
+// apron: a fixed mouth wider than a route (the South Gate and the Lot Row
+// lane ends, 3 tiles) keeps its width past the mirrored rows and frays to
+// the route's trodden line over a few tiles, so the path runs on without a
+// step at the seam (playtest 3).
+type apron struct {
+	cx, ey, dy int // the mouth's middle tile, its edge row, and the way out
+	half       int // tiles either side of the middle
+}
+
+const apronDepth = 8 // the last tile past the edge the apron reaches
 
 var seams = sync.OnceValue(func() *seamData {
 	S := chunkSize()
@@ -94,6 +107,29 @@ var seams = sync.OnceValue(func() *seamData {
 			}
 		}
 	}
+	// The town's south mouths: as wide as the road there on the fixed edge.
+	for _, p := range content.PlacesRules.GetFixed() {
+		if p.GetId() != "hearthwick" {
+			continue
+		}
+		for _, e := range fixedPorts(p, 0, 1) {
+			tx, ty := e.end.tile()
+			ey := ty - 1
+			x0, _, x1, _ := content.FixedChunks(p)
+			road := func(x int) bool {
+				if x < x0*chunkSize() || x >= (x1+1)*chunkSize() {
+					return false
+				}
+				walk, g := fixedTile(p, x, ey)
+				return walk && !strings.HasPrefix(g.String(), "grass")
+			}
+			half := 0
+			for road(tx-half-1) && road(tx+half+1) {
+				half++
+			}
+			out.aprons = append(out.aprons, apron{tx, ey, 1, half})
+		}
+	}
 	// The block: fixed places merged while any two touch or overlap.
 	for _, p := range content.PlacesRules.GetFixed() {
 		out.blocks = append(out.blocks, fixedBox(p))
@@ -122,6 +158,25 @@ func (w *world) softAt(tx, ty int) (softTile, bool) {
 	}
 	s, ok := seams().soft[[2]int{tx, ty}]
 	return s, ok && s.depth >= softDepth
+}
+
+// apronAt: is (tx, ty) on a mouth's apron? Its middle always; its sides
+// ever less often with the depth, at hashed tiles, so the edge frays.
+func (w *world) apronAt(tx, ty int) bool {
+	if !w.wick {
+		return false
+	}
+	for _, a := range seams().aprons {
+		k := (ty - a.ey) * a.dy
+		off := tx - a.cx
+		if k < softDepth || k > apronDepth || off < -a.half || off > a.half {
+			continue
+		}
+		if off == 0 || int(w.e.hash("apron", tx, ty)%1000) < 1000*(apronDepth-k)/(apronDepth-softDepth+1) {
+			return true
+		}
+	}
+	return false
 }
 
 // softSolid: may the soft band's tile at s stand solid? One tile in each
@@ -154,8 +209,9 @@ func nearKeepOut(tx, ty, r int) bool {
 func fixedBlocks() []box { return seams().blocks }
 
 // sideLean is the land the field leans to beside the fixed block: woods west
-// of it, meadow east, strongest at the block and gone at ring 1's edge, in
-// noisy patches (as the Wend's lean).
+// of it, meadow east and south (Southfields runs on into meadow, with no
+// border: playtest 3), strongest at the block and gone at ring 1's edge, in
+// noisy patches (as the Wend's lean). Below a corner, the nearer side wins.
 func (w *world) sideLean(tx, ty int) (int, bool) {
 	if sideWoods < 0 || sideMeadow < 0 {
 		return 0, false
@@ -168,6 +224,9 @@ func (w *world) sideLean(tx, ty int) (int, bool) {
 		dx := x0 - tx
 		if tx > x1 {
 			land, dx = sideMeadow, tx-x1
+		}
+		if dy := ty - y1; dy > 0 && dy >= dx {
+			land, dx = sideMeadow, dy
 		}
 		d := max(dx, y0-ty, ty-y1)
 		if dx <= 0 || d > r {
