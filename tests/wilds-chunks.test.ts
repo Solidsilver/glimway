@@ -7,6 +7,7 @@ import { FakeOperations } from '../src/lib/api/operations.ts';
 import { WorldChunkSchema, WildsNearResultSchema } from '../src/lib/gen/glimway/v1/wilds_pb.js';
 import { TERRAIN } from '../src/lib/tile.ts';
 import { epochKindAt } from '../src/lib/wilds/coords.ts';
+import { sourceOf } from '../src/lib/location.ts';
 import { DECOR_ART } from '../src/game/wilds/decor.ts';
 import { cachedTerrain, forgetChunks, loadChunk, pruneChunks } from '../src/game/wilds/chunks.ts';
 import { applyClaim, applyEchoSettled, applyLanterns, applyNear, chunkEpoch, chunkThings, groundChanges, isClaimed, readMark, refreshNear, resetWilds, takeReadRequest, wildsEpoch, wildsFrontier, wildsLive, wildsStale, wildsView } from '../src/game/wilds/store.ts';
@@ -170,6 +171,22 @@ test('a near read loads its window, each chunk in its epoch, and merges bodies w
   assert.equal(await refreshNear(session, CENTER.cx, CENTER.cy), true);
   assert.equal(wildsView()!.stale, false);
   assert.ok(wildsLive(session));
+});
+
+test('a near read in Hearthwick fetches no generated chunk of the fixed footprints', async () => {
+  // Each 404'd: fixed ground comes only under its pseudo-epoch (game/wilds/fixed.ts).
+  forgetChunks();
+  resetWilds();
+  const ops = new FakeOperations();
+  const session = fakeSession(ops);
+  const town = { cx: 0, cy: 2 };
+  // The fixture's window-bound rows lie around (-2, -4): none of them here.
+  ops.responses.set(`/api/wilds/near/${town.cx}/${town.cy}`, [nearAt(town.cx, town.cy, (j) => Object.assign(j, { entities: [], ground: [], glimpse: [], ways: [], lanterns: [] }))]);
+  serveWindow(ops, town.cx, town.cy);
+  assert.equal(await refreshNear(session, town.cx, town.cy), true);
+  const fetched = ops.calls.filter((c) => c.path.startsWith('/api/wilds/chunk/')).map((c) => c.path.split('/').slice(-2).map(Number));
+  assert.ok(fetched.length > 0, 'the generated chunks of the window still come');
+  assert.deepEqual(fetched.filter(([x, y]) => sourceOf(x!, y!).kind === 'fixed'), []);
 });
 
 test('a read replaces only its own window: states, claims and changes elsewhere stay', async () => {

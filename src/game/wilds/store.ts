@@ -38,6 +38,7 @@ import type { ChunkGroundChanges, GroundChange, WildsEntityState, WildsEpoch as 
 import { tileKey } from '../../lib/tile.ts';
 import type { WildsClaimResult } from '../../lib/gen/glimway/v1/operations_pb.js';
 import { epochKindAt } from '../../lib/wilds/coords.ts';
+import { sourceOf } from '../../lib/location.ts';
 import { NEAR_RADIUS } from '../../lib/api/near.ts';
 import type { WildsEpochKind } from '../../lib/wilds/types.ts';
 import { EV, bus } from '../events.ts';
@@ -531,11 +532,12 @@ export function chunkTerrain(cx: number, cy: number): ChunkTerrain | null {
   return epoch ? cachedTerrain(epoch.id, cx, cy) : null;
 }
 
-/** Load a chunk's body in its current epoch (null outside the frontier or before a read). */
+/** Load a chunk's body in its current epoch (null outside the frontier, on fixed ground, or before a read). */
 export async function loadWildsChunk(session: Session, cx: number, cy: number): Promise<ChunkTerrain | null> {
   const link = session.link;
   const epoch = chunkEpoch(cx, cy);
-  if (!link || !epoch || !insideNamedFrontier(cx, cy)) return null;
+  // Fixed ground has no generated chunk to fetch: its own come under its pseudo-epoch (./fixed.ts).
+  if (!link || !epoch || !insideNamedFrontier(cx, cy) || sourceOf(cx, cy).kind === 'fixed') return null;
   return loadChunk(link.api.operations, epoch.id, cx, cy);
 }
 
