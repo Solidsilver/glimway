@@ -150,9 +150,11 @@ func orEmpty[T any](s []T) []T {
 
 // placeEntities places content's entity kinds (in rule order, v2's counts)
 // on dry interior tiles clear of the water, the road, the sites and the
-// places, then each place's own entities round its landmark. Ids are
-// `<kind>:<cx>:<cy>:<index>`, the index counting within the kind. A kind
-// with no room left is placed fewer times rather than failing the chunk.
+// places, then each place's own entities round its landmark. No camp (and
+// so no enemy) stands in the keep-out beside the fixed block's open edges.
+// Ids are `<kind>:<cx>:<cy>:<index>`, the index counting within the kind. A
+// kind with no room left is placed fewer times rather than failing the
+// chunk.
 func (d *detail) placeEntities(rng *Rng, cx, cy, tier int, places []*Place, dry []bool, avoid []Tile) []Entity {
 	S := d.S
 	data := content.WildsRules
@@ -168,8 +170,8 @@ func (d *detail) placeEntities(rng *Rng, cx, cy, tier int, places []*Place, dry 
 		}
 		return !d.wetNear(x, y, 2)
 	}
-	free := func(x, y, spacing int) bool {
-		if !ok(x, y) {
+	free := func(kind string, x, y, spacing int) bool {
+		if !ok(x, y) || (kind == kindCamp && keptOut(cx*S+x, cy*S+y)) {
 			return false
 		}
 		for _, a := range avoid {
@@ -189,18 +191,18 @@ func (d *detail) placeEntities(rng *Rng, cx, cy, tier int, places []*Place, dry 
 		}
 		return true
 	}
-	pick := func() (Tile, bool) {
+	pick := func(kind string) (Tile, bool) {
 		room := S - 2*entityMargin
 		for attempt := 0; attempt < placeAttempts; attempt++ {
 			x, y := entityMargin+rng.NextInt(room), entityMargin+rng.NextInt(room)
-			if free(x, y, entitySpacing) {
+			if free(kind, x, y, entitySpacing) {
 				return Tile{x, y}, true
 			}
 		}
 		for spacing := entitySpacing - 1; spacing >= 2; spacing-- {
 			for y := entityMargin; y < S-entityMargin; y++ {
 				for x := entityMargin; x < S-entityMargin; x++ {
-					if free(x, y, spacing) {
+					if free(kind, x, y, spacing) {
 						return Tile{x, y}, true
 					}
 				}
@@ -220,7 +222,7 @@ func (d *detail) placeEntities(rng *Rng, cx, cy, tier int, places []*Place, dry 
 	for _, rule := range data.EntityKinds {
 		n := rng.Between(int(rule.GetMin()), int(rule.GetMax()))
 		for i := 0; i < n; i++ {
-			if t, found := pick(); found {
+			if t, found := pick(rule.GetKind()); found {
 				add(rule.GetKind(), t)
 			}
 		}
@@ -231,7 +233,7 @@ func (d *detail) placeEntities(rng *Rng, cx, cy, tier int, places []*Place, dry 
 			for y := p.TY - p.clearing; y <= p.TY+p.clearing; y++ {
 				for x := p.TX - p.clearing; x <= p.TX+p.clearing; x++ {
 					c := cheb(x-p.TX, y-p.TY)
-					if c < 2 || c > p.clearing-1 || (x == p.TX && y > p.TY) || !d.inBounds(x, y) || !d.walk[d.at(x, y)] || !ok(x, y) {
+					if c < 2 || c > p.clearing-1 || (x == p.TX && y > p.TY) || !d.inBounds(x, y) || !d.walk[d.at(x, y)] || !ok(x, y) || (kind == kindCamp && keptOut(cx*S+x, cy*S+y)) {
 						continue
 					}
 					clear := true
@@ -346,7 +348,8 @@ func dealSlots(e Epoch, p *content.WildsPlace) []siteSlot {
 }
 
 // placeDealt places this chunk's dealt sites clear of the edge, the water,
-// the road, the entities, the places and each other.
+// the road, the entities, the places, each other and the fixed block's
+// keep-out.
 func (d *detail) placeDealt(rng *Rng, cx, cy int, slots []siteSlot, entities []Entity, fixed []Site, places []*Place, dry []bool) []Site {
 	S := d.S
 	out := []Site{}
@@ -356,7 +359,7 @@ func (d *detail) placeDealt(rng *Rng, cx, cy int, slots []siteSlot, entities []E
 		}
 		free := func(x, y, entityGap int) bool {
 			i := d.at(x, y)
-			if !dry[i] || d.blocked[i] || d.wetNear(x, y, 2) {
+			if !dry[i] || d.blocked[i] || d.wetNear(x, y, 2) || keptOut(cx*S+x, cy*S+y) {
 				return false
 			}
 			switch d.base[i].kind {

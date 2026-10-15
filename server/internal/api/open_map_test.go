@@ -157,8 +157,9 @@ func TestWildsClear(t *testing.T) {
 	if len(n.Ground) != 1 || n.Ground[0].Epoch != n.Wick.Id || len(n.Ground[0].Changes.Changes) != 2 {
 		t.Fatal("near ground", n.Ground)
 	}
-	// Beyond the frontier: the where itself is refused.
-	if _, code := x.pathOp(c, s, "clear", "beyond", 5*24+1, -10, 5*24+1, -11, "", 409); code != "beyond-frontier" {
+	// Beyond the frontier: the where itself is refused. Chunk (6, -1) is four
+	// chunks past the east lot column (cx 2), one past the frontier's reach.
+	if _, code := x.pathOp(c, s, "clear", "beyond", 6*24+1, -10, 6*24+1, -11, "", 409); code != "beyond-frontier" {
 		t.Fatal(code)
 	}
 	// Water, fords and paving can't be cleared, nor an entity's tile.

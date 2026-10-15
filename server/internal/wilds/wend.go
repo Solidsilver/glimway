@@ -16,7 +16,10 @@ import "glimway/content"
 // and the reach test shows that's enough: nothing is walled off.
 
 const (
-	riverMargin = 10 // tiles the river's centre keeps from the Tangle and the Whitequiet's middle
+	// Tiles the river's centre keeps from the Tangle, the Whitequiet's
+	// middle and (beyond its widest half) the west lot column, whose banks
+	// then stay clear of the seams' feather (seams.go).
+	riverMargin = 10
 	bankWidth   = 3 * fp / 2
 )
 

@@ -12,7 +12,9 @@ import "glimway/content"
 // it, so a route runs a few tiles into it (on its north side, into the
 // lantern-road opening). The Tangle is kept (still epoch): a route ends just
 // outside it at its edge gap on that side, which the wick chunk there copies
-// across the seam; it stays out of the Tangle's chunks everywhere else.
+// across the seam; it stays out of the Tangle's chunks everywhere else. The
+// fixed block (town and lot columns) is kept too: routes end just outside
+// its public mouths (fixedPorts), several on one side when it has several.
 //
 // Edge gaps. So that every chunk joins its four neighbours whatever the
 // routes do, every chunk edge has one gap: a 3-tile opening through the two
@@ -33,19 +35,23 @@ type route struct {
 	line *line
 }
 
+// routeEnd is one end of a route: the end itself and the waypoint its
+// bends start from.
+type routeEnd struct{ end, way pt }
+
 // cellLinks are the routes of a cell's four sides.
 func (w *world) cellLinks(x, y int) []*route {
 	var out []*route
 	for _, d := range dirs4 {
-		if r := w.routeBetween([2]int{x, y}, [2]int{x + d[0], y + d[1]}); r != nil {
-			out = append(out, r)
-		}
+		out = append(out, w.routeBetween([2]int{x, y}, [2]int{x + d[0], y + d[1]})...)
 	}
 	return out
 }
 
-// routeBetween is the route joining two side-by-side cells, or nil.
-func (w *world) routeBetween(a, b [2]int) *route {
+// routeBetween are the routes joining two side-by-side cells: one, or one
+// from each of the fixed block's mouths on that side (the South Gate and the
+// two Lot Row lane ends share a side), or none.
+func (w *world) routeBetween(a, b [2]int) []*route {
 	if !w.wick {
 		return nil
 	}
@@ -60,11 +66,19 @@ func (w *world) routeBetween(a, b [2]int) *route {
 	if FootprintCell(a[0], a[1]) && FootprintCell(b[0], b[1]) {
 		return nil // the footprints meet at their own opening
 	}
-	pa, wa, okA := w.routeEnd(a, b)
-	pb, wb, okB := w.routeEnd(b, a)
-	if !okA || !okB {
-		return nil
+	endsA, endsB := w.routeEnds(a, b), w.routeEnds(b, a)
+	var out []*route
+	for _, ea := range endsA {
+		for _, eb := range endsB {
+			out = append(out, w.newRoute(a, b, ea, eb, len(out)))
+		}
 	}
+	w.routes[key] = out
+	return out
+}
+
+// newRoute is the k-th route between cells a and b, from ea to eb.
+func (w *world) newRoute(a, b [2]int, ea, eb routeEnd, k int) *route {
 	inside := cellBox(a[0], a[1])
 	cb := cellBox(b[0], b[1])
 	inside = box{min(inside.x0, cb.x0), min(inside.y0, cb.y0), max(inside.x1, cb.x1), max(inside.y1, cb.y1)}.grow(-routeMargin)
@@ -76,10 +90,14 @@ func (w *world) routeBetween(a, b [2]int) *route {
 		}
 		return p
 	}
-	rng := NewRng(w.e.hash("route", a[0], a[1], b[0], b[1]))
-	mid := displace(wa, wb, 3, 300, rng, fix)
-	pts := append([]pt{pa}, mid...)
-	pts = append(pts, pb)
+	seed := w.e.hash("route", a[0], a[1], b[0], b[1])
+	if k > 0 {
+		seed = w.e.hash("route", a[0], a[1], b[0], b[1], k)
+	}
+	rng := NewRng(seed)
+	mid := displace(ea.way, eb.way, 3, 300, rng, fix)
+	pts := append([]pt{ea.end}, mid...)
+	pts = append(pts, eb.end)
 	pts = dedupe(pts)
 	// Round any kept footprint's corner the route still cuts.
 	for pass := 0; pass < 3; pass++ {
@@ -103,79 +121,85 @@ func (w *world) routeBetween(a, b [2]int) *route {
 	for i := 0; i+1 < len(pts); i++ {
 		r.line.boxes = append(r.line.boxes, segBox(pts[i], pts[i+1]).grow(routeVerge))
 	}
-	w.routes[key] = r
 	return r
 }
 
-// routeEnd is where a route leaves cell c toward cell to: the end itself
-// and the waypoint its bends start from.
-func (w *world) routeEnd(c, to [2]int) (end, way pt, ok bool) {
+// routeEnds are where routes leave cell c toward cell to: its place's
+// front, a footprint's port, or the fixed block's mouths on that side.
+func (w *world) routeEnds(c, to [2]int) []routeEnd {
 	if p := w.place(c[0], c[1]); p != nil {
 		x, y := p.front()
 		e := tileCentre(x, y)
-		return e, e, true
+		return []routeEnd{{e, e}}
 	}
 	if !FootprintCell(c[0], c[1]) {
-		return pt{}, pt{}, false
+		return nil
 	}
 	cx0, cy0 := cellChunk0(c[0], c[1])
 	n := int(contentRules().GetCells().GetCellChunks())
+	dx, dy := to[0]-c[0], to[1]-c[1]
+	fixed := false
+	var out []routeEnd
 	for _, f := range content.PlacesRules.GetFixed() {
 		x0, y0, x1, y1 := content.FixedChunks(f)
 		if cx0 > x1 || cx0+n-1 < x0 || cy0 > y1 || cy0+n-1 < y0 {
 			continue
 		}
-		end, way, ok = w.fixedPort(f, to[0]-c[0], to[1]-c[1])
-		if !ok {
-			return pt{}, pt{}, false
+		fixed = true
+		for _, e := range fixedPorts(f, dx, dy) {
+			// A partially occupied cell owns only the mouths on its own
+			// fixed tiles.
+			tx, ty := e.end.tile()
+			if px, py := CellOf(floorDiv(tx-dx, chunkSize()), floorDiv(ty-dy, chunkSize())); px == c[0] && py == c[1] {
+				out = append(out, e)
+			}
 		}
-		tx, ty := end.tile()
-		px, py := CellOf(floorDiv(tx-(to[0]-c[0]), chunkSize()), floorDiv(ty-(to[1]-c[1]), chunkSize()))
-		// A partially occupied cell owns only the mouths on its own fixed tiles.
-		if px != c[0] || py != c[1] {
-			return pt{}, pt{}, false
-		}
-		return end, way, true
+	}
+	if fixed {
+		return out
 	}
 	foot := FootprintAt(cx0, cy0)
 	if foot == nil {
-		return pt{}, pt{}, false
+		return nil
 	}
-	return w.port(foot, to[0]-c[0], to[1]-c[1])
+	if end, way, ok := w.port(foot, dx, dy); ok {
+		return []routeEnd{{end, way}}
+	}
+	return nil
 }
 
-// fixedPort joins an authored road/spine mouth to the generated network.
-// Ends stand just outside fixed ground; waypoints keep the bends away from
-// its collision. Internal town/lot joins need no generated route.
-func (w *world) fixedPort(p *content.FixedPlace, dx, dy int) (end, way pt, ok bool) {
-	var x, y int
+// fixedPorts join the fixed block's public mouths on side (dx, dy) to the
+// generated network (hearthwick-2.md §1): the South Gate and the Lot Row
+// lane ends south, and a wildgate out of each lot column. Ends stand just
+// outside fixed ground; waypoints keep the bends away from its collision.
+// The joins inside the block (town to lots), the Tangle Arch and the lots'
+// open backs (each a household's own) take no generated route.
+func fixedPorts(p *content.FixedPlace, dx, dy int) []routeEnd {
+	// The mouths: their middle on the fixed edge, in half tiles (a 2-wide
+	// wildgate's middle lies between its tiles).
+	var mouths [][2]int
 	switch p.GetId() {
 	case "hearthwick":
-		switch {
-		case dx > 0:
-			x, y = 47, 59
-		case dx < 0:
-			return pt{}, pt{}, false
-		case dy > 0:
-			x, y = 9, 95
-		default:
-			x, y = 2, 24
+		if dy > 0 {
+			mouths = [][2]int{{2 * 12, 2 * 119}, {2 * -23, 2 * 119}, {2 * 46, 2 * 119}}
 		}
-	case "homestead-lots":
-		switch {
-		case dx < 0:
-			x, y = -72, 69
-		case dx > 0:
-			return pt{}, pt{}, false
-		case dy > 0:
-			x, y = -49, 119
-		default:
-			x, y = -49, 24
+	case "lots-west":
+		if dx < 0 {
+			mouths = [][2]int{{2 * -48, 2*71 + 1}}
 		}
-	default:
-		return pt{}, pt{}, false
+	case "lots-east":
+		if dx > 0 {
+			mouths = [][2]int{{2 * 71, 2*71 + 1}}
+		}
 	}
-	return tileCentre(x+dx, y+dy), tileCentre(x+dx*10, y+dy*10), true
+	var out []routeEnd
+	for _, m := range mouths {
+		at := func(k int) pt {
+			return pt{(m[0]+2*dx*k)*fp/2 + fp/2, (m[1]+2*dy*k)*fp/2 + fp/2}
+		}
+		out = append(out, routeEnd{at(1), at(10)})
+	}
+	return out
 }
 
 // port is a footprint's end of a route leaving it by side (dx, dy).
@@ -252,7 +276,9 @@ func sideName(dx, dy int) string {
 }
 
 // keptBoxes are the footprints of another epoch kind than this world's (a
-// wick world's view of the Tangle).
+// wick world's view of the Tangle), and the fixed block (town and lot
+// columns as one box, so a route pushed out of one isn't pushed into the
+// next).
 func (w *world) keptBoxes() []box {
 	var out []box
 	for _, p := range contentRules().Places {
@@ -260,10 +286,7 @@ func (w *world) keptBoxes() []box {
 			out = append(out, footprintBox(p))
 		}
 	}
-	for _, p := range content.PlacesRules.GetFixed() {
-		out = append(out, fixedBox(p))
-	}
-	return out
+	return append(out, fixedBlocks()...)
 }
 
 // pushOut moves a point inside b to b's nearest side.

@@ -199,8 +199,9 @@ func (w *world) fieldOwner(tx, ty int, pts []landPoint) int {
 	return best
 }
 
-// patchAt is a tile's patch and the land it gives there (the river's pull
-// applied; a footprint's own land in a footprint).
+// patchAt is a tile's patch and the land it gives there (the river's pull,
+// then the fixed block's side lean, applied; a footprint's own land in a
+// footprint).
 func (w *world) patchAt(tx, ty int, pts []landPoint, riverD2 int64) (owner, int) {
 	S := chunkSize()
 	cx, cy := floorDiv(tx, S), floorDiv(ty, S)
@@ -213,6 +214,11 @@ func (w *world) patchAt(tx, ty int, pts []landPoint, riverD2 int64) (owner, int)
 	l := q.land
 	if riverLeanLand >= 0 && w.riverLean(tx, ty, riverD2) {
 		l = riverLeanLand
+	}
+	// Beside the block the lots' own sides win: the Wend runs close west
+	// of the west lots, and their woods come down to it there.
+	if side, ok := w.sideLean(tx, ty); ok {
+		l = side
 	}
 	return owner{lx: q.lx, ly: q.ly}, l
 }

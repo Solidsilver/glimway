@@ -19,7 +19,7 @@ type world struct {
 	landPts   map[[2]int]landPoint // as drawn
 	landFinal map[[2]int]landPoint // islands settled
 	places    map[[2]int]*Place
-	routes    map[[4]int]*route
+	routes    map[[4]int][]*route
 	gaps      map[gapKey]int // edge gap offsets (-1: none)
 
 	river *river // nil in a still epoch
@@ -38,7 +38,7 @@ func newWorld(e Epoch) *world {
 		landPts:   map[[2]int]landPoint{},
 		landFinal: map[[2]int]landPoint{},
 		places:    map[[2]int]*Place{},
-		routes:    map[[4]int]*route{},
+		routes:    map[[4]int][]*route{},
 		gaps:      map[gapKey]int{},
 		warpX:     noise{e.hash("warp-x")},
 		warpY:     noise{e.hash("warp-y")},
