@@ -1,0 +1,90 @@
+{
+  "tool": "built-in image_gen",
+  "style_reference": "docs/art-requests.md (full preamble); docs/art-request-playtest1.md; assets/generated/playtest1-pass/houses/; assets/generated/yard-pass/; .agent/wilds-refs/",
+  "generations": [
+    {
+      "id": "wick-trees-round2",
+      "source": "sheets/generated-wick-trees.png",
+      "generation_file": "exec-d5555682-b50e-40d3-ba7e-2dfe21ff4414.png",
+      "references": [
+        "assets/generated/playtest1-pass/houses/fingersnap-house-west.png",
+        "assets/generated/yard-pass/sheets/cottage-silas-source-v2.png",
+        ".agent/wilds-refs/seam-north.png",
+        ".agent/wilds-refs/seam-lot1.png"
+      ],
+      "prompt": "Asset type: original low resolution RPG sprite for Fingersnap, a cozy lantern-lit pixel-art village RPG. Genuine transparent background, isolated poses, no labels/grid, large transparent gutters. Top-down three-quarter RPG viewpoint, not isometric. STRICT ultra simple chunky pixel style designed to read at its native size, few large flat-colour blocks, dark warm brown #3a2a28 outline, lit from upper left, no gradients, no antialiasing, no painterly detail.\nUse case: stylized-concept. Production sheet to crop into four seasonal tree frames.\nInput images: Image 1 shows Fingersnap house outline and pixel scale; Image 2 is a timber color/style reference; Images 3 and 4 show the owner's preferred Wilds trees, speckled ground and muted palette.\nScene: transparent. Exactly four isolated full-canopy giant ancient oaks in a clean 2x2 grid with generous transparent gutters. Same broad spreading gnarled tree identity in four seasonal Marks: Mudrise pale buds; Carting deep summer green; Amberfall amber/russet leaves; Quiet frosted white-teal leaves. Dark layered clumped crowns with teal shadows, lighter crowns, several twisting branches, thick gnarled trunk and roots gripping ground; small wooden sap spile and pail on trunk. Mature Wilds style, not lollipop.\nComposition: upright, front of trunk faces south, square to grid, full tree visible, bases aligned along each cell's bottom. Warm muted bark and Wilds season ramps; chunky silhouettes and 1px #3a2a28 outline at 64 texels per 16px tile. No text, labels, borders, background, people, buildings, diagonal placement, isometric, blur, gradients, matte fringes or watermark."
+    },
+    {
+      "id": "houses-main-round2",
+      "source": "sheets/generated-houses-1.png",
+      "generation_file": "exec-1fb9e7bf-713b-4ef7-879c-f5ca950a2792.png",
+      "references": [
+        "assets/generated/playtest1-pass/houses/fingersnap-house-west.png",
+        "assets/generated/playtest1-pass/houses/fingersnap-house-middle.png",
+        "assets/generated/yard-pass/sheets/cottage-silas-source-v2.png",
+        ".agent/wilds-refs/seam-lot3.png"
+      ],
+      "prompt": "Asset type: original low resolution RPG sprite for Fingersnap, a cozy lantern-lit pixel-art village RPG. Genuine transparent background, isolated poses, no labels/grid, large transparent gutters. Top-down three-quarter RPG viewpoint, not isometric. STRICT ultra simple chunky pixel style designed to read at its native size, few large flat-colour blocks, dark warm brown #3a2a28 outline, lit from upper left, no gradients, no antialiasing, no painterly detail.\nUse case: stylized-concept. Production source sheet to crop into eight facade frames.\nInput images: Images 1 and 2 show the exact Fingersnap house pixel art and outline; Image 3 shows a detailed cottage; Image 4 gives muted Wilds palette context.\nScene: transparent. Exactly eight separate full building sprites in 4 columns by 2 rows: townhouse-a, townhouse-b, townhouse-c, cottage-a, cottage-b, cottage-c, inn, barn. Townhouses are narrow two-storey timber-frame homes with detailed russet, slate-blue, and straw shingle roofs respectively, stone footing, one glowing amber window, flower box and centered south-facing door. Cottages are one-storey stone-and-timber homes with moss-green, russet and slate roofs, chimney, small porch, window boxes and centered south-facing doors. Inn is a broad two-storey timber inn on stone footing, double doors, hanging sign bracket, bench and warm windows. Barn is a broad red-brown timber farm barn with big cross-braced double doors, upper hayloft door and stone footing.\nComposition: straight-on front facade in the game's top-down three-quarter view, faces south, square to grid, no rotation. Roofs about two tiles above the foot. Complete silhouette visible; align base on lower edge of each cell. Chunky tiled roof and individually readable framing and stonework. Upper-left light. Palette: weathered golden stone, russet wood, slate, straw and moss roofs, amber windows, warm muted tones. Density: 64 texels per 16-px tile. Keep 1-pixel #3a2a28 outline and coarse flat-color groups. Avoid text, labels, grid, borders, roads, trees, people, side elevations, angled houses, isometric diamond, plain rectangle facades, photorealism, blur, gradients, antialiasing, red matte fringe, watermark. Exactly eight sprites and transparent gutters."
+    },
+    {
+      "id": "houses-trades-round2",
+      "source": "sheets/generated-houses-2.png",
+      "generation_file": "exec-03d12162-0fe9-4923-be68-e519e1980fd4.png",
+      "references": [
+        "assets/generated/playtest1-pass/houses/fingersnap-house-west.png",
+        "assets/generated/playtest1-pass/houses/fingersnap-house-middle.png",
+        "assets/generated/yard-pass/sheets/cottage-silas-source-v2.png",
+        ".agent/wilds-refs/seam-north.png"
+      ],
+      "prompt": "Asset type: original low resolution RPG sprite for Fingersnap, a cozy lantern-lit pixel-art village RPG. Genuine transparent background, isolated poses, no labels/grid, large transparent gutters. Top-down three-quarter RPG viewpoint, not isometric. STRICT ultra simple chunky pixel style designed to read at its native size, few large flat-colour blocks, dark warm brown #3a2a28 outline, lit from upper left, no gradients, no antialiasing, no painterly detail.\nUse case: stylized-concept. Transparent production sheet to crop into five game building frames.\nInput images: Images 1 and 2 show Fingersnap front-facing timber-frame houses and outlines; Image 3 is a warm cottage detail reference; Image 4 is Wilds palette context.\nScene: transparent. Exactly five cosy detailed village buildings in 3 columns by 2 rows, final bottom-right cell empty, reading order: chandler, land-office, smithy, guildhouse, Orrin's workshop. Chandler: narrow candle-maker shop, amber lamp above centred door, candle and oil-jar display window. Land office: compact tidy stone clerk building, slate roof, pinned plot map beside door. Smithy: broad timber and stone front with stone footing, open forge mouth with warm coals, chimney, anvil and a few wall tools under a shallow lean-to. Guildhouse: broad stone and timber civic building, tall windows, carved simple wheel-and-candle crest over centered door. Workshop: sign-maker facade with wide open shutters and a few upright painted signboards beside the south-facing entrance.\nComposition: complete straight-on front facades facing south in top-down three-quarter game view, square to tile grid, no rotation or angled placement. Roofs around two tiles above foot; entrance at bottom; align bases in each cell. Give each a textured roof, timber framing, window details, flower boxes where fitting, stone footing, and rich readable handmade detail. Upper-left light. Palette: russet, slate, straw and moss roofs; weathered golden stone, russet timber, muted plaster and amber light, fitting Wilds screenshots. Style: crisp coarse pixel clusters at 64 texels per 16px tile, flat-color shapes, one-pixel #3a2a28 outline. Avoid text, labels, border, grid, people, landscaping, roads, fences, diagonals, 30-degree turns, side views, isometric diamond, featureless rectangles, photorealism, blur, gradients, antialiasing, red matte fringe, watermark."
+    },
+    {
+      "id": "town-props-round2",
+      "source": "sheets/generated-town-props.png",
+      "generation_file": "exec-060fd443-fdd0-4ebd-a5d3-2fb32b9ed25f.png",
+      "references": [
+        "assets/generated/playtest1-pass/houses/fingersnap-house-west.png",
+        "assets/generated/yard-pass/frames/yard-counter.png",
+        ".agent/wilds-refs/seam-north.png",
+        ".agent/wilds-refs/seam-lot1.png"
+      ],
+      "prompt": "Asset type: original low resolution RPG sprite for Fingersnap, a cozy lantern-lit pixel-art village RPG. Genuine transparent background, isolated poses, no labels/grid, large transparent gutters. Top-down three-quarter RPG viewpoint, not isometric. STRICT ultra simple chunky pixel style designed to read at its native size, few large flat-colour blocks, dark warm brown #3a2a28 outline, lit from upper left, no gradients, no antialiasing, no painterly detail.\nUse case: stylized-concept. Transparent production sprite sheet, exact 4x4 cells, fourteen isolated village and farm props.\nInput images: Image 1 gives exact Fingersnap pixel scale and outline; Image 2 shows warm carved prop detail; Images 3 and 4 show Wilds ground, teal shadows and warm muted palette.\nSubject in cell order: six shop signs showing loaf, mug, candle, anvil, scroll, cartwheel; then barrel, two-crate stack, grain sack pile, handcart, stone water trough, washing line with linen, round haystack, patched upright scarecrow. Signs occupy the first six cells in reading order. Symbols only, never letters.\nComposition: every object upright, square to grid, fronts face south; signs hang straight, cart and trough sit square, scarecrow stake vertical. Complete silhouettes centered in equal cells, transparent gutters. Palette: russet wood, golden weathered stone, muted straw and linen, amber accent, natural pieces with teal-green shadows. Chunky staves, iron hoops, crate planks, folded sacks, cart spokes and coarse straw pixels. 64 texels per 16px tile; one-texel #3a2a28 outline, upper-left light. Avoid text, labels, border, grid lines, people, ground tiles, buildings, extra objects, diagonals, rotated props, isometric diamond, photorealism, blur, gradients, antialiasing, red fringe, watermark."
+    },
+    {
+      "id": "shop-sign-anvil-round2",
+      "source": "sheets/generated-anvil-sign.png",
+      "generation_file": "exec-d1b27d8e-cd9f-4817-9486-27e243c729c7.png",
+      "references": [
+        "assets/generated/playtest1-pass/houses/fingersnap-house-west.png",
+        "assets/generated/yard-pass/frames/yard-counter.png",
+        "assets/generated/hearthwick2-pass/sheets/generated-town-props.png",
+        ".agent/wilds-refs/seam-lot1.png"
+      ],
+      "prompt": "Asset type: original low resolution RPG sprite for Fingersnap, a cozy lantern-lit pixel-art village RPG. Genuine transparent background, isolated poses, no labels/grid, large transparent gutters. Top-down three-quarter RPG viewpoint, not isometric. STRICT ultra simple chunky pixel style designed to read at its native size, few large flat-colour blocks, dark warm brown #3a2a28 outline, lit from upper left, no gradients, no antialiasing, no painterly detail.\nUse case: stylized-concept. One isolated hanging shop sign sprite.\nInput images: Image 1 defines Fingersnap house outline and palette; Image 2 is warm carved prop detail; Image 3 shows the generated village shop signs for matching wood and bracket; Image 4 shows muted Wilds palette.\nSubject: a small hanging wooden village shop sign on an iron bracket, square board with a clear simple anvil silhouette icon centered on it. The anvil should be large and instantly readable. Sign board in warm russet wood, chunky dark outline, iron bracket and short upright support. No letters or words.\nComposition: front-facing and straight-on, square to tile grid, upright and centered, full sign and bracket visible, transparent all around. Warm upper-left highlight, 64 texels per 16px tile, chunky pixels, one-pixel #3a2a28 outline. Avoid text, letters, labels, grid, border, extra props, diagonal placement, angled sign, isometric view, fine gradients, blur, antialiasing, red matte fringe, watermark."
+    },
+    {
+      "id": "wilds-small-round2",
+      "source": "sheets/generated-wilds-small.png",
+      "generation_file": "exec-29fb3cbf-1f0b-4907-acc0-9c39a3c4deef.png",
+      "references": [
+        "assets/generated/hearthwick2-pass/sheets/generated-wick-trees.png",
+        ".agent/wilds-refs/seam-lot1.png",
+        ".agent/wilds-refs/seam-lot3.png",
+        ".agent/wilds-refs/seam-north.png"
+      ],
+      "prompt": "Asset type: original low resolution RPG sprite for Fingersnap, a cozy lantern-lit pixel-art village RPG. Genuine transparent background, isolated poses, no labels/grid, large transparent gutters. Top-down three-quarter RPG viewpoint, not isometric. STRICT ultra simple chunky pixel style designed to read at its native size, few large flat-colour blocks, dark warm brown #3a2a28 outline, lit from upper left, no gradients, no antialiasing, no painterly detail.\nUse case: stylized-concept. Transparent production sheet of seven natural sprites in 4 columns by 2 rows, last cell empty.\nInput images: Image 1 is the generated large Wick Tree style; Images 2–4 show the owner's Wilds preference: dark layered canopies, teal shadows, birches, speckled earth, undergrowth and muted warmth.\nSubject in order: four small orchard pear trees with same upright silhouette and scale in Mudrise pale blossom, Carting green leaves and visible pears, Amberfall russet foliage, Quiet bare/frosted boughs; one raised vegetable allotment bed with tidy rows of greens in dark speckled soil; a small clear spring ringed by irregular mossy stones in ripple frame A; the same spring with subtly shifted water ripple in frame B. Trees are miniature Wilds layered clumped trees with dark teal occlusion, branching trunks and expressive crowns, never lollipop trees. Spring must be a natural pool, not a trough.\nComposition: centered separated sprite per cell; trees upright with trunks facing south; spring shown slightly from above; allotment aligned to grid and facing south. Square to tile grid with no rotation. 64 texels per 16px tile. Coarse flat color clusters, one-texel #3a2a28 outline and upper-left light. Palette: deep emerald and teal shadows, seasonal leaf ramps, muted golden russets, pale frost, mossy warm stone, speckled earth and clear water. Match Wilds references. Avoid labels, letters, grids, ground tile, landscape, building, people, lollipop canopy, straight thin trunks, trough shape, rotated objects, diagonal placement, smooth gradients, blur, antialiasing, photorealism, red fringe, watermark."
+    },
+    {
+      "id": "lot-pieces-round2",
+      "source": "sheets/generated-lot-animated.png",
+      "generation_file": "exec-1014c658-9151-403c-ab01-4bb36a64f8f1.png",
+      "references": [
+        "assets/generated/playtest1-pass/houses/fingersnap-house-west.png",
+        "assets/generated/yard-pass/frames/yard-timber-rack.png",
+        "assets/generated/playtest1-pass/bridge/fingersnap-brackenwood-bridge.png",
+        ".agent/wilds-refs/seam-north.png"
+      ],
+      "prompt": "Asset type: original low resolution RPG sprite for Fingersnap, a cozy lantern-lit pixel-art village RPG. Genuine transparent background, isolated poses, no labels/grid, large transparent gutters. Top-down three-quarter RPG viewpoint, not isometric. STRICT ultra simple chunky pixel style designed to read at its native size, few large flat-colour blocks, dark warm brown #3a2a28 outline, lit from upper left, no gradients, no antialiasing, no painterly detail.\nUse case: stylized-concept. Transparent 4-column by 3-row production sheet for twelve animation and lot sprite frames.\nInput images: Image 1 establishes Fingersnap house outline and palette; Image 2 is coarse timber prop style; Image 3 is rustic arch reference; Image 4 shows Wilds textures and muted colors.\nSubject by exact cell order: row 1: hearth-stone ember frames 0,1,2, then forge-glow frame 0. Row 2: forge-glow frames 1 and 2, then washing-line sway frames 0 and 1. Row 3: lantern-stake bare, lantern-stake with amber lantern, straight wooden lot-gatepost-side, and low rustic wildgate arch of bent saplings tied over footpath. Hearth is low round golden fieldstone ring viewed slightly from above, dark bed with ember coals and tiny smoke, no cobbles; keep its silhouette exactly same for first three and vary only embers. Forge glow frames are isolated flame pixels only, no forge background. Washing line pair has two upright posts and modest cloth, same shape with subtle linen sway. Stakes/post vertical and arch square to grid.\nComposition: each centered and fully separated in an equal cell, upright, straight to grid, front faces south where applicable. No rotation or diagonal placement. Warm upper-left highlights and one-pixel #3a2a28 outline at 64 texels per 16px tile. Palette/material: golden weathered stones, russet wood, amber/orange/red coals, muted sapling green and teal shadow, iron hooks, linen. Avoid labels, lettering, grid lines, borders, ground/cobbles, buildings, people, extra props, tilted items, 30-degree angle, isometric, smooth gradients, blur, antialiasing, matte fringe, watermark."
+    }
+  ]
+}
