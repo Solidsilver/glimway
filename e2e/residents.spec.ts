@@ -123,7 +123,7 @@ test('once the road is lit, Hazel hands over her own recipe card', async ({ page
   expect(lines.join(' ')).toMatch(/Take the card off my wall/)
   await expect.poll(async () => (await serverState(page)).body.state.flags, { timeout: 10_000 }).toContain('paper:keepers-twists-recipe-card')
   // Pip no longer has it to give.
-  await warp(page, 'outdoors', -8, 75)
+  await warp(page, 'outdoors', -8, 71)
   const pip = await converse(page, 'Pip')
   expect(pip.join(' ')).not.toMatch(/card off the bakery wall/)
 })

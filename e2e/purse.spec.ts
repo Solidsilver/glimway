@@ -323,10 +323,12 @@ test('a priced shelf slot: a friend buys it in glims, and both logs name the oth
   const insideY = slot.ty * 16 + 8
   await place(page, insideX, insideY)
   await expect(page.locator('.prompt')).toContainText('Set out your gate shelf')
+  await waitForLive(page)
   await page.keyboard.press('e')
   await expect.poll(async () => (await homes(page)).mine?.items.some((i) => i.itemDef === 'gate-shelf' && i.scene === 'gate')).toBe(true)
   await place(page, insideX, insideY)
   await expect(page.locator('.prompt')).toContainText('Look at the gift shelf')
+  await waitForLive(page)
   await page.keyboard.press('e')
   const shelf = page.getByRole('dialog', { name: /Gift Shelf/ })
   await expect(shelf).toContainText('buy what has a price')

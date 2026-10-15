@@ -162,6 +162,7 @@ test('a reload on either side of the mouth comes back where it was', async ({ pa
     await expect.poll(async () => (await serverState(page)).body.state.position).toEqual({ x: at.tx * TILE + 8, y: at.ty * TILE + 8 })
     await reenter(page, 'outdoors')
     await waitForWilds(page)
+    await parkCreatures(page)
     // Poll the exact return position: right after a reload the hero can still be
     // settling when read under heavy single-worker load (it lands exactly here;
     // passing runs confirm the match).
@@ -328,7 +329,7 @@ test('Carting Day dressing and Commons interactions leave with their chunks and 
     await place(44)
     await expect.poll(dressing).toBe(3)
     expect((await win(page)).id).toBe(id)
-    expect(await page.evaluate(() => window.__fsNpcs!().map((n) => n.id).sort())).toEqual(['ada', 'elara', 'hazel', 'mara', 'orrin'])
+    expect(await page.evaluate(() => window.__fsNpcs!().map((n) => n.id).sort())).toEqual(['ada', 'elara', 'hazel', 'mara', 'orrin', 'pip'])
   }
 })
 
