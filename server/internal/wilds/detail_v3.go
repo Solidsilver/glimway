@@ -56,9 +56,16 @@ func newDetail(S int, seed uint32, base []baseTile, outer bool, home Tile) *deta
 		bare: make([]bool, S*S), blocked: make([]bool, S*S), network: make([]bool, S*S),
 		specialAt: make([]bool, S*S), taken: make([]bool, S*S), held: make([]bool, S*S),
 	}
+	woods := int8(landIndex("woods"))
 	for i, t := range base {
 		d.walk[i], d.ground[i], d.land[i] = t.walk, t.ground, t.land
 		d.held[i] = t.kind == bSoft && !t.walk
+		// The fixed block's closed edge, mirrored, stands as the edge of a
+		// wood whatever the land: in meadow, a stone or thicket stand on
+		// every tile of it lined up into a hedge (playtest 3).
+		if t.kind == bSeamFixed && !t.walk && woods >= 0 {
+			d.land[i] = woods
+		}
 		if t.kind == bWater || (!t.walk && groundSurface[t.ground] == "water") {
 			d.blocked[i] = true
 		}

@@ -48,7 +48,8 @@ const (
 	bRoute
 	bBank
 	bGap
-	bSoft // the soft band beside an open fixed edge (seams.go)
+	bSoft      // the soft band beside an open fixed edge (seams.go)
+	bSeamFixed // a seam tile mirroring the fixed block's edge
 )
 
 type baseTile struct {
@@ -273,6 +274,9 @@ func (w *world) fillRaw(x0, y0, x1, y1 int, kept *keptReader) []baseTile {
 			if mx, my, ok := w.seamMirror(tx, ty); ok {
 				walk, g := kept.tile(mx, my)
 				t.walk, t.ground, t.kind = walk, g, bSeam
+				if FixedFootprintAt(floorDiv(mx, S), floorDiv(my, S)) != nil {
+					t.kind = bSeamFixed
+				}
 				if walk && (wet || banked || groundSurface[g] == "water" || groundSurface[g] == "ford") {
 					t.ground = groundRiverBank
 				}
@@ -308,6 +312,10 @@ func (w *world) fillRaw(x0, y0, x1, y1 int, kept *keptReader) []baseTile {
 						continue
 					}
 				}
+			}
+			if w.apronAt(tx, ty) {
+				t.walk, t.kind, t.ground = true, bRoute, lg.path
+				continue
 			}
 			if routeD >= 0 && routeD <= routeVerge*routeVerge {
 				t.walk, t.kind = true, bRoute

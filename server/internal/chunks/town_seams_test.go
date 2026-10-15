@@ -93,24 +93,22 @@ func TestTownFixedSeams(t *testing.T) {
 func TestTownSeamUsesSuppliedBytes(t *testing.T) {
 	epoch := FixedEpoch("hearthwick", content.Layouts["hearthwick"].GetRevision())
 	fixed := proto.Clone(Fixed(epoch, 0, 4)).(*contract.WorldChunk)
-	// A trunk on the town's south rim.
-	x := 0
-	for x < 24 && wilds.Walkable(fixed, x, 23) {
-		x++
-	}
-	if x == 24 {
-		t.Fatal("no wall on the fixture's south edge")
+	// The town's south edge is open meadow: close one tile of it in the
+	// supplied copy, and the generated side must mirror the supplied wall.
+	x := 5
+	if !wilds.Walkable(fixed, x, 23) {
+		t.Fatal("fixture edge unexpectedly closed")
 	}
 	i := 23*24 + x
-	fixed.Solid[i/8] &^= 1 << uint(i%8)
+	fixed.Solid[i/8] |= 1 << uint(i%8)
 	ch, err := wilds.GenerateV3(wilds.WickEpoch("stored-edge", "t:100:200"), 0, 5, []wilds.Kept{{CX: 0, CY: 4, Chunk: fixed}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !wilds.Walkable(fixed, x, 23) || wilds.Walkable(Fixed(epoch, 0, 4), x, 23) {
+	if wilds.Walkable(fixed, x, 23) || !wilds.Walkable(Fixed(epoch, 0, 4), x, 23) {
 		t.Fatal("supplied edit mutated shared fixed cache")
 	}
-	if ch.Solid[x] {
+	if !ch.Solid[x] {
 		t.Fatal("authored fallback replaced supplied fixed edge")
 	}
 }

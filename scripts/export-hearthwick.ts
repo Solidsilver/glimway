@@ -15,8 +15,8 @@ for (const [id,x,y] of [
 for(let g=0;g<8;g++){const a=homeEntrance(g);anchors.push({id:`lot:${g}`,tx:a.tx-origin.tx,ty:a.ty-origin.ty});}
 const places = {
  fixed: [
- {id:'hearthwick',name:'Hearthwick',kind:'layout',layout:'hearthwick',revision:3,origin,cx:-1,cy:1,width:3,height:4,rules:rules('village'),zones:[{id:'town-walk',place:'hearthwick',tx:18,ty:18,w:38,h:38,rules:rules('village',false)}],anchors},
- ...(['west','east'] as const).map((side,i)=>({id:`lots-${side}`,name:`${side==='west'?'West':'East'} Row`,kind:'plots',layout:`lots-${side}`,revision:4,origin:tile(i?48:-48,24),cx:i?2:-2,cy:1,width:1,height:4,rules:rules('home'),zones:Array.from({length:4},(_,row)=>({id:`lot-${row*2+i}`,place:`lot:${row*2+i}`,tx:0,ty:row*24,w:24,h:24,rules:rules('home')})),anchors:[]})),
+ {id:'hearthwick',name:'Hearthwick',kind:'layout',layout:'hearthwick',revision:4,origin,cx:-1,cy:1,width:3,height:4,rules:rules('village'),zones:[{id:'town-walk',place:'hearthwick',tx:18,ty:18,w:38,h:38,rules:rules('village',false)}],anchors},
+ ...(['west','east'] as const).map((side,i)=>({id:`lots-${side}`,name:`${side==='west'?'West':'East'} Row`,kind:'plots',layout:`lots-${side}`,revision:5,origin:tile(i?48:-48,24),cx:i?2:-2,cy:1,width:1,height:4,rules:rules('home'),zones:Array.from({length:4},(_,row)=>({id:`lot-${row*2+i}`,place:`lot:${row*2+i}`,tx:0,ty:row*24,w:24,h:24,rules:rules('home')})),anchors:[]})),
  ],generated:{safe:false,ride:true,sync:false,rest:'none'},spaces:{woodland:{safe:false,ride:true,sync:false,rest:'none'},ruin:{safe:false,ride:true,sync:false,rest:'none'}},
 };
 // Curated wire IDs map to painter categories in H3 (src/game/wilds/fixed-ground.ts): meadow, woods, trodden,
@@ -126,7 +126,7 @@ for(const [x,y,v] of [[37,57,'a'],[41,57,'b'],[37,55,'b'],[41,55,'a']] as const)
 for(const [id,x,y] of [['west-road',-21,58],['lantern-road',44,58],['south-gate',10,115]] as const)deco(`way-sign:${id}`,'om-art:way-sign',x,y);
 // The living portal (round 3): two old trees grown into a ring of light over the way out, 3 wide, glowing in a loop.
 deco('brackenwood-arch','living-portal-0',39,56,1,1,false);
-rect(-17,106,0,111,':');rect(-17,113,6,116,'f');rect(16,110,43,115,'f');rect(-18,88,7,93,'f');rect(31,67,41,74,'f');
+rect(-17,106,0,111,':');rect(-17,113,6,117,'f');rect(16,110,43,117,'f');rect(-18,88,7,93,'f');rect(31,67,41,74,'f');
 piece('sawhorse','sawhorse',-16,107);prop('toolbox','tool-crate',-1,107);piece('firebox','firebox',-1,110);piece('timber-stack','timber-stack',-5,109);piece('skids','skids',-8,109);piece('woodpile','woodpile',-12,110);
 // The Wick Tree, one crown a Mark, its trunk solid; the hearth keeps its rest/light ID.
 rect(12,60,13,61,'.',true);seasonal('wick-tree','wick-tree',12,61,2);
@@ -163,12 +163,12 @@ prop('lamp:north','lantern-post',4,26,32,'village');prop('lamp:south','lantern-p
 for(let y=28;y<116;y+=12)for(const x of [-21,44])prop(`lamp:row:${x},${y}`,'lantern-post',x,y,32,'village');
 for(const x of [-21,44])prop(`lamp:wildgate:${x}`,'lantern-post',x,71,32,'village');
 for(const [id,variant,x,y] of [['madder-stall','stall-a',14,66],['stall-b','stall-b',17,64],['stall-c','stall-c',8,56],['bunting','bunting-96',12,53],['bunting-south','bunting-96',12,68]] as const)object(id,'scenery',x,y,{variant,festival:'Carting Day',art:{ox:8,oy:16,depth:5000} as LayoutObject['art']});
-// The town's edge (§5, and the owner's call of 2026-10-15): the Wilds' own code-drawn trees, thickets and
-// undergrowth (the outer drift's atlas, one picture a Mark), thickest at the edge and thinning toward town. Only
-// trunks and thickets block. Facing the generated Wilds (Southfields' south edge, the lot columns' ends) the edge
-// is porous: no two trunks touch, so every gap leads through, and H4's seams open the generated side to match
-// (server/internal/wilds/seams.go). Facing the still Tangle (the north) the trees close it by their thickness: a
-// wandering line of trunks, each touching the next corner to corner, the ground behind it under their crowns.
+// The town's edge (§5, and the owner's calls of 2026-10-15). Facing the still Tangle (the north) the Wilds' own
+// code-drawn trees, thickets and undergrowth (the outer drift's atlas, one picture a Mark) close it by their
+// thickness: a wandering line of trunks, each touching the next corner to corner, the ground behind it under their
+// crowns, lone trees thinning in front. The south has no border at all (playtest 3): its edge row is open grass,
+// and Southfields runs straight on into the generated meadow (H4's seams open the generated side to match:
+// server/internal/wilds/seams.go). The lot columns' ends stay closed by trees on their one row (below).
 // Placement is a pure function of the tile (wildHash), so the export is reproducible.
 const MARKS=['Mudrise','Carting','Amberfall','Quiet'] as const;
 function wildHash(x: number, y: number, k: number): number {
@@ -190,10 +190,9 @@ const treeKind = (tx: number, ty: number) => (['oak', 'oak', 'pine', 'birch'] as
   const blocked = (x: number, y: number) => at(x, y) && solid[y]![x] === '#';
   // Open ground for a piece: grass, two tiles clear of anything placed or built, a tile clear of every road and field.
   const free = (x: number, y: number) => at(x, y) && '.,'.includes(ground[y]![x]!) && solid[y]![x] === '.' && !near(x, y, 2, (i, j) => taken.has(`${i},${j}`) || (blocked(i, j) && !edgeWood.has(`${i},${j}`))) && !near(x, y, 1, road);
-  // The edge rows are the woods' own (the north one is closed until the line below reshapes it).
-  const edgeWood = new Set<string>(Array.from({ length: W }, (_, x) => [`${x},0`, `${x},${H - 1}`]).flat());
-  // The woods' floor (dark) only against the Tangle; toward the meadows of the generated Wilds the rim stays grass.
-  const trunk = (x: number, y: number, kind: string = treeKind(x, y)) => { solid[y]![x] = '#'; if (y < H / 2) ground[y]![x] = ','; edgeWood.add(`${x},${y}`); wildPiece(objects, x, y, kind); };
+  // The edge row is the woods' own (closed until the line below reshapes it).
+  const edgeWood = new Set<string>(Array.from({ length: W }, (_, x) => `${x},0`));
+  const trunk = (x: number, y: number, kind: string = treeKind(x, y)) => { solid[y]![x] = '#'; ground[y]![x] = ','; edgeWood.add(`${x},${y}`); wildPiece(objects, x, y, kind); };
   const under = (x: number, y: number) => { if (ground[y]![x] === '.') ground[y]![x] = ','; };
   // North, against the Tangle: the trunk line wanders over the first three rows, kept to the edge row at the lanes,
   // the arch and wherever the rows in front aren't open grass; it closes on the arch's way (x 1..3) from both sides.
@@ -215,24 +214,23 @@ const treeKind = (tx: number, ty: number) => (['oak', 'oak', 'pine', 'birch'] as
     // More trunks behind a deeper one, for the woods' depth.
     if (line[x]! === 2 && wildHash(x, 0, 13) < 0.4) wildPiece(objects, x, 0, treeKind(x, 0));
   }
-  // South, toward the generated Wilds: the edge row opens to grass (the South Gate and the lanes keep theirs).
+  // South, toward the generated meadow: no border, the edge row open grass (the South Gate and the lanes keep theirs).
   for (let x = 3; x < 69; x++) if (road(x, H - 1) === false) { solid[H - 1]![x] = '.'; ground[H - 1]![x] = '.'; }
-  // In front of the line (north) and over the south rim: lone trunks, never touching another solid tile, so they
-  // can't close a pocket; the chance falls with the depth from the edge.
+  // In front of the line: lone trunks, never touching another solid tile, so they can't close a pocket; the chance
+  // falls with the depth from the edge.
   const lone = (x: number, y: number) => free(x, y) && !near(x, y, 1, blocked);
   const CHANCE = [0.6, 0.48, 0.36, 0.24, 0.14, 0.07];
   const rim = (f: (x: number, y: number, d: number) => void) => {
-    for (const [edge, dir] of [[0, 1], [H - 1, -1]] as const)
-      for (let d = 0; d < CHANCE.length; d++) for (let x = 0; x < W; x++) if (dir < 0 || edge + d > line[x]! + 1) f(x, edge + dir * d, d);
+    for (let d = 0; d < CHANCE.length; d++) for (let x = 0; x < W; x++) if (d > line[x]! + 1) f(x, d, d);
   };
   rim((x, y, d) => { if (wildHash(x, y, 21) < CHANCE[d]! && lone(x, y)) trunk(x, y); });
-  // Then the undergrowth (walked through) on open tiles, and in the north the woods' floor running ragged into the meadow.
+  // Then the undergrowth (walked through) on open tiles, and the woods' floor running ragged into the meadow.
   rim((x, y, d) => {
     if (wildHash(x, y, 22) < 0.1 + CHANCE[d]! / 3 && free(x, y)) wildPiece(objects, x, y, wildHash(x, y, 23) < 0.6 ? 'fern' : 'grass');
-    if (y < H / 2 && wildHash(x, y, 24) < 1 - d * 0.22) under(x, y);
+    if (wildHash(x, y, 24) < 1 - d * 0.22) under(x, y);
   });
 }
-const town={id:'hearthwick',revision:3,tx:0,ty:0,width:72,height:96,palette,ground:ground.map(r=>r.join('')),solid:solid.map(r=>r.join('')),objects};
+const town={id:'hearthwick',revision:4,tx:0,ty:0,width:72,height:96,palette,ground:ground.map(r=>r.join('')),solid:solid.map(r=>r.join('')),objects};
 writeFileSync('content/places.json',JSON.stringify(places,null,2)+'\n');writeFileSync('content/layouts/hearthwick.json',JSON.stringify(town,null,2)+'\n');
 for(let side=0;side<2;side++){
  const gnd=Array.from({length:96},()=>Array<string>(24).fill(side?'.':','));
@@ -257,8 +255,9 @@ for(let side=0;side<2;side++){
  // The wildgate's arch where it opens onto the Wilds (walked under: it fades).
  obs.push({id:'wildgate:arch',kind:'scenery',tx:side?22:0,ty:48,variant:'hw2:wildgate-arch-side',art:{ox:16,oy:16,...(side?{flip:true}:{})} as LayoutObject['art']});
  // The column's ends, north and south, stay closed by the woods: one row beyond the end lots' fences, too narrow
- // to open (the generated side mirrors two rows, and the second is the fence), so trees and thickets stand on it.
- for(const y of [0,95])for(let x=0;x<24;x++)if(x%2===0||wildHash(x+side*24,y,31)<0.3)wildPiece(obs,x,y,wildHash(x+side*24,y,32)<0.25?'thicket':treeKind(x+side*24,y));
- const id=lotLayout(side);writeFileSync(`content/layouts/${id}.json`,JSON.stringify({id,revision:4,tx:0,ty:0,width:24,height:96,palette,ground:gnd.map(r=>r.join('')),solid:sol.map(r=>r.join('')),objects:obs},null,2)+'\n');
+ // to open (the generated side mirrors two rows, and the second is the fence), so trees and thickets stand on it,
+ // at hashed tiles, not in step (an even spacing read as a planted line: playtest 3).
+ for(const y of [0,95])for(let x=0;x<24;x++)if(wildHash(x+side*24,y,31)<0.5)wildPiece(obs,x,y,wildHash(x+side*24,y,32)<0.3?'thicket':treeKind(x+side*24,y));
+ const id=lotLayout(side);writeFileSync(`content/layouts/${id}.json`,JSON.stringify({id,revision:5,tx:0,ty:0,width:24,height:96,palette,ground:gnd.map(r=>r.join('')),solid:sol.map(r=>r.join('')),objects:obs},null,2)+'\n');
 }
 if(existsSync('content/layouts/homestead-lots.json'))unlinkSync('content/layouts/homestead-lots.json');
