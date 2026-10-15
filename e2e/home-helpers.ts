@@ -1,4 +1,4 @@
-import { lotOrigin } from '../src/lib/lots.ts'
+import { homeEntrance, lotName, lotOrigin } from '../src/lib/lots.ts'
 import { expect, type Page } from './fixtures'
 import type { Locator } from '@playwright/test'
 import { accountOf, allow, CONTRACT, newUser, openTitleGuide, pasteAndConnect, pastOpening, routeHabitica, setHabitica, sql, syncFromMenu, waitForWorld, served } from './connected'
@@ -306,13 +306,13 @@ export async function myHome(page: Page, _id?: string): Promise<Home> {
 
 /** Walk through gate g from the lane in front of it, onto its land. */
 export async function throughGate(page: Page, gate: number): Promise<void> {
-  const o = lotOrigin(gate)
-  await go(page, 'outdoors', o.tx + 11, o.ty + 20)
+  const ent = homeEntrance(gate)
+  await go(page, 'outdoors', ent.tx, ent.ty)
   await page.evaluate(() => (window as unknown as { __fsHomes?: { fresh?: () => Promise<void> } }).__fsHomes?.fresh?.())
-  await page.keyboard.down('ArrowUp')
+  const key = gate % 2 ? 'ArrowRight' : 'ArrowLeft'
+  await page.keyboard.down(key)
   try { await expect.poll(async () => (await homes(page)).land?.gate).toBe(gate) }
-  finally { await page.keyboard.up('ArrowUp') }
-  await goLot(page, gate, 11, 8)
+  finally { await page.keyboard.up(key) }
 }
 
 
@@ -361,25 +361,25 @@ export async function earnPlenty(page: Page, id: string): Promise<void> {
 
 /** Claim the first unclaimed gate on the lane from Pell (read the reply), then step back out onto the lane; returns the gate. */
 export async function claimDeed(page: Page): Promise<number> {
-  await go(page, 'outdoors', 34, 35)
+  await go(page, 'outdoors', 23, 60)
   await expect.poll(async () => (await homes(page)).status, { timeout: SERVER_ANSWER_MS }).toBe('ready')
   const free = (await homes(page)).gates.find((g) => g.homeId === null)!
-  await pellSays(page, new RegExp(`The deed to Lot ${free.gate + 1}`))
+  await pellSays(page, new RegExp(`The deed to ${lotName(free.gate)}`))
   await expect.poll(async () => (await homes(page)).myGate, { timeout: SERVER_ANSWER_MS }).toBe(free.gate)
   // Pell answers once the server has the claim: read it (it would hold the screen).
   await readOn(page, DEED_BOUGHT)
   // Back out on the lane, as a deed bought from Silas used to leave you.
-  await go(page, 'outdoors', 34, 35)
+  await go(page, 'outdoors', 23, 60)
   return free.gate
 }
 
 /** Pell's word on a deed bought (src/content/pell.ts PELL_DEED.bought). */
-export const DEED_BOUGHT = /Entered: Lot|received and logged/
+export const DEED_BOUGHT = /Entered: |received and logged/
 
 /** Through your own gate onto your land; the land's fixed spots (door, doorstep, mailbox, site). */
 export async function toMyLand(page: Page): Promise<NonNullable<HomesView['land']>> {
   const gate = (await lane(page)).mine!.gate
-  if (!(await inCommons(page))) await go(page, 'outdoors', 34, 35)
+  if (!(await inCommons(page))) await go(page, 'outdoors', 23, 60)
   await expect.poll(async () => (await homes(page)).status, { timeout: SERVER_ANSWER_MS }).toBe('ready')
   await throughGate(page, gate)
   await expect.poll(async () => (await homes(page)).land, { timeout: SERVER_ANSWER_MS }).not.toBeNull()

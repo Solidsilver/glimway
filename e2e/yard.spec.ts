@@ -9,6 +9,7 @@ import { DEED_PANEL_COPY, PELL, PELL_DEED } from '../src/content/pell.ts'
 import { glimsCount } from '../src/content/purse.ts'
 import { HOMESTEAD_DATA } from '../src/lib/homestead.ts'
 import { itemDef } from '../src/lib/items.ts'
+import { lotName } from '../src/lib/lots.ts'
 import { residentAt } from '../src/lib/residents.ts'
 
 /**
@@ -203,7 +204,7 @@ test('Manage your deed: offer at the table; a signature waiting on you, signed b
   await go(page, 'outdoors', 34, 35)
   await openDeed(page)
   const deed = page.getByRole('dialog', { name: DEED_PANEL_COPY.title })
-  await expect(deed.getByTestId('deed-place')).toHaveText(DEED_PANEL_COPY.where('Tansy’s Place', `Lot ${gate + 1}`))
+  await expect(deed.getByTestId('deed-place')).toHaveText(DEED_PANEL_COPY.where('Tansy’s Place', lotName(gate)))
   await expect(deed.getByTestId('deed-names')).toHaveText(DEED_PANEL_COPY.onTheDeed('Tansy'))
   await expect(deed.getByTestId('deed-not-at-table')).toBeVisible()
   const close = () => deed.getByRole('button', { name: 'Close your deed' }).click()
@@ -300,7 +301,7 @@ test('the walk-in Yard: in at the front door, Silas’s short talk, Pell’s fir
 
   // The front door under his sign on the Commons: in, without a knock. He's
   // not by the sawhorse while his hour has him inside.
-  await go(page, 'outdoors', 34, 35)
+  await go(page, 'outdoors', -14, 104)
   expect(await silasPresent(page), 'no Silas on the Commons at minute 30').toBe(false)
   await expect(page.locator('.prompt')).toContainText(/Go into Silas.s Yard/)
   await waitForLive(page)
@@ -356,12 +357,13 @@ test('the walk-in Yard: in at the front door, Silas’s short talk, Pell’s fir
   await expect(yard.getByRole('tab', { name: 'Materials' })).toHaveAttribute('aria-selected', 'true')
   await yard.getByRole('button', { name: 'Close Silas’s yard' }).click()
 
-  // Through the side door to Pell's office.
-  await go(page, YARD, 12, 5)
-  await page.keyboard.down('ArrowRight')
+  // Out to Pell's land office on the square.
+  await go(page, 'outdoors', 23, 59)
+  await expect(page.locator('.prompt')).toContainText(/Go into Pell.s land office/)
+  await waitForLive(page)
+  await page.keyboard.press('e')
   await waitForArea(page, DEEDS)
-  await page.keyboard.up('ArrowRight')
-  await expectAreaCard(page, 'Pell’s office')
+  await expectAreaCard(page, 'Pell’s land office')
 
   // Pell: the first meeting, with the first deed (free, on the Compact).
   await expect.poll(async () => (await homes(page)).status).toBe('ready')
@@ -374,9 +376,9 @@ test('the walk-in Yard: in at the front door, Silas’s short talk, Pell’s fir
   const deeds = await untilChoices(page)
   expect((await dialogueState(page)).said.join(' ')).toContain(PELL.firstMeeting.lines[0])
   expect(deeds.at(-1)!.text).toBe(PELL_DEED.notToday)
-  expect(deeds.find((c) => c.text === `The deed to Lot ${free.gate + 1}`)).toBeTruthy()
+  expect(deeds.find((c) => c.text === `The deed to ${lotName(free.gate)}`)).toBeTruthy()
   await shot(page, 'yard-pell-desktop')
-  await readDialogue(page, { pick: new RegExp(`The deed to Lot ${free.gate + 1}`) })
+  await readDialogue(page, { pick: new RegExp(`The deed to ${lotName(free.gate)}`) })
   await expect.poll(async () => (await homes(page)).myGate).toBe(free.gate)
   await readOn(page, DEED_BOUGHT)
   // The toast says where the gate is, and the needle leads out of the Yard to it.
@@ -385,17 +387,17 @@ test('the walk-in Yard: in at the front door, Silas’s short talk, Pell’s fir
   await waitForLive(page)
   await frames(page, 30)
   expect((await needle(page)).dir.here).toBe(false)
-  expect(Math.cos((await needle(page)).dir.angle!), 'toward the side door: west').toBeLessThan(-0.3)
+  expect(Math.sin((await needle(page)).dir.angle!), 'toward the front door: south').toBeGreaterThan(0.3)
   // Mending isn't Pell's: out of Silas's reach in the office.
   await openYard(page, 'mend')
   await expect(yard.getByTestId('mend-away')).toBeVisible()
   await yard.getByRole('button', { name: 'Close Silas’s yard' }).click()
 
-  // Back through the side door; Silas steps out to the sawhorse (minute 10).
-  await go(page, DEEDS, 1, 3)
-  await page.keyboard.down('ArrowLeft')
+  // Back to Silas's farmhouse in Southfields; Silas steps out to the sawhorse (minute 10).
+  await go(page, 'outdoors', -14, 104)
+  await waitForLive(page)
+  await page.keyboard.press('e')
   await waitForArea(page, YARD)
-  await page.keyboard.up('ArrowLeft')
   await setHour(page, { minute: 10, server: true })
   await go(page, YARD, AT_COUNTER.tx, AT_COUNTER.ty)
   expect(await silasPresent(page), 'no Silas at his counter at minute 10').toBe(false)
@@ -410,7 +412,7 @@ test('the walk-in Yard: in at the front door, Silas’s short talk, Pell’s fir
   await yard.getByRole('button', { name: 'Close Silas’s yard' }).click()
 
   // Out on the Commons he's by the sawhorse; the needle now follows the gate's marker.
-  await go(page, 'outdoors', 34, 35)
+  await go(page, 'outdoors', -16, 109)
   expect(await silasPresent(page), 'Silas by the sawhorse at minute 10').toBe(true)
   await expect.poll(async () => (await quests(page)).goal).not.toEqual({ kind: 'guide', where: 'gate' })
 })

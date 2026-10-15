@@ -57,9 +57,11 @@ test('gate shelf: place shelf on Commons lane, stock it, traveller takes gift, d
   const slotWren = hView.slots.find((s) => s.gate === gateWren)! as HomesView['slots'][number] & { shelf: { tx: number; ty: number } }
   const shelfPx = slotWren.shelf.tx * 16 + 8
   const shelfPy = slotWren.shelf.ty * 16 + 18
+  const insideX = (slotWren.tx + (slotWren.side === 'west' ? -1 : 1)) * 16 + 8
+  const insideY = slotWren.ty * 16 + 8
 
-  // Walk up to Wren's gate shelf position
-  await place(page, (slotWren.tx + 1) * 16 + 8, slotWren.ty * 16 + 8)
+  // Walk up to Wren's gate shelf position from inside the gate
+  await place(page, insideX, insideY)
 
   // Prompt should say "Set out your gate shelf"
   await expect(page.locator('.prompt')).toContainText('Set out your gate shelf')
@@ -72,8 +74,8 @@ test('gate shelf: place shelf on Commons lane, stock it, traveller takes gift, d
     return h.mine?.items.some((i) => i.itemDef === 'gate-shelf' && i.scene === 'gate')
   }).toBe(true)
 
-  // Walk up to look at the newly placed shelf
-  await place(page, shelfPx, shelfPy)
+  // Look at the newly placed shelf from inside the gate to manage it
+  await place(page, insideX, insideY)
   await expect(page.locator('.prompt')).toContainText('Look at the gift shelf')
   await openShelfPanel(page)
 
@@ -208,7 +210,7 @@ test('gate shelf: place shelf on Commons lane, stock it, traveller takes gift, d
   await ctxTwo.close()
 
   // Wren manages the now-empty shelf from inside the gate, as removal requires.
-  await place(page, (slotWren.tx + 1) * 16 + 8, slotWren.ty * 16 + 8)
+  await place(page, insideX, insideY)
   await expect(page.locator('.prompt')).toContainText('Look at the gift shelf')
   await openShelfPanel(page)
   const ownerShelf = page.getByRole('dialog', { name: /Gift Shelf/ })

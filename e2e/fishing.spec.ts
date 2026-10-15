@@ -228,7 +228,7 @@ test('A Line in the Race: Finn’s rod, a roach from the race, and Hazel’s car
   await residentsOut(page, { server: true })
 
   // Finn's hoist comes first while it's waiting; once it's under way he mentions the rod.
-  await warp(page, 'outdoors', 30, 78)
+  await warp(page, 'outdoors', 21, 106)
   await talkUntil(page, /Talk to Finn/, /look at it/)
   await expect.poll(async () => (await quests(page))['stuck-hoist']).toBe('hear-finn')
   await talkUntil(page, /Talk to Finn/, /Take the rod/)
@@ -238,7 +238,7 @@ test('A Line in the Race: Finn’s rod, a roach from the race, and Hazel’s car
 
   // The roach: caught at the race when the server fishes, else put in the pack.
   if (served) {
-    await warp(page, 'outdoors', 32, 73)
+    await warp(page, 'outdoors', 24, 100)
     await holdRod(page)
     await castAndWait(page)
     await waitForLive(page)
@@ -253,7 +253,7 @@ test('A Line in the Race: Finn’s rod, a roach from the race, and Hazel’s car
 
   // Hazel in the square takes the roach and gives the card.
   await residentsOut(page, { server: true })
-  await warp(page, 'outdoors', 11, 64)
+  await warp(page, 'outdoors', 9, 64)
   await talkUntil(page, /Talk to Hazel/, /Show her the roach/)
   await expect.poll(async () => (await quests(page))['a-line-in-the-race'], { timeout: 15_000 }).toBe('show-hazel')
   await reloadPack(page)

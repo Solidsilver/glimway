@@ -172,7 +172,7 @@ test('a reload on either side of the mouth comes back where it was', async ({ pa
 
 test('a slow fixed-chunk read preserves a Commons save beyond the boot wait', async ({ page, context }) => {
   await connected(page, context);
-  const tile = { tx: 2, ty: 40 };
+  const tile = { tx: 2, ty: 41 };
   const position = { x: tile.tx * TILE + 8, y: tile.ty * TILE + 8 };
   await warp(page, 'outdoors', tile.tx, tile.ty);
   await page.evaluate(() => (window as unknown as { __fsDevSaveSoon: () => void }).__fsDevSaveSoon());
@@ -328,7 +328,7 @@ test('Carting Day dressing and Commons interactions leave with their chunks and 
     await place(44)
     await expect.poll(dressing).toBe(3)
     expect((await win(page)).id).toBe(id)
-    expect(await page.evaluate(() => window.__fsNpcs!().map((n) => n.id).sort())).toEqual(['ada', 'elara', 'hazel', 'mara', 'orrin', 'silas'])
+    expect(await page.evaluate(() => window.__fsNpcs!().map((n) => n.id).sort())).toEqual(['ada', 'elara', 'hazel', 'mara', 'orrin'])
   }
 })
 

@@ -267,7 +267,7 @@ function joinedGround(fp: FixedFootprint): Uint8Array {
   const { w, h, solid } = fp
   const out = new Uint8Array(w * h)
   const queue: [number, number][] = []
-  for (const list of fp.objects.values()) for (const o of list) if (o.kind === 'gate') {
+  for (const list of fp.objects.values()) for (const o of list) if (o.kind === 'gate' || o.id === 'wildgate:arch') {
     const x=o.tx-fp.tx,y=o.ty-fp.ty
     if (!solid[y]![x]) {out[y*w+x]=1;queue.push([x,y])}
   }

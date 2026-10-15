@@ -45,7 +45,7 @@ async function packHolds(page: Page, def: string): Promise<void> {
 const dialogue = (page: Page) => page.getByRole('dialog', { name: /Conversation with/ })
 
 async function openBoard(page: Page): Promise<ReturnType<Page['getByRole']>> {
-  await go(page, 'outdoors', 12, 57)
+  await go(page, 'outdoors', 17, 56)
   await expect(page.locator('.prompt')).toContainText('Read the notice board')
   await waitForLive(page)
   await page.keyboard.press('e')
@@ -61,7 +61,7 @@ test('the well rope: on the board, on the well, mended with the rope, then water
   await packHolds(page, 'fibre-rope')
 
   // Drawing water waits for the rope.
-  await go(page, 'outdoors', 13, 62)
+  await go(page, 'outdoors', 8, 65)
   await expect(drawWater(page, bucket)).resolves.toEqual({ error: 'well-rope-broken' })
 
   // The chores list on the notice board points at the well.
@@ -74,7 +74,7 @@ test('the well rope: on the board, on the well, mended with the rope, then water
   await expect(board).toBeHidden()
 
   // The broken rope stands on the well, and mending takes the part.
-  await go(page, 'outdoors', 13, 62)
+  await go(page, 'outdoors', 8, 65)
   await expect.poll(() => repairs(page), { timeout: 15_000 }).toContain('well-rope')
   // The part is carried: the pack read lands before the mend can take it.
   await expect.poll(() => items(page), { timeout: 15_000 }).not.toBeNull()
@@ -96,7 +96,7 @@ test('the well rope: on the board, on the well, mended with the rope, then water
   await expect(board2).toBeHidden()
 
   // Water draws again: one draw, one bucket use.
-  await go(page, 'outdoors', 13, 62)
+  await go(page, 'outdoors', 8, 65)
   await expect(drawWater(page, bucket)).resolves.toMatchObject({ itemDef: 'stave-bucket', condition: 87 })
 })
 
@@ -105,7 +105,7 @@ test('returning a keepsake: Ada asks, "not yet" keeps it, giving back is once', 
   fund(id, { items: { 'knotted-halter': 1 } })
   await packHolds(page, 'knotted-halter')
 
-  await go(page, 'outdoors', 32, 56)
+  await go(page, 'outdoors', -15, 50)
   await openTalk(page, /Talk to Ada/)
   await untilLine(page, /Tam knotted every splice/)
   await readDialogue(page, { pick: /Not yet/ })
@@ -134,7 +134,7 @@ test('returning a keepsake: Ada asks, "not yet" keeps it, giving back is once', 
   expect((await items(page))!.stacks.find((s) => s.itemDef === 'knotted-halter')).toBeUndefined()
 
   // The line never asks again (the world's word says it is done).
-  await go(page, 'outdoors', 32, 56)
+  await go(page, 'outdoors', -15, 50)
   fund(id, { items: { 'knotted-halter': 1 } })
   await packHolds(page, 'knotted-halter')
   await openTalk(page, /Talk to Ada/)
@@ -155,7 +155,7 @@ test('a refused return never plays the thanks: the world answers first', async (
 
   fund(id, { items: { 'knotted-halter': 1 } })
   await packHolds(page, 'knotted-halter')
-  await go(page, 'outdoors', 32, 56)
+  await go(page, 'outdoors', -15, 50)
   await openTalk(page, /Talk to Ada/)
   await untilLine(page, /Tam knotted every splice/)
   await readDialogue(page, { pick: /Give it back/ })

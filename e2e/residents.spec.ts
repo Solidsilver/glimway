@@ -18,9 +18,9 @@ const DAY = 86400
 type Area = Parameters<typeof warp>[1]
 
 const RESIDENTS = [
-  { id: 'hazel', name: 'Hazel', full: 'Hazel Penhallow', area: 'outdoors', stand: [11, 64], intro: /Hazel Penhallow/ },
-  { id: 'finn', name: 'Finn', full: 'Finn Tolley', area: 'outdoors', stand: [30, 78], intro: /Finn Tolley, the miller/ },
-  { id: 'ada', name: 'Ada', full: 'Ada Cooley', area: 'outdoors', stand: [32, 56], intro: /Ada Cooley\./ },
+  { id: 'hazel', name: 'Hazel', full: 'Hazel Penhallow', area: 'outdoors', stand: [9, 64], intro: /Hazel Penhallow/ },
+  { id: 'finn', name: 'Finn', full: 'Finn Tolley', area: 'outdoors', stand: [21, 106], intro: /Finn Tolley, the miller/ },
+  { id: 'ada', name: 'Ada', full: 'Ada Cooley', area: 'outdoors', stand: [-15, 50], intro: /Ada Cooley\./ },
   { id: 'elara', name: 'Elara', full: 'Elara Quill', area: 'outdoors', stand: [6, 28], intro: /Elara Quill: forager/ }
 ] as const
 
@@ -117,13 +117,13 @@ test('once the road is lit, Hazel hands over her own recipe card', async ({ page
   await seedStory(id, { quest: 'complete', marks: ['met:hazel@new'] })
   await reenter(page)
   await residentsOut(page)
-  await warp(page, 'outdoors', 11, 64)
+  await warp(page, 'outdoors', 9, 64)
   const lines = await converse(page, 'Hazel', 'resident-hazel-late-desktop')
   expect(lines.join(' ')).toMatch(/My brother Joss was a runner/)
   expect(lines.join(' ')).toMatch(/Take the card off my wall/)
   await expect.poll(async () => (await serverState(page)).body.state.flags, { timeout: 10_000 }).toContain('paper:keepers-twists-recipe-card')
   // Pip no longer has it to give.
-  await warp(page, 'outdoors', 10, 75)
+  await warp(page, 'outdoors', -8, 75)
   const pip = await converse(page, 'Pip')
   expect(pip.join(' ')).not.toMatch(/card off the bakery wall/)
 })
@@ -135,7 +135,7 @@ test('who speaks first: Hazel’s own lines, then Set to Rise’s reminder; with
   await seedStory(id, { quest: 'complete', quests: { 'set-to-rise': 'fetch-flour' }, marks: ['met:hazel@new', 'paper:keepers-twists-recipe-card'] })
   await reenter(page)
   await residentsOut(page, { server: true })
-  await warp(page, 'outdoors', 11, 64)
+  await warp(page, 'outdoors', 9, 64)
 
   // No flour yet: her own late lines first (the card's, now that it's read), then the reminder,
   // its offer shown disabled.

@@ -7,7 +7,7 @@ import { area, earnGlims, freshPlayer, fund, go, homeAt, homes, hurt, landOf, la
 import { HOMESTEAD_DATA } from '../src/lib/homestead.ts'
 import { PLACES } from '../src/lib/places.ts'
 import { LAND, buildableKind, clearable, clearedSet, effectiveKind, homeLights, isLit, type Land } from '../src/lib/homestead-land.ts'
-import { homeDoorstep } from '../src/lib/lots.ts'
+import { homeDoorstep, lotName } from '../src/lib/lots.ts'
 
 /**
  * Homesteads, second version, against the real Go server
@@ -61,21 +61,21 @@ async function carryTo(page: Page, piece: string, x: number, y: number): Promise
 
 /** Claim the first unclaimed gate on the lane from Pell; returns the gate. */
 async function claimFirstFree(page: Page): Promise<number> {
-  await go(page, 'outdoors', 34, 35)
+  await go(page, 'outdoors', 23, 60)
   await expect.poll(async () => (await homes(page)).status).toBe('ready')
   const free = (await homes(page)).gates.find((g) => g.homeId === null)!
-  await pellSays(page, new RegExp(`The deed to Lot ${free.gate + 1}`))
+  await pellSays(page, new RegExp(`The deed to ${lotName(free.gate)}`))
   await expect.poll(async () => (await homes(page)).myGate).toBe(free.gate)
   // Pell answers once the server has the claim: read it (it would hold the screen).
   await readOn(page, DEED_BOUGHT)
-  await go(page, 'outdoors', 34, 35)
+  await go(page, 'outdoors', 23, 60)
   return free.gate
 }
 
 test('the Commons gate: walk in from Hearthwick and back, and through an unclaimed gate', async ({ page }) => {
   await freshPlayer(page)
-  // Walk west from Hearthwick along West Road onto the plot lane.
-  await go(page, 'outdoors', -22, 69)
+  // Walk west from Hearthwick along the west wildgate into the Wilds.
+  await go(page, 'outdoors', -23, 71)
   expect(await inCommons(page)).toBe(true)
   await page.keyboard.down('ArrowLeft')
   await expect.poll(async () => inCommons(page)).toBe(false)
@@ -85,22 +85,25 @@ test('the Commons gate: walk in from Hearthwick and back, and through an unclaim
   const v = await homes(page)
   expect(v.gates.filter((g) => g.homeId === null).length).toBeGreaterThanOrEqual(HOMESTEAD_DATA.commons.spareGates)
   // The lane's slots are world tiles (the lots are on the open map's grid).
-  expect(v.slots[0].entry).toEqual({ tx: -60, ty: 44 })
-  await go(page, 'outdoors', v.slots[0].sign.tx, v.slots[0].sign.ty + 1)
-  await talk(page, new RegExp(`Read the sign · Lot ${v.slots[0].gate + 1}`))
+  expect(v.slots[0].entry).toEqual({ tx: -23, ty: 35 })
+  const s0 = v.slots[0].side === 'west' ? { tx: v.slots[0].sign.tx + 1, ty: v.slots[0].sign.ty } : { tx: v.slots[0].sign.tx - 1, ty: v.slots[0].sign.ty }
+  await go(page, 'outdoors', s0.tx, s0.ty)
+  await talk(page, new RegExp(`Read the sign · ${lotName(v.slots[0].gate)}`))
 
   // Through a gate: wild land, nobody's, and back out onto the lane.
   await throughGate(page, 0)
   await expectAreaCard(page, 'Unclaimed land')
   await expect(page.getByTestId('arrange')).toHaveCount(0)
-  await page.keyboard.down('ArrowDown')
+  // West lot gate is on its east fence: step east out onto Lot Row West.
+  await goLot(page, 0, 21, 11)
+  await page.keyboard.down('ArrowRight')
   await expect.poll(async () => (await homes(page)).land).toBeNull()
-  await page.keyboard.up('ArrowDown')
+  await page.keyboard.up('ArrowRight')
   const p = await player(page)
-  expect(Math.abs(Math.floor(p.x / 16) - v.slots[0].entry.tx)).toBeLessThanOrEqual(1)
+  expect(Math.abs(Math.floor(p.x / 16) - v.slots[0].entry.tx)).toBeLessThanOrEqual(2)
 
   // And back east into Hearthwick.
-  await go(page, 'outdoors', -26, 69)
+  await go(page, 'outdoors', -26, 71)
   expect(await inCommons(page)).toBe(false)
   await page.keyboard.down('ArrowRight')
   await expect.poll(async () => inCommons(page)).toBe(true)
@@ -178,7 +181,7 @@ test('claim and guidance, then expansion: lantern posts, naming, clearing, cotta
   test.setTimeout(240_000)
   const id = await freshPlayer(page)
   await earnGlims(page, id)
-  await go(page, 'outdoors', 34, 35)
+  await go(page, 'outdoors', 23, 60)
   await expect.poll(async () => (await homes(page)).status).toBe('ready')
   let v = await homes(page)
   expect(v.claimed).toBe(false)
@@ -188,10 +191,11 @@ test('claim and guidance, then expansion: lantern posts, naming, clearing, cotta
 
   // Read the sign at the gate you like, then buy its deed from Pell (the sign's gate is offered first).
   const slot = v.slots.find((s) => s.gate === free.gate)!
-  await go(page, 'outdoors', slot.sign.tx, slot.sign.ty + 1)
-  await talk(page, new RegExp(`Read the sign · Lot ${free.gate + 1}`))
+  const signStand = slot.side === 'west' ? { tx: slot.sign.tx + 1, ty: slot.sign.ty } : { tx: slot.sign.tx - 1, ty: slot.sign.ty }
+  await go(page, 'outdoors', signStand.tx, signStand.ty)
+  await talk(page, new RegExp(`Read the sign · ${lotName(free.gate)}`))
   const glims = (await serverState(page)).body.state.glims
-  await pellSays(page, new RegExp(`The deed to Lot ${free.gate + 1}`))
+  await pellSays(page, new RegExp(`The deed to ${lotName(free.gate)}`))
   await expect.poll(async () => (await homes(page)).myGate).toBe(free.gate)
   // Pell answers once the server has the claim: read it (it would hold the screen).
   await readOn(page, DEED_BOUGHT)
@@ -199,14 +203,14 @@ test('claim and guidance, then expansion: lantern posts, naming, clearing, cotta
   await expect.poll(async () => (await serverState(page)).body.state.flags).toContain('paper:deed-of-sale-commons-plot')
 
   // Guidance: the journal and the HUD say where, and out on the lane a marker leads there.
-  await expect(page.getByTestId('home-goal')).toContainText(`Lot ${free.gate + 1}`)
+  await expect(page.getByTestId('home-goal')).toContainText(lotName(free.gate))
   await go(page, 'outdoors', 2, 26)
   await expect.poll(async () => (await homes(page)).guide).not.toBeNull()
   v = await homes(page)
   expect(v.guide!.arrow).toBe(true) // the gate is off screen from the Yard's door
   await shot(page, 'claim-guidance-desktop')
   await page.keyboard.press('j')
-  await expect(page.getByTestId('journal-home-goal')).toContainText(`Lot ${free.gate + 1}`)
+  await expect(page.getByTestId('journal-home-goal')).toContainText(lotName(free.gate))
   await page.keyboard.press('j')
   await go(page, 'outdoors', slot.entry.tx + (slot.side === 'west' ? 2 : -2), slot.entry.ty)
   expect((await homes(page)).guide!.arrow).toBe(false)
@@ -492,8 +496,9 @@ test('visiting: a second player walks through a neighbour’s gate, sees their p
   expect(info.mine).toBe(false)
   expect(info.tier).toBe(1)
   const slot = (await homes(other)).slots.find((s) => s.gate === gate)!
-  await go(other, 'outdoors', slot.sign.tx, slot.sign.ty + 1)
-  await talk(other, new RegExp(`Read the sign · Lot ${gate + 1}`))
+  const signStand = slot.side === 'west' ? { tx: slot.sign.tx + 1, ty: slot.sign.ty } : { tx: slot.sign.tx - 1, ty: slot.sign.ty }
+  await go(other, 'outdoors', signStand.tx, signStand.ty)
+  await talk(other, new RegExp(`Read the sign · ${lotName(gate)}`))
   await shot(other, 'visiting-lane-desktop')
 
   // Through Tansy's gate: her land, read-only (no arranging, no resting).
@@ -539,7 +544,7 @@ test('desolation: an empty homestead overgrows, its sign weathers, and in time t
   expect((await homeAt(page, gate))!.desolate).toBe(false)
   // Changed her mind: Pell gives the deed back, as it stands, for nothing.
   const glims = (await serverState(page)).body.state.glims
-  await pellSays(page, new RegExp(`Take back Lot ${gate + 1}`))
+  await pellSays(page, new RegExp(`Take back ${lotName(gate)}`))
   await expect.poll(async () => (await lane(page)).mine?.gate).toBe(gate)
   // Pell answers once the server has it back: read it (it would hold the
   // screen, and the next talk would find no prompt).

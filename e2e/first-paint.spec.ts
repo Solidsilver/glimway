@@ -50,8 +50,8 @@ async function logWebGLRenderer(page: Page): Promise<void> {
 async function arrive(page: Page): Promise<{ tasks: LongTask[]; ground: unknown; ms: number }> {
   await page.evaluate(() => ((window as unknown as { __lt: LongTask[] }).__lt = []))
   const t0 = Date.now()
-  // Just west of Hearthwick's footprint on the open map.
-  await warp(page, 'outdoors', -26, 69)
+  // Just west of Hearthwick's footprint on the open map, on the open wildgate way.
+  await warp(page, 'outdoors', -26, 71)
   // Walk in until the hero stands on Hearthwick.
   await page.keyboard.down('ArrowRight')
   await expect.poll(async () => inCommons(page)).toBe(true)
