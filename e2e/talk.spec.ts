@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { dialogueState, openTalk, readDialogue, untilChoices, waitForLive, warp, atTile, talkSpotOf } from './helpers'
+import { dialogueState, openTalk, readDialogue, untilChoices, waitForLive, atTile, talkSpotOf } from './helpers'
 import { reenter } from './connected'
 import { freshPlayer } from './home-helpers'
 import { GREETINGS, TALK_COPY } from '../src/content/talk'

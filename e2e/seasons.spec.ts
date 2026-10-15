@@ -2,7 +2,7 @@ import { expect, test, type Page } from './fixtures'
 import { residentsOut } from './room-helpers'
 import { seasonOf, serverState } from './connected'
 import { earnGlims, freshPlayer, fund, giveInstance } from './home-helpers'
-import { expectToast, openTalk, readDialogue, untilChoices, waitForLive, warp, atTile, talkSpotOf, standOf, objectOf } from './helpers'
+import { expectToast, openTalk, readDialogue, untilChoices, waitForLive, atTile, talkSpotOf, standOf, objectOf } from './helpers'
 import { calendarAt } from '../src/lib/calendar.ts'
 import { sellerFor } from '../src/lib/items.ts'
 

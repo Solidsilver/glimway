@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import { moveServerClock, serverState } from './connected'
 import { freshPlayer, fund } from './home-helpers'
-import { dialogueState, expectToast, openTalk, readDialogue, untilChoices, waitForLive, warp, atTile, talkSpotOf } from './helpers'
+import { dialogueState, expectToast, openTalk, readDialogue, untilChoices, waitForLive, atTile, talkSpotOf } from './helpers'
 
 /**
  * Set to Rise across a wait (indoors.md 5.6): Hazel's `with` gate on her

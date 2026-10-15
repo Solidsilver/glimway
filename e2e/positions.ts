@@ -1,5 +1,5 @@
 import hearthwickLayout from '../content/layouts/hearthwick.json' with { type: 'json' }
-import roomsJson from '../content/rooms.json' with { type: 'json' }
+import { ROOMS } from '../src/lib/rooms.ts'
 import { PLACES } from '../src/lib/places.ts'
 import { anchor as libAnchor } from '../src/lib/location.ts'
 import { PAPERS } from '../src/content/papers.ts'
@@ -37,7 +37,7 @@ export function anchorPoint(id: string): TilePoint {
 /** Resident's post authored in Hearthwick content, in world tiles. */
 export function postOf(npc: string): TilePoint {
   const norm = npc.toLowerCase().replace(/^npc:/, '')
-  const obj = (hearthwickLayout.objects as Array<{ id: string; kind: string; tx: number; ty: number }>).find(
+  const obj = hearthwickLayout.objects.find(
     (o) => o.kind === 'npc-post' && o.id === `npc:${norm}`
   )
   if (!obj) throw new Error(`no content post for npc ${npc} in Hearthwick layout`)
@@ -68,7 +68,7 @@ export function objectOf(id: string): ContentObject {
     flowers: 'garden:planter-west',
   }
   const targetId = aliases[id] ?? id
-  const obj = (hearthwickLayout.objects as Array<{ id: string; kind: string; tx: number; ty: number; tw?: number; th?: number; label?: string }>).find(
+  const obj = hearthwickLayout.objects.find(
     (o) => o.id === targetId || o.id === id
   )
   if (!obj) throw new Error(`no content object matching ${id} in Hearthwick layout`)
@@ -77,9 +77,9 @@ export function objectOf(id: string): ContentObject {
     area: 'outdoors',
     tx: obj.tx + hearthwickOrigin.tx,
     ty: obj.ty + hearthwickOrigin.ty,
-    tw: obj.tw ?? 1,
-    th: obj.th ?? 1,
-    ...(obj.label ? { label: obj.label } : {}),
+    tw: 'tw' in obj && typeof obj.tw === 'number' ? obj.tw : 1,
+    th: 'th' in obj && typeof obj.th === 'number' ? obj.th : 1,
+    ...('label' in obj && typeof obj.label === 'string' ? { label: obj.label } : {}),
   }
 }
 
@@ -120,27 +120,20 @@ export function standOf(id: string): TilePoint {
 
 /** An exit defined in Hearthwick content, in world tile coordinates. */
 export function exitOf(to: string): ContentExit {
-  const obj = (hearthwickLayout.objects as Array<{
-    id: string
-    kind: string
-    tx: number
-    ty: number
-    tw?: number
-    th?: number
-    label?: string
-    exit?: { to: string; entryTx: number; entryTy: number }
-  }>).find((o) => o.kind === 'exit' && (o.exit?.to === to || o.id === `exit:${to}`))
-  if (!obj || !obj.exit) throw new Error(`no content exit to ${to} in Hearthwick layout`)
+  const obj = hearthwickLayout.objects.find(
+    (o) => o.kind === 'exit' && 'exit' in o && (o.exit?.to === to || o.id === `exit:${to}`)
+  )
+  if (!obj || !('exit' in obj) || !obj.exit) throw new Error(`no content exit to ${to} in Hearthwick layout`)
   return {
     id: obj.id,
     to: obj.exit.to,
     area: 'outdoors',
     tx: obj.tx + hearthwickOrigin.tx,
     ty: obj.ty + hearthwickOrigin.ty,
-    tw: obj.tw ?? 1,
-    th: obj.th ?? 1,
+    tw: 'tw' in obj && typeof obj.tw === 'number' ? obj.tw : 1,
+    th: 'th' in obj && typeof obj.th === 'number' ? obj.th : 1,
     entry: { tx: obj.exit.entryTx, ty: obj.exit.entryTy },
-    ...(obj.label ? { label: obj.label } : {}),
+    ...('label' in obj && typeof obj.label === 'string' ? { label: obj.label } : {}),
   }
 }
 
@@ -159,32 +152,23 @@ export function wardenPost(): TilePoint {
 /** Front door or entry for a room from rooms.json. */
 export function doorOf(roomOrAlias: string, side: 'outside' | 'entry' = 'entry'): TilePoint {
   const norm = roomOrAlias.toLowerCase()
-  const room = (roomsJson.rooms as Array<{
-    id: string
-    doors?: Array<{
-      id: string
-      outside: { tx: number; ty: number }
-      entry: { tx: number; ty: number }
-    }>
-  }>).find(
+  const room = ROOMS.rooms.find(
     (r) => r.id === norm || r.id === `in:village:${norm}` || r.id === `in:commons:${norm}` || r.id.endsWith(`:${norm}`)
   )
   if (!room || !room.doors?.[0]) throw new Error(`no room door matching ${roomOrAlias} in rooms.json`)
   const d = room.doors[0]
   const pt = side === 'outside' ? d.outside : d.entry
+  if (!pt) throw new Error(`door ${d.id} has no ${side} point`)
   return { area: 'outdoors', tx: pt.tx, ty: pt.ty }
 }
 
 /** An authored spot inside a room. */
 export function roomSpot(roomOrAlias: string, spot: string): TilePoint {
   const norm = roomOrAlias.toLowerCase()
-  const room = (roomsJson.rooms as Array<{
-    id: string
-    spots?: Record<string, { tx: number; ty: number }>
-  }>).find(
+  const room = ROOMS.rooms.find(
     (r) => r.id === norm || r.id === `in:village:${norm}` || r.id === `in:commons:${norm}` || r.id.endsWith(`:${norm}`)
   )
-  if (!room || !room.spots?.[spot]) throw new Error(`no spot ${spot} in room ${roomOrAlias}`)
-  const s = room.spots[spot]
+  const s = room?.spots?.[spot]
+  if (!room || !s || s.tx === undefined || s.ty === undefined) throw new Error(`no spot ${spot} in room ${roomOrAlias}`)
   return { area: room.id, tx: s.tx, ty: s.ty }
 }
