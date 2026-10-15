@@ -11,6 +11,7 @@ import { CRAFTS_PACKED_KEY } from './crafts-art.ts'
 import { PURSE_PACKED_KEY } from './purse-art.ts'
 import { GLIMS_PACKED_KEY } from './glims-art.ts'
 import { OPEN_MAP_PACKED_KEY } from './wilds/open-map-art.ts'
+import { HEARTHWICK2_PACKED_KEY } from './hearthwick2-art.ts'
 
 /**
  * Load the packed atlases (scripts/build-atlases.ts writes them; see
@@ -36,5 +37,6 @@ export function preloadPacked(scene: Phaser.Scene, base: string = PACKED_BASE): 
   scene.load.image(PURSE_PACKED_KEY, `${base}purse.webp`)
   scene.load.image(GLIMS_PACKED_KEY, `${base}glims.webp`)
   scene.load.image(OPEN_MAP_PACKED_KEY, `${base}open-map.webp`)
+  scene.load.image(HEARTHWICK2_PACKED_KEY, `${base}hearthwick2.webp`)
   for (const a of SCALED_ATLASES) scene.load.atlas(a.key, `${base}${a.key}.png`, `${base}${a.key}.json`)
 }

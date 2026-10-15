@@ -27,3 +27,11 @@ frames total 49, and all are included. No listed §7 assets were skipped.
 
 Rebuild with `python3 assets/generated/hearthwick2-pass/build_pass.py` from the
 repository root.
+
+## Install (H5)
+
+The Wilds sheet's second row holds three 512-px cells, but the builder cut it
+on the 4-column grid, so the allotment bed and both spring frames took slices
+of their neighbours (and the trees' grass above them). `build_pass.py` now
+crops those three from their own cells, starting below the trees' grass; the
+other 46 frames are unchanged.

@@ -291,7 +291,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 2,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -302,7 +302,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 4,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -313,7 +313,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 6,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -324,7 +324,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 8,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -335,7 +335,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 10,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -346,7 +346,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 12,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -357,7 +357,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 14,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -368,7 +368,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 16,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -379,7 +379,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 18,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -390,7 +390,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 20,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -474,7 +474,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 26,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -485,7 +485,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 28,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -496,7 +496,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 30,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -507,7 +507,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 32,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -518,7 +518,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 34,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -529,7 +529,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 36,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -540,7 +540,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 38,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -551,7 +551,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 40,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -562,7 +562,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 42,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -573,7 +573,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 44,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -657,7 +657,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 50,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -668,7 +668,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 52,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -679,7 +679,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 54,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -690,7 +690,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 56,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -701,7 +701,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 58,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -712,7 +712,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 60,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -723,7 +723,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 62,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -734,7 +734,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 64,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -745,7 +745,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 66,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -756,7 +756,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 68,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -840,7 +840,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 74,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -851,7 +851,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 76,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -862,7 +862,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 78,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -873,7 +873,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 80,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -884,7 +884,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 82,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -895,7 +895,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 84,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -906,7 +906,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 86,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -917,7 +917,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 88,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -928,7 +928,7 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 90,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
         "oy": 16
@@ -939,9 +939,20 @@
       "kind": "scenery",
       "tx": 23,
       "ty": 92,
-      "variant": "gatepost-small",
+      "variant": "hw2:lantern-stake-0",
       "art": {
         "ox": 8,
+        "oy": 16
+      }
+    },
+    {
+      "id": "wildgate:arch",
+      "kind": "scenery",
+      "tx": 22,
+      "ty": 48,
+      "variant": "hw2:wildgate-arch",
+      "art": {
+        "ox": 16,
         "oy": 16
       }
     }

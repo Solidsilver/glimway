@@ -35,6 +35,8 @@ import { exitOf, objectOut, sceneryOf, type FixedDay, type FixedFootprint, type 
 import type { Buildable, BuildQueue } from './window-chunk.ts'
 import { GROUND_DEPTH } from './window-chunk.ts'
 import { perfSpan, perfTime } from '../perf.ts'
+import { drawScale, fadesOver, loopOf } from '../hearthwick2-art.ts'
+import { fnv1a32 } from '../../lib/hash.ts'
 
 /**
  * What another layer (the homestead layer: the gates' signs and shelves, the
@@ -70,6 +72,21 @@ export interface FixedChunkDeps {
 
 /** Collision bases of the pieces that stand on open ground (as ../area/collision.ts makes them). */
 const BASE: Record<string, [number, number]> = { tree: [12, 6], bush: [12, 8], rock: [12, 8] }
+
+/** The kinds drawn only as scenery: one whose art is missing draws nothing. */
+const DRAWN = new Set(['scenery', 'well', 'board'])
+
+const warned = new Set<string>()
+/**
+ * A drawn piece names a texture no pass made: it is left out, which is easy
+ * to miss (H1's town placeholders named `tool-crate`, a frame of the props
+ * atlas, not a texture). Said once a key, in development.
+ */
+function missingArt(key: string): void {
+  if (!import.meta.env?.DEV || warned.has(key)) return
+  warned.add(key)
+  console.warn(`[glimway] no art for fixed scenery ${key}`)
+}
 
 const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now())
 
@@ -223,7 +240,8 @@ export class FixedChunk implements Buildable {
     }
     for (const o of this.objects) {
       const base = BASE[o.kind] ?? (o.prop ? ([o.prop.bodyW, o.prop.bodyH] as [number, number]) : null)
-      if (!base) continue
+      // A prop without a base stands on its solid tiles (the hearth-stone).
+      if (!base || !base[0] || !base[1]) continue
       // On a solid tile its run already covers the base (every verge tree stands on one).
       if (!o.prop && fp.solid[o.ty - fp.ty]?.[o.tx - fp.tx]) continue
       bodies.push(staticBox(scene, tileMid(o.tx), tileBottom(o.ty) - base[1] / 2, base[0], base[1]))
@@ -284,12 +302,20 @@ export class FixedChunk implements Buildable {
       const o = list[i]!
       const s = sceneryOf(o)
       if (s && ensureSceneryArt(scene, s.key)) {
-        const img = scene.add.image(s.x, s.y, s.key, s.frame).setOrigin(s.originX ?? 0.5, 1).setFlipX(s.flipX ?? false)
-        img.setDepth(typeof s.depth === 'number' ? s.depth : s.y)
+        // A looping piece (the hearth's embers, the forge, the spring) plays its loop, unless motion is reduced.
+        const loop = this.deps.reducedMotion ? null : loopOf(s.key)
+        const img = (loop ? (scene.add.sprite(s.x, s.y, s.key).play({ key: loop, startFrame: fnv1a32(o.id) % 2 }) as unknown as Phaser.GameObjects.Image) : scene.add.image(s.x, s.y, s.key, s.frame)).setOrigin(s.originX ?? 0.5, 1).setFlipX(s.flipX ?? false)
+        img.setDepth(typeof s.depth === 'number' ? s.depth : s.y).setScale(drawScale(s.key))
         if (s.tint !== undefined) img.setTint(s.tint)
         if (s.tx !== undefined && s.ty !== undefined) this.keep(s.tx, s.ty, img)
         else this.images.push(img)
-      }
+        if (fadesOver(s.key)) {
+          fading.push({ image: img, bounds: img.getBounds(), footY: s.y })
+          this.fading.push(img)
+        }
+        // A lamp drawn as scenery (the hearth-stone) lights like an atlas lamp.
+        if (o.prop?.light && !props?.has(o.variant)) this.lights.push({ id: o.prop.light, sprite: img, gx: s.x, gy: s.y - o.prop.h * 0.72, glow: null })
+      } else if (s && DRAWN.has(o.kind)) missingArt(s.key)
       if (o.prop && props?.has(o.variant)) {
         const frame = props.get(o.variant)!
         const x = tileMid(o.tx)

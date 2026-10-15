@@ -694,14 +694,14 @@ export function glimDialogue(id: GlimSpotKind, state: GameState, opts: { connect
   const short = (cost: number) => state.glims < cost;
 
   if (id === 'hearth') {
-    const lines = ['The square\u2019s lamp burns low and patient, named and tended every dusk. Its warmth reaches as far as the well.', balance];
+    const lines = ['Embers keep low and patient in the hearth-stone at the Wick Tree\u2019s foot, under the lamp that is named and tended every dusk. Its warmth reaches as far as the well.', balance];
     if (short(GLIM_COSTS.rest)) lines.push(glimHint(opts.connected));
     return {
       speaker: 'Hearth Lantern',
       lines,
       choices: [
         spendChoice(state, 'Rest by the flame', { kind: 'rest' }, 'rest', [
-          'You sit with your back to the warm post. Aches loosen. Your head clears.',
+          'You sit on the warm stones with your back to the old tree. Aches loosen. Your head clears.',
         ], opts.connected, opts.remote ?? null),
         { text: 'Just warm my hands', reply: ['You stay a moment. It helps a little, the way small warm things do.'] },
       ],

@@ -94,7 +94,7 @@
       },
       "resident": "ada",
       "reaction": "Burns steady now. Good wick.",
-      "hint": "The village lamp beside the well",
+      "hint": "The lamp over the hearth-stone, under the Wick Tree",
       "description": "The village lamp gutters in the draft; the wick is burned down.",
       "mendedDescription": "A fresh wick trimmed and lit; the lamp burns steady and warm.",
       "worldFlag": "repair:village-lamp:mended"

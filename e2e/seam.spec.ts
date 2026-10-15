@@ -3,7 +3,7 @@ import type { Browser, BrowserContext } from '@playwright/test'
 import { allow, CONTRACT, newUser, openTitleGuide, pasteAndConnect, reenter, routeHabitica, serverState, setHabitica, syncFromMenu, waitForWorld } from './connected'
 import { exitTo, frames, holdUntil, inCommons, parkCreatures, player, waitForWilds, waitGame, warp, wildsWindow, windowWhole } from './helpers'
 import { setHour } from './room-helpers'
-import { go, homes, throughGate } from './home-helpers'
+import { go, goLot, homes, throughGate } from './home-helpers'
 
 /**
  * The Commons–Tangle join (docs/design/location-seam.md 6, lane S5): the
@@ -11,8 +11,8 @@ import { go, homes, throughGate } from './home-helpers'
  * through, not a portal. One scene and one window from the Commons into the
  * Tangle and back; the mouth (world y = 24, the safe ground's edge) turned
  * at and crossed on the slant; two players either side of it; reloads on
- * either side; the Yard's door and a home gate back out onto their anchors;
- * and zero HP held at the mouth. Positions are world pixels.
+ * either side; the farmhouse and land office doors and a home gate back out
+ * onto their anchors; and zero HP held at the mouth. Positions are world pixels.
  */
 
 const TILE = 16
@@ -216,23 +216,27 @@ test('a slow fixed-chunk read preserves a Commons save beyond the boot wait', as
   await page.unroute(fixedRoute);
 });
 
-test('the Yard’s door and a home gate bring you back out onto their anchors', async ({ page, context }) => {
+test('the farmhouse and land office doors and a home gate bring you back out onto their anchors', async ({ page, context }) => {
   await connected(page, context)
-  // Out of the Yard: its doorstep (anchor hearthwick:yard-door).
-  await go(page, 'in:commons:yard', 7, 7)
-  const door = await exitTo(page, 'hearthwick')
-  await go(page, 'in:commons:yard', door.tx, door.ty - 1)
-  const yardDoor = { tx: 34, ty: 35 }
-  await holdUntil(page, 'ArrowDown', async () => (await areaId(page)) === 'outdoors')
-  await waitForWilds(page)
-  const out = await hero(page)
-  expect({ tx: Math.floor(out.x / TILE), ty: Math.floor(out.y / TILE) }).toEqual(yardDoor)
+  // Out of Silas's farmhouse in Southfields (anchor hearthwick:yard-door), and
+  // Pell's land office on the square (anchor hearthwick:land-office-door).
+  for (const [room, step] of [['in:commons:yard', { tx: -14, ty: 104 }], ['in:commons:yard:deeds', { tx: 23, ty: 59 }]] as const) {
+    await go(page, room, 7, 7)
+    const door = await exitTo(page, 'hearthwick')
+    await go(page, room, door.tx, door.ty - 1)
+    await holdUntil(page, 'ArrowDown', async () => (await areaId(page)) === 'outdoors')
+    await waitForWilds(page)
+    const out = await hero(page)
+    expect({ tx: Math.floor(out.x / TILE), ty: Math.floor(out.y / TILE) }, room).toEqual(step)
+  }
   // Through gate 0 and back: the lane in front of it (anchor hearthwick:lot:0).
   await expect.poll(async () => (await homes(page)).status, { timeout: 15_000 }).not.toBe('loading')
   const slot = (await homes(page)).slots.find((s) => s.gate === 0)!
-  expect(slot.entry).toEqual({ tx: -60, ty: 44 })
+  expect(slot.entry).toEqual({ tx: -23, ty: 35 })
   await throughGate(page, 0)
-  await holdUntil(page, 'ArrowDown', async () => (await homes(page)).land === null)
+  // Out through its side gate onto Lot Row West (a west lot's gate is in its east fence, local y 11..12).
+  await goLot(page, 0, 21, 11)
+  await holdUntil(page, 'ArrowRight', async () => (await homes(page)).land === null)
   await waitForWilds(page)
   const back = await hero(page)
   expect(Math.abs(Math.floor(back.x / TILE) - slot.entry.tx)).toBeLessThanOrEqual(1)
@@ -276,16 +280,17 @@ test('at zero HP the mouth holds: the Commons is home ground, the Tangle is not'
   expect(await hero(page)).toMatchObject({ x: GATE_IN.tx * TILE + 8, y: GATE_IN.ty * TILE + 8 })
 })
 
-test('Silas walks to the Yard door when his hour changes on the open map', async ({ page, context }) => {
+test('Silas walks to his farmhouse door when his hour changes on the open map', async ({ page, context }) => {
   await connected(page, context)
   await setHour(page, { minute: 5 })
-  await warp(page, 'outdoors', 29, 37)
+  await warp(page, 'outdoors', -12, 107)
   await parkCreatures(page)
   const id = (await win(page)).id
   await expect.poll(() => page.evaluate(() => window.__fsNpcs!().find((n) => n.id === 'silas')?.present)).toBe(true)
   await setHour(page, { minute: 21 })
   await expect.poll(() => page.evaluate(() => window.__fsNpcs!().find((n) => n.id === 'silas')?.walking), { intervals: [50] }).toBe(true)
-  const door = { tx: 34, ty: 34 }
+  // The farmhouse door in Southfields (its doorstep is anchor hearthwick:yard-door).
+  const door = { tx: -14, ty: 103 }
   await expect.poll(() => page.evaluate(([x, y]) => {
     const n = window.__fsNpcs!().find((n) => n.id === 'silas')
     return !!n && Math.abs(n.x - x) < 2 && Math.abs(n.y - y) < 2

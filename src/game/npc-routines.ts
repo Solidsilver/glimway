@@ -28,8 +28,10 @@ const wait = (s: number): Step => ({ kind: 'wait', s })
 /** Routines by resident and area; each loop ends where it started (the resident's spot). */
 export const ROUTINES: Readonly<Record<string, Readonly<Record<string, readonly Step[]>>>> = {
   hearthwick: {
-    mara: [wait(7), walk(10,57), walk(16,57), walk(16,64), wait(3), walk(11,64), walk(11,59), walk(10,59)],
-    hazel: [wait(9), walk(10,63), walk(10,65), walk(9,65), { kind: 'sit', tx: 9, ty: 64, s: 16 }, walk(9,65), walk(10,65), walk(11,65), walk(11,54), walk(6,54), wait(4), walk(11,54), walk(11,63), walk(9,63)],
+    // Round the Wick Tree in front of its crown (it covers x 9..16 from y 55 to its trunk): over to the well, then up its east side by Orrin.
+    mara: [wait(7), walk(17,63), walk(11,63), walk(11,62), walk(8,62), wait(3), walk(11,62), walk(11,63), walk(17,63), walk(17,58), wait(3), walk(17,61)],
+    // To her bakery door up the square's west lip, clear of the crown.
+    hazel: [wait(9), walk(10,63), walk(10,65), walk(9,65), { kind: 'sit', tx: 9, ty: 64, s: 16 }, walk(9,65), walk(10,65), walk(11,65), walk(11,63), walk(8,63), walk(8,54), walk(6,54), wait(4), walk(8,54), walk(8,63), walk(9,63)],
     pip: [wait(5), walk(-7,75), walk(-7,71), walk(-10,71), wait(2), walk(-10,75), walk(-8,75)],
     orrin: [wait(12), walk(20,60), walk(35,60), wait(4), walk(20,60), walk(20,58)],
   },

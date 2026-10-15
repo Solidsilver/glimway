@@ -54,6 +54,7 @@ const crafts = JSON.parse(readFileSync(join(ROOT, 'assets/generated/crafts-pass/
 const purse = JSON.parse(readFileSync(join(ROOT, 'assets/generated/purse-pass/manifest.json'), 'utf8')) as { frames: Record<string, { file: string; canvasSize: { w: number; h: number } }> }
 const glims = JSON.parse(readFileSync(join(ROOT, 'assets/generated/glims-pass/manifest.json'), 'utf8')) as { frames: Record<string, { file: string; canvasSize: { w: number; h: number } }> }
 const openMap = JSON.parse(readFileSync(join(ROOT, 'assets/generated/open-map-pass/manifest.json'), 'utf8')) as { frames: Record<string, { file: string; canvas: { w: number; h: number } }> }
+const hw2 = JSON.parse(readFileSync(join(ROOT, 'assets/generated/hearthwick2-pass/manifest.json'), 'utf8')) as { frames: { key: string; file: string; canvasSize: { w: number; h: number } }[]; animations: { key: string; frames: string[] }[] }
 
 type P1 = { frames: Record<string, { source: string }>; sources: Record<string, { file: string }> }
 const p1 = JSON.parse(readFileSync(join(ROOT, PLAYTEST1_DIR, 'atlas.json'), 'utf8')) as P1
@@ -113,6 +114,8 @@ test('every input the atlases were baked from is unchanged', () => {
     'assets/generated/open-map-pass/manifest.json',
     'assets/generated/open-map-pass/animations.json',
     ...Object.values(openMap.frames).map((f) => `assets/generated/open-map-pass/${f.file}`),
+    'assets/generated/hearthwick2-pass/manifest.json',
+    ...hw2.frames.map((f) => `assets/generated/hearthwick2-pass/${f.file}`),
     'assets/generated/expansion/manifest.json',
     'assets/generated/expansion/fingersnap-terrain.png',
     'assets/generated/expansion/fingersnap-terrain.atlas.json',
@@ -273,6 +276,20 @@ test('the open map pass: every frame packed whole at 64 texels a tile, the ford 
   const anims = JSON.parse(readFileSync(join(ROOT, 'assets/generated/open-map-pass/animations.json'), 'utf8')) as { key: string; frames: string[] }[]
   for (const a of anims) for (const f of a.frames) assert.ok(built.openMap.frames[f], `${a.key}: ${f}`)
 })
+test('the Hearthwick 2 pass: every frame packed whole at 64 texels a tile, its loops carried and complete', () => {
+  const [w, h] = webpSize(join(PACKED, built.hearthwick2.image))
+  assert.deepEqual([w, h], built.hearthwick2.size)
+  assert.equal(built.hearthwick2.density, 64)
+  assert.deepEqual(Object.keys(built.hearthwick2.frames).sort(), hw2.frames.map((f) => f.key).sort())
+  assert.equal(hw2.frames.length, 49)
+  for (const f of hw2.frames) {
+    const r = built.hearthwick2.frames[f.key]
+    assert.deepEqual([r[2], r[3]], [f.canvasSize.w, f.canvasSize.h], `${f.key} keeps its canvas`)
+    assert.ok(r[0] + r[2] <= w && r[1] + r[3] <= h, `${f.key} inside the Hearthwick 2 atlas`)
+  }
+  assert.deepEqual(built.hearthwick2.animations, hw2.animations)
+  for (const a of hw2.animations) for (const f of a.frames) assert.ok(built.hearthwick2.frames[f], `${a.key}: ${f}`)
+})
 test('the playtest-1 people: every resident and held frame, trimmed to 4-texel steps inside its canvas', () => {
   const [w, h] = webpSize(join(PACKED, built.people.image))
   assert.deepEqual([w, h], built.people.size)
@@ -335,6 +352,7 @@ test('public/assets/fingersnap ships its licence, manifests and packed art only 
     `packed/${built.purse.image}`,
     `packed/${built.glims.image}`,
     `packed/${built.openMap.image}`,
+    `packed/${built.hearthwick2.image}`,
     `packed/${built.terrain.image}`,
     `packed/${built.ground.image}`,
     `packed/${built.people.image}`,

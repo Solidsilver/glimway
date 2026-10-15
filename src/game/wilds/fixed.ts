@@ -354,7 +354,7 @@ export function sceneryOf(o: FixedObject): ScenerySpot | null {
   return {
     key: o.variant,
     ...(o.frame ? { frame: o.frame } : {}),
-    ...(o.kind === 'scenery' && o.variant !== 'tool-crate' && o.tw > 0 && o.th > 0 ? { groundUnder: { tx: o.tx, ty: o.ty - o.th + 1, tw: o.tw, th: o.th, tile: TERRAIN.grass_a } } : {}),
+    ...(o.kind === 'scenery' && o.tw > 0 && o.th > 0 ? { groundUnder: { tx: o.tx, ty: o.ty - o.th + 1, tw: o.tw, th: o.th, tile: TERRAIN.grass_a } } : {}),
     x: o.tx * TILE + a.ox,
     y: o.ty * TILE + a.oy,
     ...(a.originLeft ? { originX: 0 } : {}),

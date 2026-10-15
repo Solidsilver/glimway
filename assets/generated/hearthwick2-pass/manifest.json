@@ -1603,18 +1603,18 @@
       "source": "wilds-small-source",
       "sourceRect": {
         "x": 0,
-        "y": 512,
-        "w": 384,
-        "h": 512
+        "y": 560,
+        "w": 512,
+        "h": 464
       },
       "canvasSize": {
         "w": 128,
         "h": 64
       },
       "destinationRect": {
-        "x": 42,
+        "x": 21,
         "y": 8,
-        "w": 44,
+        "w": 86,
         "h": 56
       },
       "footprint": [
@@ -1636,20 +1636,20 @@
       "key": "spring-stones-0",
       "source": "wilds-small-source",
       "sourceRect": {
-        "x": 384,
-        "y": 512,
-        "w": 384,
-        "h": 512
+        "x": 512,
+        "y": 560,
+        "w": 512,
+        "h": 464
       },
       "canvasSize": {
         "w": 128,
         "h": 128
       },
       "destinationRect": {
-        "x": 10,
-        "y": 8,
-        "w": 108,
-        "h": 120
+        "x": 4,
+        "y": 49,
+        "w": 120,
+        "h": 79
       },
       "footprint": [
         2,
@@ -1670,20 +1670,20 @@
       "key": "spring-stones-1",
       "source": "wilds-small-source",
       "sourceRect": {
-        "x": 768,
-        "y": 512,
-        "w": 384,
-        "h": 512
+        "x": 1024,
+        "y": 560,
+        "w": 512,
+        "h": 464
       },
       "canvasSize": {
         "w": 128,
         "h": 128
       },
       "destinationRect": {
-        "x": 9,
-        "y": 8,
-        "w": 110,
-        "h": 120
+        "x": 4,
+        "y": 39,
+        "w": 120,
+        "h": 89
       },
       "footprint": [
         2,

@@ -56,6 +56,12 @@ BUILDING_CROP_RECTS = {
  "land-office":(476,56,964,508),
  "smithy":(968,12,1536,516),
  "workshop-orrin":(648,512,1172,992),
+ # The Wilds sheet's second row holds three 512-px cells, not four: on the
+ # 4-column grid the bed and the two spring frames took slices of their
+ # neighbours, and the row starts below the trees' grass (H5).
+ "allotment-bed":(0,560,512,1024),
+ "spring-stones-0":(512,560,1024,1024),
+ "spring-stones-1":(1024,560,1536,1024),
 }
 
 # Hearth, forge glow, washing-line loop, stakes, gatepost and Wildgate arch.

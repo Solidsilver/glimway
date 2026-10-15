@@ -15,6 +15,7 @@ import { createCraftsArt } from '../crafts-art'
 import { createPurseArt } from '../purse-art'
 import { createGlimsArt } from '../glims-art'
 import { createOpenMapArt } from '../wilds/open-map-art'
+import { createHearthwick2Art } from '../hearthwick2-art'
 import { HOMESTEAD_DATA } from '../../lib/homestead'
 import { fixedPlaceOf, prepareFixed } from '../wilds/fixed'
 import { chunkOfPixel, isWildsArea } from '../wilds/coords'
@@ -84,6 +85,8 @@ export class BootScene extends Phaser.Scene {
     // The 0.6.1 glims pass: a glim, its HUD size, a few glims.
     createGlimsArt(this)
     createOpenMapArt(this)
+    // The Hearthwick 2 pass: the Wick Tree, the town's buildings and dressing, the lot stakes.
+    createHearthwick2Art(this)
 
     // The Commons is fixed ground on the open map (../wilds/fixed.ts): a save
     // that starts on it waits for its chunks (a few seconds at most; then the

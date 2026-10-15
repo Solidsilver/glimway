@@ -12,6 +12,7 @@ import './helpers/scene-modules.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
+import { readFileSync } from 'node:fs';
 import { registerHooks } from 'node:module';
 
 // Phaser is a stub in node tests: give it what a fixed chunk's collision and glows touch.
@@ -254,7 +255,7 @@ test('every Commons chunk attaches every kind of object it owns and detaches lea
   const kinds = new Set<string>();
   for (const key of r.fp.objects.keys()) for (const o of r.fp.objects.get(key)!) kinds.add(o.kind);
   // Every object kind the layout has (the yard door comes from rooms.json, through a chunk too).
-  for (const k of ['tree', 'prop', 'lamp', 'scenery', 'well', 'board', 'exit', 'npc-post', 'repair', 'gather']) assert.ok(kinds.has(k), k);
+  for (const k of ['overhang', 'prop', 'lamp', 'scenery', 'well', 'board', 'exit', 'npc-post', 'repair', 'gather']) assert.ok(kinds.has(k), k);
   for (let round = 0; round < 3; round++) {
     const chunks = [...r.fp.objects.keys()].map((k) => {
       const [cx, cy] = k.split(',').map(Number) as [number, number];
@@ -986,7 +987,18 @@ test('served artwork meets its collision footprint and woodland returns to the t
   const objects = [...fp.objects.values()].flat();
   for (const o of objects.filter((o) => o.id.startsWith('fence:') || (o.kind === 'scenery' && o.tw > 0))) {
     assert.equal(sceneryOf(o)!.y, (o.ty + 1) * 16, o.id);
-    if (o.tw > 0 && o.variant !== 'tool-crate') assert.deepEqual(sceneryOf(o)!.groundUnder, { tx: o.tx, ty: o.ty - o.th + 1, tw: o.tw, th: o.th, tile: 0 });
+    if (o.tw > 0) assert.deepEqual(sceneryOf(o)!.groundUnder, { tx: o.tx, ty: o.ty - o.th + 1, tw: o.tw, th: o.th, tile: 0 });
+  }
+  // Every building stands on a solid footprint its art was drawn for: the
+  // facade as wide as the foot, the roof two tiles above it (H5).
+  const hw2 = JSON.parse(readFileSync(new URL('../assets/generated/hearthwick2-pass/manifest.json', import.meta.url), 'utf8')) as { frames: { key: string; canvasSize: { w: number; h: number }; footprint: [number, number] }[] };
+  const buildings = objects.filter((o) => o.kind === 'scenery' && o.tw > 0 && o.variant.startsWith('hw2:'));
+  assert.ok(buildings.length > 50, 'the town is built with the Hearthwick 2 facades');
+  for (const o of buildings) {
+    const f = hw2.frames.find((f) => `hw2:${f.key}` === o.variant)!;
+    assert.deepEqual(f.footprint, [o.tw, o.th], o.id);
+    assert.deepEqual([f.canvasSize.w, f.canvasSize.h], [o.tw * 64, (o.th + 2) * 64], o.id);
+    for (let y = o.ty - o.th + 1; y <= o.ty; y++) for (let x = o.tx; x < o.tx + o.tw; x++) assert.ok(fp.solid[y - fp.ty]![x - fp.tx], `${o.id} solid at ${x},${y}`);
   }
   for (const o of objects.filter((o) => o.kind === 'gather')) {
     assert.equal(o.art!.ox, 8); assert.equal(o.art!.oy, 16); assert.equal(o.art!.tile, true);
