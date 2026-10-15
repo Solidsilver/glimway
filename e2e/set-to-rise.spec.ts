@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import { moveServerClock, serverState } from './connected'
 import { freshPlayer, fund } from './home-helpers'
-import { dialogueState, expectToast, openTalk, readDialogue, untilChoices, waitForLive, warp } from './helpers'
+import { dialogueState, expectToast, openTalk, readDialogue, untilChoices, waitForLive, warp, atTile, talkSpotOf } from './helpers'
 
 /**
  * Set to Rise across a wait (indoors.md 5.6): Hazel's `with` gate on her
@@ -31,7 +31,7 @@ test('Set to Rise: Hazel asks, the flour goes in, and the sponge rises two hours
   const id = await freshPlayer(page, 'Bryn')
   const start = squareTime(Math.floor(Date.now() / 1000))
   await clockTo(page, start)
-  await warp(page, 'outdoors', 11, 64)
+  await atTile(page, talkSpotOf('hazel'))
 
   // The first talk is her introduction (with the hint); the next one asks.
   await openTalk(page, /Talk to Hazel/)

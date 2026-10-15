@@ -2,7 +2,7 @@ import { expect, test, type Page } from './fixtures'
 import type { Browser, BrowserContext } from '@playwright/test'
 import { newUser, openTitleGuide, pasteAndConnect, pastOpening, routeHabitica, serverState, setHabitica, waitForWorld, CONTRACT } from './connected'
 import { partyOwner, signInPage } from './party-helpers'
-import { animationsDone, expectToast, settleWarden, talkThrough, warden, warp } from './helpers'
+import { animationsDone, expectToast, settleWarden, talkThrough, warden, warp, atTile, talkSpotOf } from './helpers'
 
 /**
  * Playing together (docs/home-server.md "Party worlds and world moves" and
@@ -126,7 +126,7 @@ test('a second player watches the naming, sees the warden rest a moment, and kee
   expect((await serverState(other)).body.worldId).toBe(world)
 
   // Olive carries the mark up to the shrine path; the warden wakes for her.
-  await warp(page, 'outdoors', 14, 62)
+  await atTile(page, talkSpotOf('mara'))
   await talkThrough(page, /Talk to Mara/)
   await warp(page, 'ruin', 15, 3)
   await talkThrough(page, /Copy the naming from the stone/)

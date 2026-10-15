@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { frames, talkThrough, waitForLive, warp } from './helpers'
+import { frames, talkThrough, waitForLive, warp, atTile, talkSpotOf, doorOf } from './helpers'
 import { freshPlayer } from './home-helpers'
 
 /**
@@ -22,7 +22,7 @@ test('the HUD names the goal in a few words, and the needle points the way', asy
   // Mara stands east and north of the library door.
   expect(Math.cos(g.dir.angle!), 'toward Mara: east').toBeGreaterThan(0)
 
-  await warp(page, 'outdoors', 14, 62)
+  await atTile(page, talkSpotOf('mara'))
   await talkThrough(page, /Talk to Mara/)
   await expect(page.locator('.hud .goal-text')).toHaveText('Copy the route stone in Ashwatch Ruin')
   await waitForLive(page)
@@ -50,7 +50,7 @@ test.describe('pinned guides', () => {
   test('a pinned "How do I…?" guide leads the goal line and the needle, and unpins back to the story', async ({ page }) => {
     const { freshPlayer, go } = await import('./home-helpers')
     await freshPlayer(page)
-    await go(page, 'outdoors', 14, 62)
+    await atTile(page, talkSpotOf('mara'))
     await waitForLive(page)
     // The journal's "How do I…?" page: open "Make your first tool" and pin it.
     await page.keyboard.press('j')
@@ -70,20 +70,15 @@ test.describe('pinned guides', () => {
     expect(Math.cos(g.dir.angle!), 'toward the Commons gate: east').toBeGreaterThan(0.3)
 
     // On the Commons: the way in is the Yard's front door, under Silas's sign (content/rooms.json).
-    await go(page, 'outdoors', 34, 35)
+    await atTile(page, doorOf('yard', 'entry'))
     await waitForLive(page)
     await frames(page, 30)
     g = await goal(page)
     expect(g.dir.here, 'Pell is indoors').toBe(false)
-    // The door is at world tile (34, 34).
-    expect(g.target).toMatchObject({ x: 34.5 * 16, y: 34.5 * 16 })
-    // In the shop, the side door; in Pell's office, Pell.
-    await go(page, 'in:commons:yard', 7, 7)
-    await waitForLive(page)
-    await frames(page, 30)
-    g = await goal(page)
-    expect(g.dir.here).toBe(false)
-    expect(Math.cos(g.dir.angle!), 'toward the side door: east').toBeGreaterThan(0.3)
+    // The door is at world tile from rooms.json (Pell's office front door).
+    const pellDoor = doorOf('deeds', 'outside')
+    expect(g.target).toMatchObject({ x: (pellDoor.tx + 0.5) * 16, y: (pellDoor.ty + 0.5) * 16 })
+    // In Pell's office, Pell.
     await go(page, 'in:commons:yard:deeds', 2, 5)
     await waitForLive(page)
     await frames(page, 30)

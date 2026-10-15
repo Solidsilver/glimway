@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
 import { linkStatus, serverState, CONTRACT } from './connected'
-import { waitForLive, expectToast } from './helpers'
+import { waitForLive, expectToast, atTile, standOf } from './helpers'
 import { atMyMailbox, claimDeed, earnGlims, earnPlenty, freshPlayer, fund, go, homes, intoCottage, myHome, place, silasSays, yardBuild } from './home-helpers'
 
 /**
@@ -77,7 +77,7 @@ test('finding 2: a 200 with a truncated body is replayed with the same key, neve
 test('finding 3: giving to a project updates the board’s carried balance at once', async ({ page }) => {
   const id = await freshPlayer(page)
   fund(id, { materials: { timber: 10 } })
-  await go(page, 'outdoors', 12, 57)
+  await atTile(page, standOf('board'))
   await expect(page.locator('.prompt')).toContainText('Read the notice board')
   await waitForLive(page)
   await page.keyboard.press('e')

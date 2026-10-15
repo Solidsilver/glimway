@@ -303,6 +303,7 @@ for (const device of ['desktop', 'phone'] as const) {
         expect(s.seat!.y).toBeLessThan(144)
         expect(s.avatar!.depth).toBe(144.5)
         await snap(page, 'sit-chair', device)
+        await expect(page.locator('.prompt')).toContainText('Stand up')
         await act(page, device)
         await expect.poll(async () => (await seat(page)).seated).toBe(false)
 
@@ -317,6 +318,7 @@ for (const device of ['desktop', 'phone'] as const) {
         expect(s.seat!.y).toBeGreaterThan(144 - 16)
         expect(s.seat!.y).toBeLessThan(144)
         await snap(page, 'sit-chair-turned', device)
+        await expect(page.locator('.prompt')).toContainText('Stand up')
         await act(page, device)
         await expect.poll(async () => (await seat(page)).seated).toBe(false)
 

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { frames, openTalk, player, readDialogue, waitForLive, warp } from './helpers'
+import { frames, openTalk, player, readDialogue, waitForLive, warp, atTile, talkSpotOf } from './helpers'
 import { freshPlayer } from './home-helpers'
 
 /**
@@ -120,7 +120,7 @@ for (const [name, viewport] of phones) {
     await freshPlayer(page)
     // Mara, by the well: the conversation hides the touch controls (and, under
     // the old measuring, dropped their insets and slid the world aside).
-    await warp(page, 'outdoors', 14, 62)
+    await atTile(page, talkSpotOf('mara'))
     await page.waitForFunction(() => (window as unknown as { __fsBanners: () => { current: unknown } }).__fsBanners().current === null, undefined, { timeout: 15_000 })
     await frames(page, 60)
     const insets = () => page.evaluate(() => (window as unknown as { __fsDevInsets: () => { top: number; bottom: number; left: number; right: number; rev: number } }).__fsDevInsets())
@@ -150,7 +150,7 @@ test('phone at 3×: the canvas has every device pixel and frames the world as at
     const context = await browser.newContext({ baseURL, viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor })
     const page = await context.newPage()
     await freshPlayer(page)
-    await warp(page, 'outdoors', 14, 62)
+    await atTile(page, talkSpotOf('mara'))
     await page.waitForFunction(() => (window as unknown as { __fsBanners: () => { current: unknown } }).__fsBanners().current === null, undefined, { timeout: 15_000 })
     await frames(page, 60)
     const canvas = await page.evaluate(() => {
@@ -199,7 +199,7 @@ async function phonePlayer(browser: import('@playwright/test').Browser, baseURL:
   page.on('pageerror', (e) => errors.push(e.message))
   if (stick) await page.addInitScript((s) => localStorage.setItem('fingersnap:settings', JSON.stringify({ stick: s })), stick)
   await freshPlayer(page)
-  await warp(page, 'outdoors', 14, 62)
+  await atTile(page, talkSpotOf('mara'))
   await page.waitForFunction(() => (window as unknown as { __fsBanners: () => { current: unknown } }).__fsBanners().current === null, undefined, { timeout: 15_000 })
   await waitForLive(page)
   await frames(page, 60)

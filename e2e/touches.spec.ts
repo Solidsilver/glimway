@@ -1,7 +1,7 @@
 import { wickStart } from '../tests/helpers/calendar.ts'
 import { devices } from '@playwright/test'
 import { expect, test, type Page } from './fixtures'
-import { holdUntil, readDialogue, toastAfter, toastCount, warp, waitForArea, waitForLive, expectLine } from './helpers'
+import { holdUntil, readDialogue, toastAfter, toastCount, warp, waitForArea, waitForLive, expectLine, atTile, standOf } from './helpers'
 import { freshPlayer } from './home-helpers'
 import { FLOWER_LINES, SIT_LINES } from '../src/content/touches.ts'
 
@@ -23,7 +23,7 @@ const manaMeter = (page: Page) => page.getByRole('meter', { name: 'Mana' })
 async function visitFlowers(page: Page): Promise<void> {
   const t = wickStart('Bloom')
   await page.evaluate((t) => (window as unknown as { __fsDevCalendar: (t: number) => void }).__fsDevCalendar(t), t)
-  await warp(page, 'outdoors', 12, 38)
+  await atTile(page, standOf('flowers'))
   await waitForLive(page)
 }
 
@@ -39,7 +39,7 @@ test('the bench seats the hero, mana comes back, movement stands up', async ({ p
   await page.keyboard.press('f')
   await expect.poll(manaNow).toBeLessThan(before)
 
-  await warp(page, 'outdoors', 8, 62)
+  await atTile(page, standOf('bench'))
   await waitForLive(page)
 
   await expect(page.locator('.prompt')).toContainText('Sit on the bench')
@@ -80,7 +80,7 @@ test('smelling the flowers says something different each time', async ({ page })
 
 test('reading the signpost opens a conversation and closes it', async ({ page }) => {
   await freshPlayer(page)
-  await warp(page, 'outdoors', 15, 60) // the signpost by the square
+  await atTile(page, standOf('signpost')) // the signpost by the square
   await expect(page.locator('.prompt')).toContainText('Read the signpost')
   await page.keyboard.press('e')
   const dialogue = page.getByRole('dialog', { name: /Conversation with/ })
@@ -98,7 +98,7 @@ test.describe('phone', () => {
   test('the touch action button sits you down and stands you up', async ({ page }) => {
     await freshPlayer(page)
     await waitForArea(page, 'outdoors')
-    await warp(page, 'outdoors', 8, 62)
+    await atTile(page, standOf('bench'))
 
     const act = page.locator('.controls .act')
     await expect(act).toHaveAttribute('aria-label', 'Sit on the bench')

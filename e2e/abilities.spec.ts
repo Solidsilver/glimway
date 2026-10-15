@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import type { BrowserContext } from '@playwright/test'
 import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, setHabitica, waitForWorld, CONTRACT } from './connected'
-import { frames, hold, stepToWarden, talkThrough, waitForLive, waitGame, warden, warp } from './helpers'
+import { frames, hold, stepToWarden, talkThrough, waitForLive, waitGame, warden, warp, atTile, talkSpotOf } from './helpers'
 import { freshPlayer } from './home-helpers'
 
 /**
@@ -47,7 +47,7 @@ test('a hero without a class fights with what’s in hand: no ✦, the finger-wi
   await page.screenshot({ path: 'test-results/abilities-classless-wisp.png' })
 
   // The Warden: blows only clink; the naming settles it, through the action button.
-  await warp(page, 'outdoors', 14, 62)
+  await atTile(page, talkSpotOf('mara'))
   await talkThrough(page, /Talk to Mara/)
   await warp(page, 'ruin', 15, 3)
   await talkThrough(page, /Copy the naming from the stone/)

@@ -499,6 +499,12 @@ export async function warp(page: Page, area: AreaId, tx?: number, ty?: number): 
   await waitForArea(page, area)
 }
 
+/** Warp to a content-backed TilePoint. */
+export async function atTile(page: Page, point: TilePoint): Promise<void> {
+  await warp(page, point.area, point.tx, point.ty)
+}
+
+
 /** Is the hero on Hearthwick (the open map, on its footprint: world tiles x -24..47, y 24..119)? */
 export async function inCommons(page: Page): Promise<boolean> {
   return page.evaluate(() => {
@@ -524,6 +530,10 @@ export async function exitTo(page: Page, to: AreaId): Promise<ExitView> {
   if (!found) throw new Error(`no exit to ${to} from ${(await world(page)).areaId}`)
   return found
 }
+
+export * from './positions.ts'
+
+
 
 /**
  * Finish a generated camp's fight for this page's account and wait for the
