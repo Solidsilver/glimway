@@ -11,7 +11,7 @@ import { signLabel } from '../area/sign-labels'
 import { HOMESTEAD_DATA, grownItem, homeItem, rotatedFootprint, type HomeInstance, type HomeItem, type HomeScene } from '../../lib/homestead'
 import { drawStable } from './homestead-stable'
 import { crArt } from '../crafts-art'
-import { homeLights, isLit, type Light } from '../../lib/homestead-land'
+import { homeLights, type Light } from '../../lib/homestead-land'
 import type { HomeView } from '../../lib/api/types'
 import { decoSeat, type ArtBox, type SeatPose } from '../seats'
 import { bus, EV } from '../events'
@@ -25,9 +25,12 @@ import { ROOM_BENCH, ROOM_CHEST, ROOM_GRID, ROOM_HEARTH } from '../cottage'
 import { HOME_FLAGS, SILAS, lotName, signText } from '../homestead'
 import type { HomesteadDeps, HomesteadLayer } from './homesteads'
 import { canvasRatio } from '../viewport'
+import { shadePixels } from '../lot-shade.ts'
 
 /** The cottage's height on its land (its collision body follows it). */
 const COTTAGE_H = 92
+
+let shadeId = 0
 
 export const POST = HOMESTEAD_DATA.lanternPosts.item
 
@@ -53,7 +56,8 @@ export class HomesteadArt {
   /** The way to your gate (Commons): a bobbing marker over it and an arrow at the screen's edge. */
   guide: { marker: Phaser.GameObjects.Image; arrow: Phaser.GameObjects.Image; label: Phaser.GameObjects.Text } | null = null
   private landTimers: Phaser.Time.TimerEvent[] = []
-  private shade: Phaser.GameObjects.Graphics | null = null
+  private shade: Phaser.GameObjects.Image | null = null
+  private shadeTexture: string | null = null
 
   constructor(private readonly home: HomesteadLayer) {
     this.scene = home.scene
@@ -293,7 +297,7 @@ export class HomesteadArt {
 
   // ---- a homestead's land
 
-  destroyLand(): void { for (const t of this.landTimers) t.remove(); this.landTimers = []; this.clear(this.homeDrawn); this.shade?.destroy(); this.shade = null }
+  destroyLand(): void { for (const t of this.landTimers) t.remove(); this.landTimers = []; this.clear(this.homeDrawn); this.clearShade() }
 
   landSteps(): (() => void)[] {
     const L = this.home.land!, home = this.home.here(), d = this.homeDrawn
@@ -339,24 +343,30 @@ export class HomesteadArt {
     this.drawItems(d, home, 'outdoor', L.gridOrigin?.x ?? 0, L.gridOrigin?.y ?? 0, desolate)
   }
 
-  /**
-   * The ground past the lamplight sits in shadow: the homestead's land is
-   * what its lamps hold. Drawn per tile, just over the ground.
-   */
+  private clearShade(): void {
+    this.shade?.destroy()
+    this.shade = null
+    if (this.shadeTexture) this.scene.textures.remove(this.shadeTexture)
+    this.shadeTexture = null
+  }
+
+  /** One continuous shade up to the lot's fence, softly meeting its lamplight. */
   drawShade(): void {
     const L = this.home.land!
-    this.shade?.destroy()
+    this.clearShade()
     const home = this.home.here()
-    if (!home) {
-      this.shade = null
-      return
-    }
-    const lights = this.lights(home)
-    const g = this.scene.add.graphics().setDepth(-3.5)
-    g.fillStyle(0x0c0c18, home.desolate ? 0.38 : 0.28)
-    for (let y = L.gridOrigin ? 2 : 1; y < (L.gridOrigin ? 19 : L.height - 1); y++)
-      for (let x = L.gridOrigin ? 3 : 1; x < (L.gridOrigin ? 21 : L.width - 1); x++) if (!isLit(lights, x, y)) g.fillRect((L.gridOrigin?.x ?? 0) + x * TILE, (L.gridOrigin?.y ?? 0) + y * TILE, TILE, TILE)
-    this.shade = g
+    if (!home) return
+    // Fence margins belong visually to the plot; cross-lanes and the spine do not.
+    const bounds = L.gridOrigin ? { x: 2, y: 0, w: L.width - 4, h: L.height - 4 } : { x: 1, y: 1, w: L.width - 2, h: L.height - 2 }
+    const key = `lot-shade:${shadeId++}`
+    const texture = this.scene.textures.createCanvas(key, bounds.w * TILE, bounds.h * TILE)!
+    const ctx = texture.context
+    const mask = ctx.createImageData(bounds.w * TILE, bounds.h * TILE)
+    mask.data.set(shadePixels(this.lights(home), bounds, home.desolate ? 0.38 : 0.28))
+    ctx.putImageData(mask, 0, 0)
+    texture.refresh()
+    this.shadeTexture = key
+    this.shade = this.scene.add.image((L.gridOrigin?.x ?? 0) + bounds.x * TILE, (L.gridOrigin?.y ?? 0) + bounds.y * TILE, key).setOrigin(0, 0).setDepth(-3.5)
   }
 
   lights(home: HomeView, except?: string): Light[] {

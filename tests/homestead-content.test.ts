@@ -126,10 +126,10 @@ test('Silas’s Yard: buildings come from the content flag, in a section of thei
 
 test('lot geometry agrees with authored footprint and the public lane is outside private services', async () => {
   const { PLACES } = await import('../src/lib/places.ts');
-  const { lotOrigin, lotAt, lotAtPixel } = await import('../src/lib/lots.ts');
+  const { lotOrigin, lotAt, lotAtPixel, PLOT_REVISION } = await import('../src/lib/lots.ts');
   const place = PLACES.fixed.find((p) => p.id === 'homestead-lots')!;
   assert.deepEqual({ tx: place.origin.tx, ty: place.origin.ty }, { tx: -72, ty: 24 });
-  assert.equal(place.revision, 2);
+  assert.equal(place.revision, PLOT_REVISION);
   assert.equal(place.width, 2);
   assert.equal(place.height, 4);
   for (let gate=0;gate<8;gate++) {
