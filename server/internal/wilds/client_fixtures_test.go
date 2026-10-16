@@ -106,3 +106,56 @@ func TestClientFixtures(t *testing.T) {
 		}
 	}
 }
+
+// Real bent crossings, including one split across a chunk edge. Their
+// walkable ford geometry must survive generation and wire packing unchanged.
+func TestRiverCrossingFixtures(t *testing.T) {
+	e := WickEpoch("v3-0", "t:1789948800:1790553600")
+	for _, f := range []struct {
+		name    string
+		cx, cy  int
+		hasFord bool
+	}{
+		{"ford-bend", -4, -3, true},
+		{"ford-bend-east", -3, -3, false}, // the dry east bank
+		{"ford-diagonal-west", -5, 1, true},
+		{"ford-diagonal-east", -4, 1, true},
+	} {
+		t.Run(f.name, func(t *testing.T) {
+			ch, err := GenerateV3(e, f.cx, f.cy, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			wire := ToProto(ch, fixtureWickID)
+			fords := 0
+			for i, g := range ch.Ground {
+				if g != groundRiverFord {
+					continue
+				}
+				fords++
+				if ch.Solid[i] || !Walkable(wire, i%ch.Size, i/ch.Size) {
+					t.Fatalf("ford at %d,%d became solid", i%ch.Size, i/ch.Size)
+				}
+				pi := wire.Ground[i/2] >> (4 * (i % 2)) & 15
+				if wire.Palette[pi] != "water_b" {
+					t.Fatal("ford lost in wire packing")
+				}
+			}
+			if (fords > 0) != f.hasFord {
+				t.Fatalf("ford count %d, want presence %v", fords, f.hasFord)
+			}
+			b, err := proto.MarshalOptions{Deterministic: true}.Marshal(wire)
+			if err != nil {
+				t.Fatal(err)
+			}
+			path := filepath.Join("..", "..", "..", "tests", "fixtures", "wilds-"+f.name+".bin")
+			if os.Getenv("UPDATE_CLIENT_FIXTURES") == "1" {
+				if err := os.WriteFile(path, b, 0o644); err != nil {
+					t.Fatal(err)
+				}
+			} else if have, err := os.ReadFile(path); err != nil || !bytes.Equal(have, b) {
+				t.Fatalf("%s is stale: UPDATE_CLIENT_FIXTURES=1 go test ./server/internal/wilds -run TestRiverCrossingFixtures", path)
+			}
+		})
+	}
+}

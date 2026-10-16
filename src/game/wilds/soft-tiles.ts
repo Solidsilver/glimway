@@ -171,57 +171,96 @@ export function largestPiece(mask: Uint8Array, T: number): Uint8Array {
   return out
 }
 
+type FordTile = { tx: number; ty: number }
+const FORD_STEPS = [[1, 0], [-1, 0], [0, 1], [0, -1]] as const
+const fordKey = (t: FordTile) => `${t.tx},${t.ty}`
+const fordOrder = (a: FordTile, b: FordTile) => a.ty - b.ty || a.tx - b.tx
+
 /**
- * Where a ford's stones go: for each 4-connected piece of ford tiles (found
- * across chunk edges, so neighbouring chunks agree), the way it crosses the
- * river (from bank to bank) and one line of tiles down its middle, across
- * the river's whole width; none for a piece whose middle line doesn't reach
- * dry ground at both ends. Seeds are the chunk's ford tiles; only tiles
- * `inside` the chunk come back. `ford` says whether a world tile is a ford,
- * `wet` whether it's water or ford.
+ * One connected line of stones through each ford, following its actual
+ * tiles between the dry banks. A route can bend or cross diagonally: no
+ * single row or column need span the river. A scrap touching only one bank
+ * gets no stones. Find the whole component before clipping to `inside`,
+ * so neighbouring chunks (and different seed tiles) choose the same line.
  */
-export function fordLines(seeds: readonly { tx: number; ty: number }[], ford: (tx: number, ty: number) => boolean, wet: (tx: number, ty: number) => boolean, inside: (tx: number, ty: number) => boolean): { tx: number; ty: number; across: boolean }[] {
+export function fordLines(seeds: readonly FordTile[], ford: (tx: number, ty: number) => boolean, wet: (tx: number, ty: number) => boolean, inside: (tx: number, ty: number) => boolean): (FordTile & { across: boolean })[] {
   const seen = new Set<string>()
-  const out: { tx: number; ty: number; across: boolean }[] = []
+  const out: (FordTile & { across: boolean })[] = []
   for (const start of seeds) {
-    if (seen.has(`${start.tx},${start.ty}`)) continue
-    const piece: { tx: number; ty: number }[] = []
+    if (seen.has(fordKey(start))) continue
+    const piece: FordTile[] = []
     const stack = [start]
-    seen.add(`${start.tx},${start.ty}`)
-    while (stack.length && piece.length < 256) {
+    seen.add(fordKey(start))
+    // The source contains only loaded tiles, so the component is finite.
+    // Width alone cannot bound its area: routes can follow the river.
+    while (stack.length) {
       const t = stack.pop()!
       piece.push(t)
-      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
-        const k = `${t.tx + dx},${t.ty + dy}`
-        if (!seen.has(k) && ford(t.tx + dx, t.ty + dy)) {
+      for (const [dx, dy] of FORD_STEPS) {
+        const next = { tx: t.tx + dx, ty: t.ty + dy }
+        const k = fordKey(next)
+        if (!seen.has(k) && ford(next.tx, next.ty)) {
           seen.add(k)
-          stack.push({ tx: t.tx + dx, ty: t.ty + dy })
+          stack.push(next)
         }
       }
     }
-    // Rows that run from dry ground to dry ground cross east-west; columns, north-south.
-    const rows = new Map<number, number[]>()
-    const cols = new Map<number, number[]>()
-    for (const t of piece) {
-      rows.set(t.ty, [...(rows.get(t.ty) ?? []), t.tx])
-      cols.set(t.tx, [...(cols.get(t.tx) ?? []), t.ty])
-    }
-    const spans = (m: Map<number, number[]>, isRow: boolean) =>
-      [...m].filter(([line, xs]) => {
-        const lo = Math.min(...xs) - 1
-        const hi = Math.max(...xs) + 1
-        return isRow ? !wet(lo, line) && !wet(hi, line) : !wet(line, lo) && !wet(line, hi)
-      }).length
-    const across = spans(rows, true) >= spans(cols, false)
-    const lines = [...(across ? rows : cols).keys()].sort((a, b) => a - b)
-    const mid = lines[Math.floor((lines.length - 1) / 2)]!
-    // Stones only where the line runs from bank to bank (a scrap of shallows gets none).
-    const run = (across ? rows : cols).get(mid)!
-    const lo = Math.min(...run) - 1
-    const hi = Math.max(...run) + 1
-    const dry = across ? !wet(lo, mid) && !wet(hi, mid) : !wet(mid, lo) && !wet(mid, hi)
-    if (!dry) continue
-    for (const t of piece) if ((across ? t.ty : t.tx) === mid && inside(t.tx, t.ty)) out.push({ ...t, across })
+    piece.sort(fordOrder)
+    for (const t of fordBankPath(piece, wet)) if (inside(t.tx, t.ty)) out.push(t)
   }
   return out
+}
+
+/** Group the dry banks locally, then join their middle contacts through ford tiles. */
+function fordBankPath(piece: readonly FordTile[], wet: (tx: number, ty: number) => boolean): (FordTile & { across: boolean })[] {
+  const tiles = new Map(piece.map((t) => [fordKey(t), t]))
+  const x0 = Math.min(...piece.map((t) => t.tx)) - 1
+  const x1 = Math.max(...piece.map((t) => t.tx)) + 1
+  const y0 = Math.min(...piece.map((t) => t.ty)) - 1
+  const y1 = Math.max(...piece.map((t) => t.ty)) + 1
+  const drySeen = new Set<string>()
+  const banks: FordTile[][] = []
+  for (const t of piece) for (const [dx, dy] of FORD_STEPS) {
+    const start = { tx: t.tx + dx, ty: t.ty + dy }
+    if (wet(start.tx, start.ty) || drySeen.has(fordKey(start))) continue
+    const dry = [start]
+    const contacts = new Map<string, FordTile>()
+    drySeen.add(fordKey(start))
+    for (let i = 0; i < dry.length; i++) for (const [dx, dy] of FORD_STEPS) {
+      const at = dry[i]!
+      const next = { tx: at.tx + dx, ty: at.ty + dy }
+      const k = fordKey(next)
+      if (tiles.has(k)) contacts.set(k, tiles.get(k)!)
+      if (next.tx < x0 || next.tx > x1 || next.ty < y0 || next.ty > y1 || wet(next.tx, next.ty) || drySeen.has(k)) continue
+      drySeen.add(k)
+      dry.push(next)
+    }
+    banks.push([...contacts.values()].sort(fordOrder))
+  }
+  if (banks.length < 2) return []
+
+  // Stable middle contacts preserve the centre line of a straight crossing.
+  const middle = (bank: readonly FordTile[]) => bank[Math.floor((bank.length - 1) / 2)]!
+  const start = middle(banks[0]!)
+  const queue = [start]
+  const prev = new Map<string, FordTile | null>([[fordKey(start), null]])
+  for (let i = 0; i < queue.length; i++) for (const [dx, dy] of FORD_STEPS) {
+    const at = queue[i]!
+    const next = tiles.get(`${at.tx + dx},${at.ty + dy}`)
+    if (!next || prev.has(fordKey(next))) continue
+    prev.set(fordKey(next), at)
+    queue.push(next)
+  }
+  const stones = new Map<string, FordTile & { across: boolean }>()
+  for (const bank of banks.slice(1)) {
+    const path: FordTile[] = []
+    for (let at: FordTile | null = middle(bank); at; at = prev.get(fordKey(at))!) path.push(at)
+    for (let i = 0; i < path.length; i++) {
+      const t = path[i]!
+      const a = path[i - 1] ?? t
+      const b = path[i + 1] ?? t
+      stones.set(fordKey(t), { ...t, across: Math.abs(b.tx - a.tx) >= Math.abs(b.ty - a.ty) })
+    }
+  }
+  return [...stones.values()].sort(fordOrder)
 }

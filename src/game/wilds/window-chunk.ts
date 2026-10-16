@@ -403,7 +403,7 @@ export class AttachedChunk implements Buildable {
 
   /**
    * A ford: stepping stones cut from the ford art, one a tile along the
-   * ford's middle line, across the river's whole width, on the painter's
+   * ford's connected bank-to-bank path, across its whole width, on the painter's
    * own water (./soft-tiles.ts fordStone and fordLines).
    */
   private fordStones(fords: readonly { tx: number; ty: number }[]): void {
