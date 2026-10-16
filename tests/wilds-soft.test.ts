@@ -6,6 +6,7 @@ import { groundTable } from '../src/game/wilds/ground-table.ts';
 import { wildsLook } from '../src/game/wilds/wilds-looks.ts';
 import { TERRAIN } from '../src/lib/tile.ts';
 import { wildsGround } from '../src/lib/wilds/data.ts';
+import { fixtureTerrain, type FixtureName } from './wilds-fixture.ts';
 
 const t = (id: string) => (TERRAIN as Record<string, number>)[wildsGround(id).terrain]!;
 
@@ -42,6 +43,7 @@ test('a ford’s stones: one line down the middle of the crossing, across the ri
   assert.deepEqual([...west, ...east].map((s) => `${s.tx},${s.ty}`).sort(), ['10,5', '11,5', '12,5', '13,5']);
   // A scrap of shallows in mid-river (water on every side) gets no stones.
   assert.deepEqual(fordLines([{ tx: 20, ty: 20 }], (x, y) => x === 20 && y === 20, () => true, () => true), []);
+  assert.deepEqual(fordLines([{ tx: 20, ty: 20 }], (x, y) => x === 20 && y === 20, (x) => x >= 20, () => true), [], 'shallows touching only one bank get no crossing');
   // A north-south crossing of an east-west river.
   const fordV = (x: number, y: number) => y >= 10 && y <= 12 && x >= 3 && x <= 5;
   const v = fordLines([{ tx: 3, ty: 10 }], fordV, (_x, y) => y >= 10 && y <= 12, () => true);
@@ -83,4 +85,68 @@ test('the ground has no tile squares: a verge in meadow paints meadow grass, and
   let cornersGrass = 0;
   for (const [x, y] of [[80, 80], [95, 80], [80, 95], [95, 95]] as const) if (!trodden.has(at(x, y))) cornersGrass++;
   assert.ok(cornersGrass >= 3, 'the corners are grass');
+});
+
+
+test('real generated fords show a connected line of stones through bends and across chunk edges', () => {
+  const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]] as const;
+  for (const [names, start] of [
+    [['ford-bend', 'ford-bend-east'], { tx: -75, ty: -61 }],
+    [['ford-diagonal-west', 'ford-diagonal-east'], { tx: -97, ty: 43 }],
+  ] as const) {
+    const chunks = names.map((name: FixtureName) => fixtureTerrain(name));
+    const tile = (tx: number, ty: number) => {
+      const c = chunks.find((c) => Math.floor(tx / c.size) === c.cx && Math.floor(ty / c.size) === c.cy);
+      return c ? { ground: c.ground[ty - c.cy * c.size]![tx - c.cx * c.size]!, solid: c.solid[ty - c.cy * c.size]![tx - c.cx * c.size]! } : null;
+    };
+    const ford = (tx: number, ty: number) => tile(tx, ty)?.ground === t('ford');
+    const wet = (tx: number, ty: number) => {
+      const g = tile(tx, ty)?.ground;
+      return g === undefined || g === t('water') || g === t('ford');
+    };
+    const stones = fordLines([start], ford, wet, () => true);
+    assert.ok(stones.length >= 4, `${names[0]}: the generated crossing must have visible stones`);
+    const keys = new Set(stones.map((p) => `${p.tx},${p.ty}`));
+    for (const p of stones) {
+      assert.equal(ford(p.tx, p.ty), true, 'stones stay on the served ford');
+      assert.equal(tile(p.tx, p.ty)?.solid, false, 'each stone is walkable');
+    }
+    const reached = new Set<string>();
+    const stack = [stones[0]!];
+    while (stack.length) {
+      const p = stack.pop()!;
+      const key = `${p.tx},${p.ty}`;
+      if (reached.has(key)) continue;
+      reached.add(key);
+      for (const [dx, dy] of dirs) if (keys.has(`${p.tx + dx},${p.ty + dy}`)) stack.push({ ...p, tx: p.tx + dx, ty: p.ty + dy });
+    }
+    assert.equal(reached.size, stones.length, 'the stones form a continuous walk');
+    const ends = stones.filter((p) => dirs.filter(([dx, dy]) => keys.has(`${p.tx + dx},${p.ty + dy}`)).length === 1);
+    assert.equal(ends.length, 2, 'one line between the banks');
+    for (const p of ends) assert.ok(dirs.some(([dx, dy]) => !wet(p.tx + dx, p.ty + dy)), 'the line reaches dry ground');
+    const split = chunks.flatMap((c) => {
+      const inside = (tx: number, ty: number) => Math.floor(tx / c.size) === c.cx && Math.floor(ty / c.size) === c.cy;
+      return fordLines(stones.filter((p) => inside(p.tx, p.ty)), ford, wet, inside);
+    });
+    const sorted = (xs: typeof stones) => xs.map((p) => `${p.tx},${p.ty},${p.across}`).sort();
+    assert.deepEqual(sorted(split), sorted(stones), 'chunks agree on the whole crossing');
+    assert.deepEqual(sorted(fordLines([stones.at(-1)!], ford, wet, () => true)), sorted(stones), 'the seed does not change the line');
+  }
+});
+
+test('a shallow-angle crossing wider than the old 256-tile cap keeps its complete stone path', () => {
+  // Current content allows a four-tile river and a three-tile ford band.
+  // A near-parallel route runs from (1,0) to (3,100): their overlap exceeds
+  // 256 tiles despite those small widths. It meets the two banks far apart.
+  const ford = (tx: number, ty: number) => tx >= 0 && tx < 4 && ty >= 0 && ty <= 100 && Math.abs(tx + 0.5 - (1 + ty / 50)) <= 1.5;
+  const wet = (tx: number, _ty: number) => tx >= 0 && tx < 4;
+  const seeds = [];
+  for (let ty = 0; ty <= 100; ty++) for (let tx = 0; tx < 4; tx++) if (ford(tx, ty)) seeds.push({ tx, ty });
+  assert.ok(seeds.length > 256);
+  const stones = fordLines([seeds[0]!], ford, wet, () => true);
+  assert.ok(stones.length > 0, 'the large crossing has stones');
+  assert.ok(stones.some((p) => p.tx === 0), 'the west bank is reached');
+  assert.ok(stones.some((p) => p.tx === 3), 'the east bank is reached');
+  const sorted = (xs: typeof stones) => xs.map((p) => `${p.tx},${p.ty},${p.across}`).sort();
+  assert.deepEqual(sorted(fordLines([seeds.at(-1)!], ford, wet, () => true)), sorted(stones), 'both ends choose the same complete component');
 });
