@@ -163,3 +163,42 @@ test('a resident out on their route is talked to where they are, not at their sp
   it.update(hero, 0);
   assert.equal(target(), 'orrin', 'home again: at his spot');
 });
+
+test('replacing an owner between frames updates the prompt and activates its new callback', () => {
+  const it = new Interactables(scene, { reducedMotion: true });
+  const owner = {};
+  let oldUses = 0, newUses = 0;
+  it.register(owner, [point('home:manage-shelf:0', 105, 100, { label: 'Old shelf', activate: () => { oldUses++; } })]);
+  it.update(hero, 0);
+  const replacement = point('home:manage-shelf:0', 105, 100, { label: 'New shelf', activate: () => { newUses++; } });
+  assert.deepEqual(prompts(() => it.register(owner, [replacement])), [{ label: 'New shelf' }]);
+  assert.equal(it.currentTarget, replacement);
+  assert.equal(it.activate(), true, 'no frame needed before E');
+  assert.equal(newUses, 1);
+  assert.equal(oldUses, 0);
+});
+
+test('replacement re-elects by current feet, reach and rank rather than retaining an id', () => {
+  const it = new Interactables(scene, { reducedMotion: true });
+  const owner = {}, feet = { ...hero };
+  it.register(owner, [point('home:manage-shelf:0', 105, 100)]);
+  it.register({}, [point('touch:bench', 200, 100)]);
+  it.update(feet, 0);
+  feet.x = 200;
+  assert.deepEqual(prompts(() => it.register(owner, [point('home:manage-shelf:0', 105, 100)])), [{ label: 'touch:bench' }]);
+  assert.equal(it.currentTarget?.id, 'touch:bench');
+  it.register(owner, [point('home:manage-shelf:0', 205, 100, { rank: 1 })]);
+  assert.equal(it.currentTarget?.id, 'home:manage-shelf:0');
+  it.register(owner, [point('home:manage-shelf:0', 205, 100, { rank: 1, available: () => false })]);
+  assert.equal(it.currentTarget?.id, 'touch:bench');
+});
+
+test('removing the last point between frames clears the prompt as well as the action target', () => {
+  const it = new Interactables(scene, { reducedMotion: true });
+  const owner = {};
+  it.register(owner, [point('home:mail', 105, 100)]);
+  it.update(hero, 0);
+  assert.deepEqual(prompts(() => it.register(owner, [])), [{ label: null }]);
+  assert.equal(it.currentTarget, null);
+  assert.equal(it.activate(), false);
+});

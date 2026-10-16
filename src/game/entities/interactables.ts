@@ -101,6 +101,8 @@ export class Interactables {
   private awayNow = ''
   /** Residents out on their route: their talk point walks with them (./npcs.ts `where`). */
   private whereCheck: Where | null = null
+  /** The live feet object last supplied by the scene, also read between frames. */
+  private player: { x: number; y: number } | null = null
 
   private readonly scene: Phaser.Scene
   private readonly deps: { reducedMotion: boolean }
@@ -128,6 +130,9 @@ export class Interactables {
       this.refreshMarkers()
     }
     this.lastPrompt = undefined
+    // Owners can redraw in a timer or an async reply, before input and the
+    // next frame. Resolve the replacement and its prompt together now.
+    if (this.player) this.update(this.player, this.scene.time?.now ?? 0)
   }
 
   /** Say who is away from their spot right now (checked every frame). */
@@ -190,6 +195,7 @@ export class Interactables {
    * drive the prompt, the markers and the keycap hint from it.
    */
   update(player: { x: number; y: number }, now: number): void {
+    this.player = player
     const best = this.pick(player)
     const away = this.awayCheck || this.goneCheck ? this.list.filter((it) => this.awayCheck?.(it.id) || this.goneCheck?.(it.id)).map((it) => it.id).join(',') : ''
     if (best !== this.currentTarget || away !== this.awayNow) {

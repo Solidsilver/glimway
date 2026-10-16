@@ -1628,3 +1628,90 @@ test('claimed lot shade reaches the fence and rear edge, replaces one texture, a
   art.destroyLand();
   assert.equal(scene.textures.added.filter((key) => key.startsWith('lot-shade:')).length, 0, 'detach releases the generated texture');
 });
+
+// E is event-driven: it can run after the window's refresh and before the
+// scene's next interaction update. Exercise actual lot facades and gate
+// scope filtering with an exhausted slice budget, on either UTC date.
+test('a fixed refresh leaves the shelf and mailbox usable before the next frame, including across a chunk edge', async (t) => {
+  const { Interactables } = await import('../src/game/entities/interactables.ts');
+  const { HomesteadLayer } = await import('../src/game/entities/homesteads.ts');
+  const { LotHomes } = await import('../src/game/wilds/lot-chunk.ts');
+  const { HomesteadTalk } = await import('../src/game/entities/homestead-talk.ts');
+  const { FixedScope } = await import('../src/game/wilds/fixed-scope.ts');
+  const { serveFixtureLand } = await import('./land-fixture.ts');
+  const { setLandSource } = await import('../src/game/lot-land.ts');
+  const { createNewGame } = await import('../src/lib/state.ts');
+  const { setGameNow } = await import('../src/game/clock.ts');
+  t.after(() => setGameNow(null));
+  for (const date of ['2026-10-15T23:59:00Z', '2026-10-16T00:01:00Z']) {
+    setGameNow(Date.parse(date) / 1000);
+    serveFixtureCommons();
+    serveFixtureLand('guest', 8);
+    setLandSource({ worldId: () => 'guest', state: () => null, fetchLand: () => null });
+    const r = rig();
+    const hero = { x: -408, y: 568, setVelocity() {} };
+    const interactions = new Interactables(r.scene as never, { reducedMotion: true });
+    let hasShelf = true;
+    const home = {
+      id: 'home-0', worldId: 'guest', gate: 0, tier: 1, landSeed: 0, member: true, desolate: false,
+      members: [{ id: 'owner', displayName: 'Owner' }], cleared: [], stumps: [], plants: [], yardPets: [], stalls: [], items: [],
+    };
+    const root = Object.assign(Object.create(HomesteadLayer.prototype), {
+      scene: r.scene, gate: null, land: null, gone: false, yardRoom: null, commons: commonsLane(),
+      homes: { homes: new Map([[0, home]]), connected: true, myGate: 0, myId: 'owner', status: 'ready', arrived() {},
+        fetchHome: async () => home, gateInfo: () => ({ shelf: hasShelf, mine: true, homeId: home.id, names: ['Owner'] }) },
+      village: { waitingCount: () => 0 }, fixedScope: new FixedScope(true),
+      deps: { session: { state: createNewGame(), link: null }, reducedMotion: true, hero: () => hero, solidGroup: r.scene.solids,
+        world: { open: true, areaId: 'outdoors', npcs: [] }, interactables: interactions },
+    }) as InstanceType<typeof HomesteadLayer>;
+    Object.assign(root, { lots: new LotHomes(root), art: new HomesteadArt(root), talk: new HomesteadTalk(root) });
+    const w = new WildsWindow({ ...r.deps, interactables: interactions, session: root.deps.session, hero: () => hero,
+      hooks: () => ({ attach: (key: string) => root.attachFixedChunk(key), detach: (key: string, refreshing?: boolean) => root.detachFixedChunk(key, refreshing) }) } as never);
+    Object.assign(root.deps, { refreshLot: (key: string) => w.refreshFixed(key) });
+    w['recentre'](-2, 1);
+    w['plan']!.attach = ['-2,1'];
+    w['paints'].set('-2,1', { key: FIXED_GROUND, sig: w['sigOf'](-2, 1) });
+    assert.equal(w['step'](), true);
+    w.builds.finish(w['fixed'].get('-2,1')!);
+    // Leave no walking budget: only an atomic active refresh can finish.
+    let clock = 0;
+    const time = t.mock.method(performance, 'now', () => { clock += 10; return clock; });
+    try {
+      const cases = [
+        { x: -408, y: 568, id: 'home:manage-shelf:0', panel: 'shelf', shelf: true },
+        { x: -424, y: 568, id: 'lot:0:home:mail', panel: 'mail', shelf: false },
+        // The public shelf belongs to -2,1; the visitor stands in -1,1.
+        { x: -376, y: 626, id: 'home:shelf:0', panel: 'shelf', shelf: true },
+      ];
+      for (const c of cases) {
+        hasShelf = c.shelf;
+        root['publishInteractions']();
+        Object.assign(hero, { x: c.x, y: c.y });
+        interactions.update(hero, 0);
+        assert.equal(interactions.currentTarget?.id, c.id, `${date}: fixture target`);
+        const before = w['fixed'].get('-2,1')!;
+        w.refreshFixed('-2,1');
+        w.update(0);
+        assert.notEqual(w['fixed'].get('-2,1'), before);
+        assert.equal(w['fixed'].get('-2,1')!.whole, true, `${date}: refresh complete before input`);
+        assert.equal(interactions.currentTarget?.id, c.id, `${date}: no scene update before E`);
+        const panels: string[] = [];
+        const opened = ({ panel }: { panel: string }) => panels.push(panel);
+        bus.on(EV.villageOpen, opened);
+        try { assert.equal(interactions.activate(), true); }
+        finally { bus.off(EV.villageOpen, opened); }
+        assert.deepEqual(panels, [c.panel]);
+      }
+      // A chunk with no hero or prompt still uses slices.
+      Object.assign(hero, { x: -200, y: 568 });
+      interactions.update(hero, 0);
+      w.refreshFixed('-2,1');
+      w.update(0);
+      assert.equal(w['fixed'].get('-2,1')!.whole, false, 'background refresh stays budgeted');
+    } finally {
+      time.mock.restore();
+      r.scene.events.emit('shutdown');
+      assert.equal(interactions.list.length, 0, 'detaching removes all facade points');
+    }
+  }
+});
