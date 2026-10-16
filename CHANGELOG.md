@@ -13,6 +13,17 @@ the game can show the first part as "What's new":
 
 ## [Unreleased]
 
+## [0.11.2] - 2026-10-16
+
+### For players
+
+- Every river crossing shows its stepping stones again. Where a path met the river at a bend or an angle, the stones were missing, so the path seemed to stop at open water.
+
+### Technical
+
+- The client's `fordLines` (`src/game/wilds/soft-tiles.ts`) joins a ford's dry banks with a path through its connected tiles, instead of using one straight middle row or column. About 11% of generated crossings had no stones before; the ford tiles were walkable throughout. The 256-tile scan cap is gone.
+- Only drawing changes: no layout revision, no generator version and no migrations.
+
 ## [0.11.1] - 2026-10-15
 
 ### For players
