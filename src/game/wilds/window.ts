@@ -46,7 +46,7 @@ import { bus, EV } from '../events.ts'
 import { generateRepairArt } from '../repairs-art.ts'
 import type { Session } from '../session.ts'
 import { CHUNK_TILES, chunkKey, chunkOfPixel, parseChunkKey } from './coords.ts'
-import { fixedPlaceOf, footprint, footprintAt, prepareFixed, applyLotHome, type FixedFootprint } from './fixed.ts'
+import { fixedPlaceOf, footprint, footprintAt, prepareFixed, applyLotHome, chunkOfTile, type FixedFootprint } from './fixed.ts'
 import { fixedChunkHash, paintSource } from './fixed-ground.ts'
 import { FixedChunk, type FixedChunkDeps } from './fixed-chunk.ts'
 import type { ExitDef } from '../worlds.ts'
@@ -213,6 +213,15 @@ export class WildsWindow {
     const stale = this.seasonalPending.values().next().value
     if (stale) {
       this.seasonalPending.delete(stale)
+      // Input is event-driven and can arrive before the next scene update.
+      // A refresh under the hero (or their prompt, across a chunk edge) must
+      // replace its fixtures in one turn, without an empty interaction list
+      // between slices. Chunks elsewhere keep their normal build budget.
+      const hero = this.deps.hero()
+      const target = this.deps.interactables.currentTarget
+      const at = chunkOfPixel(hero.x, hero.y)
+      const underfoot = chunkKey(at.cx, at.cy) === stale
+      const prompted = !!target && chunkOfTile(Math.floor(target.x / TILE), Math.floor((target.y - 8) / TILE)) === stale
       const had = this.fixed.has(stale)
       this.fixed.get(stale)?.destroy(true)
       this.fixed.delete(stale)
@@ -220,7 +229,11 @@ export class WildsWindow {
         const { cx, cy } = parseChunkKey(stale)
         const fp = footprintAt(cx, cy)
         // On its last paint; a lot whose clearing changed is painted again, off the frame.
-        if (fp && this.paints.has(stale)) this.attachFixed(fp, cx, cy)
+        if (fp && this.paints.has(stale)) {
+          this.attachFixed(fp, cx, cy)
+          const replacement = this.fixed.get(stale)
+          if (replacement && (underfoot || prompted)) this.builds.finish(replacement)
+        }
       }
     }
     const hero = this.deps.hero()
