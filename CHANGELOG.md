@@ -13,6 +13,17 @@ the game can show the first part as "What's new":
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-10-15
+
+### For players
+
+- Nothing changes in play. This release makes Glimway quicker for its host to download and update.
+
+### Technical
+
+- GitHub's source archive (the Nix flake input) is 45 MB instead of about 400 MB: the art-pass images in `assets/generated/` are `export-ignore`. The build never read them, and the large streamed archive could arrive truncated (`Truncated tar archive detected`). The images in `public/` are still included.
+- No changes in play, and no migrations.
+
 ## [0.11.0] - 2026-10-15
 
 ### For players
@@ -25,6 +36,7 @@ the game can show the first part as "What's new":
 - Brackenwood and Ashwatch are reached through a living portal in a glade off Lantern Road.
 - Pip's garden has its hedges and flowers back, and Silas has a new farmhouse.
 - Stepping onto the open map is about a second faster.
+- Fixed: pressing E at your gate shelf or mailbox could do nothing right after something changed around you.
 
 ### Technical
 
@@ -38,6 +50,7 @@ the game can show the first part as "What's new":
 - The generator mirrors open fixed edges, feathers woods back beside them, keeps camps 6 tiles from every mouth, leans to woods west and meadow east and south of the block, and runs routes out of every gate, lane end and verge.
 - E2E specs read positions from content (`e2e/positions.ts`). The full E2E job has 45 minutes.
 - Fixed: two plants could share a tile when an older plant was boxed in.
+- Fixed: a refresh of the fixed chunk under the hero dropped its interaction points between sliced build frames, so E did nothing. Such a refresh now finishes in one turn, and interactables pick their target again as soon as points change. (In the `v0.11.0` tag, `613c70c9`.)
 
 ## [0.10.0] - 2026-10-14
 
@@ -745,7 +758,8 @@ The first public release.
   under its own licence; contributions under the DCO.
 - Unit tests, Go tests and Playwright playtests.
 
-[Unreleased]: https://github.com/Solidsilver/glimway/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/Solidsilver/glimway/compare/v0.11.1...HEAD
+[0.11.1]: https://github.com/Solidsilver/glimway/compare/v0.11.0...v0.11.1
 [0.11.0]: https://github.com/Solidsilver/glimway/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/Solidsilver/glimway/compare/v0.9.1...v0.10.0
 [0.9.1]: https://github.com/Solidsilver/glimway/compare/v0.9.0...v0.9.1
