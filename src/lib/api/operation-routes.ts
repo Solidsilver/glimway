@@ -10,6 +10,7 @@ import { CompanionsRequestSchema, MountHomeRequestSchema, MountOutRequestSchema,
 import { WardrobeCheckRequestSchema, WardrobeRequestSchema } from '../gen/glimway/v1/wardrobe_pb.js';
 import { FishCastRequestSchema, FishSettleRequestSchema, FishCancelRequestSchema } from '../gen/glimway/v1/fishing_pb.js';
 import { PurseTopUpRequestSchema } from '../gen/glimway/v1/purse_pb.js';
+import { CampRequestSchema, RecoveryCollectRequestSchema } from '../gen/glimway/v1/camps_pb.js';
 import { ReportRequestSchema, QuestStepRequestSchema, MarkRequestSchema, TakePaperRequestSchema, SettleEchoRequestSchema, FallRequestSchema, ProfileReportSchema, SpendRequestSchema, WildsClaimRequestSchema, WildsLanternRequestSchema, WildsClearRequestSchema, WildsLayRequestSchema, WildsLiftRequestSchema, WildsDiscoverRequestSchema } from '../gen/glimway/v1/operations_pb.js';
 
 type ResultCase<D extends DescMessage> = MessageShape<D>['$typeName'] extends 'glimway.v1.ProfileReport'
@@ -43,6 +44,8 @@ export const operationRoutes = {
   'wilds-lay': route(WildsLayRequestSchema, '/api/wilds/lay', 'wildsLay', (api, req) => api.wildsLay(req)),
   'wilds-lift': route(WildsLiftRequestSchema, '/api/wilds/lift', 'wildsLift', (api, req) => api.wildsLift(req)),
   'wilds-discover': route(WildsDiscoverRequestSchema, '/api/wilds/discover', 'wildsDiscover', (api, req) => api.wildsDiscover(req)),
+  'camp': route(CampRequestSchema, '/api/camps', 'camp', (api, req) => api.camp(req)),
+  'recovery-collect': route(RecoveryCollectRequestSchema, '/api/recovery/collect', 'recoveryCollect', (api, req) => api.recoveryCollect(req)),
   'companions': route(CompanionsRequestSchema, '/api/companions', 'companions', (api, req) => api.companions(req)),
   'stall': route(StallRequestSchema, '/api/stable/stall', 'stall', (api, req) => api.stall(req)),
   'mount-out': route(MountOutRequestSchema, '/api/stable/out', 'mountOut', (api, req) => api.mountOut(req)),
@@ -75,6 +78,8 @@ export const queuedOperationRoutes: Partial<Record<OutboxKind, {
   'wilds-lay': operationRoutes['wilds-lay'],
   'wilds-lift': operationRoutes['wilds-lift'],
   'wilds-discover': operationRoutes['wilds-discover'],
+  'camp': operationRoutes['camp'],
+  'recovery-collect': operationRoutes['recovery-collect'],
   'companions': operationRoutes['companions'],
   'stall': operationRoutes['stall'],
   'mount-out': operationRoutes['mount-out'],

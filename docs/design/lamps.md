@@ -119,10 +119,17 @@ turncap is a convenience and safety fallback.
 ### 2.1 What exists, and where
 
 These are observations at the baseline, not claims that the proposed systems have shipped.
+The first rows were added as 0.12 and 0.13 landed and describe the code as built.
+
+| Built since the baseline | Source |
+|---|---|
+| Holds | [store/holds.go](../../server/internal/store/holds.go), migration 039: `Chunks.Hold`, `Release`, `HoldAt`, `HeldEpoch(s)`; one `Holder` per kind (`Keeps`, `Released`), registered in `api.New` and judged once when the new wick epoch is made. Fixed → held → generated. |
+| Lot lanterns | [api/lot_lanterns.go](../../server/internal/api/lot_lanterns.go), migration 040: holder kind `lot-lantern`. Fuel is `hearth-oil` (the chandler sells it at 4 glims, 3 a day), a 3-wick store in the lantern, one wick burned a turning, a wick of dimming, then lapse. |
+| Camps and Pell's crate | [api/camps.go](../../server/internal/api/camps.go), [api/recovery.go](../../server/internal/api/recovery.go), migration 041: holder kind `way-lamp`, `camps`, `camp_plants`, `recovery_crates`/`recovery_entries`; `GET`/`POST /api/camps`, `GET /api/recovery`, `POST /api/recovery/collect`. |
 
 | Existing seam | Source and consequence |
 |---|---|
-| Chunk sources | [chunks/source.go](../../server/internal/chunks/source.go) defines `ChunkSource` and `EpochComposition`. [location/location.go](../../server/internal/location/location.go) has fixed/generated sources; **held is still to build**. [store/chunks.go](../../server/internal/store/chunks.go) serves fixed/plot bodies first, then stored generated chunks. |
+| Chunk sources | [chunks/source.go](../../server/internal/chunks/source.go) defines `ChunkSource` and `EpochComposition`. [location/location.go](../../server/internal/location/location.go) has fixed/generated sources; held came with the holds engine above. [store/chunks.go](../../server/internal/store/chunks.go) serves fixed/plot bodies first, then stored generated chunks. |
 | Identity and near read | [wilds.proto](../../proto/glimway/v1/wilds.proto) defines `WildsChunkKey(realm, layer, cx, cy)`, `WorldChunk`, `NearChunk`, `GroundChanges` and `WildsWay`. [api/open_map.go](../../server/internal/api/open_map.go) takes world identity from the session and selects still/wick epochs, without holds. |
 | Epoch seeds and clock | [wilds/epoch_v3.go](../../server/internal/wilds/epoch_v3.go) hashes world seed, kind, generator version and **season** into `Epoch.hash`, chunk and loot seeds. [clock.json](../../content/clock.json) sets seven-day wicks. |
 | Geography still turns | [wend.go](../../server/internal/wilds/wend.go) uses `e.hash("wend")`; [lands.go](../../server/internal/wilds/lands.go) uses `e.hash("land", ...)`. [world_v3.go](../../server/internal/wilds/world_v3.go) seasons the landform warp/dither noise too. Stable geography is work for 0.12. |
@@ -264,6 +271,13 @@ Proposed **tuning**:
 | New communal post | Same physical lamp parts without store/deposit; explicitly Common |
 | Backland light | Five-tile radius, extra lanterns within connected light, usable tiles clipped to its one chunk |
 
+As built (0.12–0.13): the oil is `hearth-oil` at one flask a wick and three wicks a store, for
+lot lanterns and way-lamps alike (content `lotLantern`, `wayLamp`). The store is the lantern or
+lamp itself; no separate placeable store exists yet. The way-lamp is a home piece crafted at the
+bench from six timber, four stone, a lamp head and a lamp wick, so the whole cost comes back
+with the lamp on recovery; setting it takes the first flask. Its setter and their household build
+at the camp; anyone fills it. The setter may take an empty lamp down, its unspent oil returned.
+
 Retire distance escalation and the automatic 3×3 hold. Extra lanterns in one funded chunk do
 not multiply upkeep. Each claim has one linked placeable store. Refuse unlinking/removing it
 until its balance moves atomically to a replacement. No implicit shared drains between claims;
@@ -357,6 +371,15 @@ not silently relight a lamp.
 0.12 must ship the minimum backland recovery flow before enabling lapse. 0.13 extends it to
 camps, communal lamps and Common work. The zero-loss rule does not permit destructive interim
 backland behavior.
+
+**As built.** Lot backland is a deliberate exception: a lot's own home storage is its recovery
+place, so a lapsed backland's pieces go there and its plants are archived with their seed in
+storage (0.12). Camps use the crate: one `recovery_crates` row per lapse, and entries per
+beneficiary. A piece is the same instance at location `crate`; a plant returns its seed, with its
+planting kept in the entry's state for a later replant; unspent oil goes to the lamp's setter; a
+laid path tile's stone or plank goes to whoever laid it (the lot backland's paths still turn with
+the land). Collection in Pell's office takes everything at once into the pack; no destination can
+be full yet. Crates are per world.
 
 ### 2.8 The Keeper's hand and naming from parts
 
@@ -453,6 +476,11 @@ No way-lamps, camps, Keeper gate or presence-kept Common land in this release.
 | B · Geography and holds | Stable seed split, versioned generator expectations, held read/authorization, retention, material expiry and access | A's keys/epoch contract |
 | C · Backland and recovery | Tree/chandler oil, bounded services, connected lanterns/store, weekly debit/warning, atomic packing and Pell collection for objects/plants/paths | A; B's resolver |
 | D · Drawing and acceptance | Lot/store flows, reserve/warning in world and existing map, final art; arrival long frame and two E2E flakes riding with the feature | A's view types; B/C integration |
+
+**As built in 0.12:** holds and lasting geography (migrations 038, 039) and lot lanterns (040)
+shipped; the backland lapses to home storage, not Pell's crate, and its laid paths turn with it
+without a refund (§2.7). The tree/sap supply is the chandler's `hearth-oil`. Pell's crate came
+with camps in 0.13 (migration 041).
 
 A leads; B/C can build against that contract, D against its view types. Integrate recovery before
 real lapse. Warnings, buffer and safe backland collection cannot wait for 0.13. Common preservation

@@ -219,6 +219,9 @@ func (a *Server) wildsClear(w http.ResponseWriter, r *http.Request) error {
 		if err = a.backlandBuilder(ctx, tx, s, p.cx, p.cy); err != nil {
 			return nil, err
 		}
+		if err = a.campBuilderAt(ctx, tx, s, p.cx, p.cy); err != nil {
+			return nil, err
+		}
 		if p.eff.Change(p.lx, p.ly) != nil {
 			return nil, fail(409, "already-cleared")
 		}
@@ -275,6 +278,9 @@ func (a *Server) wildsLay(w http.ResponseWriter, r *http.Request) error {
 			return nil, err
 		}
 		if err = a.backlandBuilder(ctx, tx, s, p.cx, p.cy); err != nil {
+			return nil, err
+		}
+		if err = a.campBuilderAt(ctx, tx, s, p.cx, p.cy); err != nil {
 			return nil, err
 		}
 		if p.eff.Laid(p.lx, p.ly) {

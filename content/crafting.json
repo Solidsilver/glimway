@@ -553,6 +553,22 @@
         "id": "bookshelf",
         "qty": 1
       }
+    },
+    {
+      "id": "craft-way-lamp",
+      "name": "Way-lamp",
+      "minTier": 2,
+      "materials": {
+        "timber": 6,
+        "stone": 4,
+        "lamp-head": 1,
+        "lamp-wick": 1
+      },
+      "output": {
+        "kind": "decoration",
+        "id": "way-lamp",
+        "qty": 1
+      }
     }
   ],
   "hearthRecipes": [

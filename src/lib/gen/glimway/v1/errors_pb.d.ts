@@ -1198,6 +1198,18 @@ export enum ErrorCode {
    * @generated from enum value: ERROR_CODE_CANNOT_HOLD = 233;
    */
   CANNOT_HOLD = 233,
+
+  /**
+   * 0.13 Camps (lamps.md 2.5, 2.7).
+   *
+   * @generated from enum value: ERROR_CODE_NO_CAMP = 234;
+   */
+  NO_CAMP = 234,
+
+  /**
+   * @generated from enum value: ERROR_CODE_CAMP_NOT_EMPTY = 235;
+   */
+  CAMP_NOT_EMPTY = 235,
 }
 
 /**

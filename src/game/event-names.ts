@@ -103,6 +103,8 @@ export const EV = {
   planted: 'game:planted',
   /** Write the hero's spot into the save now (before a mutation that measures reach). */
   notePosition: 'game:note-position',
+  /** Set a way-lamp, set a piece out or plant at the camp you stand in (UI -> game; src/game/wilds/camps.ts). */
+  campDo: 'game:camp-do',
   // ui -> game (and dialogue panel -> scene)
   action: 'game:action',
   cast: 'game:cast',
@@ -491,6 +493,7 @@ export interface EventMap {
   [EV.turning]: { reason: 'epoch-ended' }
   [EV.planted]: { plant: HomePlantView; gate: number; worldId: string }
   [EV.notePosition]: void
+  [EV.campDo]: { action: 'set' | 'place' | 'plant'; itemId?: string; itemDef?: string }
   [EV.action]: void
   [EV.cast]: void
   [EV.castMove]: void

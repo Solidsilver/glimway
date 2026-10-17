@@ -49,6 +49,20 @@ message Homestead {
   // The lot lantern on each lot's back line (hearthwick-2.md 6): lit, it
   // holds the backland chunk behind the lot across turnings.
   LotLantern lot_lantern = 15 [(buf.validate.field).required = true];
+  // The way-lamp (roadmap 0.13; lamps.md 2.5): set in the Wilds, it holds
+  // one chunk as a camp while it has oil.
+  WayLamp way_lamp = 16 [(buf.validate.field).required = true];
+}
+
+// The way-lamp's camp (lamps.md 2.5): `item` is the home piece set as the
+// lamp (a camp-only piece); its oil works as the lot lantern's does. reach
+// is how far, in tiles, a player may set, fill or build from.
+message WayLamp {
+  string item = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  string oil = 2 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  int32 max_wicks = 3 [(buf.validate.field).int32 = {gte: 1, lte: 12}];
+  int32 wicks_per_oil = 4 [(buf.validate.field).int32 = {gte: 1, lte: 12}];
+  int32 reach = 5 [(buf.validate.field).int32 = {gte: 1, lte: 8}];
 }
 
 // The lot lantern's oil (roadmap 0.12): one `oil` item adds wicks_per_oil
@@ -249,8 +263,8 @@ message HomeItem {
   };
   option (buf.validate.message).cel = {
     id: "home_item.where"
-    message: "where is one or two distinct scenes (indoor, outdoor, gate)"
-    expression: "size(this.where) > 0 && size(this.where) <= 2 && this.where.all(w, w in [\"indoor\", \"outdoor\", \"gate\"]) && (size(this.where) == 1 || this.where[0] != this.where[1])"
+    message: "where is one or two distinct scenes (indoor, outdoor, gate, camp)"
+    expression: "size(this.where) > 0 && size(this.where) <= 2 && this.where.all(w, w in [\"indoor\", \"outdoor\", \"gate\", \"camp\"]) && (size(this.where) == 1 || this.where[0] != this.where[1])"
   };
   string id = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
   string name = 2;

@@ -39,6 +39,7 @@ import type { Hero } from '../entities/hero'
 import type { HomesteadLayer } from '../entities/homesteads'
 import type { WildsEntities } from '../wilds/entities'
 import type { WildsPaths } from '../wilds/paths'
+import type { WildsCamps } from '../wilds/camps'
 
 export interface WorldActionDeps {
   scene: Phaser.Scene
@@ -51,6 +52,8 @@ export interface WorldActionDeps {
   wilds: () => WildsEntities | null
   /** The open map's path work (a confirmed lay comes back as `path:lay:…`). */
   paths: () => WildsPaths | null
+  /** Camps (lamps.md 2.5): the way-lamp's talk comes back as `camp:…`. */
+  camps: () => WildsCamps | null
   /** Write where the hero stands into the save (it rides along with a write). */
   notePosition: () => void
   /** A paid outcome changes what the markers and the prompt say. */
@@ -74,6 +77,7 @@ export class WorldActions {
     ['echo:settle:', (siteId) => void this.deps.wilds()?.settleEcho(siteId)],
     // The confirm before laying on land that turns (open-map.md 2.9).
     ['path:', (rest) => this.deps.paths()?.onAction(rest)],
+    ['camp:', (rest) => this.deps.camps()?.onAction(rest)],
     ['heirloom:grant:', (id) => this.grantHeirloom(id)],
     [
       'buy:',

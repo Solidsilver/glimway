@@ -14,6 +14,7 @@ import type { WildsRumour } from "./wilds_pb.js";
 import type { FallResult, MarkResult, ProfileResult, QuestStepResult, ReportResult, SettleEchoResult, SpendResult, TakePaperResult, WildsClaimResult, WildsClearResult, WildsDiscoverResult, WildsLanternResult, WildsLayResult, WildsLiftResult } from "./operations_pb.js";
 import type { ContributeResult, CraftResult, DeskCopyResult, HearthCraftResult, LibraryDonateResult, MailActionResult, MailRecallResult, MailSendResult, MendResult, WorkshopView } from "./village_pb.js";
 import type { WorldChoice, WorldLeaveResult, WorldMoveResult } from "./world_pb.js";
+import type { CampResult, RecoveryCollectResult } from "./camps_pb.js";
 
 /**
  * Describes the file glimway/v1/state.proto.
@@ -589,6 +590,18 @@ export declare type Envelope = Message<"glimway.v1.Envelope"> & {
      */
     value: WildsDiscoverResult;
     case: "wildsDiscover";
+  } | {
+    /**
+     * @generated from field: glimway.v1.CampResult camp = 47;
+     */
+    value: CampResult;
+    case: "camp";
+  } | {
+    /**
+     * @generated from field: glimway.v1.RecoveryCollectResult recovery_collect = 48;
+     */
+    value: RecoveryCollectResult;
+    case: "recoveryCollect";
   } | { case: undefined; value?: undefined };
 };
 

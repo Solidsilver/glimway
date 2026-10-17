@@ -61,6 +61,8 @@ export interface LanternPosts { item: string; radius: number; nameMax: number; c
 export interface HomesteadStable { item: string; maxStalls: number; stallCost: Record<string, number>; growth: Record<string, number> }
 /** The lot lantern's oil (roadmap 0.12): wicks per flask, the store's size, and the stake that carries it. */
 export interface LotLanternRules { oil: string; maxWicks: number; wicksPerOil: number; stakeY: number }
+/** The way-lamp's camp (roadmap 0.13): its piece, its oil, and the reach to set, fill and build from. */
+export interface WayLampRules { item: string; oil: string; maxWicks: number; wicksPerOil: number; reach: number }
 export interface HomesteadData {
   tiers: HomeTier[];
   indoor: HomeGrid;
@@ -79,6 +81,7 @@ export interface HomesteadData {
   items: HomeItem[];
   stable: HomesteadStable;
   lotLantern: LotLanternRules;
+  wayLamp: WayLampRules;
 }
 
 /** Throws on anything content/homestead.go would refuse. */

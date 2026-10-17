@@ -267,6 +267,9 @@ const (
 	ErrorCode_ERROR_CODE_LANTERN_FULL ErrorCode = 231
 	ErrorCode_ERROR_CODE_NO_HOME      ErrorCode = 232
 	ErrorCode_ERROR_CODE_CANNOT_HOLD  ErrorCode = 233
+	// 0.13 Camps (lamps.md 2.5, 2.7).
+	ErrorCode_ERROR_CODE_NO_CAMP        ErrorCode = 234
+	ErrorCode_ERROR_CODE_CAMP_NOT_EMPTY ErrorCode = 235
 )
 
 // Enum value maps for ErrorCode.
@@ -506,6 +509,8 @@ var (
 		231: "ERROR_CODE_LANTERN_FULL",
 		232: "ERROR_CODE_NO_HOME",
 		233: "ERROR_CODE_CANNOT_HOLD",
+		234: "ERROR_CODE_NO_CAMP",
+		235: "ERROR_CODE_CAMP_NOT_EMPTY",
 	}
 	ErrorCode_value = map[string]int32{
 		"ERROR_CODE_UNSPECIFIED":               0,
@@ -742,6 +747,8 @@ var (
 		"ERROR_CODE_LANTERN_FULL":              231,
 		"ERROR_CODE_NO_HOME":                   232,
 		"ERROR_CODE_CANNOT_HOLD":               233,
+		"ERROR_CODE_NO_CAMP":                   234,
+		"ERROR_CODE_CAMP_NOT_EMPTY":            235,
 	}
 )
 
@@ -777,7 +784,7 @@ var File_glimway_v1_errors_proto protoreflect.FileDescriptor
 const file_glimway_v1_errors_proto_rawDesc = "" +
 	"\n" +
 	"\x17glimway/v1/errors.proto\x12\n" +
-	"glimway.v1*\xf69\n" +
+	"glimway.v1*\xaf:\n" +
 	"\tErrorCode\x12\x1a\n" +
 	"\x16ERROR_CODE_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17ERROR_CODE_INVALID_JSON\x10\x01\x12\"\n" +
@@ -1013,7 +1020,9 @@ const file_glimway_v1_errors_proto_rawDesc = "" +
 	"\x1aERROR_CODE_BEYOND_FRONTIER\x10\xe6\x01\x12\x1c\n" +
 	"\x17ERROR_CODE_LANTERN_FULL\x10\xe7\x01\x12\x17\n" +
 	"\x12ERROR_CODE_NO_HOME\x10\xe8\x01\x12\x1b\n" +
-	"\x16ERROR_CODE_CANNOT_HOLD\x10\xe9\x01B1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
+	"\x16ERROR_CODE_CANNOT_HOLD\x10\xe9\x01\x12\x17\n" +
+	"\x12ERROR_CODE_NO_CAMP\x10\xea\x01\x12\x1e\n" +
+	"\x19ERROR_CODE_CAMP_NOT_EMPTY\x10\xeb\x01B1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
 
 var (
 	file_glimway_v1_errors_proto_rawDescOnce sync.Once

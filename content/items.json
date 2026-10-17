@@ -912,6 +912,13 @@
       "blurb": "Expands your land. Holds back the dark where its light falls."
     },
     {
+      "id": "way-lamp",
+      "name": "Way-lamp",
+      "tab": "home",
+      "kind": "home-good",
+      "blurb": "A lamp on a stone footing, for the Wilds. Set it out and keep it in oil, and the woods it lights hold through the turning."
+    },
+    {
       "id": "gate-shelf",
       "name": "Gate shelf",
       "tab": "home",

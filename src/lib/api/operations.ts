@@ -11,6 +11,7 @@ import { type CompanionsRequest, type MountHomeRequest, type MountOutRequest, ty
 import { WardrobeReadSchema, type WardrobeCheckRequest, type WardrobeRead, type WardrobeRequest } from '../gen/glimway/v1/wardrobe_pb.js';
 import { FishingWatersSchema, type FishCastRequest, type FishSettleRequest, type FishCancelRequest, type FishingWaters } from '../gen/glimway/v1/fishing_pb.js';
 import { PurseReadSchema, type PurseRead, type PurseTopUpRequest } from '../gen/glimway/v1/purse_pb.js';
+import { CampsReadSchema, RecoveryReadSchema, type CampRequest, type CampsRead, type RecoveryCollectRequest, type RecoveryRead } from '../gen/glimway/v1/camps_pb.js';
 import { type ReportRequest, type QuestStepRequest, type MarkRequest, type TakePaperRequest, type SettleEchoRequest, type FallRequest, type ProfileReport, type SpendRequest, type WildsClaimRequest, type WildsLanternRequest, type WildsClearRequest, type WildsLayRequest, type WildsLiftRequest, type WildsDiscoverRequest } from '../gen/glimway/v1/operations_pb.js';
 
 export type Transport = (method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown, extra?: { headers?: Record<string, string>; binary?: boolean; keepalive?: boolean }) => Promise<unknown>;
@@ -41,6 +42,12 @@ export interface OperationsApi {
   wildsLay(request: WildsLayRequest): Promise<Envelope>;
   wildsLift(request: WildsLiftRequest): Promise<Envelope>;
   wildsDiscover(request: WildsDiscoverRequest): Promise<Envelope>;
+  /** Camps (lamps.md 2.5): set, fill, place, remove, plant; and the world's camps. */
+  camp(request: CampRequest): Promise<Envelope>;
+  camps(): Promise<CampsRead>;
+  /** Pell's recovery crate (lamps.md 2.7): what waits, and collecting it. */
+  recovery(): Promise<RecoveryRead>;
+  recoveryCollect(request: RecoveryCollectRequest): Promise<Envelope>;
   /** Companions and the stable (crafts.md 6.2). */
   companions(request: CompanionsRequest): Promise<Envelope>;
   stall(request: StallRequest): Promise<Envelope>;
@@ -110,6 +117,10 @@ export function createOperationsApi(send: Transport): OperationsApi {
     async wildsLay(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['wilds-lay'], req)); },
     async wildsLift(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['wilds-lift'], req)); },
     async wildsDiscover(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['wilds-discover'], req)); },
+    async camp(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['camp'], req)); },
+    async camps() { return decodeMixed(await send('GET', '/api/camps'), (r) => decodeWire(CampsReadSchema, r)).result; },
+    async recovery() { return decodeMixed(await send('GET', '/api/recovery'), (r) => decodeWire(RecoveryReadSchema, r)).result; },
+    async recoveryCollect(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['recovery-collect'], req)); },
     async companions(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['companions'], req)); },
     async stall(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['stall'], req)); },
     async mountOut(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['mount-out'], req)); },
