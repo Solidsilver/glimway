@@ -97,7 +97,7 @@ func lampNaming(ctx context.Context, tx *sql.Tx, world, id string) (*contract.La
 	var parts, landmark, text, short string
 	var namer sql.NullString
 	var at int64
-	err := tx.QueryRowContext(ctx, "SELECT parts,landmark,text,short_name,namer,named_at FROM lamp_namings WHERE world_id=? AND lamp_id=?", world, id).Scan(&parts, &landmark, &text, &short, &namer, &at)
+	err := tx.QueryRowContext(ctx, "SELECT parts,landmark,text,short_name,namer,named_at FROM lamp_namings WHERE lamp_id=? AND (world_id=? OR world_id IS NULL)", id, world).Scan(&parts, &landmark, &text, &short, &namer, &at)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}

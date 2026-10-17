@@ -81,6 +81,8 @@ export interface ItemsView {
   pickedUp: string[];
   /** Recent thank-yous for things you made. */
   thanks: ThanksView[];
+  /** Home pieces in the pack (a way-lamp, a stool), deed or no deed. */
+  carried: { id: string; itemDef: string }[];
 }
 export interface ItemsResponse extends Snapshot {
   items: ItemsView;
@@ -183,6 +185,7 @@ export function projectCounts(v: GeneratedAssetCounts | undefined): AssetCounts 
 
 export function projectItemsView(v: GeneratedItemsView): ItemsView {
   if (!v.offHand) throw new Error('missing off hand');
+  if (v.carried.some((p) => !p.id || !p.itemDef)) throw new Error('invalid carried piece');
   return {
     stacks: v.stacks.map((s): StackView => ({ itemDef: s.itemDef, qty: int(s.qty, 1), maker: maker(s.maker ?? undefined) })),
     instances: v.instances.map(projectInstance),
@@ -190,6 +193,7 @@ export function projectItemsView(v: GeneratedItemsView): ItemsView {
     offHand: { open: v.offHand.open, class: v.offHand.class ?? null, itemDef: v.offHand.itemDef ?? null, instance: v.offHand.instance ?? null },
     pickedUp: v.pickedUp.filter((p): p is string => typeof p === 'string'),
     thanks: v.thanks.map((t): ThanksView => ({ fromName: t.fromName.slice(0, 64), itemDef: t.itemDef, at: num(t.at) })),
+    carried: v.carried.map((p) => ({ id: p.id, itemDef: p.itemDef })),
   };
 }
 

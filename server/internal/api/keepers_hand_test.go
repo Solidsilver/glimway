@@ -258,6 +258,68 @@ func TestLampAshOnlyOnce(t *testing.T) {
 	}
 }
 
+// A lamp's naming follows the lamp (review B5): a post named in one world
+// keeps its naming in the next, set as a post or as a camp's lamp, and is
+// never named, or its ash given, again. A road stone's id repeats between
+// worlds, so each world names its own.
+func TestPortableLampNamingFollowsItAcrossWorlds(t *testing.T) {
+	x := newRig(t)
+	x.withStone()
+	x.hero("olive", "Olive", "p1")
+	x.ready("olive")
+	party := x.partyWorldOf("p1")
+	x.hero("alice", "Alice", "")
+	x.ready("alice")
+	x.hero("alice", "Alice", "p1")
+	c, s := x.again("alice")
+	x.keeper(s.AccountID)
+	x.stack(s.AccountID, "lamp-wick", "", 2)
+	sx, sy := local(2, -1, [2]int{testStoneTile[0] + 1, testStoneTile[1] + 1})
+	x.lampOp(c, s, &contract.CommunalLampRequest{Action: "relight", Lamp: testStone}, sx, sy, 200)
+	x.lampOp(c, s, &contract.CommunalLampRequest{Action: "name", Lamp: testStone, Parts: roadParts}, sx, sy, 200)
+	lamp := x.carry(s.AccountID, "way-lamp")
+	spots := x.campSpots(s.WorldID, campCX, campCY)
+	x.lampOp(c, s, &contract.CommunalLampRequest{Action: "post", ItemId: lamp, X: int32(spots[0][0]), Y: int32(spots[0][1])}, spots[1][0], spots[1][1], 200)
+	x.lampOp(c, s, &contract.CommunalLampRequest{Action: "name", Lamp: lamp, Parts: roadParts}, spots[1][0], spots[1][1], 200)
+	x.lampOp(c, s, &contract.CommunalLampRequest{Action: "lift", Lamp: lamp}, spots[1][0], spots[1][1], 200)
+	if x.packQty(s.AccountID, "lamp-ash") != 2 {
+		t.Fatalf("ash before the move: %d", x.packQty(s.AccountID, "lamp-ash"))
+	}
+
+	x.worldReq("POST", "/api/world/move", moveBody(s, "naming-move", party, "in:village:library"), c, 200)
+	c, s = x.again("alice")
+	if s.WorldID != party {
+		t.Fatal("not moved")
+	}
+	spots = x.campSpots(s.WorldID, campCX, campCY)
+	v, _ := x.lampOp(c, s, &contract.CommunalLampRequest{Action: "post", ItemId: lamp, X: int32(spots[0][0]), Y: int32(spots[0][1])}, spots[1][0], spots[1][1], 200)
+	if v.Lamp.GetNaming().GetShortName() != "First lamp past the Whitequiet" {
+		t.Fatalf("the post lost its naming: %+v", v.Lamp.GetNaming())
+	}
+	if _, code := x.lampOp(c, s, &contract.CommunalLampRequest{Action: "name", Lamp: lamp, Parts: roadParts}, spots[1][0], spots[1][1], 409); code != "lamp-named" {
+		t.Fatalf("named again in another world: %s", code)
+	}
+	// Set as a camp's lamp, it's still the same lamp.
+	x.lampOp(c, s, &contract.CommunalLampRequest{Action: "lift", Lamp: lamp}, spots[1][0], spots[1][1], 200)
+	x.stack(s.AccountID, "hearth-oil", "", 1)
+	cv, _ := x.campOp(c, s, &contract.CampRequest{Action: "set", ItemId: lamp, X: int32(spots[0][0]), Y: int32(spots[0][1])}, spots[1][0], spots[1][1], 200)
+	if cv.Camp.GetNaming().GetShortName() != "First lamp past the Whitequiet" {
+		t.Fatalf("the camp's lamp lost its naming: %+v", cv.Camp.GetNaming())
+	}
+	if _, code := x.campOp(c, s, &contract.CampRequest{Action: "name", Camp: lamp, Parts: roadParts}, spots[1][0], spots[1][1], 409); code != "lamp-named" {
+		t.Fatalf("a camp renamed its named lamp: %s", code)
+	}
+	// This world's stone is its own lamp: unnamed here, named once here.
+	l, _ := x.lampOp(c, s, &contract.CommunalLampRequest{Action: "relight", Lamp: testStone}, sx, sy, 200)
+	if l.Lamp.GetNaming() != nil {
+		t.Fatal("another world's stone naming showed here")
+	}
+	x.lampOp(c, s, &contract.CommunalLampRequest{Action: "name", Lamp: testStone, Parts: roadParts}, sx, sy, 200)
+	if x.packQty(s.AccountID, "lamp-ash") != 3 {
+		t.Fatalf("ash after the move: %d", x.packQty(s.AccountID, "lamp-ash"))
+	}
+}
+
 // The latecomer: someone else lit the stone first. A Keeper finishes the
 // quest by tending it, or by reading its naming; no race, no oil.
 func TestKeepersHandLatecomerTendsOrReads(t *testing.T) {

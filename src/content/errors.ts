@@ -180,7 +180,7 @@ export const HOME_ERRORS: Table = {
   'too-far-away': 'Stand by the lantern to fill it.',
   // Camps (roadmap 0.13).
   'no-camp': 'There’s no way-lamp here to set things down by.',
-  'camp-not-empty': 'Everything set out here has to come up before the lamp does.',
+  'camp-not-empty': 'Everything here has to come up before the lamp does, or you can pack up the whole camp.',
   'not-your-camp': 'This is someone else’s camp, and they say who builds here. You’re welcome to walk through and tend the lamp.',
   'not-in-world': 'You can only name people who live in this world.',
   // Communal lamps (roadmap 0.13).

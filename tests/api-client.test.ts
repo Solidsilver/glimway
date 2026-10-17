@@ -71,7 +71,7 @@ test('Wilds claim parser preserves and validates rare warden sliver finds', () =
 });
 
 test('items parser keeps what a seller handed over (/api/items/buy)', () => {
-  const items = { stacks: [{ itemDef: 'tallow', qty: 1, maker: null }], instances: [], pockets: [], offHand: { open: false, class: null, itemDef: null, instance: null }, pickedUp: [], thanks: [] };
+  const items = { stacks: [{ itemDef: 'tallow', qty: 1, maker: null }], instances: [], pockets: [], offHand: { open: false, class: null, itemDef: null, instance: null }, pickedUp: [], thanks: [], carried: [] };
   // The wire answer carries every ItemsResult field (EmitUnpopulated).
   const fields = { wear: null, used: '', pickup: '', given: null, mended: '', created: [], gathered: [], plant: null, land: null, returned: '', paper: null, heirloom: '', adaOilCount: 0, glimsGiven: 0, tapped: null, firstTap: false, refined: null };
   const raw = { ...snapshot(), result: { items, ...fields, bought: { seller: 'hazels-kitchen', itemDef: 'tallow', qty: 1, glims: 1 } } };

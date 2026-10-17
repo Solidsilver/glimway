@@ -94,7 +94,7 @@ export function validateMapStatus(out: WildsMapStatus, explored: readonly { cx: 
   const keys = new Set(explored.map((k) => k.cx + ',' + k.cy));
   const seen = new Set<string>();
   const land = (s: WildsMapStatus['chunks'][number]) => {
-    if (!s.chunk || s.chunk.realm !== loadWilds().realm || s.chunk.layer !== 0 || !['wild','common','built','still','permanent'].includes(s.tier) || !['held','dimming','turns','released','carries','paths-turn','detail-turns','permanent'].includes(s.nextTurning)) throw new Error('invalid land status');
+    if (!s.chunk || s.chunk.realm !== loadWilds().realm || s.chunk.layer !== 0 || !['wild','common','built','still','permanent'].includes(s.tier) || !['held','dimming','turns','released','carries','paths-turn','lamps-carry','lamps-turn','detail-turns','permanent'].includes(s.nextTurning)) throw new Error('invalid land status');
     if (s.tier === 'built' && (!s.claimId || s.cost !== 1)) throw new Error('invalid built status');
     if (s.epoch && (!s.epoch.id || s.epoch.kind !== 'wick' || s.tier !== 'built')) throw new Error('invalid map epoch');
     if (s.ground) {

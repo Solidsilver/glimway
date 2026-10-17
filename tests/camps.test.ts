@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { create } from '@bufbuild/protobuf';
 import { CampViewSchema, CampPieceSchema, CampPlantSchema } from '../src/lib/gen/glimway/v1/camps_pb.js';
 import { HOMESTEAD_DATA } from '../src/lib/homestead.ts';
-import { campAtTile, campFrame, campHasRoom, campLines, campLook, campSpot, campTaken, collectedLine, crateLines } from '../src/lib/camps.ts';
+import { CAMP_PACK_WORDS, campAtTile, campFrame, campHasRoom, campLines, campLook, campPlantLines, campSpot, campTaken, collectedLine, crateLines, uprootedLine } from '../src/lib/camps.ts';
+import { homeErrorText } from '../src/content/errors.ts';
 
 const W = HOMESTEAD_DATA.wayLamp;
 
@@ -72,4 +73,15 @@ test('Pell’s words: what the crate holds, and what was signed out', () => {
   assert.deepEqual(crateLines([]), []);
   assert.match(collectedLine(entries), /^Signed out to you: /);
   assert.match(collectedLine([]), /Nothing waiting/);
+});
+
+test('taking a camp apart: a plant dug up, the whole camp packed up (review B7)', () => {
+  assert.deepEqual(campPlantLines('Turncap spawn', null), ['Your turncap spawn, growing in the lamp’s light.']);
+  assert.deepEqual(campPlantLines('Turncap spawn', 'Bob'), ['Bob’s turncap spawn, growing in the lamp’s light.']);
+  assert.equal(uprootedLine('Turncap spawn'), 'You dig up the turncap spawn. It’s in your pack.');
+  assert.equal(CAMP_PACK_WORDS.dig.text, 'Dig it up');
+  assert.equal(CAMP_PACK_WORDS.pack.text, 'Pack up the camp');
+  assert.match(CAMP_PACK_WORDS.ask.join(' '), /Nothing is lost/);
+  // The refusal to take a lamp down over a camp points at packing it up.
+  assert.match(homeErrorText('camp-not-empty'), /pack up the whole camp/);
 });

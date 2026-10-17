@@ -286,8 +286,13 @@ lot lanterns and way-lamps alike (content `lotLantern`, `wayLamp`). The store is
 lamp itself; no separate placeable store exists yet. The way-lamp is a home piece crafted at the
 bench from six timber, four stone, a lamp head and a lamp wick, so the whole cost comes back
 with the lamp on recovery; setting it takes the first flask. Its setter keeps the camp and says
-who builds there (below); anyone fills it. The setter may take an empty lamp down, its unspent oil
-returned.
+who builds there (below); anyone fills it. Setting it needs no homestead (the pack read lists
+carried pieces, deed or not). The setter may take an empty lamp down, its unspent oil
+returned, or pack the whole camp up from beside the lamp (`api/camp_teardown.go`): everything
+goes to Pell's as at a lapse, anyone else's things naming the keeper who moved them, and the hold
+lets go at the turning, which refunds laid paths. A camp plant comes up into the digger's pack as
+its seed: anyone who may build there, or whoever planted it, whatever the rule. Nothing planted
+grows into a crop yet.
 
 Who may build (0.13, owner decision 2026-10-17; migration 045, `api/claim_rules.go`): a Built
 claim's keeper sets one rule and one list of world members. The rules are `household` (the
@@ -305,7 +310,9 @@ same check.
 Communal lamps (0.13, content `communalLamp`): relighting a dark road stone burns one lamp wick,
 not refunded when it goes dark (spent like oil); a communal post is the same `way-lamp` piece set
 with no oil, crated whole to its setter if its chunk goes a wick unvisited. Both keep their stable
-lamp id (stone site id, or piece id) and a `lamp_namings` row that outlives the light.
+lamp id (stone site id, or piece id) and a `lamp_namings` row that outlives the light. A piece's
+naming has no world (migration 046): it follows the lamp into any world, named and its ash given
+once ever. A stone's id repeats between worlds, so its naming is its world's.
 
 Retire distance escalation and the automatic 3×3 hold. Extra lanterns in one funded chunk do
 not multiply upkeep. Each claim has one linked placeable store. Refuse unlinking/removing it

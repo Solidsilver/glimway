@@ -2,9 +2,10 @@
  * Camps on the open map (roadmap 0.13; docs/design/lamps.md §2.5, §2.7): a
  * way-lamp someone set in the Wilds, burning or guttering, with the pieces
  * and plants set out in its light. Look at the lamp for its oil and top it
- * up; its setter (the keeper) takes it down once the camp is empty and says
- * who may build there. Pick up a piece of yours; the keeper may move
- * anyone else's off to Pell's. From the pack (EV.campDo): set a carried
+ * up; its setter (the keeper) takes it down once the camp is empty, or packs
+ * the whole camp off to Pell's, and says who may build there. Pick up a
+ * piece of yours; the keeper may move anyone else's off to Pell's. Dig up a
+ * plant if you may build there, or if you planted it. From the pack (EV.campDo): set a carried
  * way-lamp down beside you, or a piece or a seed at the camp you stand in.
  *
  * Read from GET /api/camps (no socket message carries camps): on walking
@@ -13,7 +14,7 @@
  */
 import Phaser from 'phaser'
 import type { CampView } from '../../lib/gen/glimway/v1/camps_pb.js'
-import { CAMP_ERRORS, CAMP_RULE_WORDS, CAMP_RULES, campAtTile, campFrame, campHasRoom, campLampName, campLines, campLook, campNameable, campPieceName, campRefusal, campRule, campRuleLines, campSpot, campTaken, movedOffLine, moveOffLines, personName, ruleNames, withMember, withoutMember, type CampRule } from '../../lib/camps.ts'
+import { CAMP_ERRORS, CAMP_PACK_WORDS, CAMP_RULE_WORDS, CAMP_RULES, campAtTile, campFrame, campHasRoom, campLampName, campLines, campLook, campNameable, campPieceName, campPlantLines, campRefusal, campRule, campRuleLines, campSpot, campTaken, movedOffLine, moveOffLines, personName, ruleNames, uprootedLine, withMember, withoutMember, type CampRule } from '../../lib/camps.ts'
 import { HOMESTEAD_DATA, homeItem, rotatedFootprint } from '../../lib/homestead.ts'
 import { TILE, tileFeet } from '../../lib/tile.ts'
 import { chunkOf } from '../../lib/wilds/coords.ts'
@@ -156,6 +157,8 @@ export class WildsCamps {
         const at = tileFeet(p.x, p.y)
         const key = itemIcon(p.itemDef)
         if (this.scene.textures.exists(key)) this.images.push(this.scene.add.image(at.x, at.y, key).setOrigin(0.5, 1).setDepth(at.y))
+        // Anyone who may build here can dig it up; whoever planted it always can.
+        if (c.builder || p.ownerId === this.me) points.push(wildsPoint(`camp-plant:${p.id}`, at, 20, () => ({ label: `Look at the ${campPieceName(p.itemDef).toLowerCase()}`, verb: 'Look', claim: () => this.lookPlant(p.id) })))
       }
       // The lamp itself: lit, or guttering in its wick of warning.
       const at = tileFeet(c.x, c.y)
@@ -220,8 +223,26 @@ export class WildsCamps {
     if (c.builder && !c.naming && isKeeper(this.deps.session.state.flags)) choices.push({ ...LAMP_NAMING.name, action: `camp:name:${c.id}` })
     if (c.setterId === this.me) choices.push({ text: CAMP_RULE_WORDS.heading, note: CAMP_RULE_WORDS.rules[campRule(c)].pick, action: `camp:rules:${c.id}` })
     if (c.setterId === this.me && c.pieces.length === 1 && c.plants.length === 0) choices.push({ text: 'Take the lamp down', note: 'The camp goes; its oil comes back to you', action: `camp:down:${c.id}` })
+    else if (c.setterId === this.me) choices.push({ ...CAMP_PACK_WORDS.pack, action: `camp:pack:${c.id}` })
     choices.push({ text: 'Leave it' })
     openDialogue({ id: 'camp', speaker: campLampName(c), lines: campLines(c, this.me), choices })
+  }
+
+  /** The keeper's "pack up the camp", asked once more before everything goes to Pell's. */
+  private askPack(id: string): void {
+    const c = this.camp(id)
+    if (!c || c.setterId !== this.me) return
+    openDialogue({ id: 'camp', speaker: campLampName(c), lines: [...CAMP_PACK_WORDS.ask], choices: [{ text: CAMP_PACK_WORDS.confirm, action: `camp:packup:${c.id}` }, { text: CAMP_PACK_WORDS.keep, dismiss: true }] })
+  }
+
+  /** A plant at the camp: whose it is, and digging it up. */
+  private lookPlant(plantId: string): void {
+    const c = campsUi.list.find((x) => x.plants.some((p) => p.id === plantId))
+    const p = c?.plants.find((x) => x.id === plantId)
+    if (!c || !p) return
+    const name = campPieceName(p.itemDef)
+    const owner = p.ownerId === this.me ? null : personName(campsUi.people, p.ownerId)
+    openDialogue({ id: 'camp', speaker: name, lines: campPlantLines(name, owner), choices: [{ ...CAMP_PACK_WORDS.dig, action: `camp:uproot:${p.id}` }, { text: 'Leave it', dismiss: true }] })
   }
 
   /** The keeper's "Who may build here": the four rules, and the list when the rule reads it. */
@@ -279,6 +300,13 @@ export class WildsCamps {
       const said = p ? movedOffLine(personName(campsUi.people, p.ownerId), campPieceName(p.itemDef)) : ''
       return void this.act({ action: 'remove', itemId: id }, () => { if (said) bus.emit(EV.toast, { text: said, icon: 'glim' }) })
     }
+    if (what === 'pack') return this.askPack(id)
+    if (what === 'packup') return void this.act({ action: 'pack', camp: id }, () => bus.emit(EV.toast, { text: CAMP_PACK_WORDS.done, icon: 'glim' }))
+    if (what === 'uproot') {
+      const p = campsUi.list.flatMap((x) => x.plants).find((x) => x.id === id)
+      const said = p ? uprootedLine(campPieceName(p.itemDef)) : ''
+      return void this.act({ action: 'uproot', itemId: id }, () => { if (said) bus.emit(EV.toast, { text: said, icon: 'glim' }) })
+    }
     if (what === 'fill') void this.act({ action: 'fill', camp: id }, (c) => { if (c) openDialogue({ id: 'camp', speaker: campLampName(c), lines: campLines(c, this.me) }) })
     else if (what === 'name') void this.beginNaming(id)
     else if (what === 'down') void this.act({ action: 'remove', itemId: id }, () => bus.emit(EV.toast, { text: 'You take the way-lamp down. Its oil is back in your pack.', icon: 'glim' }))
@@ -321,7 +349,7 @@ export class WildsCamps {
   /** The camp an operation was about: named, holding its piece, or at its tile. */
   private campOf(fields: { camp?: string; itemId?: string; x?: number; y?: number }): CampView | null {
     return (fields.camp ? this.camp(fields.camp) : null)
-      ?? campsUi.list.find((c) => c.pieces.some((p) => p.id === fields.itemId))
+      ?? campsUi.list.find((c) => c.pieces.some((p) => p.id === fields.itemId) || c.plants.some((p) => p.id === fields.itemId))
       ?? (fields.x !== undefined && fields.y !== undefined ? campAtTile(campsUi.list, fields.x, fields.y) : null)
   }
 
@@ -342,7 +370,7 @@ export class WildsCamps {
       void itemsFor(this.deps.session).load()
       void homesteadsFor(this.deps.session).load()
       const c = r.result.camp ?? null
-      const list = campsUi.list.filter((x) => x.id !== c?.id && !(fields.action === 'remove' && fields.itemId === x.id))
+      const list = campsUi.list.filter((x) => x.id !== c?.id && !(fields.action === 'remove' && fields.itemId === x.id) && !(fields.action === 'pack' && fields.camp === x.id))
       this.adopt(c ? [...list, c] : list)
       then?.(c)
     } finally {

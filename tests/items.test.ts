@@ -269,6 +269,7 @@ function view(extra: Partial<ItemsView> = {}): ItemsView {
     offHand: { open: true, class: 'warrior', itemDef: 'carters-lantern', instance: 'l1' },
     pickedUp: [],
     thanks: [],
+    carried: [],
     ...extra,
   };
 }
@@ -389,6 +390,7 @@ test('modelEntries formats warden-set descriptions across all dullness stages', 
     offHand: { open: false, class: null, itemDef: null, instance: null },
     pickedUp: [],
     thanks: [],
+    carried: [],
   };
 
   const entries = modelEntries(baseView, { pack: [], decorations: [] });

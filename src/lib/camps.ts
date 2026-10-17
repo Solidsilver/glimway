@@ -214,3 +214,34 @@ export function movedOffLine(owner: string, piece: string): string {
 export function campPieceName(itemDef: string): string {
   return itemName(itemDef)
 }
+
+// ------------------------------------------------------------ taking a camp apart
+
+/**
+ * A plant at a camp: whose it is, and digging it up. Anyone who may build
+ * there can dig one up, and whoever planted it always can. It goes into the
+ * digger's pack as its seed (api/camp_teardown.go).
+ */
+export function campPlantLines(plant: string, owner: string | null): string[] {
+  const name = plant.toLowerCase()
+  return [owner ? `${owner}’s ${name}, growing in the lamp’s light.` : `Your ${name}, growing in the lamp’s light.`]
+}
+
+/** Said once it's dug up. */
+export function uprootedLine(plant: string): string {
+  return `You dig up the ${plant.toLowerCase()}. It’s in your pack.`
+}
+
+/** The keeper's "pack up the camp": everything to Pell's at once, as at a lapse. */
+export const CAMP_PACK_WORDS = {
+  dig: { text: 'Dig it up', note: 'It goes back in your pack' },
+  pack: { text: 'Pack up the camp', note: 'Everything here goes to Pell’s' },
+  ask: [
+    'Pack up the whole camp?',
+    'Pell keeps every piece and plant in a crate for whoever it belongs to. The lamp and its oil wait there for you. Nothing is lost.',
+    'Any path laid here comes back at the turning.'
+  ],
+  confirm: 'Pack it all up',
+  keep: 'Leave it standing',
+  done: 'The camp’s packed up. Everything waits at Pell’s.'
+} as const
