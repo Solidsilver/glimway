@@ -15,12 +15,14 @@ the game can show the first part as "What's new":
 
 ### For players
 
+- Lot lantern art now includes a dimming state for the upcoming oil warning.
 - Signing in, reloading and stepping outdoors no longer freeze the game for a moment as the world appears.
 - The Wilds keep their shape across the turning: the Wend runs the same course and woods and meadows stay where they are. Only the living detail (trees, forage, camps, chests, places and paths) changes each wick.
 - The Wilds turn early once, when this version arrives: the current wick's land is replaced. The Tangle keeps everything.
 
 ### Technical
 
+- Added `lantern-stake-2` as a generated 64×96 Hearthwick 2 frame, packed at 64 texels per tile; it is registered as a texture only and is not used by lot layouts.
 - Arrival has no long frame: boot builds its art a slice a frame (8 ms budget; the heavy passes yield a texture at a time, `Steps` in `src/game/art-pass.ts`), each frame's texture is uploaded once instead of twice, and the packed atlases boot only copies out of are staged as decoded images instead of GPU textures (`loadStaged`). Portraits and UI icons are drawn once per game during boot, and the open map no longer paints an empty area tileset. Desktop (GPU), longest arrival frame: sign-in ~480–680 → ~80–85 ms, reload ~560–660 → ~85–105 ms, door-out ~110–120 → ~60 ms; at a 4× CPU throttle, ~2.4–2.7 s → ~0.3 s. No change in what's drawn.
 - New `glimway-server verify-backup FILE`: opens a snapshot read-only (writing nothing to or beside it, and never opening `-db`), runs SQLite's integrity check, confirms the schema is this version's or an older one it can migrate, and prints the schema plus account, world and home counts. Non-zero exit on any failure. The NixOS backup service now verifies each new snapshot and fails the unit if the check fails; the bad snapshot is renamed `.sqlite.unverified` and no old snapshots are pruned. A Go test runs the documented restore (back up, verify, copy to a new path, open, read back). [docs/home-server.md](docs/home-server.md) adds it to the NixOS, Docker and manual routes and before upgrades. No migrations.
 - Lasting geography (overturns open-map decision 18): land cells and their sizes, the border warp and the Wend hash the world seed, generator version and pass, without the season or epoch kind (`wilds.Epoch.landform`). Living detail keeps the seasoned hash. Still-epoch output is byte-identical (its goldens are unchanged), so the generator version stays 3; the wick goldens, the pinned rumour counts and the client's ford fixtures are regenerated.
