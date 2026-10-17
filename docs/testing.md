@@ -2,8 +2,8 @@
 
 How Glimway is tested, which tier to run when, and how to chase a flaky
 playtest. This is the one reference for the test workflow; the README's
-"Tests" section is the short version, and older notes (`build-status.md`,
-playtest records) describe how things ran at the time.
+"Tests" section is the short version, and the older playtest records
+describe how things ran at the time.
 
 ## Prerequisites
 

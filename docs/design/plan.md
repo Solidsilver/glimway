@@ -19,7 +19,9 @@ The brainstorms each started from their own idea and arrived at the same few cha
    until it expires.
 3. **Lamps are the spine.** Way-lamps push the frontier (world), the Keeper's hand quest teaches
    the naming (world, quests), the mage's craft is naming (magic), Old ways links lamps (magic,
-   hands-on design), and pottery makes the lamp base (world).
+   hands-on design), and pottery makes the lamp base (world). *(Reworded 2026-10-17: lamps are
+   the engine that makes marks persist; the promise is the two gears in
+   [../roadmap.md](../roadmap.md). The Old ways are parked.)*
 4. **Class picks the way.** Obstacles have a class way and a tool way (world), and each class has
    its own craft of world workings (magic). These are one system and should be designed as one.
 5. **Lazy time everywhere.** Resident cycles (layers), kiln firing (world), fish recovery
@@ -33,7 +35,8 @@ The brainstorms each started from their own idea and arrived at the same few cha
 8. **Nobody plays yet** (owner, 2026-10-07), so changes that would break players' habits or data
    are cheap now: riding moving behind a stable (pets), heroes without a class losing Fingersnap
    (magic), the Tangle regenerating once (world). Prefer clean breaks over compatibility code, and
-   keep only the owner's own saves loading where that's cheap.
+   keep only the owner's own saves loading where that's cheap. *(Friends have played since 10-15.
+   Clean breaks end at the 0.14 contract freeze; [../roadmap.md](../roadmap.md) rule 7.)*
 
 ## Shared foundations
 
@@ -152,23 +155,10 @@ first writer.
 
 ## Proposed order, as releases
 
-Each release is a minor version with its own art round, written as one request.
-
-| Release | Contents | Lanes |
-|---|---|---|
-| **0.2 Foundations** (shipped 2026-10-08) | Versioning and proto stage 1, the "What's new" card, the cleanup lanes | Codex for the server, Opus for the client |
-| **0.3 Server-first** | The server owns all state and rules; the client sends intents, predicts and draws (see "Server-first" below). Local guest play is dropped. | Codex-heavy, Opus for the client |
-| **0.4 Indoors** | Rooms are places, Hazel's kitchen, Finn's mill with its loft, the library, resident cycles; the quest tree with a Quests tab, pinning and the tutorial hook, its gates as server operations | Opus (game and UI), Codex (area checks, quest operations) |
-| **0.4 → 0.5: One schema** (after the 0.4 gate) | Everything the server and the client both type or load moves to protobuf, with JSON on the wire and in `content/`: the ~40 hand-typed endpoints (homestead, items, library, mail, storage, crafting, the hearth and desk, commons, projects, repairs, `world/*`), and the content files with loaders on both sides (rooms, residents, furnishings, quests and the rest). Field rules move into the schema with protovalidate (Go and TS); rules across entries stay in code, once. See "One schema" below. | GLM or MiMo (mechanical), reviewed cross-family |
-| **0.5 Crafts** | Pets steps 1–3 (fixes, friends' pets, Companions, yard pets); magic groundwork (ability table, highest-level mark, classless change); level-20 combat abilities, client-side; the stable and riding; fishing at the mill pond with one recipe | mixed |
-| **0.6 The purse and the wardrobe** | The gold purse: a Top up from Habitica with consent each time (two a UTC day, no amount cap), gold at the sellers and Silas's offcut bundles, gold between players on shelves, in letters and by hand; the Habitica wardrobe: wear any gear you own, chosen per slot, never written back. Design: [purse-and-wardrobe.md](purse-and-wardrobe.md) (owner, 2026-10-09) | MiMo for the server (Sol reviews the top-up), Opus for the game |
-| **0.6.1 Glims** | Embers and the purse's gold become one currency, glims: earned from Habitica XP as embers were, and topped up from Habitica gold at two gold to a glim, at most 30 a UTC day. Design: [silas-yard.md](silas-yard.md) part 1 (owner, 2026-10-10) | MiMo for the server, Opus for the client, Codex for the glim art |
-| **0.7 Silas's Yard** | Silas's cottage becomes a walk-in shop: his talk gets short, a tabbed Yard panel (Build, Furnish, Materials, Mend) does the selling, and Pell the clerk keeps the deeds in a side room. Design: [silas-yard.md](silas-yard.md) part 2 (owner, 2026-10-10) | Opus (game and UI), MiMo (server), Codex (art) |
-| **0.8 The open map** | One open wilderness generated on the server: signed chunk coordinates from the Commons gate, lands from fields (woods and meadow; patch sizes from a distribution), the Wend with fords, the Lantern Road with dark lamp stones, places and routes, per-chunk epochs (the Tangle still, the Beyond turning every wick), seamless walking with no chunk doors, the frontier three chunks past the Tangle and the Whitequiet, tiers by distance, paths players clear and lay, and a Map tab; reasons to go out: Elara's rumour each wick, first finders named on the map, landmarks seen from afar, a glimpse past the drift, and named ways. The Tangle is made again once (clean break). Design: [open-map.md](open-map.md) (owner, 2026-10-10) | Opus (contract, generator, server, client), Codex Luna (art) |
-| **0.9 Shared fights** | The server runs every camp's enemies (wisps and beetles) in chunk rooms, shared by everyone in the 3×3; your hits judged by the server, favouring the attacker; curated fights stay on the client. One-camp prototype first. Design: [shared-fights.md](shared-fights.md) (owner, 2026-10-11) | Sol (contract, Go sim, claims), Opus (client), MiMo (measuring); no art round |
-| **0.10 Lamps** | The Keeper's hand, way-lamps that hold land and push the frontier, the mage's Name a lamp, the homing turncap and lamp-ash pouch, on the open map; lamps show as a layer and a ledger on the full-screen world map (M), not a Journal tab ([world-map.md](world-map.md) 6). Design: [lamps.md](lamps.md), to re-plan after 0.8 | Opus (contract, server, game and UI), Codex Luna (art) |
-| **Then, as revisions** | Chapter 2 (Dorrit's span), lake country, the rest of lamps (the Old ways, the clay base), caves and the next lands, in the order below | — |
-| **Standalone (later)** | Glimway without Habitica, with Habitica as one mode: guest accounts steps 3–6 ([guests.md](guests.md)), embers without Habitica, our own look, classes and companions | — |
+*(Release table removed 2026-10-17. It had drifted from what shipped: 0.3 came as "the server owns
+the world", 0.4 added indoors, 0.8 the open map, 0.9 shared fights, 0.10 the Commons/Tangle join and
+0.11 Hearthwick. `CHANGELOG.md` records what shipped; [../roadmap.md](../roadmap.md) holds the order
+from 0.12 on. The prose below is kept as the record of the decisions it describes.)*
 
 **Server-first (owner, 2026-10-07).** Before more features, move to a proper client/server
 split, so nothing new is built twice (TypeScript and Go) and kept in step by parity tests. The
@@ -213,15 +203,8 @@ step:
    `canPlace`) stay in code, in one place each, with shared vectors.
 3. **The hand-written loaders and validators retire** as each file moves.
 
-The later revisions keep their earlier order:
-
-| Revision | Contents |
-|---|---|
-| The open map | Per-chunk epochs on the server generator, regeneration at the turning. **Moved up to 0.8** ([open-map.md](open-map.md)); lakes and height bands stay with lake country and the Tops |
-| Lake country | Fields and water, reed and clay, crossings, pottery and Aldo's kiln, fishing in generated waters, level-10 workings on real obstacles |
-| Lamps | The Keeper's hand, way-lamps and the frontier, the mage's naming, the Old ways, chapter 2 (the broken span). **Moved up:** the first four parts go in 0.9, on the open map; chapter 2 comes after them; the Old ways stay here ([lamps.md](lamps.md)) |
-| Shared fights | The server enemy sim at camps, combat abilities in server rooms. **Moved up to 0.9** ([shared-fights.md](shared-fights.md)) |
-| On from there | Caves, the next lands, capstones, home water |
+*(The table of later revisions was removed 2026-10-17. The order of what is left lives in
+[../roadmap.md](../roadmap.md).)*
 
 **Decided (owner, 2026-10-07): interleave.** The cleanup the features lean on comes first (done
 in 0.2). The polish update (sound, the player body, phone resolution, UI steps 8 and 9) runs

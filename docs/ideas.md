@@ -4,7 +4,7 @@ A canvas for ideas that come up along the way. Nothing here is planned or promis
 becomes real work, it moves into a plan or brief and gets a link here. Add freely and keep each
 entry short.
 
-Designed ideas now live in [design/](design/plan.md): the combined [plan](design/plan.md), the
+The release order is [roadmap.md](roadmap.md). Designed ideas live in [design/](design/plan.md): the combined [plan](design/plan.md), the
 open [world](design/world.md), [layers](design/layers.md), [pets](design/pets.md),
 [magic](design/magic.md), [quests](design/quests.md), [fishing](design/fishing.md) and
 [guests on the server](design/guests.md).
@@ -36,11 +36,13 @@ worth thinking about; **(later)** means parked on purpose.
   it stays in Habitica. Design: [design/purse-and-wardrobe.md](design/purse-and-wardrobe.md).
 - **Pets and mounts as companions** (shipped in 0.5): choose which pet walks with you and three for
   the yard, and ride from the stable. See [design/crafts.md](design/crafts.md).
-- **Streaks and achievements** (maybe): earn recognition in the world, such as a plaque, a title,
-  or a resident who remarks on it.
-- **Party goals tied to Habitica tasks** (maybe): party members' finished tasks add up to something
+- **Streaks and achievements** (maybe; "the Habitica mirror", after 0.16 in [roadmap.md](roadmap.md)): earn recognition in the world, such as a plaque, a title,
+  or a resident who remarks on it. Celebrate, never grade.
+- **Party goals tied to Habitica tasks** (later, parked 2026-10-17): party members' finished tasks add up to something
   shared in the world, such as lighting a stretch of road together, so doing your dailies helps
-  your friends.
+  your friends. Shared projects in the game (the span, a road) do this without a second goal system.
+- **A weekly wick report** (later, parked 2026-10-17): your Habitica week reflected in the world at
+  the turning. Owner: "ok, not super exciting."
 
 - **Backups for everything Habitica supplies** (agreed, standing goal): our own versions of the
   avatar (the player body), gear, pets and sprites, so a spin-off not tied to Habitica stays
@@ -87,6 +89,11 @@ worth thinking about; **(later)** means parked on purpose.
 
 ## Standalone version (later)
 Glimway without Habitica, with Habitica as one mode. The owner plays with Habitica, so this waits.
+Decided 2026-10-17 ([roadmap.md](roadmap.md) rule 6): **one world, two editions.** The standalone
+is a game to sell on Steam and/or mobile with no real-life tie-in; it swaps three edges, where glims
+come from (daily town requests, boss bounties, trade, on a rested-glim curve), the hero, and the art.
+It waits until the 0.14–0.16 loops are proven. The web client gets wrapped (Tauri, Capacitor)
+rather than rewritten.
 - **Guest accounts** (agreed, designed): key phrase sign-in, devices, linking. Steps 3–6 of
   [design/guests.md](design/guests.md).
 - **Glims without Habitica** (needs a design session): today guests earn glims only from story
@@ -105,7 +112,11 @@ Glimway without Habitica, with Habitica as one mode. The owner plays with Habiti
   today. Ideas: pet storage, mounts done properly, and pets that matter in the world. Check against
   [habitica-boundary.md](habitica-boundary.md).
 - **A bigger magic system** (maybe, needs a design session): today there's a single Fingersnap
-  ability. Expand it into a real system, perhaps tied to class.
+  ability. Expand it into a real system, perhaps tied to class. **The Old ways** (the level-30 mage
+  capstone, [design/lamps.md](design/lamps.md)) and class-locked magic trees are parked (later,
+  2026-10-17): no player is near level 30.
+- **Baking** (later, parked 2026-10-17): food with buffs, baked and sold at the stalls. Comes back as
+  a tactile craft you can get good at, not a click-to-craft button.
 - **A quest overhaul** (maybe, needs a design session):
   - quests as a tree, so new ones can be added over time;
   - the first quest is a "tutorial by doing" without feeling like a tutorial: it teaches the

@@ -9,7 +9,7 @@ that moves the changelog and bumps that version, tagged.
 
 - `main`: releases only. Every commit on it is a released version.
 - `dev`: the next release, playable. Each release's work comes together on an
-  integration branch (`exp/<feature>`, with one worktree per lane), and once it
+  integration branch (`exp/<feature>`, with one worktree per lane; see [agent-workflow.md](agent-workflow.md)), and once it
   passes CI it merges into `dev`. The playtest runs on `dev`, in the main
   checkout. Fixes found there go out to worktrees again and merge back into
   `dev`. When the playtest passes, the release commit (below) goes on `dev`, and
