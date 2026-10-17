@@ -1798,7 +1798,9 @@ export declare type ChunkLandStatus = Message<"glimway.v1.ChunkLandStatus"> & {
   cost: number;
 
   /**
-   * held, dimming, turns, released, carries, paths-turn, detail-turns, permanent
+   * held, dimming, turns, released, carries, paths-turn, lamps-carry,
+   * lamps-turn (a chunk whose only Common work is communal lamps),
+   * detail-turns, permanent
    *
    * @generated from field: string next_turning = 8;
    */
@@ -1837,7 +1839,9 @@ export declare type MapLamp = Message<"glimway.v1.MapLamp"> & {
   id: string;
 
   /**
-   * lot-lantern, way-lamp; common-lamp is reserved for communal lights.
+   * lot-lantern, way-lamp, common-lamp (a communal light: a relit road stone
+   * or a communal post, id its stable lamp id; name, naming and namer stay
+   * empty until a Keeper names it).
    *
    * @generated from field: string kind = 2;
    */

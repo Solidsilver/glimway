@@ -90,6 +90,8 @@ export interface FsHooks {
   __fsMarks: () => (ReturnType<WildsMarks['debug']> & { discoveries: { id: string; by: string; name: string }[]; places: { id: string; kind: string; tx: number; ty: number }[] }) | null
   /** The camps the open map last read, and the spot beside the hero a lamp, piece or seed would go. */
   __fsCamps: () => { camps: { id: string; cx: number; cy: number; x: number; y: number; oil: number; dimming: boolean; pieces: { id: string; itemDef: string; x: number; y: number }[]; plants: { id: string; itemDef: string }[] }[]; spot: { tx: number; ty: number } | null } | null
+  /** The lit communal lamps the open map last read (lamps.md 1.3). */
+  __fsCommunalLamps: () => { lamps: { id: string; kind: string; x: number; y: number; visited: boolean; name: string }[] } | null
   /** This wick's rumour as the link holds it. */
   __fsRumour: () => ({ epoch: string; place: string; site: string; landmark: string; compass: string; ring: number; pastRiver: boolean; opened: boolean; current: boolean } | null)
   /** The workable pieces of this area and, at home, the lamps whose light holds the ground. */

@@ -1,0 +1,54 @@
+syntax = "proto3";
+package glimway.v1;
+option go_package = "glimway/server/internal/gen/glimway/v1;contract";
+import "glimway/v1/op.proto";
+
+// Communal lamps (roadmap 0.13; docs/design/lamps.md 1.3, 2.4): Common light,
+// public rest and wayfinding, claiming no land around it. Kept by presence,
+// never by oil: a lamp whose chunk somebody stood in during the wick stays
+// lit through the turning; one nobody came to goes dark (a relit stone) or
+// waits for its setter in a crate at Pell's (a post). Tiles on the wire are
+// world tiles.
+
+// A lamp's naming (lamps.md 2.8), from parts only, never free text: the part
+// ids, the real landmark it names, and the sentence and short name rendered
+// from them when it was named (kept as written if the landmark later moves).
+// Unset until a Keeper names the lamp (the Keeper's-hand lane builds the
+// naming); before that the lamp goes by a neutral communal-lamp label.
+message LampNaming {
+  repeated string parts = 1; string landmark = 2;
+  string text = 3; string short_name = 4;
+  string namer_id = 5; string namer_name = 6; double named_at = 7;
+}
+
+// A lit communal lamp. id is stable for the lamp's life and through
+// recovery: a stone's is its road site's (lamp-stone:<cx>:<cy>), a post's
+// its way-lamp piece's. kind: "stone" (a Lantern Road stone relit) or
+// "post" (a way-lamp set as communal). setter: who relit or set it.
+// visited: its chunk has had a visit this wick, so it stays lit through
+// the next turning. A dark stone is never listed.
+message CommunalLampView {
+  string id = 1; string kind = 2;
+  sint32 cx = 3; sint32 cy = 4; sint32 x = 5; sint32 y = 6;
+  string setter_id = 7; string setter_name = 8;
+  double lit_at = 9; bool visited = 10;
+  LampNaming naming = 11;
+}
+// GET /api/communal-lamps: the world's lit communal lamps.
+message CommunalLampsRead { repeated CommunalLampView lamps = 1; }
+
+// POST /api/communal-lamps: one communal-lamp operation, by action. Each
+// one that succeeds visits the lamp's chunk for this wick, even across a
+// seam from where the player stands.
+//   relight: light the dark stone `lamp` (a lamp-stone site id), anyone.
+//   tend:    look after the lit lamp `lamp`, anyone (it only visits).
+//   post:    set the carried way-lamp item_id at tile (x, y) as a communal post.
+//   lift:    take your own post `lamp` back into your pack.
+message CommunalLampRequest {
+  OpHeader op = 1; Where where = 2;
+  string action = 3; string lamp = 4; string item_id = 5;
+  sint32 x = 6; sint32 y = 7;
+}
+// The lamp after the operation (none: lifted) and the pack's material
+// balances.
+message CommunalLampResult { CommunalLampView lamp = 1; map<string,double> materials = 2; }

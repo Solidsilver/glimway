@@ -134,6 +134,8 @@ var routes = []routeMetadata{
 	{method: "POST", path: "/api/camps", label: "/api/camps", handler: (*Server).campOp},
 	{method: "GET", path: "/api/recovery", label: "/api/recovery", handler: (*Server).recoveryRead},
 	{method: "POST", path: "/api/recovery/collect", label: "/api/recovery/collect", handler: (*Server).recoveryCollect},
+	{method: "GET", path: "/api/communal-lamps", label: "/api/communal-lamps", handler: (*Server).communalLampsRead},
+	{method: "POST", path: "/api/communal-lamps", label: "/api/communal-lamps", handler: (*Server).communalLampOp},
 	{method: "POST", path: "/api/wilds/echo", label: "/api/wilds/echo", handler: (*Server).settleEcho},
 	{method: "POST", path: "/api/homestead/buy", label: "/api/homestead/buy", handler: (*Server).homeMutation},
 	{method: "POST", path: "/api/homestead/place", label: "/api/homestead/place", handler: (*Server).homeMutation},

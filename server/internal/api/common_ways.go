@@ -71,6 +71,10 @@ func (c commonWays) Turn(ctx context.Context, tx *sql.Tx, world string, ended, n
 			return err
 		}
 	}
+	// Communal lamps go by the same visits and lapses (communal_lamps.go).
+	if err := c.turnLamps(ctx, tx, world, ended, next, gone, now); err != nil {
+		return err
+	}
 	if ended == nil {
 		return nil
 	}

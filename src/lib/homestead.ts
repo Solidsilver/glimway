@@ -63,6 +63,8 @@ export interface HomesteadStable { item: string; maxStalls: number; stallCost: R
 export interface LotLanternRules { oil: string; maxWicks: number; wicksPerOil: number; stakeY: number }
 /** The way-lamp's camp (roadmap 0.13): its piece, its oil, and the reach to set, fill and build from. */
 export interface WayLampRules { item: string; oil: string; maxWicks: number; wicksPerOil: number; reach: number }
+/** Communal lamps (roadmap 0.13): what relighting a dark stone burns (relightQty 0: free), and the reach to relight, tend, set or lift from. */
+export interface CommunalLampRules { relight: string; relightQty: number; reach: number }
 export interface HomesteadData {
   tiers: HomeTier[];
   indoor: HomeGrid;
@@ -82,6 +84,7 @@ export interface HomesteadData {
   stable: HomesteadStable;
   lotLantern: LotLanternRules;
   wayLamp: WayLampRules;
+  communalLamp: CommunalLampRules;
 }
 
 /** Throws on anything content/homestead.go would refuse. */

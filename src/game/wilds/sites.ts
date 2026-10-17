@@ -10,8 +10,8 @@
  *  - Given-back places: the crossing, the Amberwash cairn, a jackdaw's nest
  *    in a dead iron-oak, a reed backwater of the Wend, and a plank where the
  *    bridge tore. Each gives its found text back when its moment is due.
- *  - The Lantern Road's dark lamp stones (open-map.md 2.2): something to
- *    look at, for now (lamps relight them in 0.9).
+ *  - The Lantern Road's lamp stones (open-map.md 2.2): dark until someone
+ *    relights one (./communal-lamps.ts draws the light and offers it).
  *  - This wick's rumoured find (open-map.md 2.10): a bundle tucked under a
  *    landmark, opened once by each player (a personal claim, like a chest).
  *
@@ -49,7 +49,6 @@ import { LAMP_STONE_DARK, omArt } from './open-map-art.ts'
 import { FINDS } from '../../content/open-map.ts'
 import { addAll, destroyAll, looseImage } from '../area/bulk.ts'
 import { CLAIM_ERROR, lootArt, lootGain } from './entities.ts'
-import { loadWilds } from '../../lib/wilds/data.ts'
 import { roadStep } from '../../lib/quests.ts'
 
 type C = CanvasRenderingContext2D
@@ -479,7 +478,8 @@ export class WildsSites {
   private offerAt(s: StorySite): WildsClaim | null {
     const c = this.ctx()
     if (s.kind === 'lamp-stone') {
-      return { label: 'Look at the lamp stone', verb: 'Look', claim: () => bus.emit(EV.toast, { text: loadWilds().words.lampStone, icon: 'lantern', kind: 'thought' }) }
+      // Dark to relight, lit to tend (./communal-lamps.ts).
+      return { label: 'Look at the lamp stone', verb: 'Look', claim: () => bus.emit(EV.lampStoneLook, { site: s.id }) }
     }
     if (s.kind === 'rumour') {
       if (isClaimed(s.id)) return { label: FINDS.bundleLook, verb: 'Look', claim: () => bus.emit(EV.toast, { text: FINDS.bundleEmpty, icon: 'map', kind: 'thought' }) }

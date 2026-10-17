@@ -15,6 +15,7 @@ import type { FallResult, MarkResult, ProfileResult, QuestStepResult, ReportResu
 import type { ContributeResult, CraftResult, DeskCopyResult, HearthCraftResult, LibraryDonateResult, MailActionResult, MailRecallResult, MailSendResult, MendResult, WorkshopView } from "./village_pb.js";
 import type { WorldChoice, WorldLeaveResult, WorldMoveResult } from "./world_pb.js";
 import type { CampResult, RecoveryCollectResult } from "./camps_pb.js";
+import type { CommunalLampResult } from "./lamps_pb.js";
 
 /**
  * Describes the file glimway/v1/state.proto.
@@ -602,6 +603,12 @@ export declare type Envelope = Message<"glimway.v1.Envelope"> & {
      */
     value: RecoveryCollectResult;
     case: "recoveryCollect";
+  } | {
+    /**
+     * @generated from field: glimway.v1.CommunalLampResult communal_lamp = 49;
+     */
+    value: CommunalLampResult;
+    case: "communalLamp";
   } | { case: undefined; value?: undefined };
 };
 

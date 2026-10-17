@@ -63,6 +63,7 @@ import type { HomeAction, HomeActionResponse, HomeOp, HomeView, ItemsOp, Commons
 import { contributeRequest, deskCopyRequest, hearthCraftRequest, homesteadRequest, itemsRequest, mailKeyedRequest, mailSendRequest, shelfRequest, storageRequest, craftRequest, type ItemsFields, type MailSendAction, type ShelfAction, type StorageMoveAction } from '../lib/api/requests.ts'
 import { EnvelopeSchema, PlayerStateSchema, PlayRequestSchema, type PlayerState } from '../lib/gen/glimway/v1/state_pb.js'
 import type { CampResult, CampsRead, RecoveryCollectResult, RecoveryRead } from '../lib/gen/glimway/v1/camps_pb.js'
+import type { CommunalLampResult, CommunalLampsRead } from '../lib/gen/glimway/v1/lamps_pb.js'
 import { FallRequestSchema, MarkRequestSchema, ProfileReportSchema, QuestStepRequestSchema, SpendRequestSchema, TakePaperRequestSchema, type ProfileResult, type SettleEchoResult, type WildsClaimResult as WildsClaimProto, type WildsLanternResult as WildsLanternProto, type WildsClearResult, type WildsLayResult, type WildsLiftResult, type WildsDiscoverResult } from '../lib/gen/glimway/v1/operations_pb.js'
 import { ContributeRequestSchema, CraftRequestSchema, DeskCopyRequestSchema, HearthCraftRequestSchema, MailKeyedRequestSchema, MailSendRequestSchema, StorageMoveRequestSchema } from '../lib/gen/glimway/v1/village_pb.js'
 import { HomesteadRequestSchema, ShelfRequestSchema } from '../lib/gen/glimway/v1/homestead_pb.js'
@@ -1990,6 +1991,19 @@ export class Link {
   async recoveryCollect(): Promise<WildsOutcome<RecoveryCollectResult>> {
     if (!this.session) return { ok: false, code: 'unknown' }
     return wildsOutcome(await this.operation('recovery-collect', {}))
+  }
+
+  // ------------------------------------------------------------ communal lamps (lamps.md 1.3, 2.4)
+
+  /** A communal-lamp operation (relight, tend, post, lift) from where the hero stands. Needs a connection. */
+  async communalLamp(fields: OperationFields<'communal-lamp'>): Promise<WildsOutcome<CommunalLampResult>> {
+    if (!this.session) return { ok: false, code: 'unknown' }
+    return wildsOutcome(await this.operation('communal-lamp', fields))
+  }
+
+  /** The world's lit communal lamps (GET /api/communal-lamps). */
+  async communalLampsRead(): Promise<HomeRead<CommunalLampsRead>> {
+    return this.read(() => this.api.run(() => this.ops.communalLamps()))
   }
 
   // ------------------------------------------------------------ fishing (design crafts 5.4)

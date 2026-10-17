@@ -130,6 +130,14 @@ export declare type Homestead = Message<"glimway.content.v1.Homestead"> & {
    * @generated from field: glimway.content.v1.WayLamp way_lamp = 16;
    */
   wayLamp?: WayLamp | undefined;
+
+  /**
+   * Communal lamps (roadmap 0.13; lamps.md 1.3, 2.4): Common light, kept by
+   * presence, never by oil.
+   *
+   * @generated from field: glimway.content.v1.CommunalLamp communal_lamp = 17;
+   */
+  communalLamp?: CommunalLamp | undefined;
 };
 
 /**
@@ -252,6 +260,14 @@ export declare type HomesteadValid = Message<"glimway.content.v1.Homestead"> & {
    * @generated from field: glimway.content.v1.WayLamp way_lamp = 16;
    */
   wayLamp: WayLampValid;
+
+  /**
+   * Communal lamps (roadmap 0.13; lamps.md 1.3, 2.4): Common light, kept by
+   * presence, never by oil.
+   *
+   * @generated from field: glimway.content.v1.CommunalLamp communal_lamp = 17;
+   */
+  communalLamp: CommunalLampValid;
 };
 
 /**
@@ -259,6 +275,40 @@ export declare type HomesteadValid = Message<"glimway.content.v1.Homestead"> & {
  * Use `create(HomesteadSchema)` to create a new message.
  */
 export declare const HomesteadSchema: GenMessage<Homestead, {validType: HomesteadValid}>;
+
+/**
+ * Communal lamps (lamps.md 2.5's "Communal stone relight" and "New communal
+ * post"): anyone relights a dark lamp stone of the Lantern Road, burning
+ * relight_qty of `relight` (0: free), or sets the way-lamp piece as a
+ * communal post, with no oil and no store. reach is how far, in tiles, a
+ * player may relight, tend, set or lift from.
+ *
+ * @generated from message glimway.content.v1.CommunalLamp
+ */
+export declare type CommunalLamp = Message<"glimway.content.v1.CommunalLamp"> & {
+  /**
+   * @generated from field: string relight = 1;
+   */
+  relight: string;
+
+  /**
+   * @generated from field: int32 relight_qty = 2;
+   */
+  relightQty: number;
+
+  /**
+   * @generated from field: int32 reach = 3;
+   */
+  reach: number;
+};
+
+export declare type CommunalLampValid = CommunalLamp;
+
+/**
+ * Describes the message glimway.content.v1.CommunalLamp.
+ * Use `create(CommunalLampSchema)` to create a new message.
+ */
+export declare const CommunalLampSchema: GenMessage<CommunalLamp, {validType: CommunalLampValid}>;
 
 /**
  * The way-lamp's camp (lamps.md 2.5): `item` is the home piece set as the

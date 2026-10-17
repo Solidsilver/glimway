@@ -1210,6 +1210,28 @@ export enum ErrorCode {
    * @generated from enum value: ERROR_CODE_CAMP_NOT_EMPTY = 235;
    */
   CAMP_NOT_EMPTY = 235,
+
+  /**
+   * 0.13 Communal lamps (lamps.md 1.3, 2.4).
+   *
+   * @generated from enum value: ERROR_CODE_NO_LAMP = 236;
+   */
+  NO_LAMP = 236,
+
+  /**
+   * @generated from enum value: ERROR_CODE_LAMP_LIT = 237;
+   */
+  LAMP_LIT = 237,
+
+  /**
+   * @generated from enum value: ERROR_CODE_NOT_COMMON = 238;
+   */
+  NOT_COMMON = 238,
+
+  /**
+   * @generated from enum value: ERROR_CODE_NOT_YOUR_LAMP = 239;
+   */
+  NOT_YOUR_LAMP = 239,
 }
 
 /**

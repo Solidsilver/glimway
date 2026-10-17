@@ -170,5 +170,9 @@
   {
     "name": "042_common_ways.sql",
     "sha256": "0909fe60498fa6fda5bce7be0fa77983f34cfc6b62c609c540398312e0ba72da"
+  },
+  {
+    "name": "043_communal_lamps.sql",
+    "sha256": "44d3740bb27aad27923e0a5e3198ffab832b0fdb52af141367e6fdc4e005a3af"
   }
 ]

@@ -40,6 +40,7 @@ import type { HomesteadLayer } from '../entities/homesteads'
 import type { WildsEntities } from '../wilds/entities'
 import type { WildsPaths } from '../wilds/paths'
 import type { WildsCamps } from '../wilds/camps'
+import type { WildsCommunalLamps } from '../wilds/communal-lamps'
 
 export interface WorldActionDeps {
   scene: Phaser.Scene
@@ -54,6 +55,8 @@ export interface WorldActionDeps {
   paths: () => WildsPaths | null
   /** Camps (lamps.md 2.5): the way-lamp's talk comes back as `camp:…`. */
   camps: () => WildsCamps | null
+  /** Communal lamps (lamps.md 1.3): a lamp's talk comes back as `communal-lamp:…`. */
+  communalLamps: () => WildsCommunalLamps | null
   /** Write where the hero stands into the save (it rides along with a write). */
   notePosition: () => void
   /** A paid outcome changes what the markers and the prompt say. */
@@ -78,6 +81,7 @@ export class WorldActions {
     // The confirm before laying on land that turns (open-map.md 2.9).
     ['path:', (rest) => this.deps.paths()?.onAction(rest)],
     ['camp:', (rest) => this.deps.camps()?.onAction(rest)],
+    ['communal-lamp:', (rest) => this.deps.communalLamps()?.onAction(rest)],
     ['heirloom:grant:', (id) => this.grantHeirloom(id)],
     [
       'buy:',

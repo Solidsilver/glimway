@@ -1,0 +1,238 @@
+/**
+ * Communal lamps on the open map (roadmap 0.13; docs/design/lamps.md §1.3,
+ * §2.4): Lantern Road stones someone relit, burning over the dark stone art,
+ * and way-lamps set as communal posts. Look at a dark stone (./sites.ts
+ * sends EV.lampStoneLook) to light it with a lamp wick; look at a lit lamp
+ * to tend it (the visit counts this wick), and at your own post to take it
+ * down. From the pack (EV.communalPost): set a carried way-lamp beside you
+ * as a communal post.
+ *
+ * Read from GET /api/communal-lamps (no socket message carries them): on
+ * walking into another chunk, every half minute, and after each of your own
+ * lamp operations. Drawn for the chunks around the hero.
+ */
+import Phaser from 'phaser'
+import type { CommunalLampView } from '../../lib/gen/glimway/v1/lamps_pb.js'
+import { COMMUNAL_LAMP_DONE, COMMUNAL_LAMP_ERRORS, COMMUNAL_POST_FRAME, canLift, canRelight, communalLampLines, communalLampName, darkStoneLines, lampTiles, lampsNear, litStone, relightCost } from '../../lib/communal-lamps.ts'
+import { campSpot } from '../../lib/camps.ts'
+import { HOMESTEAD_DATA } from '../../lib/homestead.ts'
+import { TERRAIN, TILE, tileFeet } from '../../lib/tile.ts'
+import { chunkOf } from '../../lib/wilds/coords.ts'
+import { loadWilds } from '../../lib/wilds/data.ts'
+import { homeErrorText } from '../../content/errors.ts'
+import { bus, EV } from '../events.ts'
+import { openDialogue } from '../dialogue.ts'
+import { sfx } from '../sfx.ts'
+import type { Session } from '../session.ts'
+import type { Interactables } from '../entities/interactables.ts'
+import type { DialogueChoice } from '../../content/world.ts'
+import { solidBox } from '../area/collision.ts'
+import { drawScale } from '../hearthwick2-art.ts'
+import { omArt } from './open-map-art.ts'
+import { itemsFor } from '../items.ts'
+import { homesteadsFor } from '../homestead.ts'
+import { groundAt, solidAt } from './ground-view.ts'
+import { wildsPoint } from './sites.ts'
+
+export interface CommunalLampsDeps {
+  session: Session
+  interactables: Interactables
+  solids: Phaser.Physics.Arcade.StaticGroup
+  hero: () => { x: number; y: number }
+  notePosition: () => void
+  reducedMotion: boolean
+}
+
+/** How often the lamps are read again while you stand still (ms). */
+const READ_EVERY_MS = 30_000
+/** The warm light of a lit lamp. */
+const LAMPLIGHT = 0xffb054
+
+export class WildsCommunalLamps {
+  private lamps: CommunalLampView[] = []
+  private images: Phaser.GameObjects.GameObject[] = []
+  private tweens: Phaser.Tweens.Tween[] = []
+  private bodies: Phaser.Physics.Arcade.Image[] = []
+  private drawnFor = ''
+  private readAt = 0
+  private reading = false
+  private version = 0
+  private busy = false
+
+  constructor(private scene: Phaser.Scene, private deps: CommunalLampsDeps) {
+    const onPost = (d: { itemId: string }) => void this.post(d.itemId)
+    const onStone = (d: { site: string }) => this.lookStone(d.site)
+    bus.on(EV.communalPost, onPost)
+    bus.on(EV.lampStoneLook, onStone)
+    scene.events.once('shutdown', () => {
+      bus.off(EV.communalPost, onPost)
+      bus.off(EV.lampStoneLook, onStone)
+      this.clear()
+      deps.interactables.register(this, [])
+    })
+  }
+
+  private get me(): string | null {
+    return this.deps.session.link?.accountId ?? null
+  }
+
+  update(): void {
+    const hero = this.deps.hero()
+    const at = chunkOf(Math.floor(hero.x / TILE), Math.floor(hero.y / TILE))
+    const key = `${this.version}|${at.cx},${at.cy}`
+    const now = Date.now()
+    if (key !== this.drawnFor) {
+      // A new chunk: read again (someone may have lit a lamp out here).
+      if (!this.drawnFor.endsWith(`|${at.cx},${at.cy}`)) this.readAt = 0
+      this.drawnFor = key
+      this.draw(at.cx, at.cy)
+    }
+    if (now >= this.readAt && !this.reading) {
+      this.readAt = now + READ_EVERY_MS
+      void this.read()
+    }
+  }
+
+  /** Read the lamps again now. */
+  async read(): Promise<void> {
+    const link = this.deps.session.link
+    if (!link) return
+    this.reading = true
+    try {
+      const r = await link.communalLampsRead()
+      if (r.ok) this.adopt(r.value.lamps)
+    } finally {
+      this.reading = false
+    }
+  }
+
+  private adopt(list: CommunalLampView[]): void {
+    this.lamps = list
+    this.version++
+  }
+
+  // ------------------------------------------------------------ drawing
+
+  private clear(): void {
+    for (const t of this.tweens) t.stop()
+    for (const o of this.images) o.destroy()
+    for (const b of this.bodies) this.deps.solids.remove(b, true, true)
+    this.tweens = []
+    this.images = []
+    this.bodies = []
+  }
+
+  private draw(cx: number, cy: number): void {
+    this.clear()
+    const points = []
+    for (const l of lampsNear(this.lamps, cx, cy)) {
+      const at = tileFeet(l.x, l.y)
+      if (l.kind === 'post') {
+        // The post itself (the stone is the road's, drawn with its chunk's sites).
+        const key = omArt(COMMUNAL_POST_FRAME)
+        if (this.scene.textures.exists(key)) {
+          const img = this.scene.add.image(at.x, at.y, key).setOrigin(0.5, 1).setScale(drawScale(key)).setDepth(at.y)
+          img.setData('communal-lamp', l.id)
+          this.images.push(img)
+        }
+        const body = solidBox(this.scene, at.x, at.y - TILE / 2, TILE - 6, TILE - 6)
+        this.deps.solids.add(body)
+        this.bodies.push(body)
+        points.push({ ...wildsPoint(`communal-lamp:${l.id}`, at, 30, () => ({ label: `Look at the ${communalLampName(l).toLowerCase()}`, verb: 'Look', claim: () => this.look(l.id) })), rank: 0 })
+      }
+      // Its light: over the stone's soot-dark niche, or the post's lamp.
+      const glow = this.scene.add.image(at.x, at.y - (l.kind === 'stone' ? 26 : 22), 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(LAMPLIGHT).setScale(0.55).setAlpha(0.8).setDepth(4001)
+      this.images.push(glow)
+      if (!this.deps.reducedMotion) this.tweens.push(this.scene.tweens.add({ targets: glow, alpha: { from: 0.8, to: 0.55 }, duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' }))
+    }
+    this.deps.interactables.register(this, points)
+  }
+
+  // ------------------------------------------------------------ talking
+
+  private wicksCarried(): number {
+    const def = HOMESTEAD_DATA.communalLamp.relight
+    return itemsFor(this.deps.session).view?.stacks.filter((x) => x.itemDef === def).reduce((n, x) => n + x.qty, 0) ?? 0
+  }
+
+  /** A road stone: lit (tend it), or dark (light it). */
+  lookStone(site: string): void {
+    const lit = litStone(this.lamps, site)
+    if (lit) return this.look(lit.id)
+    const cost = relightCost()
+    const ok = canRelight(this.wicksCarried())
+    const choices: DialogueChoice[] = [
+      { text: cost ? `Light it with ${cost}` : 'Light it', action: `communal-lamp:relight:${site}`, disabled: !ok, ...(ok ? {} : { note: 'You need a lamp wick' }) },
+      { text: 'Leave it' }
+    ]
+    openDialogue({ id: 'communal-lamp', speaker: 'Lamp stone', lines: darkStoneLines(loadWilds().words.lampStone), choices })
+  }
+
+  /** A lit lamp: its naming or label, who lit it, the coming turning; tend it, or take your post down. */
+  look(id: string): void {
+    const l = this.lamps.find((x) => x.id === id)
+    if (!l) return
+    const choices: DialogueChoice[] = [{ text: 'Tend it', note: 'Trim the wick: your visit counts this wick', action: `communal-lamp:tend:${l.id}` }]
+    if (canLift(l, this.me)) choices.push({ text: 'Take your lamp down', note: 'It goes back in your pack', action: `communal-lamp:lift:${l.id}` })
+    choices.push({ text: 'Leave it' })
+    openDialogue({ id: 'communal-lamp', speaker: communalLampName(l), lines: communalLampLines(l, this.me), choices })
+  }
+
+  /** A choice picked in a lamp's talk (WorldActions routes `communal-lamp:` here). */
+  onAction(rest: string): void {
+    const i = rest.indexOf(':')
+    const what = rest.slice(0, i), id = rest.slice(i + 1)
+    if (!id || (what !== 'relight' && what !== 'tend' && what !== 'lift')) return
+    void this.act({ action: what, lamp: id }, () => bus.emit(EV.toast, { text: COMMUNAL_LAMP_DONE[what], icon: 'lantern' }))
+  }
+
+  // ------------------------------------------------------------ doing
+
+  /** Open ground beside you, as the client knows it (the server checks again). */
+  private open(tx: number, ty: number): boolean {
+    const g = groundAt(tx, ty)
+    return !solidAt(tx, ty) && g !== null && g !== TERRAIN.water_a && g !== TERRAIN.water_b && g !== TERRAIN.bridge
+  }
+
+  /** From the pack: a carried way-lamp set down beside you as a communal post. */
+  private async post(itemId: string): Promise<void> {
+    const hero = this.deps.hero()
+    const feet = { tx: Math.floor(hero.x / TILE), ty: Math.floor((hero.y - 1) / TILE) }
+    const spot = campSpot(feet, (x, y) => this.open(x, y), lampTiles(this.lamps))
+    if (!spot) {
+      bus.emit(EV.toast, { text: COMMUNAL_LAMP_ERRORS['land-blocked']!, icon: 'glim', kind: 'error' })
+      return
+    }
+    await this.act({ action: 'post', itemId, x: spot.tx, y: spot.ty }, () => bus.emit(EV.toast, { text: COMMUNAL_LAMP_DONE.post, icon: 'lantern' }))
+  }
+
+  private async act(fields: { action: string; lamp?: string; itemId?: string; x?: number; y?: number }, then?: () => void): Promise<void> {
+    const link = this.deps.session.link
+    if (!link || this.busy) return
+    this.busy = true
+    this.deps.notePosition()
+    try {
+      const r = await link.communalLamp({ lamp: '', itemId: '', x: 0, y: 0, ...fields })
+      if (!r.ok) {
+        sfx('fizzle')
+        bus.emit(EV.toast, { text: COMMUNAL_LAMP_ERRORS[r.code] ?? homeErrorText(r.code), icon: 'glim', kind: 'error' })
+        return
+      }
+      sfx(fields.action === 'lift' ? 'pop' : 'lantern')
+      void itemsFor(this.deps.session).load()
+      if (fields.action === 'post' || fields.action === 'lift') void homesteadsFor(this.deps.session).load()
+      const l = r.result.lamp ?? null
+      const gone = fields.action === 'lift' ? fields.lamp : undefined
+      this.adopt([...this.lamps.filter((x) => x.id !== l?.id && x.id !== gone), ...(l ? [l] : [])])
+      then?.()
+    } finally {
+      this.busy = false
+    }
+  }
+
+  // ------------------------------------------------------------ playtests
+
+  debug(): { lamps: { id: string; kind: string; x: number; y: number; visited: boolean; name: string }[] } {
+    return { lamps: this.lamps.map((l) => ({ id: l.id, kind: l.kind, x: l.x, y: l.y, visited: l.visited, name: communalLampName(l) })) }
+  }
+}

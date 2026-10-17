@@ -366,6 +366,7 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
     return { ...marks.debug(), discoveries: [...(view?.discoveries.values() ?? [])].map((d) => ({ id: d.entityId, by: d.discovererId, name: d.displayName })), places: knownPlaces() }
   })
   on('__fsCamps', () => s['camps']?.debug() ?? null)
+  on('__fsCommunalLamps', () => s['communalLamps']?.debug() ?? null)
   on('__fsRumour', () => {
     const link = s['session'].link
     // `current`: read since the last turning (Link.rumourStale), so it's this wick's.
