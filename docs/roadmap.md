@@ -50,7 +50,7 @@ Decided 2026-10-17; the full design is the `lamps.md` rewrite (docs lane during 
 |---|---|---|---|
 | **Wild** | Generated land nobody is keeping | Nothing | Living detail turns: trees, forage, creatures, unheld paths |
 | **Common** | Laid paths and communal way-lamps | Presence: any single visit during the wick | Kept if visited; otherwise turns |
-| **Built** | Claimed land: lot backland, way-lamp camps, Wilds hearths | Oil from Wick Tree sap, in a 2–3 wick store; anyone may tend | Kept while lit; a full wick of dimming warning; on lapse the land turns and every placed item packs into the crate at Pell's |
+| **Built** | Claimed land: lot backland, way-lamp camps, and the land around a Wilds hearth (its core plot is permanent; see 0.14) | Oil from Wick Tree sap, in a 2–3 wick store; anyone may tend | Kept while lit; a full wick of dimming warning; on lapse the land turns and every placed item packs into the crate at Pell's |
 
 **Lasting geography** (overturns open-map decision 18): lakes, rivers and ridges keep their
 shape across turnings. Only the living detail reshuffles. In the generator, the landform passes
@@ -92,7 +92,9 @@ way-lamps in the Wilds, with the map showing what is held, common and turning.
   papers. A short design spike comes first.
 - Wilds hearths as an **additional charter**, not a moved deed (replaces hearth H3): two or more
   members co-sign on a world with more than one member; one signer suffices on a one-member
-  world, and a charter stands if more members join later.
+  world, and a charter stands if more members join later. **The core plot is permanent** (owner,
+  2026-10-17): it never turns and needs no oil until the charter is given up. Only land the
+  household extends beyond the core is Built land on oil.
 - Two-way trading: resident buyers and async player stalls, with listing fees as a glim sink.
 - Rides along: per-chunk gathering cost.
 - **Contract freeze.** Clean breaks end here.

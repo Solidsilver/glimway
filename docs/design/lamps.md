@@ -76,7 +76,7 @@ Connected lanterns farther out extend the yard's usable tiles within that one ch
 Keep [Hearthwick 2 §6](hearthwick-2.md#6-extending-a-lot-with-lanterns)'s bounds: west backland
 is `cx = -3`, east backland `cx = 3`, at the lot's `cy = 1..4`. The whole chunk's terrain is
 held, but only lit tiles join arrange, clear, plant and gather services. Additional lanterns
-do not claim a second chunk. The fenced lot and hearth remain permanent if backland lapses.
+do not claim a second chunk. The fenced lot and hearth remain permanent if backland lapses. Likewise a chartered Wilds hearth's **core plot is permanent until the charter is given up** (owner, 2026-10-17); only land extended beyond it runs on oil.
 
 An empty store does not erase the yard. At a turning it enters **Dimming**, retaining its hold
 and services for the following wick, with warnings in the world and on the map. Anyone may add

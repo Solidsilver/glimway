@@ -147,3 +147,8 @@ rather than rewritten.
   exact pixels for now.
 - **A faster scene build on phones** (maybe): after the ground fix, about 0.4–0.5 s remains on a
   throttled phone, from props, portraits and the HUD's icons.
+
+## Land (2026-10-17)
+- **Tethers** (maybe, owner idea): each player gets a small fixed number of tethers that hold a
+  chunk of land for good, with no oil, as a permanent alternative to lamps. Optional; the
+  chartered Wilds hearth's core plot is permanent either way (roadmap 0.14).
