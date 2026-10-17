@@ -70,3 +70,86 @@ for (const path of ['src/lib/api/queued-operation.ts', 'server/internal/api/op.g
     assert.doesNotMatch(output, /not in e2e\/changed-map\.json/, output)
   })
 }
+
+const specsOf = (output: string) => (output.trim().split('\n').pop()?.match(/e2e\/\S+\.spec\.ts/g) ?? []).map((s) => s.slice('e2e/'.length))
+const fullSuite = (output: string) => /→ full suite/.test(output)
+const smokeTier = (output: string) => /the smoke tier$/m.test(output.trim().split('\n').pop() ?? '')
+
+test('the trowel lane (b542aa9b) still selects lot-lantern and camps', () => {
+  const files = ['server/internal/api/camp_teardown.go', 'server/internal/api/camps.go', 'server/internal/api/lot_location.go', 'server/internal/api/plants.go', 'src/game/entities/homestead-talk.ts', 'src/game/wilds/camps.ts', 'src/lib/belt.ts', 'src/lib/camps.ts', 'src/lib/trowel.ts', 'proto/glimway/v1/camps.proto', 'proto/glimway/v1/items.proto']
+  const specs = specsOf(list(files.join(',')))
+  for (const spec of ['lot-lantern.spec.ts', 'camps.spec.ts']) assert.ok(specs.includes(spec), `${spec}: ${specs}`)
+  for (const file of ['src/lib/belt.ts', 'src/lib/trowel.ts', 'src/lib/lots.ts', 'server/internal/api/lot_location.go', 'server/internal/api/camp_teardown.go']) {
+    assert.ok(specsOf(list(file)).includes('lot-lantern.spec.ts'), file)
+  }
+  for (const file of ['src/lib/camps.ts', 'src/lib/trowel.ts', 'src/game/wilds/camps.ts', 'server/internal/api/camps.go', 'server/internal/api/camp_teardown.go']) {
+    assert.ok(specsOf(list(file)).includes('camps.spec.ts'), file)
+  }
+})
+
+test('homestead-talk.ts runs one spec per branch it routes to, plus the smoke tier', () => {
+  const output = list('src/game/entities/homestead-talk.ts')
+  assert.deepEqual(specsOf(output), ['camps.spec.ts', 'companions.spec.ts', 'crafting.spec.ts', 'gifts.spec.ts', 'heirlooms.spec.ts', 'homestead.spec.ts', 'lot-lantern.spec.ts', 'playtest1.spec.ts', 'village.spec.ts', 'yard.spec.ts'])
+  assert.ok(smokeTier(output), output)
+  // The other homestead entities keep their broad rules.
+  assert.ok(specsOf(list('src/game/entities/homestead-art.ts')).includes('talk.spec.ts'))
+})
+
+test('the Wilds camps run camps.spec and the smoke tier, not every Wilds spec', () => {
+  for (const file of ['src/game/wilds/camps.ts', 'src/game/wilds/camps-state.ts']) {
+    const output = list(file)
+    assert.deepEqual(specsOf(output), ['camps.spec.ts'], output)
+    assert.ok(smokeTier(output), output)
+  }
+  // `!` only takes those files out: the rest of the Wilds keeps its rule.
+  assert.ok(specsOf(list('src/game/wilds/paths.ts')).includes('wilds.spec.ts'))
+})
+
+for (const [file, want, not] of [
+  ['proto/glimway/v1/camps.proto', ['camps.spec.ts', 'lot-lantern.spec.ts'], ['fights-server.spec.ts', 'connected.spec.ts']],
+  ['server/internal/gen/glimway/v1/items.pb.go', ['items.spec.ts', 'inventory.spec.ts', 'lot-lantern.spec.ts'], ['fights-server.spec.ts', 'connected.spec.ts']],
+  ['src/lib/gen/glimway/v1/goods_pb.js', ['items.spec.ts', 'homestead.spec.ts'], ['fights-server.spec.ts']],
+  ['src/lib/gen/glimway/v1/errors_pb.d.ts', ['connected.spec.ts', 'version.spec.ts'], ['fights-server.spec.ts']],
+  ['proto/glimway/v1/state.proto', ['connected.spec.ts', 'onboarding.spec.ts'], ['fights-server.spec.ts']],
+  ['proto/glimway/v2/presence.proto', ['presence.spec.ts', 'fights-server.spec.ts', 'fights-shared.spec.ts'], []],
+  ['gen/glimway/content/v1/enemies.pb.go', ['fights-server.spec.ts', 'fights-shared.spec.ts'], []],
+  ['gen/glimway/content/v1/homestead.pb.go', ['homestead.spec.ts', 'lot-lantern.spec.ts'], ['fights-server.spec.ts']],
+  ['src/lib/api/items.ts', ['items.spec.ts', 'inventory.spec.ts'], ['party-worlds.spec.ts', 'coop.spec.ts']],
+] as const) {
+  test(`proto family: ${file} runs its family's specs`, () => {
+    const output = list(file)
+    const specs = specsOf(output)
+    for (const s of want) assert.ok(specs.includes(s), `${s}: ${output}`)
+    for (const s of not) assert.ok(!specs.includes(s), `not ${s}: ${output}`)
+    assert.doesNotMatch(output, /not in e2e\/changed-map\.json/, output)
+  })
+}
+
+test('a content schema with no family rule runs only the smoke tier', () => {
+  const output = list('proto/glimway/content/v1/contract.proto')
+  assert.deepEqual(specsOf(output), [])
+  assert.ok(smokeTier(output), output)
+})
+
+test('the server catch-all applies only to files with no rule of their own', () => {
+  const signIn = ['connected.spec.ts', 'connected-screens.spec.ts', 'onboarding.spec.ts', 'polish.spec.ts']
+  assert.deepEqual(specsOf(list('server/internal/api/recovery.go')), [...signIn].sort())
+  assert.deepEqual(specsOf(list('server/internal/api/login.go')), [...signIn].sort())
+  assert.deepEqual(specsOf(list('server/internal/api/camps.go')), ['camps.spec.ts'])
+  assert.deepEqual(specsOf(list('src/lib/api/client.ts')), [...signIn, 'party-worlds.spec.ts', 'party-worlds-screens.spec.ts', 'presence.spec.ts', 'coop.spec.ts'].sort())
+})
+
+for (const path of ['server/internal/api/camps_test.go', 'server/internal/api/testdata/server-first.json', 'server/internal/store/storetest/composition.go', 'e2e/hooks.d.ts']) {
+  test(`test-only ${path} selects nothing`, () => {
+    const output = list(path)
+    assert.doesNotMatch(output, /smoke tier|e2e\/\S+\.spec\.ts|full suite/, output)
+  })
+}
+
+for (const path of ['e2e/room-helpers.ts', 'e2e/positions.ts', 'go.mod', 'svelte.config.js']) {
+  test(`shared infrastructure ${path} runs the full suite`, () => assert.ok(fullSuite(list(path))))
+}
+
+test('e2e/harness runs only the spec that loads it', () => {
+  assert.deepEqual(specsOf(list('e2e/harness/phaser.html')), ['window-order.spec.ts'])
+})

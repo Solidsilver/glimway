@@ -104,18 +104,36 @@ plus uncommitted and untracked files, and maps them through
 
 - a changed spec runs itself;
 - a file under a rule's `paths` runs that rule's `specs` (rules marked
-  `smoke` also run the smoke tier, e.g. `src/game/scenes/**`);
-- a file in the `full` list (fixtures, helpers, the e2e servers, the
-  Playwright and Vite configs, `package.json`) runs the full suite;
+  `smoke` also run the smoke tier, e.g. `src/game/scenes/**`). A path
+  starting with `!` takes files back out of its rule
+  (`"!src/game/wilds/camps.ts"` under `src/game/wilds/**`);
+- a rule marked `fallback` is a catch-all: it applies only to files no other
+  rule covers. `server/internal/api/**`, `server/internal/store/**`,
+  `src/lib/api/**` and the generated code are fallbacks to the sign-in specs,
+  so a server or client file with its own rule runs only that rule's specs
+  (every playtest signs in against the Go server anyway);
+- a file in the `full` list (fixtures, helpers and what they re-export, the
+  e2e servers, the Playwright, Vite and Svelte configs, `package.json`,
+  `go.mod`) runs the full suite;
 - a source file no rule covers adds the smoke tier, and the script names it.
   Add a rule when that happens;
-- docs, unit tests and other `ignore` paths run nothing.
+- docs, unit tests (Go `_test.go` files, `testdata` and `storetest` too) and
+  other `ignore` paths run nothing.
+
+The wire contract maps by message family: `camps.proto`, its Go output and
+its TS output together run the camps specs, `items.proto` the item-route
+specs, and so on. Each family's API client (`src/lib/api/items.ts`) sits in
+the same rule. Content schemas (`proto/glimway/content/v1`) run the specs of
+the loader that decodes them. `state_pb` loads most families at start-up, so
+family rules also run the smoke tier. A dialogue hub such as
+`homestead-talk.ts` has its own rule naming one spec per branch it routes to;
+its `about` says which spec covers which branch.
 
 CI does the same on lane branches: a push to `exp/*` runs `test:changed`
 against `origin/dev` on the self-hosted GPU runner, so lanes don't queue behind
 each other's full runs. Pushes to `dev` and `main` run the full suite.
 
-The fight selector maps server fight/fall code, presence protobuf output,
+The fight selector maps server fight/fall code, v2 presence protobuf output,
 interpolation, the server enemy renderer, camp outcome polling and fight
 content to `fights-server.spec.ts` and `fights-shared.spec.ts`. The two-client
 gate runs in CI; set `E2E_SHARED_FIGHTS=1` to opt in locally.
