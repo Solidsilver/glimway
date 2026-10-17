@@ -2548,5 +2548,80 @@
       "w": 229,
       "h": 243
     }
+  },
+  {
+    "key": "item-willow-rod",
+    "region": [
+      0,
+      0,
+      64,
+      64
+    ],
+    "sourceRect": {
+      "x": 0,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    }
+  },
+  {
+    "key": "item-mill-roach",
+    "region": [
+      0,
+      0,
+      64,
+      64
+    ],
+    "sourceRect": {
+      "x": 0,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    }
+  },
+  {
+    "key": "item-millers-fry",
+    "region": [
+      0,
+      0,
+      64,
+      64
+    ],
+    "sourceRect": {
+      "x": 0,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    }
+  },
+  {
+    "key": "item-recipe-card-millers-fry",
+    "region": [
+      0,
+      0,
+      64,
+      64
+    ],
+    "sourceRect": {
+      "x": 0,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    }
+  },
+  {
+    "key": "item-way-lamp",
+    "region": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "sourceRect": {
+      "x": 281,
+      "y": 65,
+      "w": 618,
+      "h": 1135
+    }
   }
 ]

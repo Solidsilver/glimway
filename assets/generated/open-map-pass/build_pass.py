@@ -20,6 +20,7 @@ LANDMARK_SOURCE = Image.open(SRC / 'landmarks-generated.png').convert('RGBA')
 SPLIT_OAK_SOURCE = Image.open(SRC / 'landmark-split-oak-generated.png').convert('RGBA')
 STANDING_STONE_SOURCE = Image.open(SRC / 'standing-stone-round3-generated.png').convert('RGBA')
 WAY_SIGN_SOURCE = Image.open(SRC / 'way-sign-round3-generated.png').convert('RGBA')
+WAY_LAMP_SOURCE = Image.open(SRC / 'way-lamp-generated.png').convert('RGBA')
 
 # Source cuts in the generated 1402x1122 transparent prop sheet. Crops are kept
 # here so every frame can be rebuilt without depending on the generation tool.
@@ -266,6 +267,32 @@ for key,(col,row,foot) in {
     else:
         generated_prop(key,'landmarks-generated',LANDMARK_SOURCE,col,row,3,2,foot,20)
 
+# The generated three-state wayside lamp is kept on one fixed canvas. Its
+# states share a union crop before fitting, then the builder reduces it to
+# 2x2 texel clusters and the Wilds palette just like the other props.
+lamp_cell_width = WAY_LAMP_SOURCE.width // 3
+lamp_cells = [WAY_LAMP_SOURCE.crop((i*lamp_cell_width+6, 6, (i+1)*lamp_cell_width-6, WAY_LAMP_SOURCE.height-6)) for i in range(3)]
+lamp_union = Image.new('L', lamp_cells[0].size, 0)
+for cell in lamp_cells:
+    lamp_union = ImageChops.lighter(lamp_union, cell.getchannel('A'))
+lamp_bbox = lamp_union.getbbox()
+for i,cell in enumerate(lamp_cells):
+    cell = cell.crop(lamp_bbox)
+    half = fit_pixel_art(cell, (32,48), 24)
+    im = half.resize((64,96), Image.Resampling.NEAREST)
+    # Keep the game's canonical outline color in the limited palette.
+    px = im.load()
+    for yy in range(im.height):
+        for xx in range(im.width):
+            r,g,b,a = px[xx,yy]
+            if a and max(r,g,b) < 64: px[xx,yy] = (58,42,40,a)
+    key = f'way-lamp-{i}'
+    im.save(OUT/f'{key}.png', optimize=True)
+    frames[key] = {'file':f'frames/{key}.png','source':'way-lamp-generated',
+      'sourceRect':{'x':i*lamp_cell_width+6,'y':6,'w':lamp_cell_width-12,'h':WAY_LAMP_SOURCE.height-12},
+      'canvas':{'w':64,'h':96},'footprint':{'w':1,'h':1},
+      'footPoint':{'x':32,'y':96},'kind':'transparent-prop'}
+
 # Round-3 portrait replacements remove the tiny source cuts and stray fragments.
 round3_prop(STANDING_STONE_SOURCE,'landmark-standing-stone',(56,204),'standing-stone-round3-generated')
 round3_prop(WAY_SIGN_SOURCE,'way-sign',(56,104),'way-sign-round3-generated')
@@ -318,6 +345,7 @@ source_files={
  'ford-water-round3-generated':'ford-water-round3-generated.png',
  'standing-stone-round3-generated':'standing-stone-round3-generated.png',
  'way-sign-round3-generated':'way-sign-round3-generated.png',
+ 'way-lamp-generated':'way-lamp-generated.png',
 }
 for k,file in source_files.items():
     im=Image.open(SRC/file)

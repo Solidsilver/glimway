@@ -26,8 +26,9 @@ import type { Interactables } from '../entities/interactables.ts'
 import type { DialogueChoice } from '../../content/world.ts'
 import { solidBox } from '../area/collision.ts'
 import { decoFlat, decoKey } from '../commons-art.ts'
-import { drawScale, hw2Art } from '../hearthwick2-art.ts'
+import { drawScale } from '../hearthwick2-art.ts'
 import { itemIcon, itemsFrame, itemWorldArt } from '../items-pass.ts'
+import { omArt } from './open-map-art.ts'
 import { itemsFor } from '../items.ts'
 import { homesteadsFor } from '../homestead.ts'
 import { groundAt, solidAt } from './ground-view.ts'
@@ -142,7 +143,7 @@ export class WildsCamps {
       }
       // The lamp itself: lit, or guttering in its wick of warning.
       const at = tileFeet(c.x, c.y)
-      const key = hw2Art(campFrame(campLook(c)))
+      const key = omArt(campFrame(campLook(c)))
       if (this.scene.textures.exists(key)) {
         const img = this.scene.add.image(at.x, at.y, key).setOrigin(0.5, 1).setScale(drawScale(key)).setDepth(at.y)
         img.setData('camp', c.id)

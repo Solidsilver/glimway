@@ -58,6 +58,12 @@
       "key": "way-sign-round3-generated",
       "source": "source/way-sign-round3-generated.png",
       "prompt": "Single isolated straight-on upright wooden way-sign with a sturdy post and one blank readable horizontal plank sign board near its top. Muted weathered brown timber, crisp pixel-art silhouette, transparent background. No plants, fragments, stones, text, or cast shadow."
+    },
+    {
+      "key": "way-lamp-0..2",
+      "source": "source/way-lamp-generated.png",
+      "prompt": "Use the existing lantern-stake art as a front-facing lamp reference and the open-map lamp-stone as the Wilds palette and stone-cluster reference. Create exactly three equal horizontal cells of the same square-to-grid wayside lamp: sturdy wooden post, hooded iron lamp head, cairn stone footing. Dark unlit glass; steady warm amber light; dim cooler weak guttering light. Identical construction and transparent silhouette in all cells, no scenery, text, dividers, blur or antialiasing.",
+      "method": "Built-in image_gen with lantern-stake-1 and lamp-stone-dark as references. build_pass.py crops the three equal cells, applies a union silhouette crop, fits each to a 64x96 canvas in 2x2 texel clusters, and limits it to the Wilds palette."
     }
   ],
   "derivedVariants": [
@@ -73,5 +79,8 @@
   "round3BuildNotes": [
     "The new standing-stone and way-sign sources are cropped to their alpha bounds and fit to tall silhouettes that occupy 202/224 and 104/128 vertical texels respectively.",
     "The ford uses a separate generated rippled-water texture and three large stepping stones. The builder masks away all other source stones, keeps the three crossing stones stationary, and shifts the water by one or two texels for animation."
+  ],
+  "round4BuildNotes": [
+    "way-lamp-0..2 use one shared silhouette crop and 64x96 foot-pointed canvases; the builder changes only the lamp glass/light pixels across the three states."
   ]
 }

@@ -294,7 +294,8 @@
   "assets/generated/items-pass/fingersnap-world-sprites-1.png": "d3a1e70de525b1bc01ebb1e1698b82b837fb7fa28643985e6dd757c0263260bb",
   "assets/generated/items-pass/fingersnap-world-sprites-2.png": "933c0182123b768b484f0eb92869dbccefdb8f72f547c1656f94d786628d3153",
   "assets/generated/items-pass/fingersnap-world-sprites-3.png": "fd9d8847d1d0bf172b66fc0157febeb9b08c94021ad0ec607514fcb094b53a98",
-  "assets/generated/items-pass/manifest.json": "cc4619319034d77c1c563a2aa05969850f9858870c0d7c9a8e62e3ce9e5eb327",
+  "assets/generated/items-pass/manifest.json": "899f48de3a2abdc1d9a93c96d88609e5a90f3e1cfd7091d3dadd09962d377eae",
+  "assets/generated/items-pass/way-lamp-icon-generated.png": "b0a7ff3c54fecfc34223f9429fc1bbf86bdeac4d0bd5b9d4bb0353b19d136171",
   "assets/generated/open-map-pass/animations.json": "57529c7108e73c1a5bc0b79c227ea953dffa17887416488fbd03dd6c82d0b9f4",
   "assets/generated/open-map-pass/frames/bank-stones-0.png": "2127ae3cc30ebe4ca1254f9ce678b889bdce92b53362c9e7c9826e09820bcd6d",
   "assets/generated/open-map-pass/frames/bank-stones-1.png": "5d6ed4685999b13c642fdb93a9fcb048cc1b50778257d06a07ee2a4cc9738c92",
@@ -340,8 +341,11 @@
   "assets/generated/open-map-pass/frames/road-verge-1.png": "9dac78646bbdc53392f4ad92f6675558472a4649cb1059002a2cd1bbf8cbc0a5",
   "assets/generated/open-map-pass/frames/rumour-find-closed.png": "f39492c71c1514b2eec24b37c3c28d754a1c01ba1b2e0240d9c1c1198c2bd0a1",
   "assets/generated/open-map-pass/frames/rumour-find-open.png": "9e6c61e7cddf6f25b215b899737860906a33fa44a74987a52acc5753b9ac0da1",
+  "assets/generated/open-map-pass/frames/way-lamp-0.png": "8ff5d985616e7354eaa01deac7d0f1f135f646a80ea17d8ee8305e4916a3ac14",
+  "assets/generated/open-map-pass/frames/way-lamp-1.png": "92e454e84bdb1b468be8e17d87ab80162f5652c37c79c2c28d3f3c9b6d5668de",
+  "assets/generated/open-map-pass/frames/way-lamp-2.png": "9b78424ca39f6c7b53b1181c2ffd0cc19cfe4e383e26f4e050c9ec60ea0fb551",
   "assets/generated/open-map-pass/frames/way-sign.png": "83cde3dacf5ad1e41cfbd17ef92456e499ab8a7e8c056f493d2b8ce45ac33472",
-  "assets/generated/open-map-pass/manifest.json": "ce9aa4678684be24dd1df4850af1e7a87b873ccee449c3c44fc0eb2fb9711820",
+  "assets/generated/open-map-pass/manifest.json": "a427fe87ca7bca3bf1cbbc3db1b5c4cf88179ed4b46a95f9bdc22465aa6dc727",
   "assets/generated/playtest1-pass/{atlas,animations}.json: frames in use": "3ae857132e0b15574345aa1bcac2cfc552a05535690dabed4d2066a3028718e3",
   "assets/generated/playtest1-pass/bridge/fingersnap-brackenwood-bridge.png": "4954285a1b3bc8367b7796767099a8bd56ec8d23038d9bb7baadb5db67ab33ca",
   "assets/generated/playtest1-pass/ground/fingersnap-ground-base.png": "e91ddfb5259364952ef30c49dde945c08792f3f6245611a686c054d34be6c4ec",
@@ -393,8 +397,8 @@
   "ground.webp": "6151b5306345edf22bdea4211e20910d3a83dbe0ede013999a3d65f5a7529d94",
   "hearthwick2.webp": "3447b45149fbf73ca91ccfa7a07b280a0d193d813c73ac045ee336d0ec8c3ebc",
   "indoors.webp": "f8a34227b29a345347126c09304e318a9c2bdb0e6269b3e360c1593e542ab1d2",
-  "items.webp": "ecd2b4d308db0615f50126868db6e5acb40718c52e0c098296c25bf323ceb020",
-  "open-map.webp": "6d3750d12794aef4646ea5448d087fed329e77ec1911480088a653d38a13ec7b",
+  "items.webp": "9e5863bf1e8511d8c815aff450ebf892ca967b9ea485fe7fe36d3c5b81db6db3",
+  "open-map.webp": "4f7cffb68b7199a9db831461753d033a6dfdf8f9744f9687fd84211bdc2643d0",
   "people.webp": "bc06b2da02a1d7c07397ed9e239337d946d7639d3d1c381a71aed29860a4f782",
   "purse.webp": "cffd867b431c323653d66485b7a26c70621f785a544673bb0a75bee57a3a9c78",
   "runtime.webp": "a0e1d4ec27403d5891da88339b7b4161ca29b8a10aef79b2d7b6bc9fc2d70044",
@@ -1875,7 +1879,7 @@
  "items": {
   "image": "items.webp",
   "size": [
-   1145,
+   1148,
    1088
   ],
   "density": 4,
@@ -2055,7 +2059,7 @@
     64
    ],
    "item-work-apron": [
-    704,
+    768,
     896,
     64,
     64
@@ -2085,7 +2089,7 @@
     64
    ],
    "item-willow-bark": [
-    384,
+    448,
     896,
     64,
     64
@@ -2115,7 +2119,7 @@
     64
    ],
    "item-wild-honey": [
-    256,
+    320,
     896,
     64,
     64
@@ -2265,7 +2269,7 @@
     64
    ],
    "item-wild-thyme": [
-    320,
+    384,
     896,
     64,
     64
@@ -2313,7 +2317,7 @@
     64
    ],
    "item-willow-bark-tea": [
-    448,
+    512,
     896,
     64,
     64
@@ -2349,7 +2353,7 @@
     64
    ],
    "item-work-glove": [
-    768,
+    832,
     896,
     64,
     64
@@ -2367,13 +2371,13 @@
     64
    ],
    "item-window-lamp-lit": [
-    576,
+    640,
     896,
     64,
     64
    ],
    "item-window-lamp-unlit": [
-    640,
+    704,
     896,
     64,
     64
@@ -2385,7 +2389,7 @@
     64
    ],
    "item-writing-desk": [
-    832,
+    896,
     896,
     64,
     64
@@ -2541,31 +2545,31 @@
     64
    ],
    "world-door-fox": [
-    1024,
-    896,
+    0,
+    960,
     64,
     64
    ],
    "world-window-lamp-unlit-pane": [
-    576,
+    640,
     1024,
     64,
     64
    ],
    "world-window-lamp-lit-warm-glow": [
-    512,
+    576,
     1024,
     64,
     64
    ],
    "world-gate-shelf-empty": [
-    320,
+    384,
     960,
     64,
     64
    ],
    "world-gate-shelf-stocked-with-jars": [
-    384,
+    448,
     960,
     64,
     64
@@ -2577,25 +2581,25 @@
     64
    ],
    "world-keepsake-cabinet-empty": [
-    768,
+    832,
     960,
     64,
     64
    ],
    "world-keepsake-cabinet-displaying-trinkets": [
-    704,
+    768,
     960,
     64,
     64
    ],
    "world-drying-rack-bare-rack": [
-    0,
+    64,
     960,
     64,
     64
    ],
    "world-drying-rack-hanging-herbs": [
-    64,
+    128,
     960,
     64,
     64
@@ -2631,8 +2635,8 @@
     64
    ],
    "world-naming-frame": [
+    0,
     1024,
-    960,
     64,
     64
    ],
@@ -2649,31 +2653,31 @@
     64
    ],
    "world-pressed-flowers-fresh-bloom-colors": [
-    192,
+    256,
     1024,
     64,
     64
    ],
    "world-pressed-flowers-dried-brown": [
-    128,
+    192,
     1024,
     64,
     64
    ],
    "world-empty-chair": [
-    256,
+    320,
     960,
     64,
     64
    ],
    "world-closure-lamp-unlit": [
-    960,
+    1024,
     896,
     64,
     64
    ],
    "world-closure-lamp-lit-pale-blue": [
-    896,
+    960,
     896,
     64,
     64
@@ -2697,7 +2701,7 @@
     128
    ],
    "world-lantern-post-footing": [
-    832,
+    896,
     960,
     64,
     64
@@ -2709,61 +2713,61 @@
     128
    ],
    "world-old-lamp-stone-intact-weathered": [
-    0,
+    64,
     1024,
     64,
     64
    ],
    "world-old-lamp-stone-pick-broken": [
-    64,
+    128,
     1024,
     64,
     64
    ],
    "world-dug-patch-fresh-dark-earth-hole": [
-    128,
-    960,
-    64,
-    64
-   ],
-   "world-dug-patch-settled-earth": [
     192,
     960,
     64,
     64
    ],
+   "world-dug-patch-settled-earth": [
+    256,
+    960,
+    64,
+    64
+   ],
    "world-tree-stump-fresh-cut-with-pale-sawdust": [
-    384,
+    448,
     1024,
     64,
     64
    ],
    "world-tree-stump-weathered": [
-    448,
+    512,
     1024,
     64,
     64
    ],
    "world-herb-patch-comfrey-lush-leafy-plant": [
-    512,
+    576,
     960,
     64,
     64
    ],
    "world-herb-patch-comfrey-dug-earth-patch": [
-    448,
+    512,
     960,
     64,
     64
    ],
    "world-herb-patch-thyme-purple-thyme-sprigs": [
-    640,
+    704,
     960,
     64,
     64
    ],
    "world-herb-patch-thyme-dug-earth-patch": [
-    576,
+    640,
     960,
     64,
     64
@@ -2805,25 +2809,25 @@
     128
    ],
    "world-stump-turncaps-sprouting-caps": [
-    320,
+    384,
     1024,
     64,
     64
    ],
    "world-stump-turncaps-mature-leaning-caps": [
-    256,
+    320,
     1024,
     64,
     64
    ],
    "world-ledger-soup-pot-bubbling-steaming-pot-over-fire": [
-    896,
+    960,
     960,
     64,
     64
    ],
    "world-ledger-soup-pot-coldempty-pot": [
-    960,
+    1024,
     960,
     64,
     64
@@ -2883,13 +2887,13 @@
     128
    ],
    "mill-froth-0": [
-    640,
+    704,
     1024,
     56,
     24
    ],
    "mill-froth-1": [
-    696,
+    760,
     1024,
     56,
     24
@@ -2901,7 +2905,7 @@
     80
    ],
    "item-willow-rod": [
-    512,
+    576,
     896,
     64,
     64
@@ -2921,6 +2925,12 @@
    "item-recipe-card-millers-fry": [
     320,
     768,
+    64,
+    64
+   ],
+   "item-way-lamp": [
+    256,
+    896,
     64,
     64
    ]
@@ -4547,43 +4557,43 @@
  "openMap": {
   "image": "open-map.webp",
   "size": [
-   736,
-   736
+   752,
+   800
   ],
   "density": 64,
   "frames": {
    "meadow-grass-0": [
-    64,
+    256,
     608,
     64,
     64
    ],
    "meadow-grass-1": [
-    128,
+    320,
     608,
     64,
     64
    ],
    "meadow-grass-2": [
-    192,
+    384,
     608,
     64,
     64
    ],
    "meadow-flowers-0": [
-    576,
-    544,
+    64,
+    608,
     64,
     64
    ],
    "meadow-flowers-1": [
-    640,
-    544,
+    128,
+    608,
     64,
     64
    ],
    "meadow-flowers-2": [
-    0,
+    192,
     608,
     64,
     64
@@ -4607,32 +4617,32 @@
     256
    ],
    "meadow-stone-0": [
-    256,
+    448,
     608,
     64,
     64
    ],
    "meadow-stone-1": [
-    320,
+    512,
     608,
     64,
     64
    ],
    "bank-stones-0": [
-    384,
+    576,
     544,
     64,
     64
    ],
    "bank-stones-1": [
-    448,
+    640,
     544,
     64,
     64
    ],
    "bank-stones-2": [
-    512,
-    544,
+    0,
+    608,
     64,
     64
    ],
@@ -4649,14 +4659,14 @@
     224
    ],
    "rumour-find-closed": [
-    576,
-    672,
+    64,
+    736,
     64,
     64
    ],
    "rumour-find-open": [
-    640,
-    672,
+    128,
+    736,
     64,
     64
    ],
@@ -4672,104 +4682,122 @@
     64,
     128
    ],
+   "way-lamp-0": [
+    256,
+    320,
+    64,
+    96
+   ],
+   "way-lamp-1": [
+    320,
+    320,
+    64,
+    96
+   ],
+   "way-lamp-2": [
+    384,
+    320,
+    64,
+    96
+   ],
    "path-stone-0": [
-    640,
-    608,
-    64,
-    64
-   ],
-   "path-stone-1": [
-    0,
-    672,
-    64,
-    64
-   ],
-   "path-stone-2": [
-    64,
-    672,
-    64,
-    64
-   ],
-   "path-stone-3": [
     128,
     672,
     64,
     64
    ],
+   "path-stone-1": [
+    192,
+    672,
+    64,
+    64
+   ],
+   "path-stone-2": [
+    256,
+    672,
+    64,
+    64
+   ],
+   "path-stone-3": [
+    320,
+    672,
+    64,
+    64
+   ],
    "path-plank-h-0": [
-    384,
-    608,
-    64,
-    64
-   ],
-   "path-plank-h-1": [
-    448,
-    608,
-    64,
-    64
-   ],
-   "path-plank-v-0": [
-    512,
-    608,
-    64,
-    64
-   ],
-   "path-plank-v-1": [
     576,
     608,
     64,
     64
    ],
+   "path-plank-h-1": [
+    640,
+    608,
+    64,
+    64
+   ],
+   "path-plank-v-0": [
+    0,
+    672,
+    64,
+    64
+   ],
+   "path-plank-v-1": [
+    64,
+    672,
+    64,
+    64
+   ],
    "road-paving-0": [
-    192,
-    672,
-    64,
-    64
-   ],
-   "road-paving-1": [
-    256,
-    672,
-    64,
-    64
-   ],
-   "road-paving-2": [
-    320,
-    672,
-    64,
-    64
-   ],
-   "road-paving-3": [
     384,
     672,
     64,
     64
    ],
-   "road-verge-0": [
+   "road-paving-1": [
     448,
     672,
     64,
     64
    ],
-   "road-verge-1": [
+   "road-paving-2": [
     512,
     672,
     64,
     64
    ],
-   "ford-h-0": [
-    256,
-    320,
-    192,
+   "road-paving-3": [
+    576,
+    672,
+    64,
     64
    ],
-   "ford-h-1": [
+   "road-verge-0": [
+    640,
+    672,
+    64,
+    64
+   ],
+   "road-verge-1": [
+    0,
+    736,
+    64,
+    64
+   ],
+   "ford-h-0": [
     448,
     320,
     192,
     64
    ],
-   "ford-h-2": [
+   "ford-h-1": [
     0,
+    480,
+    192,
+    64
+   ],
+   "ford-h-2": [
+    192,
     480,
     192,
     64
@@ -4793,32 +4821,32 @@
     192
    ],
    "frontier-veil-0": [
-    192,
-    480,
-    192,
-    64
-   ],
-   "frontier-veil-1": [
     384,
     480,
     192,
     64
    ],
-   "frontier-veil-2": [
+   "frontier-veil-1": [
     0,
     544,
     192,
     64
    ],
-   "frontier-veil-3": [
+   "frontier-veil-2": [
     192,
     544,
     192,
     64
    ],
+   "frontier-veil-3": [
+    384,
+    544,
+    192,
+    64
+   ],
    "icon-map-tab": [
-    704,
-    672,
+    192,
+    736,
     32,
     32
    ]

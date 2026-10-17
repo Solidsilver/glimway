@@ -42,8 +42,19 @@ def main():
         alpha = image.getchannel('A')
         ys = ([round(alpha.height*p) for p in job['rowDividers']] if job.get('rowDividers') else cuts(alpha, job['rows'], 'y'))
         source = 'items-'+job['id']
+        source = job.get('sourceKey', source)
         sources.append(dict(key=source, file=job['file'], width=image.width, height=image.height))
         first = len(frames)
+        if job.get('premeasured'):
+            for frame_data, note in zip(job['frames'], job['frameNotes']):
+                frame = dict(frame_data)
+                frame['source'], frame['sheet'] = source, job.get('sheet', job['id'])
+                frame['sourceRect'] = dict(x=0, y=0, w=image.width, h=image.height)
+                for k in ['itemId','category','priority','name','state','look']:
+                    frame[k] = note[k]
+                frames.append(frame)
+                inspect.append(dict(key=frame['key'], region=(0,0,image.width,image.height), sourceRect=frame['sourceRect']))
+            continue
         # Most generated sheets use row-major source cells. Sparse sheets can
         # name explicit cell indices when a generator grouped item families by row.
         cell_indices = job.get('cellIndices', list(range(len(job['frames']))))
@@ -76,7 +87,8 @@ def main():
         for f in frames[first:]:
             r=f['sourceRect']
             atlas[f['key']]={'frame':r,'rotated':False,'trimmed':False,'spriteSourceSize':dict(x=0,y=0,w=r['w'],h=r['h']),'sourceSize':dict(w=r['w'],h=r['h'])}
-        (ROOT/(job['file'].replace('.png','.atlas.json'))).write_text(json.dumps({'frames':atlas,'meta':{'image':job['file'],'size':{'w':image.width,'h':image.height}}},indent=2)+'\n')
+        if not job.get('premeasured'):
+            (ROOT/(job['file'].replace('.png','.atlas.json'))).write_text(json.dumps({'frames':atlas,'meta':{'image':job['file'],'size':{'w':image.width,'h':image.height}}},indent=2)+'\n')
 
     # Keep scale consistent across states of the same prop or animation.
     groups=defaultdict(list)
@@ -116,8 +128,8 @@ def main():
         if len(seq)>1 and not base.startswith('mill-wheel') and base!='mill-froth':
             state_groups.append(dict(key=base+'-states',frames=seq,selection='select by gameplay state; never auto-loop'))
     manifest=dict(version=1,baseUrl='/assets/fingersnap/items-pass/',sources=sources,frames=frames,animations=animations,stateGroups=state_groups,aliases=aliases,
-                  notes=['All source rectangles are measured; no fixed source cell dimensions are assumed.','Use the manifest exact native canvas dimensions.','Inventory wear and world condition frames are discrete gameplay states, not looping animations.','Existing Commons frames are referenced with the commons: alias prefix.','Physics, interaction footprints, scene wiring, and world adjacency remain runtime decisions.'])
-    (ROOT/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
+                  notes=['All source rectangles are measured; no fixed source cell dimensions are assumed.','Use the manifest exact native canvas dimensions.','Inventory wear and world condition frames are discrete gameplay states, not looping animations.','Existing Commons frames are referenced with the commons: alias prefix.','Physics, interaction footprints, scene wiring, and world adjacency remain runtime decisions.','Fishing (0.5 crafts, lane G): the willow rod, mill roach, Miller’s fry and recipe-card icons are the crafts pass’s normalized frames (../crafts-pass/frames), copied 1:1 at the art density, so the item lookups find them here. The fishing effects (float, rings, splash, the held rod) are drawn from the crafts pack (cr-art:).'])
+    (ROOT/'manifest.json').write_text(json.dumps(manifest,indent=2,ensure_ascii=False)+'\n')
     (ROOT/'frame-inspection.json').write_text(json.dumps(inspect,indent=2)+'\n')
     print(f"{len(sources)} source sheets / {len(frames)} frames / {len(animations)} animation or state groups")
 

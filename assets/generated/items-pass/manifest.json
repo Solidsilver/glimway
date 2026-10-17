@@ -97,6 +97,12 @@
       "file": "../crafts-pass/frames/recipe-card-millers-fry.png",
       "width": 64,
       "height": 64
+    },
+    {
+      "key": "items-way-lamp-icon",
+      "file": "way-lamp-icon-generated.png",
+      "width": 1254,
+      "height": 1254
     }
   ],
   "frames": [
@@ -5341,11 +5347,11 @@
         "h": 64
       },
       "itemId": "willow-rod",
+      "category": "Tools",
+      "priority": "P1",
       "name": "Willow rod",
       "state": null,
       "look": "A plain willow rod with a cork grip and a wound line",
-      "category": "Tools",
-      "priority": "P1",
       "destinationRect": {
         "x": 0,
         "y": 0,
@@ -5372,11 +5378,11 @@
         "h": 64
       },
       "itemId": "mill-roach",
+      "category": "Supplies",
+      "priority": "P1",
       "name": "Mill roach",
       "state": null,
       "look": "Silver with red fins",
-      "category": "Supplies",
-      "priority": "P1",
       "destinationRect": {
         "x": 0,
         "y": 0,
@@ -5403,11 +5409,11 @@
         "h": 64
       },
       "itemId": "millers-fry",
+      "category": "Supplies",
+      "priority": "P1",
       "name": "Miller's fry",
       "state": null,
       "look": "Two small floured fish in a pan, a sprig on top",
-      "category": "Supplies",
-      "priority": "P1",
       "destinationRect": {
         "x": 0,
         "y": 0,
@@ -5434,11 +5440,42 @@
         "h": 64
       },
       "itemId": "recipe-card-millers-fry",
+      "category": "Papers",
+      "priority": "P1",
       "name": "Recipe card: Miller's fry",
       "state": null,
       "look": "Hazel's card",
-      "category": "Papers",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-way-lamp",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-way-lamp-icon",
+      "sheet": "way-lamp-icon",
+      "sourceRect": {
+        "x": 281,
+        "y": 65,
+        "w": 618,
+        "h": 1135
+      },
+      "itemId": "way-lamp",
+      "category": "Home goods",
       "priority": "P1",
+      "name": "Way-lamp",
+      "state": null,
+      "look": "Hooded wayside lamp on a stone footing, steadily lit",
       "destinationRect": {
         "x": 0,
         "y": 0,
@@ -5852,6 +5889,11 @@
     "mill-wheel-mended": "mill-wheel-mended-0",
     "mill-froth": "mill-froth-0",
     "mill-hopper": "mill-hopper",
+    "willow-rod": "item-willow-rod",
+    "mill-roach": "item-mill-roach",
+    "millers-fry": "item-millers-fry",
+    "recipe-card-millers-fry": "item-recipe-card-millers-fry",
+    "way-lamp": "item-way-lamp",
     "timber": "commons:icon-timber",
     "woodpile": "commons:woodpile",
     "candle-hulls": "commons:candle-hull-0",
@@ -5860,11 +5902,7 @@
     "river-glass-bead": "commons:icon-river-glass-bead",
     "tin-whistle": "commons:icon-tin-whistle",
     "beeswax-candle": "commons:icon-beeswax-candle",
-    "spare-bootlace": "commons:icon-spare-bootlace",
-    "willow-rod": "item-willow-rod",
-    "mill-roach": "item-mill-roach",
-    "millers-fry": "item-millers-fry",
-    "recipe-card-millers-fry": "item-recipe-card-millers-fry"
+    "spare-bootlace": "commons:icon-spare-bootlace"
   },
   "notes": [
     "All source rectangles are measured; no fixed source cell dimensions are assumed.",

@@ -3533,5 +3533,162 @@
       0.485,
       1
     ]
+  },
+  {
+    "id": "crafts-rod-icon",
+    "sourceKey": "crafts-rod-icon",
+    "file": "../crafts-pass/frames/rod-icon.png",
+    "premeasured": true,
+    "sheet": "crafts-pass",
+    "columns": 1,
+    "rows": 1,
+    "frames": [
+      {
+        "key": "item-willow-rod",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell",
+        "role": "inventory-icon"
+      }
+    ],
+    "frameNotes": [
+      {
+        "itemId": "willow-rod",
+        "category": "Tools",
+        "priority": "P1",
+        "name": "Willow rod",
+        "state": null,
+        "look": "A plain willow rod with a cork grip and a wound line"
+      }
+    ]
+  },
+  {
+    "id": "crafts-mill-roach",
+    "sourceKey": "crafts-mill-roach",
+    "file": "../crafts-pass/frames/mill-roach.png",
+    "premeasured": true,
+    "sheet": "crafts-pass",
+    "columns": 1,
+    "rows": 1,
+    "frames": [
+      {
+        "key": "item-mill-roach",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell",
+        "role": "inventory-icon"
+      }
+    ],
+    "frameNotes": [
+      {
+        "itemId": "mill-roach",
+        "category": "Supplies",
+        "priority": "P1",
+        "name": "Mill roach",
+        "state": null,
+        "look": "Silver with red fins"
+      }
+    ]
+  },
+  {
+    "id": "crafts-millers-fry",
+    "sourceKey": "crafts-millers-fry",
+    "file": "../crafts-pass/frames/millers-fry.png",
+    "premeasured": true,
+    "sheet": "crafts-pass",
+    "columns": 1,
+    "rows": 1,
+    "frames": [
+      {
+        "key": "item-millers-fry",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell",
+        "role": "inventory-icon"
+      }
+    ],
+    "frameNotes": [
+      {
+        "itemId": "millers-fry",
+        "category": "Supplies",
+        "priority": "P1",
+        "name": "Miller's fry",
+        "state": null,
+        "look": "Two small floured fish in a pan, a sprig on top"
+      }
+    ]
+  },
+  {
+    "id": "crafts-recipe-card-millers-fry",
+    "sourceKey": "crafts-recipe-card-millers-fry",
+    "file": "../crafts-pass/frames/recipe-card-millers-fry.png",
+    "premeasured": true,
+    "sheet": "crafts-pass",
+    "columns": 1,
+    "rows": 1,
+    "frames": [
+      {
+        "key": "item-recipe-card-millers-fry",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell",
+        "role": "inventory-icon"
+      }
+    ],
+    "frameNotes": [
+      {
+        "itemId": "recipe-card-millers-fry",
+        "category": "Papers",
+        "priority": "P1",
+        "name": "Recipe card: Miller's fry",
+        "state": null,
+        "look": "Hazel's card"
+      }
+    ]
+  },
+  {
+    "id": "way-lamp-icon",
+    "file": "way-lamp-icon-generated.png",
+    "columns": 1,
+    "rows": 1,
+    "frames": [
+      {
+        "key": "item-way-lamp",
+        "width": 16,
+        "height": 16,
+        "origin": [
+          0.5,
+          1
+        ],
+        "fit": "cell",
+        "role": "inventory-icon"
+      }
+    ],
+    "frameNotes": [
+      {
+        "itemId": "way-lamp",
+        "category": "Home goods",
+        "priority": "P1",
+        "name": "Way-lamp",
+        "look": "Hooded wayside lamp on a stone footing, steadily lit",
+        "state": null
+      }
+    ]
   }
 ]

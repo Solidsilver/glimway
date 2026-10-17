@@ -2,7 +2,7 @@
   "version": 1,
   "density": 4,
   "worldTileSize": 16,
-  "frameCount": 45,
+  "frameCount": 48,
   "sources": [
     {
       "key": "meadow-props",
@@ -83,6 +83,14 @@
       "height": 1536,
       "mode": "RGBA",
       "sha256": "4898551c1317f6122445f6d955d698939fa67bbf01c9bf7c571fee9eb99896c0"
+    },
+    {
+      "key": "way-lamp-generated",
+      "file": "source/way-lamp-generated.png",
+      "width": 2172,
+      "height": 724,
+      "mode": "RGBA",
+      "sha256": "c242243bf515943e506eab42f2b36ed98bb2a947c0d1e51d1d710a5ea55049a4"
     }
   ],
   "frames": {
@@ -543,6 +551,75 @@
       "footPoint": {
         "x": 32,
         "y": 128
+      },
+      "kind": "transparent-prop"
+    },
+    "way-lamp-0": {
+      "file": "frames/way-lamp-0.png",
+      "source": "way-lamp-generated",
+      "sourceRect": {
+        "x": 6,
+        "y": 6,
+        "w": 712,
+        "h": 712
+      },
+      "canvas": {
+        "w": 64,
+        "h": 96
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 96
+      },
+      "kind": "transparent-prop"
+    },
+    "way-lamp-1": {
+      "file": "frames/way-lamp-1.png",
+      "source": "way-lamp-generated",
+      "sourceRect": {
+        "x": 730,
+        "y": 6,
+        "w": 712,
+        "h": 712
+      },
+      "canvas": {
+        "w": 64,
+        "h": 96
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 96
+      },
+      "kind": "transparent-prop"
+    },
+    "way-lamp-2": {
+      "file": "frames/way-lamp-2.png",
+      "source": "way-lamp-generated",
+      "sourceRect": {
+        "x": 1454,
+        "y": 6,
+        "w": 712,
+        "h": 712
+      },
+      "canvas": {
+        "w": 64,
+        "h": 96
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 96
       },
       "kind": "transparent-prop"
     },

@@ -380,6 +380,63 @@
         "y": 128
       }
     },
+    "way-lamp-0": {
+      "source": "way-lamp-generated",
+      "x": 6,
+      "y": 6,
+      "w": 712,
+      "h": 712,
+      "canvas": {
+        "w": 64,
+        "h": 96
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 96
+      }
+    },
+    "way-lamp-1": {
+      "source": "way-lamp-generated",
+      "x": 730,
+      "y": 6,
+      "w": 712,
+      "h": 712,
+      "canvas": {
+        "w": 64,
+        "h": 96
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 96
+      }
+    },
+    "way-lamp-2": {
+      "source": "way-lamp-generated",
+      "x": 1454,
+      "y": 6,
+      "w": 712,
+      "h": 712,
+      "canvas": {
+        "w": 64,
+        "h": 96
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 96
+      }
+    },
     "path-stone-0": {
       "source": "ground-tiles-generated",
       "x": 6,
