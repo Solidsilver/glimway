@@ -46,7 +46,7 @@ func (x *rig) pathOp(c *http.Cookie, s response, op string, key string, sx, sy, 
 	epoch := "outside"
 	if len(epochs) > 0 {
 		epoch = epochs[0]
-	} else if wildsWhereInside(tileWhere(tx, ty)) {
+	} else if wildsWhereInside("", tileWhere(tx, ty)) {
 		dbtx, err := x.db.DB.BeginTx(context.Background(), nil)
 		if err != nil {
 			x.t.Fatal(err)

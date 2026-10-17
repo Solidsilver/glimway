@@ -1151,8 +1151,10 @@ export declare type WildsRegionResultValid = WildsRegionResult;
 export declare const WildsRegionResultSchema: GenMessage<WildsRegionResult, {validType: WildsRegionResultValid}>;
 
 /**
- * The frontier the server enforces (open-map.md 2.6): in 0.8 a rectangle
- * (contract 8); 0.9's lamps add held chunks beside it.
+ * The frontier the server enforces (open-map.md 2.6; lamps.md 2.2): the
+ * content's reach around the footprints, and every chunk within the
+ * content's held_slack of a held chunk (held: the world's held keys, by cy
+ * then cx), no further south than south_limit. rect bounds the union.
  *
  * @generated from message glimway.v1.WildsFrontier
  */
@@ -1161,6 +1163,11 @@ export declare type WildsFrontier = Message<"glimway.v1.WildsFrontier"> & {
    * @generated from field: glimway.v1.WildsChunkRect rect = 1;
    */
   rect?: WildsChunkRect | undefined;
+
+  /**
+   * @generated from field: repeated glimway.v1.WildsChunkKey held = 2;
+   */
+  held: WildsChunkKey[];
 };
 
 export declare type WildsFrontierValid = WildsFrontier;

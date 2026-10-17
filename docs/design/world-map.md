@@ -151,6 +151,13 @@ The future lamps pass must amend `lamps.md` decision 9, §2.6, empty-state wordi
 
 Separate terrain, marks/labels and readable details so later pins, party marks and lamp holds share the same coordinate transform and clipping. [magic.md](magic.md)'s “Sense the turning” should eventually provide an authorized party-only forecast layer with wick/expiry metadata, visually distinct from explored current land. Do not expose future terrain by fetching it speculatively. The “carter's map” wording in that design must be reconciled with the owner's built-in-map decision; no craft gate is added here. Pins, party sharing, forecasts and layer toggles ship with their own feature, not as empty placeholders now.
 
+**Reach (0.13, as built).** The map's frontier is the world's reach: the static frontier plus three
+chunks of slack around every held chunk ([lamps.md §2.2](lamps.md#22-holds-and-lasting-geography)).
+The near read names the held keys beside its bounding rect (`WildsFrontier.held`), and the map's
+edge and grid follow them through `insideFrontier`, so a camp's slack shows as walkable frontier
+and a lapsed camp's slack falls back into the drift after the turning. The glimpse runs past the
+slack's edge as past the static one. `map_tiers` answers a tier for chunks in reach only.
+
 ### Desktop minimap: a follow-up idea
 
 The owner suggested a desktop minimap while this plan was being written. Keep it as an optional follow-up to the full-screen map, using the same world data, bounded renderer and live-position surface. A starting design is a roughly 160×160 view near the desktop HUD's top-right buttons, centred on the player, north-up, showing nearby walked terrain, a few important marks and the dot. Click/keyboard activation opens the full-screen map. Hide it under panels, cinematics and outside the Wilds, and offer a Menu preference to turn it off.

@@ -119,10 +119,31 @@ export function buildWildsWorld(): WorldData {
     gathering: [],
     open: {
       bounds,
-      view: { x: bounds.x - DRIFT_VIEW_PX, y: bounds.y - DRIFT_VIEW_PX, w: bounds.w + 2 * DRIFT_VIEW_PX, h: bounds.h + 2 * DRIFT_VIEW_PX },
+      view: viewOf(bounds),
       groundAt: outdoorGroundAt,
       solidAt: outdoorSolidAt,
       standAt: outdoorStandAt,
     },
   }
+}
+
+/** The camera's look: the bounds and the drift past them. */
+function viewOf(b: { x: number; y: number; w: number; h: number }): { x: number; y: number; w: number; h: number } {
+  return { x: b.x - DRIFT_VIEW_PX, y: b.y - DRIFT_VIEW_PX, w: b.w + 2 * DRIFT_VIEW_PX, h: b.h + 2 * DRIFT_VIEW_PX }
+}
+
+/**
+ * Held land moves the frontier (lamps.md 2.2): a camp set pushes it out,
+ * a turning may pull it in. Bring the open world's bounds and look to the
+ * near read's frontier; true when they changed. Before a read (or just
+ * after the turning forgot the last) they stay as they are.
+ */
+export function followFrontier(open: NonNullable<WorldData['open']>): boolean {
+  if (!wildsFrontier()) return false
+  const b = gridBounds()
+  const o = open.bounds
+  if (b.x === o.x && b.y === o.y && b.w === o.w && b.h === o.h) return false
+  open.bounds = b
+  open.view = viewOf(b)
+  return true
 }

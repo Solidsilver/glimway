@@ -98,6 +98,9 @@ const (
 // version. It never creates: none is sql.ErrNoRows, an ended one
 // chunks.ErrEpochEnded.
 func (c *Chunks) Current(ctx context.Context, tx *sql.Tx, world, kind string, now int64) (*contract.WildsEpoch, error) {
+	if err := confirmReach(ctx, tx, world); err != nil {
+		return nil, err
+	}
 	e, err := scanEpochRow(tx.QueryRowContext(ctx, epochSelect+"WHERE world_id=? AND kind=? AND generator_version=? ORDER BY starts_at DESC LIMIT 1", world, kind, c.version()))
 	if err != nil {
 		return nil, err

@@ -9509,7 +9509,8 @@
     "name": "glimway.v1.WildsFrontier",
     "case": "empty",
     "json": {
-      "rect": null
+      "rect": null,
+      "held": []
     }
   },
   {
@@ -9521,7 +9522,15 @@
         "minCy": 1,
         "maxCx": 1,
         "maxCy": 1
-      }
+      },
+      "held": [
+        {
+          "realm": "fixture",
+          "layer": 1,
+          "cx": 1,
+          "cy": 1
+        }
+      ]
     }
   },
   {
@@ -10064,7 +10073,15 @@
           "minCy": 1,
           "maxCx": 1,
           "maxCy": 1
-        }
+        },
+        "held": [
+          {
+            "realm": "fixture",
+            "layer": 1,
+            "cx": 1,
+            "cy": 1
+          }
+        ]
       },
       "center": {
         "realm": "fixture",
@@ -10324,7 +10341,8 @@
           "minCy": -8,
           "maxCx": 4,
           "maxCy": 7
-        }
+        },
+        "held": []
       },
       "center": {
         "realm": "hearthwick",

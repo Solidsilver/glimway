@@ -138,9 +138,14 @@ func (a *Server) near(ctx context.Context, tx *sql.Tx, s store.Snapshot, cx, cy 
 		return nil, err
 	}
 	x0, y0, x1, y1 := frontier.Rect(s.WorldID)
+	held := frontier.Held(s.WorldID)
+	reach := &contract.WildsFrontier{Rect: &contract.WildsChunkRect{MinCx: int32(x0), MinCy: int32(y0), MaxCx: int32(x1), MaxCy: int32(y1)}, Held: make([]*contract.WildsChunkKey, 0, len(held))}
+	for _, k := range held {
+		reach.Held = append(reach.Held, chunkKeyProto(k[0], k[1]))
+	}
 	out := &contract.WildsNearResult{
 		Still: proto.Clone(ep.still).(*contract.WildsEpoch), Wick: proto.Clone(ep.wick).(*contract.WildsEpoch),
-		Frontier: &contract.WildsFrontier{Rect: &contract.WildsChunkRect{MinCx: int32(x0), MinCy: int32(y0), MaxCx: int32(x1), MaxCy: int32(y1)}},
+		Frontier: reach,
 		Center:   chunkKeyProto(cx, cy), Radius: NearRadius,
 		Entities: []*contract.WildsEntityState{}, PersonalClaims: []*contract.WildsPersonalClaim{},
 		Discoveries: []*contract.WildsDiscovery{}, Lanterns: []*contract.WildsLantern{}, Echoes: []*contract.EchoAssignment{},
@@ -334,7 +339,12 @@ func (a *Server) near(ctx context.Context, tx *sql.Tx, s store.Snapshot, cx, cy 
 		var at []chunks.ChunkXY
 		for y := cy - NearRadius - glimpseReach; y <= cy+NearRadius+glimpseReach; y++ {
 			for x := cx - NearRadius - glimpseReach; x <= cx+NearRadius+glimpseReach; x++ {
-				if frontier.Inside(s.WorldID, x, y) || y > int(content.WildsRules.GetFrontier().GetSouthLimit()) || wilds.NearestFootprint(x, y) > int(content.WildsRules.GetFrontier().GetReach())+glimpseReach {
+				// Past the reach, but within glimpseReach of it: the static
+				// frontier's, or a held chunk's slack.
+				nearHeld := slices.ContainsFunc(held, func(k [2]int) bool {
+					return max(abs(k[0]-x), abs(k[1]-y)) <= frontier.Slack()+glimpseReach
+				})
+				if frontier.Inside(s.WorldID, x, y) || y > int(content.WildsRules.GetFrontier().GetSouthLimit()) || !nearHeld && wilds.NearestFootprint(x, y) > int(content.WildsRules.GetFrontier().GetReach())+glimpseReach {
 					continue
 				}
 				at = append(at, chunks.ChunkXY{CX: int32(x), CY: int32(y)})

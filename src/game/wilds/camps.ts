@@ -39,6 +39,7 @@ import { omArt } from './open-map-art.ts'
 import { itemsFor } from '../items.ts'
 import { homesteadsFor } from '../homestead.ts'
 import { groundAt, solidAt } from './ground-view.ts'
+import { refreshNear } from './store.ts'
 import { wildsPoint } from './sites.ts'
 import { TERRAIN } from '../../lib/tile.ts'
 
@@ -381,6 +382,11 @@ export class WildsCamps {
       const c = r.result.camp ?? null
       const list = campsUi.list.filter((x) => x.id !== c?.id && !(fields.action === 'remove' && fields.itemId === x.id) && !(fields.action === 'pack' && fields.camp === x.id))
       this.adopt(c ? [...list, c] : list)
+      // A way-lamp set pushes the frontier out (lamps.md 2.2): read it now, not at the next chunk.
+      if (fields.action === 'set' && fields.x !== undefined && fields.y !== undefined) {
+        const at = chunkOf(fields.x, fields.y)
+        void refreshNear(this.deps.session, at.cx, at.cy).catch(() => false)
+      }
       then?.(c, r.result)
     } finally {
       this.busy = false
