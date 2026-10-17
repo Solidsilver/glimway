@@ -201,7 +201,7 @@ func (a *Server) plant(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *
 }
 
 // uprootHomePlant digs a plant on your own land up with a trowel, from
-// beside where it stands today, into your pack as its seed
+// beside where it stands today, into your pack whole, its growth kept
 // (camp_teardown.go digUpPlant). Whoever may plant there may dig: a
 // member, on the lot or in its lit backland (ownLand). The plant is
 // req.Target.
@@ -219,7 +219,7 @@ func (a *Server) uprootHomePlant(ctx context.Context, tx *sql.Tx, s *store.Snaps
 	if !nearTile(s, s.State.Area, x, y, 2) {
 		return fail(409, "too-far-away")
 	}
-	out.Wear, err = a.digUpPlant(ctx, tx, s, "homestead_plants", p.ID, p.ItemDef, "uproot", now)
+	out.Wear, err = a.digUpPlant(ctx, tx, s, "homestead_plants", p.ID, p.ItemDef, now)
 	return err
 }
 

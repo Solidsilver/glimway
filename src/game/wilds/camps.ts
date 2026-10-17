@@ -253,7 +253,7 @@ export class WildsCamps {
     openDialogue({ id: 'camp', speaker: name, lines: campPlantLines(name, owner, mayDig), choices: [...CAMP_PLANT_CHOICES] })
   }
 
-  /** The trowel at a camp plant: up it comes, into your pack as its seed. */
+  /** The trowel at a camp plant: up it comes whole, into your pack to plant again. */
   private uproot(plantId: string): void {
     const p = campsUi.list.flatMap((x) => x.plants).find((x) => x.id === plantId)
     const name = p ? campPieceName(p.itemDef) : ''

@@ -136,7 +136,7 @@ type itemsView struct {
 	Thanks    []thanksView   `json:"thanks"`
 	// Carried are the home pieces in the pack, deed or no deed.
 	Carried []homeInstance `json:"carried"`
-	// Plants are the plants in the pack, taken from Pell's crate (recovery.go).
+	// Plants are the plants in the pack, lifted whole (recovery.go carryPlant).
 	Plants []carriedPlantView `json:"plants"`
 }
 

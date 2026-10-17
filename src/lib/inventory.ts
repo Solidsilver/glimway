@@ -71,7 +71,7 @@ export interface InventoryEntry {
   carryable?: boolean;
   giveable?: boolean;
   mendable?: boolean;
-  /** A plant from Pell’s crate, carried as itself (lamps.md 2.7): it plants again, its growth kept. */
+  /** A plant carried as itself, from Pell’s crate or the trowel (lamps.md 2.7): it plants again, its growth kept. */
   carriedPlant?: CarriedPlantView;
   /** Which pocket holds it (1, 2), or whether the off hand does. */
   pocket?: number | null;
@@ -318,7 +318,7 @@ export function modelEntries(view: ItemsView, src: Pick<InventorySource, 'pack' 
       ),
     );
   }
-  // Plants from Pell's crate, each as itself (lamps.md 2.7).
+  // Plants carried whole (from Pell's crate or the trowel), each its own row (lamps.md 2.7).
   for (const p of view.plants ?? []) {
     const d = itemDef(p.itemDef);
     if (d) out.push(modelEntry(d, carriedPlantEntry(d, p), view));
@@ -337,7 +337,7 @@ export function modelEntries(view: ItemsView, src: Pick<InventorySource, 'pack' 
 /** A carried plant's words (lamps.md 2.7): it is the plant itself, lifted whole, not its seed. */
 export const CARRIED_PLANT_WORDS = {
   name: (seed: string) => `${seed}, lifted whole`,
-  blurb: 'Lifted with its roots and kept safe at Pell’s. Plant it on your land or at a camp you build at and it grows on from where it was.',
+  blurb: 'Lifted whole, roots and all. Plant it on your land or at a camp you build at and it grows on from where it was.',
   planted: (seed: string) => `Your ${seed.toLowerCase()} is back in the ground, growing on from where it was.`,
 } as const;
 

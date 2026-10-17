@@ -87,7 +87,4 @@ message RecoveryCollectRequest {
   OpHeader op = 1; Where where = 2;
   repeated int32 entries = 3; repeated int32 as_seed = 4;
 }
-// collected: what this collect gave. kept: what was asked for but stays in
-// the crate because the pack can't hold it (a plant past the most a pack
-// carries), still waiting.
-message RecoveryCollectResult { repeated RecoveryEntry collected = 1; map<string,double> materials = 2; repeated RecoveryEntry kept = 3; }
+message RecoveryCollectResult { repeated RecoveryEntry collected = 1; map<string,double> materials = 2; }

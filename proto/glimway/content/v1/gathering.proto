@@ -18,11 +18,7 @@ message Gathering {
   // The line when a visit runs into a cap.
   string soft_cap_line = 3;
   // How many plants one home's land tends; past it the ground is full.
-  int32 plants_per_home = 4 [(buf.validate.field).int32.gte = 1];
-  // How many plants a pack carries at once (taken from Pell's crate, their
-  // planting kept); past it they wait in the crate.
-  int32 carried_plants = 8 [(buf.validate.field).int32.gte = 1];
-  // The targets each kind of place has: wilds (the Tangle and the
+  int32 plants_per_home = 4 [(buf.validate.field).int32.gte = 1];  // The targets each kind of place has: wilds (the Tangle and the
   // Whitequiet), woodland, home (any homestead's land), the village, the
   // Commons. Which named targets exist is a code rule.
   map<string, GatheringArea> areas = 5 [(buf.validate.field).map = {

@@ -938,14 +938,10 @@ func (x *RecoveryCollectRequest) GetAsSeed() []int32 {
 	return nil
 }
 
-// collected: what this collect gave. kept: what was asked for but stays in
-// the crate because the pack can't hold it (a plant past the most a pack
-// carries), still waiting.
 type RecoveryCollectResult struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Collected     []*RecoveryEntry       `protobuf:"bytes,1,rep,name=collected,proto3" json:"collected,omitempty"`
 	Materials     map[string]float64     `protobuf:"bytes,2,rep,name=materials,proto3" json:"materials,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed64,2,opt,name=value"`
-	Kept          []*RecoveryEntry       `protobuf:"bytes,3,rep,name=kept,proto3" json:"kept,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -990,13 +986,6 @@ func (x *RecoveryCollectResult) GetCollected() []*RecoveryEntry {
 func (x *RecoveryCollectResult) GetMaterials() map[string]float64 {
 	if x != nil {
 		return x.Materials
-	}
-	return nil
-}
-
-func (x *RecoveryCollectResult) GetKept() []*RecoveryEntry {
-	if x != nil {
-		return x.Kept
 	}
 	return nil
 }
@@ -1093,11 +1082,10 @@ const file_glimway_v1_camps_proto_rawDesc = "" +
 	"\x02op\x18\x01 \x01(\v2\x14.glimway.v1.OpHeaderR\x02op\x12'\n" +
 	"\x05where\x18\x02 \x01(\v2\x11.glimway.v1.WhereR\x05where\x12\x18\n" +
 	"\aentries\x18\x03 \x03(\x05R\aentries\x12\x17\n" +
-	"\aas_seed\x18\x04 \x03(\x05R\x06asSeed\"\x8d\x02\n" +
+	"\aas_seed\x18\x04 \x03(\x05R\x06asSeed\"\xde\x01\n" +
 	"\x15RecoveryCollectResult\x127\n" +
 	"\tcollected\x18\x01 \x03(\v2\x19.glimway.v1.RecoveryEntryR\tcollected\x12N\n" +
-	"\tmaterials\x18\x02 \x03(\v20.glimway.v1.RecoveryCollectResult.MaterialsEntryR\tmaterials\x12-\n" +
-	"\x04kept\x18\x03 \x03(\v2\x19.glimway.v1.RecoveryEntryR\x04kept\x1a<\n" +
+	"\tmaterials\x18\x02 \x03(\v20.glimway.v1.RecoveryCollectResult.MaterialsEntryR\tmaterials\x1a<\n" +
 	"\x0eMaterialsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01B1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
@@ -1151,12 +1139,11 @@ var file_glimway_v1_camps_proto_depIdxs = []int32{
 	15, // 13: glimway.v1.RecoveryCollectRequest.where:type_name -> glimway.v1.Where
 	7,  // 14: glimway.v1.RecoveryCollectResult.collected:type_name -> glimway.v1.RecoveryEntry
 	12, // 15: glimway.v1.RecoveryCollectResult.materials:type_name -> glimway.v1.RecoveryCollectResult.MaterialsEntry
-	7,  // 16: glimway.v1.RecoveryCollectResult.kept:type_name -> glimway.v1.RecoveryEntry
-	17, // [17:17] is the sub-list for method output_type
-	17, // [17:17] is the sub-list for method input_type
-	17, // [17:17] is the sub-list for extension type_name
-	17, // [17:17] is the sub-list for extension extendee
-	0,  // [0:17] is the sub-list for field type_name
+	16, // [16:16] is the sub-list for method output_type
+	16, // [16:16] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_glimway_v1_camps_proto_init() }

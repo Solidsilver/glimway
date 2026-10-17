@@ -5,9 +5,9 @@ package api
 // Pell's office the owner takes what they pick, or everything, into their
 // pack, free: pieces back among their carried home pieces, stacks (oil, path
 // stone) into the pack, a plant as a carried plant, its planting kept (or as
-// its seed, if they'd rather). What they leave, or what the pack can't hold,
-// waits on. Collecting marks each entry once, so a retried or repeated
-// collect never gives twice.
+// its seed, if they'd rather). What they leave waits on, with no end.
+// Collecting marks each entry once, so a retried or repeated collect never
+// gives twice.
 //
 // A lot's backland is the exception: its lapse sends pieces to the lot's own
 // home storage (lot_lanterns.go), which is that land's recovery place.
@@ -136,7 +136,7 @@ func inPellsOffice(s *store.Snapshot) bool {
 // recoveryCollect is POST /api/recovery/collect: what the caller picked
 // (req.Entries; none is everything waiting for them), into their pack, in
 // Pell's office. A plant comes as a carried plant unless it's picked as its
-// seed (req.AsSeed). What the pack can't hold stays in the crate (kept).
+// seed (req.AsSeed). The pack holds everything; what isn't picked waits on.
 func (a *Server) recoveryCollect(w http.ResponseWriter, r *http.Request) error {
 	req := &contract.RecoveryCollectRequest{}
 	if err := decodeOp(w, r, req); err != nil {
@@ -158,46 +158,28 @@ func (a *Server) recoveryCollect(w http.ResponseWriter, r *http.Request) error {
 		if len(req.Entries) > 0 {
 			entries = slices.DeleteFunc(entries, func(e recoveryEntry) bool { return !slices.Contains(req.Entries, e.Id) })
 		}
-		room, err := plantRoom(ctx, tx, s.AccountID)
-		if err != nil {
-			return nil, err
-		}
-		got, kept := []recoveryEntry{}, []recoveryEntry{}
+		got := []recoveryEntry{}
 		for _, e := range entries {
 			asPlant := e.Kind == "plant" && !slices.Contains(req.AsSeed, e.Id)
-			if asPlant && room <= 0 {
-				kept = append(kept, e)
-				continue
-			}
 			if ok, err := collectEntry(ctx, tx, s.AccountID, e, asPlant, now); err != nil {
 				return nil, err
 			} else if ok {
 				got = append(got, e)
-				if asPlant {
-					room--
-				}
 			}
 		}
 		if err = refreshItems(ctx, tx, s); err != nil {
 			return nil, err
 		}
 		m, err := materialsProto(ctx, tx, s.AccountID)
-		return &contract.RecoveryCollectResult{Collected: recoveryProto(got), Materials: m, Kept: recoveryProto(kept)}, err
+		return &contract.RecoveryCollectResult{Collected: recoveryProto(got), Materials: m}, err
 	})
 }
 
-// plantRoom: how many more plants the caller's pack carries (content
-// gathering.carriedPlants). The pack holds any number of everything else.
-func plantRoom(ctx context.Context, tx *sql.Tx, account string) (int, error) {
-	var n int
-	err := tx.QueryRowContext(ctx, "SELECT count(*) FROM carried_plants WHERE account_id=?", account).Scan(&n)
-	return int(content.GatheringRules.GetCarriedPlants()) - n, err
-}
-
-// carryPlant puts a crated plant into the pack as itself: its own id (a new
-// one if it has none, or its id is in use) and its first planting.
-func carryPlant(ctx context.Context, tx *sql.Tx, account string, e recoveryEntry, now int64) error {
-	id := e.plant
+// carryPlant puts a plant into the pack as itself (carried_plants): from
+// Pell's crate, or dug up with the trowel (digUpPlant). It keeps its own id
+// (a new one if it has none, or the id is in use) and when it was first
+// planted, its growth.
+func carryPlant(ctx context.Context, tx *sql.Tx, account, id, def string, plantedAt, now int64) error {
 	var used bool
 	if id != "" {
 		if err := tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM carried_plants WHERE id=?) OR EXISTS(SELECT 1 FROM homestead_plants WHERE id=?) OR EXISTS(SELECT 1 FROM camp_plants WHERE id=?)", id, id, id).Scan(&used); err != nil {
@@ -210,11 +192,7 @@ func carryPlant(ctx context.Context, tx *sql.Tx, account string, e recoveryEntry
 			return err
 		}
 	}
-	at := now
-	if e.plantedAt.Valid {
-		at = e.plantedAt.Int64
-	}
-	_, err := tx.ExecContext(ctx, "INSERT INTO carried_plants(id,account_id,item_def,planted_at,carried_at) VALUES(?,?,?,?,?)", id, account, e.ItemDef, at, now)
+	_, err := tx.ExecContext(ctx, "INSERT INTO carried_plants(id,account_id,item_def,planted_at,carried_at) VALUES(?,?,?,?,?)", id, account, def, plantedAt, now)
 	return err
 }
 
@@ -260,7 +238,11 @@ func collectEntry(ctx context.Context, tx *sql.Tx, account string, e recoveryEnt
 		return true, fittedLedger(ctx, tx, account, *e.instance, 1, "recovery-collect", *e.instance, now)
 	}
 	if e.Kind == "plant" && asPlant {
-		return true, carryPlant(ctx, tx, account, e, now)
+		at := now
+		if e.plantedAt.Valid {
+			at = e.plantedAt.Int64
+		}
+		return true, carryPlant(ctx, tx, account, e.plant, e.ItemDef, at, now)
 	}
 	return true, packPut(ctx, tx, account, e.ItemDef, []makerQty{{Maker: e.maker, Qty: int(e.Qty)}}, "recovery-collect", ref, now)
 }

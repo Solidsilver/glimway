@@ -517,10 +517,6 @@ export declare type RecoveryCollectRequestValid = RecoveryCollectRequest;
 export declare const RecoveryCollectRequestSchema: GenMessage<RecoveryCollectRequest, {validType: RecoveryCollectRequestValid}>;
 
 /**
- * collected: what this collect gave. kept: what was asked for but stays in
- * the crate because the pack can't hold it (a plant past the most a pack
- * carries), still waiting.
- *
  * @generated from message glimway.v1.RecoveryCollectResult
  */
 export declare type RecoveryCollectResult = Message<"glimway.v1.RecoveryCollectResult"> & {
@@ -533,11 +529,6 @@ export declare type RecoveryCollectResult = Message<"glimway.v1.RecoveryCollectR
    * @generated from field: map<string, double> materials = 2;
    */
   materials: { [key: string]: number };
-
-  /**
-   * @generated from field: repeated glimway.v1.RecoveryEntry kept = 3;
-   */
-  kept: RecoveryEntry[];
 };
 
 export declare type RecoveryCollectResultValid = RecoveryCollectResult;

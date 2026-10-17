@@ -83,7 +83,7 @@ export interface ItemsView {
   thanks: ThanksView[];
   /** Home pieces in the pack (a way-lamp, a stool), deed or no deed. */
   carried: { id: string; itemDef: string }[];
-  /** Plants in the pack, taken from Pell’s crate with their planting kept: each plants again where its seed could. */
+  /** Plants in the pack, lifted whole (from Pell’s crate or with the trowel), their planting kept: each plants again where its seed could. */
   plants: CarriedPlantView[];
 }
 /** A carried plant (lamps.md 2.7): its own id, its seed and when it was first planted. */

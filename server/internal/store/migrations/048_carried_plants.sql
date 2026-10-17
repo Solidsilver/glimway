@@ -1,6 +1,7 @@
--- Plants carried in the pack (lamps.md 2.7): a plant taken from Pell's crate
--- as itself, not its seed. id is the plant's own, kept from where it grew;
--- item_def its seed; planted_at when it was first planted, its growth.
+-- Plants carried in the pack (lamps.md 2.7): a plant lifted whole, from
+-- Pell's crate or with the trowel, not its seed. id is the plant's own,
+-- kept from where it grew; item_def its seed; planted_at when it was first
+-- planted, its growth.
 -- Planting it again puts it back in the ground (homestead_plants or
 -- camp_plants) with the same id and planted_at; its planted_day there is the
 -- day it was set again, where its wandering starts.

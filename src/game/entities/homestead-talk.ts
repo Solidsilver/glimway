@@ -1,6 +1,6 @@
 import { lanternStake, lotAtPixel, lotOrigin } from '../../lib/lots'
 import { lanternHasRoom, lanternLines } from '../../lib/lot-lantern'
-import { CRATE_WORDS, crateLines, crateTakeLines } from '../../lib/camps'
+import { CRATE_WORDS, collectedLine, crateLines } from '../../lib/camps'
 import { homeErrorText, itemErrorText } from '../../content/errors'
 import { dugUpLine, plantOffer } from '../../lib/trowel'
 import { itemName } from '../../lib/items'
@@ -639,7 +639,7 @@ export class HomesteadTalk {
     }
   }
 
-  /** The trowel at a plant of yours: up it comes, into your pack as its seed. */
+  /** The trowel at a plant of yours: up it comes whole, into your pack to plant again. */
   private async uproot(plantId: string, itemDef: string): Promise<void> {
     const gate = this.home.gate
     if (gate === null) return
@@ -663,7 +663,7 @@ export class HomesteadTalk {
     this.crate = r?.ok ? r.value.entries : []
   }
 
-  /** Everything in Pell's crates, into the pack (lamps.md 2.7); what the pack can't hold waits on. */
+  /** Everything in Pell's crates, into the pack (lamps.md 2.7). */
   private async collectCrate(): Promise<void> {
     const link = this.deps.session.link
     if (!link) return
@@ -675,11 +675,11 @@ export class HomesteadTalk {
       this.say({ speaker: PELL.name, lines: [homeErrorText(r.code)] })
       return
     }
-    this.crate = r.result.kept
+    this.crate = []
     sfx('settle')
     void itemsFor(this.deps.session).load()
     void this.home.homes.load()
-    this.say({ speaker: PELL.name, lines: crateTakeLines(r.result.collected, r.result.kept) })
+    this.say({ speaker: PELL.name, lines: [collectedLine(r.result.collected)] })
   }
 
   /** Pell enters your name: a new deed, or an old one taken back. */

@@ -57,9 +57,9 @@ func packTrowel(ctx context.Context, tx *sql.Tx, account string) (string, error)
 // digUpPlant is the end every dig-up shares, at a camp (camp_plants) or on
 // home land (homestead_plants): a trowel from the pack is used once (the
 // same wear as any tool use: useTool, breaking at zero), and the plant
-// comes out of the ground and into the digger's pack as its seed. Nothing
-// planted grows into a crop yet, so there is no crop to pick.
-func (a *Server) digUpPlant(ctx context.Context, tx *sql.Tx, s *store.Snapshot, table, id, def, reason string, now int64) (*contract.WearResult, error) {
+// comes out of the ground whole, into the digger's pack as a carried plant
+// with its id and growth kept (carryPlant), to plant again where they may.
+func (a *Server) digUpPlant(ctx context.Context, tx *sql.Tx, s *store.Snapshot, table, id, def string, now int64) (*contract.WearResult, error) {
 	trowel, err := packTrowel(ctx, tx, s.AccountID)
 	if err != nil {
 		return nil, err
@@ -77,10 +77,14 @@ func (a *Server) digUpPlant(ctx context.Context, tx *sql.Tx, s *store.Snapshot, 
 			return nil, err
 		}
 	}
+	var plantedAt int64
+	if err = tx.QueryRowContext(ctx, "SELECT planted_at FROM "+table+" WHERE id=?", id).Scan(&plantedAt); err != nil {
+		return nil, err
+	}
 	if _, err = tx.ExecContext(ctx, "DELETE FROM "+table+" WHERE id=?", id); err != nil {
 		return nil, err
 	}
-	return wearProto(&res), packPut(ctx, tx, s.AccountID, def, []makerQty{{Qty: 1}}, reason, id, now)
+	return wearProto(&res), carryPlant(ctx, tx, s.AccountID, id, def, plantedAt, now)
 }
 
 // uprootCampPlant digs a camp plant up with a trowel, from beside it: anyone
@@ -109,7 +113,7 @@ func (a *Server) uprootCampPlant(ctx context.Context, tx *sql.Tx, s *store.Snaps
 	if !nearTile(s, outdoorsArea, c.CX*S+x, c.CY*S+y, int(content.HomeRules.GetWayLamp().GetReach())) {
 		return nil, nil, fail(409, "too-far-away")
 	}
-	wear, err := a.digUpPlant(ctx, tx, s, "camp_plants", req.ItemId, def, "camp-uproot", now)
+	wear, err := a.digUpPlant(ctx, tx, s, "camp_plants", req.ItemId, def, now)
 	return c, wear, err
 }
 

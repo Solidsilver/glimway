@@ -405,8 +405,8 @@ export declare type ItemsView = Message<"glimway.v1.ItemsView"> & {
   carried: HomeInstance[];
 
   /**
-   * Plants in the pack, taken from Pell's crate with their planting kept:
-   * each can be planted again wherever its seed could be.
+   * Plants in the pack, lifted whole (from Pell's crate or with the trowel),
+   * their planting kept: each can be planted again wherever its seed could be.
    *
    * @generated from field: repeated glimway.v1.CarriedPlant plants = 8;
    */

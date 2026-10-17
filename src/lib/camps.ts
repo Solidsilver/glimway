@@ -9,7 +9,6 @@
 import type { CampMember, CampView, RecoveryEntry } from './gen/glimway/v1/camps_pb.js'
 import { HOMESTEAD_DATA } from './homestead.ts'
 import { giftPhrase, itemName } from './items.ts'
-import { GATHERING_DATA } from './gathering.ts'
 
 export type CampLook = 'lit' | 'dimming'
 
@@ -176,19 +175,6 @@ export const CRATE_WORDS = {
   choose: 'Choose what to take',
   chooseNote: 'Leave the rest with Pell'
 } as const
-
-/** Said when a plant stays in the crate because the pack carries no more. */
-export function keptLine(kept: readonly Pick<RecoveryEntry, 'itemDef' | 'qty'>[]): string {
-  const n = GATHERING_DATA.carriedPlants
-  const one = kept.length === 1
-  return `A pack carries ${n} living ${n === 1 ? 'plant' : 'plants'} at most, so ${listed(kept.map(entryPhrase))} ${one ? 'waits' : 'wait'} here for you. Plant one first, or take ${one ? 'it' : 'them'} as seed.`
-}
-
-/** Pell's words after a collect: what was signed out, then what stayed in the crate. */
-export function crateTakeLines(collected: readonly Pick<RecoveryEntry, 'itemDef' | 'qty'>[], kept: readonly Pick<RecoveryEntry, 'itemDef' | 'qty'>[] = []): string[] {
-  if (kept.length === 0) return [collectedLine(collected)]
-  return collected.length ? [collectedLine(collected), keptLine(kept)] : [keptLine(kept)]
-}
 
 /** A camp refusal in words: the lot lantern's shared codes, said of a way-lamp. */
 export const CAMP_ERRORS: Record<string, string> = {

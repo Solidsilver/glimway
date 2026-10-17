@@ -708,8 +708,8 @@ type ItemsView struct {
 	// The home pieces in the pack (a way-lamp, a stool), deed or no deed:
 	// what can be set as a camp, a communal post or a piece at a camp.
 	Carried []*HomeInstance `protobuf:"bytes,7,rep,name=carried,proto3" json:"carried,omitempty"`
-	// Plants in the pack, taken from Pell's crate with their planting kept:
-	// each can be planted again wherever its seed could be.
+	// Plants in the pack, lifted whole (from Pell's crate or with the trowel),
+	// their planting kept: each can be planted again wherever its seed could be.
 	Plants        []*CarriedPlant `protobuf:"bytes,8,rep,name=plants,proto3" json:"plants,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

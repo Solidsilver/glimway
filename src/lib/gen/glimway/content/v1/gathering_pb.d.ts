@@ -42,20 +42,13 @@ export declare type Gathering = Message<"glimway.content.v1.Gathering"> & {
   /**
    * How many plants one home's land tends; past it the ground is full.
    *
+   * The targets each kind of place has: wilds (the Tangle and the
+   *
    * @generated from field: int32 plants_per_home = 4;
    */
   plantsPerHome: number;
 
   /**
-   * How many plants a pack carries at once (taken from Pell's crate, their
-   * planting kept); past it they wait in the crate.
-   *
-   * @generated from field: int32 carried_plants = 8;
-   */
-  carriedPlants: number;
-
-  /**
-   * The targets each kind of place has: wilds (the Tangle and the
    * Whitequiet), woodland, home (any homestead's land), the village, the
    * Commons. Which named targets exist is a code rule.
    *
@@ -110,20 +103,13 @@ export declare type GatheringValid = Message<"glimway.content.v1.Gathering"> & {
   /**
    * How many plants one home's land tends; past it the ground is full.
    *
+   * The targets each kind of place has: wilds (the Tangle and the
+   *
    * @generated from field: int32 plants_per_home = 4;
    */
   plantsPerHome: number;
 
   /**
-   * How many plants a pack carries at once (taken from Pell's crate, their
-   * planting kept); past it they wait in the crate.
-   *
-   * @generated from field: int32 carried_plants = 8;
-   */
-  carriedPlants: number;
-
-  /**
-   * The targets each kind of place has: wilds (the Tangle and the
    * Whitequiet), woodland, home (any homestead's land), the village, the
    * Commons. Which named targets exist is a code rule.
    *

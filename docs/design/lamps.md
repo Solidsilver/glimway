@@ -324,9 +324,9 @@ who builds there (below); anyone fills it. Setting it needs no homestead (the pa
 carried pieces, deed or not). The setter may take an empty lamp down, its unspent oil
 returned, or pack the whole camp up from beside the lamp (`api/camp_teardown.go`): everything
 goes to Pell's as at a lapse, anyone else's things naming the keeper who moved them, and the hold
-lets go at the turning, which refunds laid paths. A camp plant comes up into the digger's pack as
-its seed: anyone who may build there, or whoever planted it, whatever the rule. Nothing planted
-grows into a crop yet.
+lets go at the turning, which refunds laid paths. A camp plant comes up whole into the
+digger's pack (a carried plant, §2.7): anyone who may build there, or whoever planted it,
+whatever the rule. Nothing planted grows into a crop yet.
 
 Digging up takes a trowel (owner decision 2026-10-17): `bench-trowel`, tool action `uproot`,
 crafted at the bench from one timber and one stone. It is the only way to dig up a planted
@@ -339,7 +339,8 @@ within two tiles (`POST /api/items/uproot`, `target` the plant id). Both share `
 `api/camp_teardown.go`: no trowel in the pack is `wrong-tool`. Each dig is one use of the
 trowel through `useTool`, the same wear as any tool (the keenest trowel carried, as the belt
 holds it); at zero it gives out like any cheap tool and thanks its maker. The answer carries the
-wear (`ItemsResult.wear`, `CampResult.wear`). The plant comes back as its seed. No migration.
+wear (`ItemsResult.wear`, `CampResult.wear`). The plant comes up whole as a carried
+plant, its id and growth kept, to plant again (owner decision 2026-10-17; §2.7 `carryPlant`).
 
 Who may build (0.13, owner decision 2026-10-17; migration 045, `api/claim_rules.go`): a Built
 claim's keeper sets one rule and one list of world members. The rules are `household` (the
@@ -494,21 +495,22 @@ they pick, or everything. `POST /api/recovery/collect` takes `entries` (none is 
 not waiting for the caller is skipped. What they leave waits on with no expiry. Pell's crate lines
 are unchanged; beside "Take your things from the crate" he offers "Choose what to take", which
 opens the crate panel (`src/ui/CratePanel.svelte`): a Take per entry, and "Take it whole" or "Take
-its seed" for a plant. The pack has no capacity limit (`item_stacks` holds any count), so the only
-full destination is the carried-plant limit below. What it can't hold stays in the crate and
-comes back in `RecoveryCollectResult.kept`, and Pell says so (`keptLine`).
+its seed" for a plant. The pack has no capacity limit (`item_stacks` holds any count), and
+carried plants have none either (owner decision 2026-10-17), so no destination is ever full.
 
-**Replanting from a crate.** A crated plant is taken whole by default: it becomes a carried plant
-(migration 048, `carried_plants`), keeping its own id and `planted_at` (its growth; nothing
-grows into a crop yet, so its age is all the growth there is). A pack carries
-`gathering.carriedPlants` (6) of them. `ItemsView.plants` lists them, and the pack shows each as
-its own row ("Birch sapling, lifted whole") with Plant wherever its seed could go. Planting one is
-the seed's own operation with the same rules: `POST /api/items/plant` with `instance` on the
-lot and in its lit backland (`ownLand`), and the camp's `plant` with `item_id` where the planter
-may build (`mayBuild`). It goes back in with the same id and `planted_at`. Its `planted_day` is
-the day it went in again, because a lot plant's daily wandering is replayed from that day and
-should start where it was set. Taking it as its seed is the old behaviour, offered alongside. A
-plant dug up with the trowel still comes up as its seed (`digUpPlant`).
+**Replanting from a crate, and the trowel.** A crated plant is taken whole by default: it becomes
+a carried plant (migration 048, `carried_plants`), keeping its own id and `planted_at` (its
+growth; nothing grows into a crop yet, so its age is all the growth there is). Digging a plant up
+with the trowel lifts it the same way (`digUpPlant` → `carryPlant`), at home, in the lit backland
+and at camps, into the digger's pack; the dig still wears the trowel once. `ItemsView.plants`
+lists carried plants, and the pack shows each as its own row ("Birch sapling, lifted whole") with
+Plant wherever its seed could go. Planting one is the seed's own operation with the same rules:
+`POST /api/items/plant` with `instance` on the lot and in its lit backland (`ownLand`), and the
+camp's `plant` with `item_id` where the planter may build (`mayBuild`). It goes back in with the
+same id and `planted_at`. Its `planted_day` is the day it went in again, because a lot plant's
+daily wandering is replayed from that day and should start where it was set. Taking a crated
+plant as its seed is the old behaviour, offered alongside. A dark lot lantern's backland plants
+still go to home storage as seeds (owner decision 2026-10-17).
 
 ### 2.8 The Keeper's hand and naming from parts
 

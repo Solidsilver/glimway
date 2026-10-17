@@ -1,8 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CRATE_WORDS, cratePick, crateRows, crateTakeLines, keptLine } from '../src/lib/camps.ts';
+import { CRATE_WORDS, collectedLine, cratePick, crateRows } from '../src/lib/camps.ts';
 import { CARRIED_PLANT_WORDS, modelEntries } from '../src/lib/inventory.ts';
-import { GATHERING_DATA } from '../src/lib/gathering.ts';
 import type { ItemsView } from '../src/lib/api/types.ts';
 
 const entry = (id: number, kind: string, itemDef: string, qty = 1, o: { movedBy?: string; reason?: string } = {}) => ({ id, kind, itemDef, qty, ...o });
@@ -34,19 +33,9 @@ test('the picker asks for one entry, a plant whole or as its seed, or for everyt
   assert.deepEqual(cratePick(7, true), { entries: [7], asSeed: [7] });
 });
 
-test('Pell says what was signed out, and what the pack could not carry stays', () => {
-  const lamp = { itemDef: 'way-lamp', qty: 1 }, sapling = { itemDef: 'birch-sapling', qty: 1 }, thyme = { itemDef: 'wild-thyme', qty: 1 };
-  assert.deepEqual(crateTakeLines([lamp]), ['Signed out to you: a way-lamp. The home pieces are in your pack.']);
-  assert.deepEqual(crateTakeLines([]), ['Nothing waiting for you. The book’s square.']);
-  const both = crateTakeLines([lamp], [sapling]);
-  assert.equal(both.length, 2);
-  assert.match(both[0]!, /^Signed out to you: a way-lamp/);
-  assert.equal(both[1], keptLine([sapling]));
-  assert.match(keptLine([sapling]), new RegExp(`carries ${GATHERING_DATA.carriedPlants} living plants at most, so a birch sapling waits here for you\\. Plant one first, or take it as seed\\.`));
-  assert.match(keptLine([sapling, thyme]), /a birch sapling and a wild thyme wait here.*take them as seed/i);
-  assert.deepEqual(crateTakeLines([], [sapling]), [keptLine([sapling])], 'nothing came: no "nothing waiting"');
-  assert.ok(GATHERING_DATA.carriedPlants >= 1);
+test('Pell keeps his take-all words; the picker says what was signed out', () => {
   assert.equal(CRATE_WORDS.takeYours, 'Take your things from the crate', 'Pell’s take-all choice keeps its words');
+  assert.equal(collectedLine([{ itemDef: 'way-lamp', qty: 1 }]), 'Signed out to you: a way-lamp. The home pieces are in your pack.');
 });
 
 test('a carried plant is its own row in the pack, named whole, plantable, never given or used', () => {

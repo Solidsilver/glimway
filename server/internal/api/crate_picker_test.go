@@ -77,7 +77,7 @@ func TestCratePickerTakesWhatsPicked(t *testing.T) {
 	}
 	stoolEntry := entryOf(waiting, "piece", "wooden-stool")
 	r, _ := x.pick(x.alice, "pick-stool", []int32{stoolEntry}, nil, 200)
-	if len(r.Collected) != 1 || r.Collected[0].Id != stoolEntry || len(r.Kept) != 0 {
+	if len(r.Collected) != 1 || r.Collected[0].Id != stoolEntry {
 		t.Fatalf("picked: %+v", r)
 	}
 	if loc, _ := x.itemAt(stool); loc != "inventory" {
@@ -116,33 +116,24 @@ func TestCratePickerTakesWhatsPicked(t *testing.T) {
 	x.conserved(alice)
 }
 
-// A pack carries so many plants; past that a plant waits in the crate,
-// said so, while everything else comes. Taken as its seed, it always fits.
-func TestCratePickerFullPackKeepsThePlant(t *testing.T) {
+// A plant may be taken as its seed instead, the old way; however many
+// plants the pack already carries, nothing waits for want of room.
+func TestCratePickerTakesAPlantAsItsSeed(t *testing.T) {
 	x, _, _, _ := campCrate(t)
 	alice := x.alice.s.AccountID
-	for i := range int(content.GatheringRules.GetCarriedPlants()) {
-		if _, err := x.db.DB.Exec("INSERT INTO carried_plants(id,account_id,item_def,planted_at,carried_at) VALUES(?,?,'wild-thyme',0,0)", fmt.Sprintf("full-%d", i), alice); err != nil {
+	for i := range 50 {
+		if _, err := x.db.DB.Exec("INSERT INTO carried_plants(id,account_id,item_def,planted_at,carried_at) VALUES(?,?,'wild-thyme',0,0)", fmt.Sprintf("many-%d", i), alice); err != nil {
 			t.Fatal(err)
 		}
 	}
-	r, _ := x.collect(x.alice.c, x.alice.s, "take-all", true, 200)
-	if len(r.Collected) != 3 || len(r.Kept) != 1 || r.Kept[0].Kind != "plant" || r.Kept[0].ItemDef != "birch-sapling" {
-		t.Fatalf("collected %+v, kept %+v", r.Collected, r.Kept)
-	}
-	left := x.recovery(x.alice.c)
-	if len(left) != 1 || left[0].Kind != "plant" {
-		t.Fatalf("left waiting: %+v", left)
-	}
-	if n := len(x.carriedPlantsOf(alice)); n != int(content.GatheringRules.GetCarriedPlants()) {
-		t.Fatalf("carried plants: %d", n)
-	}
-	if x.packQty(alice, "birch-sapling") != 0 {
-		t.Fatal("the sapling came as a seed unasked")
-	}
-	r, _ = x.pick(x.alice, "take-seed", []int32{left[0].Id}, []int32{left[0].Id}, 200)
-	if len(r.Collected) != 1 || len(r.Kept) != 0 || x.packQty(alice, "birch-sapling") != 1 || len(x.recovery(x.alice.c)) != 0 {
+	plant := entryOf(x.recovery(x.alice.c), "plant", "birch-sapling")
+	r, _ := x.pick(x.alice, "take-seed", []int32{plant}, []int32{plant}, 200)
+	if len(r.Collected) != 1 || x.packQty(alice, "birch-sapling") != 1 || len(x.carriedPlantsOf(alice)) != 50 {
 		t.Fatalf("as its seed: %+v", r)
+	}
+	r, _ = x.collect(x.alice.c, x.alice.s, "take-rest", true, 200)
+	if len(r.Collected) != 3 || len(x.recovery(x.alice.c)) != 0 {
+		t.Fatalf("the rest: %+v", r)
 	}
 	x.conserved(alice)
 }
@@ -154,8 +145,8 @@ func TestCratedPlantIsReplantedWithItsGrowth(t *testing.T) {
 	x, _, plant, plantedAt := campCrate(t)
 	alice, bob := x.alice.s.AccountID, x.bob.s.AccountID
 	r, _ := x.collect(x.alice.c, x.alice.s, "take-all", true, 200)
-	if len(r.Collected) != 4 || len(r.Kept) != 0 {
-		t.Fatalf("collected %+v, kept %+v", r.Collected, r.Kept)
+	if len(r.Collected) != 4 {
+		t.Fatalf("collected %+v", r.Collected)
 	}
 	if got := x.carriedPlantsOf(alice); len(got) != 1 || got[plant] != plantedAt {
 		t.Fatalf("carried: %v, want %s at %d", got, plant, plantedAt)

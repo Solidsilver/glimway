@@ -5,14 +5,14 @@
   import { homesteadsFor } from '../game/homestead'
   import { homeErrorText } from '../content/errors'
   import type { RecoveryEntry } from '../lib/gen/glimway/v1/camps_pb.js'
-  import { CRATE_WORDS, cratePick, crateRows, crateTakeLines } from '../lib/camps'
+  import { CRATE_WORDS, collectedLine, cratePick, crateRows } from '../lib/camps'
   import { actionRunner } from './panel-state.svelte'
   import Panel from './Panel.svelte'
 
   // Pell's crate (lamps.md 2.7), opened from his desk: everything waiting
   // for you, entry by entry. Take one, or everything; a plant whole (its
   // growth kept) or as its seed. What you leave waits, with no end. The
-  // server takes each entry once and keeps what the pack can't hold.
+  // server takes each entry once; the pack holds whatever is taken.
   let { session, onClose }: { session: Session; onClose: () => void } = $props()
 
   const action = actionRunner()
@@ -39,9 +39,9 @@
       async () => {
         const r = await link.recoveryCollect(cratePick(id, asSeed))
         if (!r.ok) return { ok: false as const, text: homeErrorText(r.code) }
-        return { ok: true as const, collected: r.result.collected, kept: r.result.kept }
+        return { ok: true as const, collected: r.result.collected }
       },
-      (d) => crateTakeLines(d.collected, d.kept).join(' ')
+      (d) => collectedLine(d.collected)
     )
     void itemsFor(session).load()
     void homesteadsFor(session).load()

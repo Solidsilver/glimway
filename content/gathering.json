@@ -13,7 +13,6 @@
   },
   "softCapLine": "The wood’s given enough here today.",
   "plantsPerHome": 40,
-  "carriedPlants": 6,
   "areas": {
     "wilds": {
       "targets": [
