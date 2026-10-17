@@ -55,6 +55,8 @@ func (a *Server) itemsMutation(w http.ResponseWriter, r *http.Request) error {
 			err = a.gather(ctx, tx, s, &req, now, out)
 		case "plant":
 			err = a.plant(ctx, tx, s, &req, now, out)
+		case "uproot":
+			err = a.uprootHomePlant(ctx, tx, s, &req, now, out)
 		case "return":
 			err = a.returnKeepsake(ctx, tx, s, &req, now, out)
 		case "heirloom":
@@ -73,7 +75,7 @@ func (a *Server) itemsMutation(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		if gate := max(homeGateAt(s), backlandGateAt(s)); (op == "gather" && out.Land != nil || op == "plant") && gate >= 0 {
+		if gate := max(homeGateAt(s), backlandGateAt(s)); (op == "gather" && out.Land != nil || op == "plant" || op == "uproot") && gate >= 0 {
 			world := s.WorldID
 			notify = append(notify, func() { a.homeChanged(world, gate) })
 		}

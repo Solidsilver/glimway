@@ -166,6 +166,7 @@ var routes = []routeMetadata{
 	{method: "POST", path: "/api/items/ada-oil", label: "/api/items/ada-oil", handler: (*Server).itemsMutation},
 	{method: "POST", path: "/api/items/gather", label: "/api/items/gather", handler: (*Server).itemsMutation},
 	{method: "POST", path: "/api/items/plant", label: "/api/items/plant", handler: (*Server).itemsMutation},
+	{method: "POST", path: "/api/items/uproot", label: "/api/items/uproot", handler: (*Server).itemsMutation},
 	{method: "POST", path: "/api/items/buy", label: "/api/items/buy", handler: (*Server).itemsMutation},
 	{method: "POST", path: "/api/items/tap", label: "/api/items/tap", handler: (*Server).itemsMutation},
 	{method: "POST", path: "/api/items/refine", label: "/api/items/refine", handler: (*Server).itemsMutation},

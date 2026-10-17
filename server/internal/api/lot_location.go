@@ -38,6 +38,16 @@ func localHomeTile(s *store.Snapshot, x, y int) (int, int) {
 	return x, y
 }
 
+// worldHomeTile is localHomeTile turned round: a home tile of gate's in the
+// tiles the player's area measures in.
+func worldHomeTile(s *store.Snapshot, gate, x, y int) (int, int) {
+	if s.State.Area == outdoorsArea {
+		ox, oy := chunks.LotOrigin(gate)
+		return x + ox, y + oy
+	}
+	return x, y
+}
+
 // onPrivateLot is a service boundary, distinct from the whole-zone identity
 // used for world-move arrivals and presence subscriptions.
 func onPrivateLot(s *store.Snapshot, gate int) bool {

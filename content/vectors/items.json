@@ -1438,5 +1438,17 @@
   "giveable": true,
   "usableNow": false,
   "offHand": false
+ },
+ {
+  "id": "bench-trowel",
+  "instanced": true,
+  "stackable": false,
+  "assetKind": "instance",
+  "atZero": "breaks",
+  "slots": 1,
+  "maxPoints": 90,
+  "giveable": true,
+  "usableNow": false,
+  "offHand": false
  }
 ]

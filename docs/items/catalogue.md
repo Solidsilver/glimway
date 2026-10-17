@@ -23,6 +23,7 @@ footprint.
 | `bench-axe` | Bench axe | Pine haft, soft scrap-iron head. Chops trees in the Tangle and on your land. | Short axe, pale haft, dull grey head |
 | `bench-pick` | Bench pick | Breaks boulders into quarry stone and drift-stone. | Pick with a pale haft |
 | `bench-spade` | Bench spade | Digs saplings, roots, herbs, turncap spawn and wild honey. | Spade, worn wooden grip |
+| `bench-trowel` | Bench trowel | Digs up a planted seed or sapling, one use a dig. It comes back to your pack as its seed. The only way to dig a plant up: on your land, in its lit backland or at a camp. | Short hand trowel, pale grip (not drawn yet) |
 | `stave-bucket` | Stave bucket | Oak staves, iron hoops. Draws water at the well (once the rope is mended); water feeds hearth recipes and waters beds. The hoops loosen with use. | Small wooden bucket, two dark hoops |
 | `watering-can` | Tin watering can | Tarrow tin, bought from Silas. Waters a bed in one go. Watering is never required: a watered bed grows a little faster that day. | Squat tin can with a long spout |
 

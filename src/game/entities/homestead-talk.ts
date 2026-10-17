@@ -1,7 +1,10 @@
 import { lanternStake, lotAtPixel, lotOrigin } from '../../lib/lots'
 import { lanternHasRoom, lanternLines } from '../../lib/lot-lantern'
 import { collectedLine, crateLines } from '../../lib/camps'
-import { homeErrorText } from '../../content/errors'
+import { homeErrorText, itemErrorText } from '../../content/errors'
+import { dugUpLine, plantOffer } from '../../lib/trowel'
+import { itemName } from '../../lib/items'
+import { heldNow } from '../held'
 import type { RecoveryEntry } from '../../lib/gen/glimway/v1/camps_pb.js'
 /**
  * Homesteads, talked to: everything you can use on the Commons, at Silas's
@@ -248,6 +251,24 @@ export class HomesteadTalk {
             !this.home.homes.connected || !this.home.here()?.member
               ? say('A woodpile', ['Green timber, stacked to season. “Green wood sinks, dry wood sings.”'])()
               : panel('woodpile')()
+        })
+      }
+      // Your plants (on the lot or in its lit backland): only the trowel in hand digs one up (../../lib/trowel.ts).
+      for (const p of home.plants ?? []) {
+        if (!home.member || !this.home.homes.connected) break
+        const offer = () => plantOffer(itemName(p.itemDef), heldNow().kind, true, false)
+        out.push({
+          id: `home:plant:${p.id}`,
+          // At the plant's tile, within the server's two-tile reach (api/plants.go uprootHomePlant).
+          x: (L.gridOrigin?.x ?? 0) + tileMid(p.x),
+          y: (L.gridOrigin?.y ?? 0) + tileMid(p.y),
+          reach: 28,
+          clickReach: 28,
+          label: () => offer()?.label ?? null,
+          verb: () => offer()?.verb ?? null,
+          markerOffset: 16,
+          available: () => offer() !== null,
+          activate: () => void this.uproot(p.id, p.itemDef)
         })
       }
       out.push(...stablePoints(this.home, (speaker, lines) => this.say({ speaker, lines })))
@@ -609,6 +630,22 @@ export class HomesteadTalk {
     } else {
       sfx('fizzle')
       this.say({ speaker: 'Gate Shelf', lines: [r.text] })
+    }
+  }
+
+  /** The trowel at a plant of yours: up it comes, into your pack as its seed. */
+  private async uproot(plantId: string, itemDef: string): Promise<void> {
+    const gate = this.home.gate
+    if (gate === null) return
+    bus.emit(EV.notePosition)
+    const r = await itemsFor(this.deps.session).uproot(plantId)
+    if (r.ok) {
+      sfx('pop')
+      bus.emit(EV.toast, { text: dugUpLine(itemName(itemDef), r.value?.wear), icon: 'glim' })
+      void this.home.homes.fetchHome(gate)
+    } else {
+      sfx('fizzle')
+      bus.emit(EV.toast, { text: itemErrorText(r.code), icon: 'glim', kind: 'error' })
     }
   }
 

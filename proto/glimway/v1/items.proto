@@ -24,15 +24,16 @@ message Bought {
   int32 glims = 6;
 }
 
-// One request message for all sixteen item mutations, mirroring the
+// One request message for all seventeen item mutations, mirroring the
 // retired hand-written itemRequest: every op's fields are optional and empty
 // means unset (the op name comes from the URL path). Deliberate; don't copy
 // the grab-bag into new routes without saying why — the per-op result
 // messages in state.proto's Envelope oneof are the pattern to grow into.
 //
 // POST /api/items/{use,repair,fit,unfit,give,pocket,offhand,pickup,return,
-// heirloom,ada-oil,gather,plant,buy,tap,refine}; tap and refine (the Wick
-// Tree's sap, lamps.md 2.5) joined buy here as one more pack change at a
+// heirloom,ada-oil,gather,plant,uproot,buy,tap,refine}; uproot digs up a home
+// plant (target: its id) with a trowel. Tap and refine (the Wick Tree's
+// sap, lamps.md 2.5) joined buy here as one more pack change at a
 // spot, with no fields of their own. Tile is [x, y] (a home land tile), a
 // repeated-int32 pair on purpose: the gather stump proof matches stored
 // payloads with json_extract(payload_json,'$.tile[0]') (gathering.go), which

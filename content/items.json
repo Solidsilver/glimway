@@ -1214,6 +1214,19 @@
       "kind": "paper",
       "marked": true,
       "blurb": "A flour-dusted bakery card from Hazel, checked against a roach she kept. One mill roach and a scoop of flour."
+    },
+    {
+      "id": "bench-trowel",
+      "name": "Bench trowel",
+      "tab": "tools",
+      "kind": "tool",
+      "grade": "cheap",
+      "uses": 30,
+      "actions": [
+        "uproot"
+      ],
+      "marked": true,
+      "blurb": "Digs up a planted seed or sapling. It comes back to your pack as its seed."
     }
   ],
   "pickups": [

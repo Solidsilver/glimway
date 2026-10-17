@@ -193,6 +193,20 @@
       }
     },
     {
+      "id": "craft-bench-trowel",
+      "name": "Bench trowel",
+      "minTier": 2,
+      "materials": {
+        "timber": 1,
+        "stone": 1
+      },
+      "output": {
+        "kind": "instance",
+        "id": "bench-trowel",
+        "qty": 1
+      }
+    },
+    {
       "id": "craft-willow-rod",
       "name": "Willow rod",
       "minTier": 2,

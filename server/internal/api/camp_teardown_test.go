@@ -10,8 +10,8 @@ import (
 )
 
 // A camp plant comes up into the digger's pack as its seed: anyone the
-// keeper's rule lets build there, or whoever planted it, from beside it.
-// Then the lamp can come down (review B7).
+// keeper's rule lets build there, or whoever planted it, from beside it,
+// with a trowel. Then the lamp can come down (review B7).
 func TestCampPlantUproot(t *testing.T) {
 	x := newClaimRig(t)
 	seed := "turncap-spawn"
@@ -26,6 +26,12 @@ func TestCampPlantUproot(t *testing.T) {
 		t.Fatalf("bob dug without the rule: %s", code)
 	}
 	x.rule(x.alice, "everyone", nil, 200)
+	// Leave to build isn't enough: only the trowel digs a plant up.
+	if _, code := x.op(x.bob, &contract.CampRequest{Action: "uproot", ItemId: plant}, 409); code != "wrong-tool" {
+		t.Fatalf("bob dug without a trowel: %s", code)
+	}
+	x.instance(x.bob.s.AccountID, "bench-trowel", -1, "")
+	x.instance(x.zed.s.AccountID, "bench-trowel", -1, "")
 	if _, code := x.campOp(x.bob.c, x.bob.s, &contract.CampRequest{Action: "uproot", ItemId: plant}, x.stand[0]+12, x.stand[1], 409); code != "too-far-away" {
 		t.Fatalf("dug from afar: %s", code)
 	}
@@ -35,6 +41,10 @@ func TestCampPlantUproot(t *testing.T) {
 	v, _ = x.op(x.bob, &contract.CampRequest{Action: "uproot", ItemId: plant}, 200)
 	if len(v.Camp.Plants) != 0 || x.packQty(x.bob.s.AccountID, seed) != 1 || x.packQty(x.alice.s.AccountID, seed) != 0 {
 		t.Fatalf("the seed: %+v bob=%d", v.Camp.Plants, x.packQty(x.bob.s.AccountID, seed))
+	}
+	// The dig is one use of bob's trowel, as any tool use.
+	if v.Wear == nil || v.Wear.ItemDef != "bench-trowel" || v.Wear.UsesLeft != 29 || v.Wear.Broke {
+		t.Fatalf("the trowel's wear: %+v", v.Wear)
 	}
 	if _, code := x.op(x.bob, &contract.CampRequest{Action: "uproot", ItemId: plant}, 409); code != "not-placed" {
 		t.Fatalf("dug twice: %s", code)

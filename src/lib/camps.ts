@@ -238,23 +238,21 @@ export function campPieceName(itemDef: string): string {
 // ------------------------------------------------------------ taking a camp apart
 
 /**
- * A plant at a camp: whose it is, and digging it up. Anyone who may build
- * there can dig one up, and whoever planted it always can. It goes into the
- * digger's pack as its seed (api/camp_teardown.go).
+ * A plant at a camp: whose it is. Anyone who may build there can dig one
+ * up, and whoever planted it always can, but only with a trowel in hand
+ * (./trowel.ts): the look never offers it, and says so to whoever may.
  */
-export function campPlantLines(plant: string, owner: string | null): string[] {
+export function campPlantLines(plant: string, owner: string | null, mayDig = false): string[] {
   const name = plant.toLowerCase()
-  return [owner ? `${owner}’s ${name}, growing in the lamp’s light.` : `Your ${name}, growing in the lamp’s light.`]
+  const whose = owner ? `${owner}’s ${name}, growing in the lamp’s light.` : `Your ${name}, growing in the lamp’s light.`
+  return mayDig ? [whose, 'A trowel would dig it up.'] : [whose]
 }
 
-/** Said once it's dug up. */
-export function uprootedLine(plant: string): string {
-  return `You dig up the ${plant.toLowerCase()}. It’s in your pack.`
-}
+/** A camp plant's look: its only choice is to leave it (digging up is the trowel's). */
+export const CAMP_PLANT_CHOICES = [{ text: 'Leave it', dismiss: true }] as const
 
 /** The keeper's "pack up the camp": everything to Pell's at once, as at a lapse. */
 export const CAMP_PACK_WORDS = {
-  dig: { text: 'Dig it up', note: 'It goes back in your pack' },
   pack: { text: 'Pack up the camp', note: 'Everything here goes to Pell’s' },
   ask: [
     'Pack up the whole camp?',
