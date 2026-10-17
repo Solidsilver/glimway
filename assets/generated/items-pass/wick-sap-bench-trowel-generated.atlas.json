@@ -1,0 +1,71 @@
+{
+  "frames": {
+    "item-wick-sap": {
+      "frame": {
+        "x": 183,
+        "y": 179,
+        "w": 395,
+        "h": 442
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 395,
+        "h": 442
+      },
+      "sourceSize": {
+        "w": 395,
+        "h": 442
+      }
+    },
+    "item-bench-trowel-whole": {
+      "frame": {
+        "x": 868,
+        "y": 105,
+        "w": 459,
+        "h": 538
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 459,
+        "h": 538
+      },
+      "sourceSize": {
+        "w": 459,
+        "h": 538
+      }
+    },
+    "item-bench-trowel-worn": {
+      "frame": {
+        "x": 1594,
+        "y": 105,
+        "w": 458,
+        "h": 538
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 458,
+        "h": 538
+      },
+      "sourceSize": {
+        "w": 458,
+        "h": 538
+      }
+    }
+  },
+  "meta": {
+    "image": "wick-sap-bench-trowel-generated.png",
+    "size": {
+      "w": 2172,
+      "h": 724
+    }
+  }
+}

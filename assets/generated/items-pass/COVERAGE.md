@@ -7,6 +7,7 @@ Generated frames are listed by canonical item or world-sprite ID. Native dimensi
 - `bench-axe`: `item-bench-axe-whole` (whole), `item-bench-axe-worn` (worn)
 - `bench-pick`: `item-bench-pick-whole` (whole), `item-bench-pick-worn` (worn)
 - `bench-spade`: `item-bench-spade-whole` (whole), `item-bench-spade-worn` (worn)
+- `bench-trowel`: `item-bench-trowel-whole` (whole), `item-bench-trowel-worn` (worn)
 - `stave-bucket`: `item-stave-bucket-whole` (whole), `item-stave-bucket-worn` (worn)
 - `watering-can`: `item-watering-can` (default)
 - `brack-felling-axe`: `item-brack-felling-axe-whole` (whole), `item-brack-felling-axe-worn` (worn), `item-brack-felling-axe-blunt` (blunt)
@@ -68,6 +69,7 @@ Generated frames are listed by canonical item or world-sprite ID. Native dimensi
 - `blue-moss`: `item-blue-moss` (default)
 - `candle-oil`: `item-candle-oil` (default)
 - `hearth-oil`: `item-hearth-oil` (default)
+- `wick-sap`: `item-wick-sap` (default)
 - `storm-oil`: `item-storm-oil` (default)
 
 ## Keepsakes

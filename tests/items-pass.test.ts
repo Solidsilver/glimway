@@ -51,8 +51,8 @@ test('items-pass exposes its loader and load keys', () => {
   assert.equal(itemsArtKey('item-bench-axe-whole'), 'items-art:item-bench-axe-whole')
 })
 
-test('the manifest’s 14 generated source sheets and 4 crafts-pass fishing icons are delivered as transparent RGBA PNGs of the stated size', () => {
-  assert.equal(manifest.sources.length, 18)
+test('the manifest’s 15 generated source sheets and 4 crafts-pass fishing icons are delivered as transparent RGBA PNGs of the stated size', () => {
+  assert.equal(manifest.sources.length, 19)
   assert.equal(manifest.sources.filter((s) => s.file.startsWith('../crafts-pass/frames/')).length, 4)
   for (const s of manifest.sources) {
     const h = pngHeader(`${SOURCE_DIR}${s.file}`)
@@ -62,7 +62,7 @@ test('the manifest’s 14 generated source sheets and 4 crafts-pass fishing icon
 })
 
 test('every frame has a measured source rect inside its sheet and a destination inside its native canvas', () => {
-  assert.equal(manifest.frames.length, 178)
+  assert.equal(manifest.frames.length, 181)
   assert.equal(frameByKey.size, manifest.frames.length, 'frame keys are unique')
   const sources = new Map(manifest.sources.map((s) => [s.key, s]))
   const rects = new Set<string>()
@@ -81,7 +81,7 @@ test('every frame has a measured source rect inside its sheet and a destination 
 
 test('inventory icons have role inventory-icon and native dimensions', () => {
   const icons = manifest.frames.filter((f) => f.role === 'inventory-icon')
-  assert.equal(icons.length, 118)
+  assert.equal(icons.length, 121)
   for (const icon of icons) {
     assert.ok(icon.key.startsWith('item-'), `${icon.key} has item- prefix`)
     assert.ok(icon.width > 0 && icon.height > 0)
@@ -136,7 +136,7 @@ test('only the three authored mill animations loop', () => {
 })
 
 test('state groups describe discrete variants, not animations', () => {
-  assert.equal(manifest.stateGroups.length, 31)
+  assert.equal(manifest.stateGroups.length, 32)
   for (const group of manifest.stateGroups) {
     assert.match(group.selection, /never auto-loop/i, `${group.key} must never auto-loop`)
     for (const frame of group.frames) {
@@ -173,6 +173,9 @@ test('itemIcon resolves item IDs, discrete states, and fallbacks', () => {
   assert.equal(itemIcon('bench-pick'), 'items-art:item-bench-pick-whole')
   assert.equal(itemIcon('watering-can'), 'items-art:item-watering-can')
   assert.equal(itemIcon('way-lamp'), 'items-art:item-way-lamp')
+  assert.equal(itemIcon('wick-sap'), 'items-art:item-wick-sap')
+  assert.equal(itemIcon('bench-trowel', 'whole'), 'items-art:item-bench-trowel-whole')
+  assert.equal(itemIcon('bench-trowel', 'worn'), 'items-art:item-bench-trowel-worn')
 
   // Explicit state resolution
   assert.equal(itemIcon('bench-axe', 'whole'), 'items-art:item-bench-axe-whole')

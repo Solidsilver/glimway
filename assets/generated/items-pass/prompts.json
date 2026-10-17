@@ -11,6 +11,13 @@
       "source": "lamp-icons-generated.png",
       "prompt": "Create three transparent pixel-art inventory icons in separate equal cells: grey ash with one amber ember; an ash-grey drawstring pouch with ash at the neck; and a leaning metal turncap set in amber. Chunky clusters readable at 16x16, warm dark outline, upper-left light, no background, text, blur, antialiasing or watermark.",
       "method": "Built-in image_gen source sheet retained. build_manifest.py measures each cell and records source rectangles; the items atlas builder scales each crop to its 16x16 inventory canvas."
+    },
+    {
+      "key": "sap-trowel-icons",
+      "source": "wick-sap-bench-trowel-generated.png",
+      "prompt": "Use the existing items-pass bench-spade and hearth-oil icons as references. Create exactly three separate icons arranged left-to-right in three equal square cells: a squat glass or clay jar of pale translucent warm gold Wick Tree sap with a cork stopper; a whole hand trowel with iron-oak handle and grey iron blade; and the same trowel with a chipped, dulled blade and scuffed handle. Keep the whole and worn trowels the same silhouette, angle, scale and palette. Crisp chunky pixel clusters, dark warm-brown outlines, upper-left light, earthy palette, straight-on view, generous transparent margin. True transparent background; no scenery, props, text, cell borders, shadows, smoothing, antialiasing or watermark.",
+      "refinement": "Preserve the first sap-jar cell and middle whole-trowel cell. In the rightmost cell only, make the trowel's worn state unmistakable at 16x16 with a clear small notch chipped from one blade edge, lower-contrast dulled grey blade, and several darker scuff marks on the same wood handle. Preserve the transparent three-cell layout and warm-brown outline style.",
+      "method": "Generated and revised with built-in image_gen. Source retained; build_manifest.py measures each cell and records source rectangles; the items atlas builder scales each crop to its 16x16 inventory canvas."
     }
   ]
 }
