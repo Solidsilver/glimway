@@ -277,6 +277,10 @@ lamp itself; no separate placeable store exists yet. The way-lamp is a home piec
 bench from six timber, four stone, a lamp head and a lamp wick, so the whole cost comes back
 with the lamp on recovery; setting it takes the first flask. Its setter and their household build
 at the camp; anyone fills it. The setter may take an empty lamp down, its unspent oil returned.
+Communal lamps (0.13, content `communalLamp`): relighting a dark road stone burns one lamp wick,
+not refunded when it goes dark (spent like oil); a communal post is the same `way-lamp` piece set
+with no oil, crated whole to its setter if its chunk goes a wick unvisited. Both keep their stable
+lamp id (stone site id, or piece id) and a `lamp_namings` row that outlives the light.
 
 Retire distance escalation and the automatic 3×3 hold. Extra lanterns in one funded chunk do
 not multiply upkeep. Each claim has one linked placeable store. Refuse unlinking/removing it

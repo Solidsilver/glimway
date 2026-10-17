@@ -77,12 +77,12 @@ func (a *Server) mapStatus(ctx context.Context, tx *sql.Tx, s store.Snapshot, ep
 			continue
 		}
 		seen[[2]int{cx, cy}] = true
-		land, lamp, err := a.chunkLand(ctx, tx, s.WorldID, ep, cx, cy, now)
+		land, marks, err := a.chunkLand(ctx, tx, s.WorldID, ep, cx, cy, now)
 		if err != nil {
 			return nil, err
 		}
 		out.Chunks = append(out.Chunks, land)
-		if lamp != nil {
+		for _, lamp := range marks {
 			out.Lamps = append(out.Lamps, lamp)
 			lamps[lamp.Id] = true
 		}
@@ -107,19 +107,22 @@ func (a *Server) mapStatus(ctx context.Context, tx *sql.Tx, s store.Snapshot, ep
 	}
 	for _, gate := range gates {
 		cx, cy := chunks.BacklandChunk(gate)
-		_, lamp, err := a.chunkLand(ctx, tx, s.WorldID, ep, cx, cy, now)
+		_, marks, err := a.chunkLand(ctx, tx, s.WorldID, ep, cx, cy, now)
 		if err != nil {
 			return nil, err
 		}
-		if lamp != nil && !lamps[lamp.Id] {
-			out.Lamps = append(out.Lamps, lamp)
-			lamps[lamp.Id] = true
+		// Only the lantern's own mark: communal lights there need exploring.
+		for _, lamp := range marks {
+			if lamp.Kind == lotLanternKind && !lamps[lamp.Id] {
+				out.Lamps = append(out.Lamps, lamp)
+				lamps[lamp.Id] = true
+			}
 		}
 	}
 	return out, nil
 }
 
-func (a *Server) chunkLand(ctx context.Context, tx *sql.Tx, world string, ep openEpochs, cx, cy int, now int64) (*contract.ChunkLandStatus, *contract.MapLamp, error) {
+func (a *Server) chunkTier(ctx context.Context, tx *sql.Tx, world string, ep openEpochs, cx, cy int, now int64) (*contract.ChunkLandStatus, *contract.MapLamp, error) {
 	land := &contract.ChunkLandStatus{Chunk: chunkKeyProto(cx, cy), Tier: "wild", NextTurning: "detail-turns"}
 	if location.SourceOf(cx, cy).Kind == location.SourceFixed {
 		land.Tier, land.NextTurning = "permanent", "permanent"
@@ -188,4 +191,62 @@ func (a *Server) chunkLand(ctx context.Context, tx *sql.Tx, world string, ep ope
 		}
 	}
 	return land, nil, err
+}
+
+// chunkLand is a chunk's land status and the lamps marked in it: its
+// claim's own lamp, and any lit communal lamps (communal_lamps.go) as
+// common-lamp marks under the neutral label until a Keeper names one. A
+// chunk whose only Common work is lamps is Common by them; a held chunk's
+// lamps share its Built status.
+func (a *Server) chunkLand(ctx context.Context, tx *sql.Tx, world string, ep openEpochs, cx, cy int, now int64) (*contract.ChunkLandStatus, []*contract.MapLamp, error) {
+	land, claim, err := a.chunkTier(ctx, tx, world, ep, cx, cy, now)
+	if err != nil {
+		return nil, nil, err
+	}
+	var marks []*contract.MapLamp
+	if claim != nil {
+		marks = append(marks, claim)
+	}
+	if land.Tier == "permanent" || land.Tier == "still" {
+		return land, marks, nil
+	}
+	rows, err := tx.QueryContext(ctx, communalLampSelect+"WHERE world_id=? AND cx=? AND cy=? ORDER BY y,x", world, cx, cy)
+	if err != nil {
+		return nil, nil, err
+	}
+	lit := []communalLamp{}
+	for rows.Next() {
+		l, err := scanCommunalLamp(rows)
+		if err != nil {
+			rows.Close()
+			return nil, nil, err
+		}
+		lit = append(lit, l)
+	}
+	if err = closeRows(rows); err != nil || len(lit) == 0 {
+		return land, marks, err
+	}
+	if land.Tier == "wild" {
+		land.Tier = "common"
+		if land.Visited, err = store.Visited(ctx, tx, world, cx, cy, now); err != nil {
+			return nil, nil, err
+		}
+		land.NextTurning = "lamps-turn"
+		if land.Visited {
+			land.NextTurning = "lamps-carry"
+		}
+	}
+	S := chunkSize()
+	for _, l := range lit {
+		mark := &contract.MapLamp{Id: l.ID, Kind: commonLampKind, X: int32(cx*S + l.X), Y: int32(cy*S + l.Y), At: float64(l.LitAt), Land: land}
+		n, err := lampNaming(ctx, tx, world, l.ID)
+		if err != nil {
+			return nil, nil, err
+		}
+		if n != nil {
+			mark.Name, mark.Naming, mark.Namer = n.ShortName, n.Text, n.NamerName
+		}
+		marks = append(marks, mark)
+	}
+	return land, marks, nil
 }

@@ -67,6 +67,7 @@ import { waitingFixedAt } from '../wilds/wilds-world'
 import { WildsPaths } from '../wilds/paths'
 import { WildsMarks } from '../wilds/marks'
 import { WildsCamps } from '../wilds/camps'
+import { WildsCommunalLamps } from '../wilds/communal-lamps'
 import { watchRumour } from '../rumour-watch'
 import { loadWilds } from '../../lib/wilds/data'
 import { displayArea, setWildsLand } from '../../content/world'
@@ -140,6 +141,7 @@ export class WorldScene extends Phaser.Scene {
   /** Way signs, finders' names and first finds on the open map (null in curated areas). */
   private marks: WildsMarks | null = null
   private camps: WildsCamps | null = null
+  private communalLamps: WildsCommunalLamps | null = null
   /** The drift's line is said once a scene build (open-map.md 2.6). */
   private driftSaid = false
   /** Which of the open map's places the HUD names now. */
@@ -236,6 +238,7 @@ export class WorldScene extends Phaser.Scene {
     this.paths = null
     this.marks = null
     this.camps = null
+    this.communalLamps = null
     this.driftSaid = false
     this.occluders = []
     this.cinematic = false
@@ -398,6 +401,7 @@ export class WorldScene extends Phaser.Scene {
       wilds: () => this.wilds,
       paths: () => this.paths,
       camps: () => this.camps,
+      communalLamps: () => this.communalLamps,
       notePosition: () => this.notePosition(),
       refresh: () => {
         this.refreshMarkers()
@@ -489,6 +493,14 @@ export class WorldScene extends Phaser.Scene {
         solids: this.solids.group,
         hero: () => this.hero.sprite,
         notePosition: () => this.notePosition()
+      })
+      this.communalLamps = new WildsCommunalLamps(this, {
+        session: this.session,
+        interactables: this.interactables,
+        solids: this.solids.group,
+        hero: () => this.hero.sprite,
+        notePosition: () => this.notePosition(),
+        reducedMotion: this.reducedMotion
       })
       // The first window is painted behind the fade (the near read and its
       // chunks came in before this build: prepareWilds).
@@ -797,6 +809,7 @@ export class WorldScene extends Phaser.Scene {
     this.paths?.update()
     this.marks?.update()
     this.camps?.update()
+    this.communalLamps?.update()
     this.checkDrift()
     this.updateDiscoveries()
     this.checkExits()

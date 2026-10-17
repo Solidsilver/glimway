@@ -105,6 +105,10 @@ export const EV = {
   notePosition: 'game:note-position',
   /** Set a way-lamp, set a piece out or plant at the camp you stand in (UI -> game; src/game/wilds/camps.ts). */
   campDo: 'game:camp-do',
+  /** Set a carried way-lamp beside you as a communal post (UI -> game; src/game/wilds/communal-lamps.ts). */
+  communalPost: 'game:communal-post',
+  /** Look at a Lantern Road lamp stone: dark to relight, or lit to tend (sites -> src/game/wilds/communal-lamps.ts). */
+  lampStoneLook: 'game:lamp-stone-look',
   // ui -> game (and dialogue panel -> scene)
   action: 'game:action',
   cast: 'game:cast',
@@ -494,6 +498,8 @@ export interface EventMap {
   [EV.planted]: { plant: HomePlantView; gate: number; worldId: string }
   [EV.notePosition]: void
   [EV.campDo]: { action: 'set' | 'place' | 'plant'; itemId?: string; itemDef?: string }
+  [EV.communalPost]: { itemId: string }
+  [EV.lampStoneLook]: { site: string }
   [EV.action]: void
   [EV.cast]: void
   [EV.castMove]: void

@@ -18,6 +18,8 @@ export const MAP_LAMPS = {
   holds: 'Holds at the next turning',
   carries: 'Paths carry across the turning',
   pathsTurn: 'Paths turn unless someone visits',
+  lampsCarry: 'Lamps stay lit across the turning',
+  lampsTurn: 'Lamps go dark unless someone visits',
   reserve: (n: number) => `${n} ${n === 1 ? 'wick' : 'wicks'} in reserve`,
   distance: (n: number) => `${n} tiles from town`,
   namer: (name: string) => `Named by ${name}`,

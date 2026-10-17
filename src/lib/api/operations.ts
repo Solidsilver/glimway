@@ -13,6 +13,7 @@ import { WardrobeReadSchema, type WardrobeCheckRequest, type WardrobeRead, type 
 import { FishingWatersSchema, type FishCastRequest, type FishSettleRequest, type FishCancelRequest, type FishingWaters } from '../gen/glimway/v1/fishing_pb.js';
 import { PurseReadSchema, type PurseRead, type PurseTopUpRequest } from '../gen/glimway/v1/purse_pb.js';
 import { CampsReadSchema, RecoveryReadSchema, type CampRequest, type CampsRead, type RecoveryCollectRequest, type RecoveryRead } from '../gen/glimway/v1/camps_pb.js';
+import { CommunalLampsReadSchema, type CommunalLampRequest, type CommunalLampsRead } from '../gen/glimway/v1/lamps_pb.js';
 import { type ReportRequest, type QuestStepRequest, type MarkRequest, type TakePaperRequest, type SettleEchoRequest, type FallRequest, type ProfileReport, type SpendRequest, type WildsClaimRequest, type WildsLanternRequest, type WildsClearRequest, type WildsLayRequest, type WildsLiftRequest, type WildsDiscoverRequest } from '../gen/glimway/v1/operations_pb.js';
 
 export type Transport = (method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown, extra?: { headers?: Record<string, string>; binary?: boolean; keepalive?: boolean }) => Promise<unknown>;
@@ -51,6 +52,9 @@ export interface OperationsApi {
   /** Pell's recovery crate (lamps.md 2.7): what waits, and collecting it. */
   recovery(): Promise<RecoveryRead>;
   recoveryCollect(request: RecoveryCollectRequest): Promise<Envelope>;
+  /** Communal lamps (lamps.md 1.3, 2.4): relight, tend, post, lift; and the world's lit ones. */
+  communalLamp(request: CommunalLampRequest): Promise<Envelope>;
+  communalLamps(): Promise<CommunalLampsRead>;
   /** Companions and the stable (crafts.md 6.2). */
   companions(request: CompanionsRequest): Promise<Envelope>;
   stall(request: StallRequest): Promise<Envelope>;
@@ -129,6 +133,8 @@ export function createOperationsApi(send: Transport): OperationsApi {
     async camps() { return decodeMixed(await send('GET', '/api/camps'), (r) => decodeWire(CampsReadSchema, r)).result; },
     async recovery() { return decodeMixed(await send('GET', '/api/recovery'), (r) => decodeWire(RecoveryReadSchema, r)).result; },
     async recoveryCollect(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['recovery-collect'], req)); },
+    async communalLamp(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['communal-lamp'], req)); },
+    async communalLamps() { return decodeMixed(await send('GET', '/api/communal-lamps'), (r) => decodeWire(CommunalLampsReadSchema, r)).result; },
     async companions(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['companions'], req)); },
     async stall(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['stall'], req)); },
     async mountOut(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['mount-out'], req)); },

@@ -11,6 +11,7 @@ import { WardrobeCheckRequestSchema, WardrobeRequestSchema } from '../gen/glimwa
 import { FishCastRequestSchema, FishSettleRequestSchema, FishCancelRequestSchema } from '../gen/glimway/v1/fishing_pb.js';
 import { PurseTopUpRequestSchema } from '../gen/glimway/v1/purse_pb.js';
 import { CampRequestSchema, RecoveryCollectRequestSchema } from '../gen/glimway/v1/camps_pb.js';
+import { CommunalLampRequestSchema } from '../gen/glimway/v1/lamps_pb.js';
 import { ReportRequestSchema, QuestStepRequestSchema, MarkRequestSchema, TakePaperRequestSchema, SettleEchoRequestSchema, FallRequestSchema, ProfileReportSchema, SpendRequestSchema, WildsClaimRequestSchema, WildsLanternRequestSchema, WildsClearRequestSchema, WildsLayRequestSchema, WildsLiftRequestSchema, WildsDiscoverRequestSchema } from '../gen/glimway/v1/operations_pb.js';
 
 type ResultCase<D extends DescMessage> = MessageShape<D>['$typeName'] extends 'glimway.v1.ProfileReport'
@@ -46,6 +47,7 @@ export const operationRoutes = {
   'wilds-discover': route(WildsDiscoverRequestSchema, '/api/wilds/discover', 'wildsDiscover', (api, req) => api.wildsDiscover(req)),
   'camp': route(CampRequestSchema, '/api/camps', 'camp', (api, req) => api.camp(req)),
   'recovery-collect': route(RecoveryCollectRequestSchema, '/api/recovery/collect', 'recoveryCollect', (api, req) => api.recoveryCollect(req)),
+  'communal-lamp': route(CommunalLampRequestSchema, '/api/communal-lamps', 'communalLamp', (api, req) => api.communalLamp(req)),
   'companions': route(CompanionsRequestSchema, '/api/companions', 'companions', (api, req) => api.companions(req)),
   'stall': route(StallRequestSchema, '/api/stable/stall', 'stall', (api, req) => api.stall(req)),
   'mount-out': route(MountOutRequestSchema, '/api/stable/out', 'mountOut', (api, req) => api.mountOut(req)),
@@ -80,6 +82,7 @@ export const queuedOperationRoutes: Partial<Record<OutboxKind, {
   'wilds-discover': operationRoutes['wilds-discover'],
   'camp': operationRoutes['camp'],
   'recovery-collect': operationRoutes['recovery-collect'],
+  'communal-lamp': operationRoutes['communal-lamp'],
   'companions': operationRoutes['companions'],
   'stall': operationRoutes['stall'],
   'mount-out': operationRoutes['mount-out'],

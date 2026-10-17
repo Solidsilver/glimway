@@ -3402,7 +3402,9 @@ type ChunkLandStatus struct {
 	Dimming bool   `protobuf:"varint,5,opt,name=dimming,proto3" json:"dimming,omitempty"`
 	Reserve uint32 `protobuf:"varint,6,opt,name=reserve,proto3" json:"reserve,omitempty"` // charged wicks, excluding the warning wick
 	Cost    uint32 `protobuf:"varint,7,opt,name=cost,proto3" json:"cost,omitempty"`       // wicks charged each turning
-	// held, dimming, turns, released, carries, paths-turn, detail-turns, permanent
+	// held, dimming, turns, released, carries, paths-turn, lamps-carry,
+	// lamps-turn (a chunk whose only Common work is communal lamps),
+	// detail-turns, permanent
 	NextTurning string `protobuf:"bytes,8,opt,name=next_turning,json=nextTurning,proto3" json:"next_turning,omitempty"`
 	// Built terrain stays pinned even when its mark is far outside the near window.
 	Epoch *WildsEpoch `protobuf:"bytes,9,opt,name=epoch,proto3" json:"epoch,omitempty"`
@@ -3515,7 +3517,9 @@ func (x *ChunkLandStatus) GetGround() *GroundChanges {
 type MapLamp struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// lot-lantern, way-lamp; common-lamp is reserved for communal lights.
+	// lot-lantern, way-lamp, common-lamp (a communal light: a relit road stone
+	// or a communal post, id its stable lamp id; name, naming and namer stay
+	// empty until a Keeper names it).
 	Kind          string           `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
 	X             int32            `protobuf:"zigzag32,3,opt,name=x,proto3" json:"x,omitempty"`
 	Y             int32            `protobuf:"zigzag32,4,opt,name=y,proto3" json:"y,omitempty"` // world tiles; never reveal adjacent terrain

@@ -364,6 +364,15 @@
     onClose()
   }
 
+  /** A carried way-lamp set beside you as a communal lamp: no oil, kept by passers-by (lamps.md 1.3). */
+  function setCommunal(e: InventoryEntry): void {
+    const itemId = carried(e.id)
+    if (!itemId) return
+    bus.emit(EV.notePosition)
+    bus.emit(EV.communalPost, { itemId })
+    onClose()
+  }
+
   /** Seeds and saplings go into your own land, at your feet, or at a camp you build at. */
   function plantable(e: InventoryEntry): boolean {
     const gate = myLandGate()
@@ -576,6 +585,7 @@
   {#if model && e.section === 'main' && (lampSettable(e) || campSettable(e))}
     <span class="acts">
       {#if lampSettable(e)}<button type="button" class="act primary" data-act="set-lamp" disabled={action.busy !== null} onclick={() => setAtCamp(e, 'set')}>{inventoryCopy.actions.setLamp}</button>{/if}
+      {#if lampSettable(e)}<button type="button" class="act" data-act="set-communal-lamp" disabled={action.busy !== null} onclick={() => setCommunal(e)}>{inventoryCopy.actions.setCommunal}</button>{/if}
       {#if campSettable(e)}<button type="button" class="act primary" data-act="set-out" disabled={action.busy !== null} onclick={() => setAtCamp(e, 'place')}>{inventoryCopy.actions.setOut}</button>{/if}
     </span>
   {/if}

@@ -613,5 +613,10 @@
     "maxWicks": 3,
     "wicksPerOil": 1,
     "reach": 3
+  },
+  "communalLamp": {
+    "relight": "lamp-wick",
+    "relightQty": 1,
+    "reach": 3
   }
 }

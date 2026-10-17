@@ -268,7 +268,9 @@ message ChunkLandStatus {
   bool dimming = 5;
   uint32 reserve = 6; // charged wicks, excluding the warning wick
   uint32 cost = 7; // wicks charged each turning
-  // held, dimming, turns, released, carries, paths-turn, detail-turns, permanent
+  // held, dimming, turns, released, carries, paths-turn, lamps-carry,
+  // lamps-turn (a chunk whose only Common work is communal lamps),
+  // detail-turns, permanent
   string next_turning = 8;
   // Built terrain stays pinned even when its mark is far outside the near window.
   WildsEpoch epoch = 9;
@@ -277,7 +279,9 @@ message ChunkLandStatus {
 }
 message MapLamp {
   string id = 1;
-  // lot-lantern, way-lamp; common-lamp is reserved for communal lights.
+  // lot-lantern, way-lamp, common-lamp (a communal light: a relit road stone
+  // or a communal post, id its stable lamp id; name, naming and namer stay
+  // empty until a Keeper names it).
   string kind = 2;
   sint32 x = 3; sint32 y = 4; // world tiles; never reveal adjacent terrain
   double at = 5;

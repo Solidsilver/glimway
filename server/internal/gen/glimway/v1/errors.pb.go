@@ -270,6 +270,11 @@ const (
 	// 0.13 Camps (lamps.md 2.5, 2.7).
 	ErrorCode_ERROR_CODE_NO_CAMP        ErrorCode = 234
 	ErrorCode_ERROR_CODE_CAMP_NOT_EMPTY ErrorCode = 235
+	// 0.13 Communal lamps (lamps.md 1.3, 2.4).
+	ErrorCode_ERROR_CODE_NO_LAMP       ErrorCode = 236
+	ErrorCode_ERROR_CODE_LAMP_LIT      ErrorCode = 237
+	ErrorCode_ERROR_CODE_NOT_COMMON    ErrorCode = 238
+	ErrorCode_ERROR_CODE_NOT_YOUR_LAMP ErrorCode = 239
 )
 
 // Enum value maps for ErrorCode.
@@ -511,6 +516,10 @@ var (
 		233: "ERROR_CODE_CANNOT_HOLD",
 		234: "ERROR_CODE_NO_CAMP",
 		235: "ERROR_CODE_CAMP_NOT_EMPTY",
+		236: "ERROR_CODE_NO_LAMP",
+		237: "ERROR_CODE_LAMP_LIT",
+		238: "ERROR_CODE_NOT_COMMON",
+		239: "ERROR_CODE_NOT_YOUR_LAMP",
 	}
 	ErrorCode_value = map[string]int32{
 		"ERROR_CODE_UNSPECIFIED":               0,
@@ -749,6 +758,10 @@ var (
 		"ERROR_CODE_CANNOT_HOLD":               233,
 		"ERROR_CODE_NO_CAMP":                   234,
 		"ERROR_CODE_CAMP_NOT_EMPTY":            235,
+		"ERROR_CODE_NO_LAMP":                   236,
+		"ERROR_CODE_LAMP_LIT":                  237,
+		"ERROR_CODE_NOT_COMMON":                238,
+		"ERROR_CODE_NOT_YOUR_LAMP":             239,
 	}
 )
 
@@ -784,7 +797,7 @@ var File_glimway_v1_errors_proto protoreflect.FileDescriptor
 const file_glimway_v1_errors_proto_rawDesc = "" +
 	"\n" +
 	"\x17glimway/v1/errors.proto\x12\n" +
-	"glimway.v1*\xaf:\n" +
+	"glimway.v1*\x9d;\n" +
 	"\tErrorCode\x12\x1a\n" +
 	"\x16ERROR_CODE_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17ERROR_CODE_INVALID_JSON\x10\x01\x12\"\n" +
@@ -1022,7 +1035,11 @@ const file_glimway_v1_errors_proto_rawDesc = "" +
 	"\x12ERROR_CODE_NO_HOME\x10\xe8\x01\x12\x1b\n" +
 	"\x16ERROR_CODE_CANNOT_HOLD\x10\xe9\x01\x12\x17\n" +
 	"\x12ERROR_CODE_NO_CAMP\x10\xea\x01\x12\x1e\n" +
-	"\x19ERROR_CODE_CAMP_NOT_EMPTY\x10\xeb\x01B1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
+	"\x19ERROR_CODE_CAMP_NOT_EMPTY\x10\xeb\x01\x12\x17\n" +
+	"\x12ERROR_CODE_NO_LAMP\x10\xec\x01\x12\x18\n" +
+	"\x13ERROR_CODE_LAMP_LIT\x10\xed\x01\x12\x1a\n" +
+	"\x15ERROR_CODE_NOT_COMMON\x10\xee\x01\x12\x1d\n" +
+	"\x18ERROR_CODE_NOT_YOUR_LAMP\x10\xef\x01B1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
 
 var (
 	file_glimway_v1_errors_proto_rawDescOnce sync.Once

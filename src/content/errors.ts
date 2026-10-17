@@ -179,6 +179,11 @@ export const HOME_ERRORS: Table = {
   // Camps (roadmap 0.13).
   'no-camp': 'There’s no way-lamp here to set things down by.',
   'camp-not-empty': 'Everything set out here has to come up before the lamp does.',
+  // Communal lamps (roadmap 0.13).
+  'no-lamp': 'There’s no lamp there to see to.',
+  'lamp-lit': 'Someone’s already lit it. It’s burning.',
+  'not-common': 'A communal lamp goes on open common ground: not in town, the Tangle, a lot’s backland or a camp.',
+  'not-your-lamp': 'That lamp’s someone else’s to take down. Leave it burning.',
   resolved: 'Your last order with Silas went through after all. Check what you have before trying again.',
   pending: 'No answer yet — it may have gone through. We’ll find out when the connection is back; nothing will be charged twice.'
 }

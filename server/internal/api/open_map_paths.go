@@ -294,6 +294,12 @@ func (a *Server) wildsLay(w http.ResponseWriter, r *http.Request) error {
 			p.eff.Change(p.lx, p.ly) == nil && len(p.changes.Changes) >= int(content.WildsRules.GetPaths().GetMaxChanges()) {
 			return nil, fail(409, "cannot-lay-here")
 		}
+		// Nor under a communal lamp's post (communal_lamps.go).
+		if lamp, err := lampStandsAt(ctx, tx, s.WorldID, p.cx, p.cy, p.lx, p.ly); err != nil {
+			return nil, err
+		} else if lamp {
+			return nil, fail(409, "cannot-lay-here")
+		}
 		have, err := materials(ctx, tx, s.AccountID)
 		if err != nil {
 			return nil, err

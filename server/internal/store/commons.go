@@ -34,6 +34,14 @@ func Visit(ctx context.Context, tx *sql.Tx, world string, cx, cy int, now int64)
 	return err
 }
 
+// Visited: someone has stood in the chunk during the calendar wick holding
+// now, so its Common work carries through the coming turning.
+func Visited(ctx context.Context, tx *sql.Tx, world string, cx, cy int, now int64) (bool, error) {
+	var seen bool
+	err := tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM chunk_visits WHERE world_id=? AND realm=? AND layer=0 AND cx=? AND cy=? AND wick_start=?)", world, content.WildsRules.GetRealm(), cx, cy, WickStart(now)).Scan(&seen)
+	return seen, err
+}
+
 // VisitedThrough: someone stood in the chunk during every calendar wick
 // from the one holding from up to (not including) the one holding to. A
 // turning the server missed (down, or nobody came) is judged in order: a
