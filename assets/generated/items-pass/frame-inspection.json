@@ -2668,5 +2668,50 @@
       "w": 543,
       "h": 503
     }
+  },
+  {
+    "key": "item-wick-sap",
+    "region": [
+      0,
+      0,
+      724,
+      724
+    ],
+    "sourceRect": {
+      "x": 183,
+      "y": 179,
+      "w": 395,
+      "h": 442
+    }
+  },
+  {
+    "key": "item-bench-trowel-whole",
+    "region": [
+      724,
+      0,
+      1448,
+      724
+    ],
+    "sourceRect": {
+      "x": 868,
+      "y": 105,
+      "w": 459,
+      "h": 538
+    }
+  },
+  {
+    "key": "item-bench-trowel-worn",
+    "region": [
+      1448,
+      0,
+      2172,
+      724
+    ],
+    "sourceRect": {
+      "x": 1594,
+      "y": 105,
+      "w": 458,
+      "h": 538
+    }
   }
 ]

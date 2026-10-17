@@ -3706,5 +3706,23 @@
       {"itemId":"lamp-ash-pouch","category":"Supplies","priority":"P1","name":"Lamp ash pouch","state":null,"look":"A small drawstring pouch in ash-grey cloth, with a little ash at the neck"},
       {"itemId":"homing-turncap","category":"Supplies","priority":"P1","name":"Homing turncap","state":null,"look":"A turncap set in a bead of amber, its stem leaning to one side"}
     ]
+  },
+  {
+    "id": "sap-trowel-icons",
+    "file": "wick-sap-bench-trowel-generated.png",
+    "columns": 3,
+    "rows": 1,
+    "frames": [
+      {"key":"item-wick-sap","width":16,"height":16,"origin":[0.5,1],"fit":"cell","role":"inventory-icon"},
+      {"key":"item-bench-trowel-whole","width":16,"height":16,"origin":[0.5,1],"fit":"cell","role":"inventory-icon"},
+      {"key":"item-bench-trowel-worn","width":16,"height":16,"origin":[0.5,1],"fit":"cell","role":"inventory-icon"}
+    ],
+    "frameNotes": [
+      {"itemId":"wick-sap","category":"Supplies","priority":"P1","name":"Wick Tree sap","state":null,"look":"A squat stoppered jar of pale gold Wick Tree sap"},
+      {"itemId":"bench-trowel","category":"Tools","priority":"P1","name":"Bench trowel","state":"whole","look":"A small hand trowel with an iron-oak handle and grey iron blade"},
+      {"itemId":"bench-trowel","category":"Tools","priority":"P1","name":"Bench trowel","state":"worn","look":"The same trowel with a chipped, dulled blade and scuffed handle"}
+    ],
+    "prompt": "Use case: stylized-concept. Asset type: transparent pixel-art inventory icon source sheet for a 16x16 game UI. Use the existing items-pass bench-spade and hearth-oil icons as references. Create exactly three separate icons arranged left-to-right in three equal square cells: a squat glass or clay jar of pale translucent warm gold Wick Tree sap with a cork stopper; a whole hand trowel with iron-oak handle and grey iron blade; and the same trowel with a chipped, dulled blade and scuffed handle. Keep the whole and worn trowels the same silhouette, angle, scale and palette. Crisp chunky pixel clusters, dark warm-brown outlines, upper-left light, earthy palette, straight-on view, generous transparent margin. True transparent background; no scenery, props, text, cell borders, shadows, smoothing, antialiasing or watermark.",
+    "refinement": "Preserve the first sap-jar cell and middle whole-trowel cell. In the rightmost cell only, make the trowel's worn state unmistakable at 16x16 with a clear small notch chipped from one blade edge, lower-contrast dulled grey blade, and several darker scuff marks on the same wood handle. Preserve the transparent three-cell layout and warm-brown outline style."
   }
 ]

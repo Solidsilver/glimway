@@ -109,6 +109,12 @@
       "file": "lamp-icons-generated.png",
       "width": 2172,
       "height": 724
+    },
+    {
+      "key": "items-sap-trowel-icons",
+      "file": "wick-sap-bench-trowel-generated.png",
+      "width": 2172,
+      "height": 724
     }
   ],
   "frames": [
@@ -5581,6 +5587,99 @@
         "w": 16,
         "h": 16
       }
+    },
+    {
+      "key": "item-wick-sap",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-sap-trowel-icons",
+      "sheet": "sap-trowel-icons",
+      "sourceRect": {
+        "x": 183,
+        "y": 179,
+        "w": 395,
+        "h": 442
+      },
+      "itemId": "wick-sap",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Wick Tree sap",
+      "state": null,
+      "look": "A squat stoppered jar of pale gold Wick Tree sap",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-bench-trowel-whole",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-sap-trowel-icons",
+      "sheet": "sap-trowel-icons",
+      "sourceRect": {
+        "x": 868,
+        "y": 105,
+        "w": 459,
+        "h": 538
+      },
+      "itemId": "bench-trowel",
+      "category": "Tools",
+      "priority": "P1",
+      "name": "Bench trowel",
+      "state": "whole",
+      "look": "A small hand trowel with an iron-oak handle and grey iron blade",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-bench-trowel-worn",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-sap-trowel-icons",
+      "sheet": "sap-trowel-icons",
+      "sourceRect": {
+        "x": 1594,
+        "y": 105,
+        "w": 458,
+        "h": 538
+      },
+      "itemId": "bench-trowel",
+      "category": "Tools",
+      "priority": "P1",
+      "name": "Bench trowel",
+      "state": "worn",
+      "look": "The same trowel with a chipped, dulled blade and scuffed handle",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
     }
   ],
   "animations": [
@@ -5876,6 +5975,14 @@
         "world-ledger-soup-pot-coldempty-pot"
       ],
       "selection": "select by gameplay state; never auto-loop"
+    },
+    {
+      "key": "bench-trowel-states",
+      "frames": [
+        "item-bench-trowel-whole",
+        "item-bench-trowel-worn"
+      ],
+      "selection": "select by gameplay state; never auto-loop"
     }
   ],
   "aliases": {
@@ -5996,6 +6103,8 @@
     "lamp-ash": "item-lamp-ash",
     "lamp-ash-pouch": "item-lamp-ash-pouch",
     "homing-turncap": "item-homing-turncap",
+    "wick-sap": "item-wick-sap",
+    "bench-trowel": "item-bench-trowel-whole",
     "timber": "commons:icon-timber",
     "woodpile": "commons:woodpile",
     "candle-hulls": "commons:candle-hull-0",

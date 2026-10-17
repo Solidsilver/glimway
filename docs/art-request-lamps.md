@@ -54,7 +54,7 @@ match that dark stone.
 | `item-lamp-ash-pouch` | 64×64 | A small drawstring pouch in ash-grey cloth, a little ash at the neck |
 | `item-homing-turncap` | 64×64 | A turncap set in a bead of amber, its stem leaning one way |
 | `icon-lamps-tab` | 32×32 | A tiny way-lamp, lit, for the journal's Lamps tab; same frame and weight as the other tab icons |
-| `item-bench-trowel` | 64×64 (16×16 in the pack) | Not drawn yet. A short hand trowel: pale pine grip, a small dull scrap-iron blade, a little earth on the tip. Same weight as the bench spade's icon. Two frames like the other bench tools (whole, worn). Until it comes the pack shows the generic placeholder (`items-art:fallback`) |
+| `item-bench-trowel` | 64×64 (16×16 in the pack) | Drawn (items pass, `item-bench-trowel-whole` and `-worn`). A short hand trowel: pale pine grip, a small dull scrap-iron blade, a little earth on the tip. Same weight as the bench spade's icon. Two frames like the other bench tools (whole, worn). |
 
 Reused, no new art: Mara's portrait, the naming slip (`item-naming-slip`), Name a lamp's ability
 icon (`crafts-pass`), the lamp head, wick and hearth oil icons, and the `glow` image.
