@@ -35,6 +35,9 @@ type Gathering struct {
 	SoftCapLine string `protobuf:"bytes,3,opt,name=soft_cap_line,json=softCapLine,proto3" json:"soft_cap_line,omitempty"`
 	// How many plants one home's land tends; past it the ground is full.
 	PlantsPerHome int32 `protobuf:"varint,4,opt,name=plants_per_home,json=plantsPerHome,proto3" json:"plants_per_home,omitempty"`
+	// How many plants a pack carries at once (taken from Pell's crate, their
+	// planting kept); past it they wait in the crate.
+	CarriedPlants int32 `protobuf:"varint,8,opt,name=carried_plants,json=carriedPlants,proto3" json:"carried_plants,omitempty"`
 	// The targets each kind of place has: wilds (the Tangle and the
 	// Whitequiet), woodland, home (any homestead's land), the village, the
 	// Commons. Which named targets exist is a code rule.
@@ -101,6 +104,13 @@ func (x *Gathering) GetSoftCapLine() string {
 func (x *Gathering) GetPlantsPerHome() int32 {
 	if x != nil {
 		return x.PlantsPerHome
+	}
+	return 0
+}
+
+func (x *Gathering) GetCarriedPlants() int32 {
+	if x != nil {
+		return x.CarriedPlants
 	}
 	return 0
 }
@@ -466,12 +476,13 @@ var File_glimway_content_v1_gathering_proto protoreflect.FileDescriptor
 
 const file_glimway_content_v1_gathering_proto_rawDesc = "" +
 	"\n" +
-	"\"glimway/content/v1/gathering.proto\x12\x12glimway.content.v1\x1a\x1bbuf/validate/validate.proto\"\x94\x06\n" +
+	"\"glimway/content/v1/gathering.proto\x12\x12glimway.content.v1\x1a\x1bbuf/validate/validate.proto\"\xc4\x06\n" +
 	"\tGathering\x12g\n" +
 	"\x06swings\x18\x01 \x03(\v2).glimway.content.v1.Gathering.SwingsEntryB$\xbaH!\x9a\x01\x1e\b\x03\"\x14r\x12R\x04chopR\x05breakR\x03dig*\x04\x1a\x02(\x01R\x06swings\x12=\n" +
 	"\x04caps\x18\x02 \x01(\v2!.glimway.content.v1.GatheringCapsB\x06\xbaH\x03\xc8\x01\x01R\x04caps\x12\"\n" +
 	"\rsoft_cap_line\x18\x03 \x01(\tR\vsoftCapLine\x12/\n" +
-	"\x0fplants_per_home\x18\x04 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\rplantsPerHome\x12o\n" +
+	"\x0fplants_per_home\x18\x04 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\rplantsPerHome\x12.\n" +
+	"\x0ecarried_plants\x18\b \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\rcarriedPlants\x12o\n" +
 	"\x05areas\x18\x05 \x03(\v2(.glimway.content.v1.Gathering.AreasEntryB/\xbaH,\x9a\x01)\b\x03\"%r#R\x05wildsR\bwoodlandR\x04homeR\n" +
 	"hearthwickR\x05areas\x12f\n" +
 	"\atargets\x18\x06 \x03(\v2*.glimway.content.v1.Gathering.TargetsEntryB \xbaH\x1d\x9a\x01\x1a\b\x01\"\x16r\x142\x12^[a-z0-9-]{1,100}$R\atargets\x128\n" +

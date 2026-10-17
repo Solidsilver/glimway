@@ -703,8 +703,8 @@ func (x *CampResult) GetWear() *WearResult {
 }
 
 // One thing waiting in a crate at Pell's: a piece, a tool, a stack (oil,
-// path stone) or a plant's seed, from the place at chunk (cx, cy) it left
-// at lapsed_at.
+// path stone) or a plant (its planting kept: it comes as a carried plant or
+// as its seed), from the place at chunk (cx, cy) it left at lapsed_at.
 // The id is int32: the HTTP JSON carries numbers, and protojson writes a
 // 64-bit integer as a string, which the client refuses.
 // moved_by: the camp keeper's name when they moved the piece off their camp
@@ -866,12 +866,16 @@ func (x *RecoveryRead) GetEntries() []*RecoveryEntry {
 	return nil
 }
 
-// POST /api/recovery/collect: take everything waiting into the pack (pieces
-// to the carried home pieces), in Pell's office.
+// POST /api/recovery/collect: take what waits into the pack (pieces to the
+// carried home pieces), in Pell's office. entries: the entry ids to take;
+// none means everything. A plant comes as a carried plant, its planting
+// kept, unless its id is in as_seed: then it comes as its seed.
 type RecoveryCollectRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Op            *OpHeader              `protobuf:"bytes,1,opt,name=op,proto3" json:"op,omitempty"`
 	Where         *Where                 `protobuf:"bytes,2,opt,name=where,proto3" json:"where,omitempty"`
+	Entries       []int32                `protobuf:"varint,3,rep,packed,name=entries,proto3" json:"entries,omitempty"`
+	AsSeed        []int32                `protobuf:"varint,4,rep,packed,name=as_seed,json=asSeed,proto3" json:"as_seed,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -920,10 +924,28 @@ func (x *RecoveryCollectRequest) GetWhere() *Where {
 	return nil
 }
 
+func (x *RecoveryCollectRequest) GetEntries() []int32 {
+	if x != nil {
+		return x.Entries
+	}
+	return nil
+}
+
+func (x *RecoveryCollectRequest) GetAsSeed() []int32 {
+	if x != nil {
+		return x.AsSeed
+	}
+	return nil
+}
+
+// collected: what this collect gave. kept: what was asked for but stays in
+// the crate because the pack can't hold it (a plant past the most a pack
+// carries), still waiting.
 type RecoveryCollectResult struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Collected     []*RecoveryEntry       `protobuf:"bytes,1,rep,name=collected,proto3" json:"collected,omitempty"`
 	Materials     map[string]float64     `protobuf:"bytes,2,rep,name=materials,proto3" json:"materials,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed64,2,opt,name=value"`
+	Kept          []*RecoveryEntry       `protobuf:"bytes,3,rep,name=kept,proto3" json:"kept,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -968,6 +990,13 @@ func (x *RecoveryCollectResult) GetCollected() []*RecoveryEntry {
 func (x *RecoveryCollectResult) GetMaterials() map[string]float64 {
 	if x != nil {
 		return x.Materials
+	}
+	return nil
+}
+
+func (x *RecoveryCollectResult) GetKept() []*RecoveryEntry {
+	if x != nil {
+		return x.Kept
 	}
 	return nil
 }
@@ -1059,13 +1088,16 @@ const file_glimway_v1_camps_proto_rawDesc = "" +
 	"\bmoved_by\x18\b \x01(\tR\amovedBy\x12\x16\n" +
 	"\x06reason\x18\t \x01(\tR\x06reason\"C\n" +
 	"\fRecoveryRead\x123\n" +
-	"\aentries\x18\x01 \x03(\v2\x19.glimway.v1.RecoveryEntryR\aentries\"g\n" +
+	"\aentries\x18\x01 \x03(\v2\x19.glimway.v1.RecoveryEntryR\aentries\"\x9a\x01\n" +
 	"\x16RecoveryCollectRequest\x12$\n" +
 	"\x02op\x18\x01 \x01(\v2\x14.glimway.v1.OpHeaderR\x02op\x12'\n" +
-	"\x05where\x18\x02 \x01(\v2\x11.glimway.v1.WhereR\x05where\"\xde\x01\n" +
+	"\x05where\x18\x02 \x01(\v2\x11.glimway.v1.WhereR\x05where\x12\x18\n" +
+	"\aentries\x18\x03 \x03(\x05R\aentries\x12\x17\n" +
+	"\aas_seed\x18\x04 \x03(\x05R\x06asSeed\"\x8d\x02\n" +
 	"\x15RecoveryCollectResult\x127\n" +
 	"\tcollected\x18\x01 \x03(\v2\x19.glimway.v1.RecoveryEntryR\tcollected\x12N\n" +
-	"\tmaterials\x18\x02 \x03(\v20.glimway.v1.RecoveryCollectResult.MaterialsEntryR\tmaterials\x1a<\n" +
+	"\tmaterials\x18\x02 \x03(\v20.glimway.v1.RecoveryCollectResult.MaterialsEntryR\tmaterials\x12-\n" +
+	"\x04kept\x18\x03 \x03(\v2\x19.glimway.v1.RecoveryEntryR\x04kept\x1a<\n" +
 	"\x0eMaterialsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01B1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
@@ -1119,11 +1151,12 @@ var file_glimway_v1_camps_proto_depIdxs = []int32{
 	15, // 13: glimway.v1.RecoveryCollectRequest.where:type_name -> glimway.v1.Where
 	7,  // 14: glimway.v1.RecoveryCollectResult.collected:type_name -> glimway.v1.RecoveryEntry
 	12, // 15: glimway.v1.RecoveryCollectResult.materials:type_name -> glimway.v1.RecoveryCollectResult.MaterialsEntry
-	16, // [16:16] is the sub-list for method output_type
-	16, // [16:16] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	7,  // 16: glimway.v1.RecoveryCollectResult.kept:type_name -> glimway.v1.RecoveryEntry
+	17, // [17:17] is the sub-list for method output_type
+	17, // [17:17] is the sub-list for method input_type
+	17, // [17:17] is the sub-list for extension type_name
+	17, // [17:17] is the sub-list for extension extendee
+	0,  // [0:17] is the sub-list for field type_name
 }
 
 func init() { file_glimway_v1_camps_proto_init() }

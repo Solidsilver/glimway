@@ -54,7 +54,7 @@
       "specs": ["lot-lantern.spec.ts"]
     },
     {
-      "paths": ["src/lib/camps.ts", "src/lib/trowel.ts", "src/game/wilds/camps*.ts", "server/internal/api/camps.go", "server/internal/api/camp_teardown.go"],
+      "paths": ["src/lib/camps.ts", "src/lib/trowel.ts", "src/game/wilds/camps*.ts", "server/internal/api/camps.go", "server/internal/api/camp_teardown.go", "server/internal/api/recovery.go", "src/ui/CratePanel.svelte"],
       "specs": ["camps.spec.ts"]
     },
     {

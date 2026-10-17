@@ -390,8 +390,8 @@ export declare const CampResultSchema: GenMessage<CampResult, {validType: CampRe
 
 /**
  * One thing waiting in a crate at Pell's: a piece, a tool, a stack (oil,
- * path stone) or a plant's seed, from the place at chunk (cx, cy) it left
- * at lapsed_at.
+ * path stone) or a plant (its planting kept: it comes as a carried plant or
+ * as its seed), from the place at chunk (cx, cy) it left at lapsed_at.
  * The id is int32: the HTTP JSON carries numbers, and protojson writes a
  * 64-bit integer as a string, which the client refuses.
  * moved_by: the camp keeper's name when they moved the piece off their camp
@@ -479,8 +479,10 @@ export declare type RecoveryReadValid = RecoveryRead;
 export declare const RecoveryReadSchema: GenMessage<RecoveryRead, {validType: RecoveryReadValid}>;
 
 /**
- * POST /api/recovery/collect: take everything waiting into the pack (pieces
- * to the carried home pieces), in Pell's office.
+ * POST /api/recovery/collect: take what waits into the pack (pieces to the
+ * carried home pieces), in Pell's office. entries: the entry ids to take;
+ * none means everything. A plant comes as a carried plant, its planting
+ * kept, unless its id is in as_seed: then it comes as its seed.
  *
  * @generated from message glimway.v1.RecoveryCollectRequest
  */
@@ -494,6 +496,16 @@ export declare type RecoveryCollectRequest = Message<"glimway.v1.RecoveryCollect
    * @generated from field: glimway.v1.Where where = 2;
    */
   where?: Where | undefined;
+
+  /**
+   * @generated from field: repeated int32 entries = 3;
+   */
+  entries: number[];
+
+  /**
+   * @generated from field: repeated int32 as_seed = 4;
+   */
+  asSeed: number[];
 };
 
 export declare type RecoveryCollectRequestValid = RecoveryCollectRequest;
@@ -505,6 +517,10 @@ export declare type RecoveryCollectRequestValid = RecoveryCollectRequest;
 export declare const RecoveryCollectRequestSchema: GenMessage<RecoveryCollectRequest, {validType: RecoveryCollectRequestValid}>;
 
 /**
+ * collected: what this collect gave. kept: what was asked for but stays in
+ * the crate because the pack can't hold it (a plant past the most a pack
+ * carries), still waiting.
+ *
  * @generated from message glimway.v1.RecoveryCollectResult
  */
 export declare type RecoveryCollectResult = Message<"glimway.v1.RecoveryCollectResult"> & {
@@ -517,6 +533,11 @@ export declare type RecoveryCollectResult = Message<"glimway.v1.RecoveryCollectR
    * @generated from field: map<string, double> materials = 2;
    */
   materials: { [key: string]: number };
+
+  /**
+   * @generated from field: repeated glimway.v1.RecoveryEntry kept = 3;
+   */
+  kept: RecoveryEntry[];
 };
 
 export declare type RecoveryCollectResultValid = RecoveryCollectResult;

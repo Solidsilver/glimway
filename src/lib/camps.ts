@@ -9,6 +9,7 @@
 import type { CampMember, CampView, RecoveryEntry } from './gen/glimway/v1/camps_pb.js'
 import { HOMESTEAD_DATA } from './homestead.ts'
 import { giftPhrase, itemName } from './items.ts'
+import { GATHERING_DATA } from './gathering.ts'
 
 export type CampLook = 'lit' | 'dimming'
 
@@ -126,6 +127,67 @@ export function crateLines(entries: readonly (Pick<RecoveryEntry, 'itemDef' | 'q
 /** Pell's words once the crate is collected. */
 export function collectedLine(entries: readonly Pick<RecoveryEntry, 'itemDef' | 'qty'>[]): string {
   return entries.length === 0 ? 'Nothing waiting for you. The book’s square.' : `Signed out to you: ${listed(entries.map(entryPhrase))}. The home pieces are in your pack.`
+}
+
+// ------------------------------------------------------------ Pell's crate picker (lamps.md 2.7)
+
+type CrateEntry = Pick<RecoveryEntry, 'id' | 'kind' | 'itemDef' | 'qty'> & { movedBy?: string; reason?: string }
+
+/** An entry as the picker lists it: what it is, why it's here, and whether it's a plant (taken whole or as its seed). */
+export interface CrateRow { id: number; label: string; note: string; plant: boolean }
+
+/** Why an entry waits, short: the note under it in the picker. */
+function crateNote(e: Pick<CrateEntry, 'movedBy' | 'reason'>): string {
+  if (e.movedBy) return `Moved off ${e.movedBy}’s camp`
+  if (e.reason === RECOVERY_REASONS.landChanged) return 'Your old paths, paid back'
+  if (e.reason === RECOVERY_REASONS.deedLost) return 'From your old lot'
+  if (e.reason === RECOVERY_REASONS.packedUp) return 'From the camp you packed up'
+  return 'From a camp the woods took back'
+}
+
+/** The crate's entries as the picker lists them, in Pell's order (oldest first). */
+export function crateRows(entries: readonly CrateEntry[]): CrateRow[] {
+  return entries.map((e) => {
+    const what = entryPhrase(e)
+    return { id: e.id, label: what.charAt(0).toUpperCase() + what.slice(1), note: crateNote(e), plant: e.kind === 'plant' }
+  })
+}
+
+/** The collect request for one entry (a plant whole, or as its seed), or for everything. */
+export function cratePick(id: number | null, asSeed = false): { entries: number[]; asSeed: number[] } {
+  return id === null ? { entries: [], asSeed: [] } : { entries: [id], asSeed: asSeed ? [id] : [] }
+}
+
+/** The picker's words. */
+export const CRATE_WORDS = {
+  title: 'Pell’s crate',
+  close: 'Close the crate',
+  lede: 'Everything here is yours, kept as you left it. Take what you want now. The rest waits here as long as you like.',
+  loading: 'Pell’s opening the book…',
+  empty: 'Nothing waiting for you. The book’s square.',
+  takeAll: 'Take everything',
+  take: 'Take',
+  takeWhole: 'Take it whole',
+  takeSeed: 'Take its seed',
+  taking: 'Taking…',
+  plantNote: 'Whole, it keeps its growth and goes back in the ground wherever you can plant. As a seed, it starts over.',
+  /** Pell's choices at the desk: everything at once, or the picker. */
+  takeYours: 'Take your things from the crate',
+  choose: 'Choose what to take',
+  chooseNote: 'Leave the rest with Pell'
+} as const
+
+/** Said when a plant stays in the crate because the pack carries no more. */
+export function keptLine(kept: readonly Pick<RecoveryEntry, 'itemDef' | 'qty'>[]): string {
+  const n = GATHERING_DATA.carriedPlants
+  const one = kept.length === 1
+  return `A pack carries ${n} living ${n === 1 ? 'plant' : 'plants'} at most, so ${listed(kept.map(entryPhrase))} ${one ? 'waits' : 'wait'} here for you. Plant one first, or take ${one ? 'it' : 'them'} as seed.`
+}
+
+/** Pell's words after a collect: what was signed out, then what stayed in the crate. */
+export function crateTakeLines(collected: readonly Pick<RecoveryEntry, 'itemDef' | 'qty'>[], kept: readonly Pick<RecoveryEntry, 'itemDef' | 'qty'>[] = []): string[] {
+  if (kept.length === 0) return [collectedLine(collected)]
+  return collected.length ? [collectedLine(collected), keptLine(kept)] : [keptLine(kept)]
 }
 
 /** A camp refusal in words: the lot lantern's shared codes, said of a way-lamp. */

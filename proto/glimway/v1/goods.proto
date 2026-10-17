@@ -63,7 +63,13 @@ message ItemsView {
   // The home pieces in the pack (a way-lamp, a stool), deed or no deed:
   // what can be set as a camp, a communal post or a piece at a camp.
   repeated HomeInstance carried = 7;
+  // Plants in the pack, taken from Pell's crate with their planting kept:
+  // each can be planted again wherever its seed could be.
+  repeated CarriedPlant plants = 8;
 }
+// A carried plant (lamps.md 2.7): its id (kept from its planting), its seed
+// and when it was first planted (its growth).
+message CarriedPlant { string id = 1; string item_def = 2; double planted_at = 3; }
 
 // A homestead member (everyone on a deed is equal).
 message HomeMember { string id = 1; string display_name = 2; }

@@ -403,6 +403,14 @@ export declare type ItemsView = Message<"glimway.v1.ItemsView"> & {
    * @generated from field: repeated glimway.v1.HomeInstance carried = 7;
    */
   carried: HomeInstance[];
+
+  /**
+   * Plants in the pack, taken from Pell's crate with their planting kept:
+   * each can be planted again wherever its seed could be.
+   *
+   * @generated from field: repeated glimway.v1.CarriedPlant plants = 8;
+   */
+  plants: CarriedPlant[];
 };
 
 export declare type ItemsViewValid = ItemsView;
@@ -412,6 +420,37 @@ export declare type ItemsViewValid = ItemsView;
  * Use `create(ItemsViewSchema)` to create a new message.
  */
 export declare const ItemsViewSchema: GenMessage<ItemsView, {validType: ItemsViewValid}>;
+
+/**
+ * A carried plant (lamps.md 2.7): its id (kept from its planting), its seed
+ * and when it was first planted (its growth).
+ *
+ * @generated from message glimway.v1.CarriedPlant
+ */
+export declare type CarriedPlant = Message<"glimway.v1.CarriedPlant"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string item_def = 2;
+   */
+  itemDef: string;
+
+  /**
+   * @generated from field: double planted_at = 3;
+   */
+  plantedAt: number;
+};
+
+export declare type CarriedPlantValid = CarriedPlant;
+
+/**
+ * Describes the message glimway.v1.CarriedPlant.
+ * Use `create(CarriedPlantSchema)` to create a new message.
+ */
+export declare const CarriedPlantSchema: GenMessage<CarriedPlant, {validType: CarriedPlantValid}>;
 
 /**
  * A homestead member (everyone on a deed is equal).

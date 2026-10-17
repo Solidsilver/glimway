@@ -23,7 +23,7 @@ import { adoptMaterials, mirrorMaterials, nextMark } from './materials-order.ts'
 import type { Session } from './session.ts'
 import { roadStep } from '../lib/quests.ts'
 
-export type VillagePanel = 'board' | 'chest' | 'bench' | 'mail' | 'hearth' | 'desk' | 'woodpile' | 'shelf'
+export type VillagePanel = 'board' | 'chest' | 'bench' | 'mail' | 'hearth' | 'desk' | 'woodpile' | 'shelf' | 'crate'
 
 export type Status = 'idle' | 'loading' | 'ready' | 'offline'
 

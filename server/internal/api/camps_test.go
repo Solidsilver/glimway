@@ -340,7 +340,8 @@ func TestCampBurnsDimsAndLapsesIntoPellsCrate(t *testing.T) {
 			t.Fatalf("%s after collecting: %s", id, loc)
 		}
 	}
-	if x.packQty(s.AccountID, "birch-sapling") != 1 || len(x.recovery(c)) != 0 {
+	// The sapling comes as itself, its planting kept (crate_picker_test.go).
+	if len(x.carriedPlantsOf(s.AccountID)) != 1 || len(x.recovery(c)) != 0 {
 		t.Fatal("the sapling")
 	}
 	x.collect(bc, bs, "bob-collect", true, 200)

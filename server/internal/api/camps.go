@@ -462,9 +462,9 @@ func (a *Server) fillWayLamp(ctx context.Context, tx *sql.Tx, s *store.Snapshot,
 	return c, err
 }
 
-// buildAtCamp sets a carried piece out, or plants a seed, at a camp the
-// caller may build at: on open land of its held chunk, in reach, clear of
-// what stands there.
+// buildAtCamp sets a carried piece out, or plants a seed or a carried plant,
+// at a camp the caller may build at: on open land of its held chunk, in
+// reach, clear of what stands there.
 func (a *Server) buildAtCamp(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contract.CampRequest, now int64) (*camp, error) {
 	rules := content.HomeRules.GetWayLamp()
 	cx, cy, lx, ly := campTile(req.X, req.Y)
@@ -483,6 +483,8 @@ func (a *Server) buildAtCamp(ctx context.Context, tx *sql.Tx, s *store.Snapshot,
 	}
 	here := rect{lx, ly, 1, 1}
 	var def string
+	// plant: a seed, or a carried plant (item_id) set in again, its growth kept.
+	var seed planting
 	if req.Action == "place" {
 		if def, err = carriedPiece(ctx, tx, s.AccountID, req.ItemId); err != nil {
 			return nil, err
@@ -497,11 +499,8 @@ func (a *Server) buildAtCamp(ctx context.Context, tx *sql.Tx, s *store.Snapshot,
 		if here.x+w > chunkSize() || here.y+h > chunkSize() {
 			return nil, fail(409, "out-of-bounds")
 		}
-	} else {
-		def = req.ItemDef
-		if !content.IsGatheringSeed(def) {
-			return nil, fail(400, "not-a-seed")
-		}
+	} else if seed, err = plantingFor(ctx, tx, s.AccountID, req.ItemId, req.ItemDef); err != nil {
+		return nil, err
 	}
 	g, err := a.campGround(ctx, tx, s.WorldID, cx, cy, now)
 	if err != nil {
@@ -539,14 +538,10 @@ func (a *Server) buildAtCamp(ctx context.Context, tx *sql.Tx, s *store.Snapshot,
 		if len(plants) >= int(content.GatheringRules.GetPlantsPerHome()) {
 			return nil, fail(409, "land-blocked")
 		}
-		if _, err = packTake(ctx, tx, s.AccountID, def, nil, 1, "camp-plant", c.ID, now); err != nil {
+		if err = takePlanting(ctx, tx, s.AccountID, &seed, "camp-plant", c.ID, now); err != nil {
 			return nil, err
 		}
-		id, err := store.Random()
-		if err != nil {
-			return nil, err
-		}
-		_, err = tx.ExecContext(ctx, "INSERT INTO camp_plants(id,camp_id,account_id,item_def,x,y,planted_at,planted_day) VALUES(?,?,?,?,?,?,?,?)", id, c.ID, s.AccountID, def, lx, ly, now, utcDay(now))
+		_, err = tx.ExecContext(ctx, "INSERT INTO camp_plants(id,camp_id,account_id,item_def,x,y,planted_at,planted_day) VALUES(?,?,?,?,?,?,?,?)", seed.id, c.ID, s.AccountID, seed.def, lx, ly, seed.at, utcDay(now))
 		return c, err
 	}
 	if _, err = tx.ExecContext(ctx, "UPDATE homestead_items SET location='camp',camp_id=?,scene='camp',x=?,y=?,rotation=? WHERE id=? AND location='inventory' AND account_id=?", c.ID, lx, ly, req.Rotation, req.ItemId, s.AccountID); err != nil {

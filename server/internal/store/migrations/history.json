@@ -192,5 +192,9 @@
     "sha256": "5cfad6a954f87ca9e43e8b2c51366c60a058923a7d75ce75fc847ed60185f13d",
     "backfill": "migration_047_backfill.go",
     "backfillSha256": "d2173c0e16195b4263c5f77403ec492b971c45b65671f665919f6bf697d9738d"
+  },
+  {
+    "name": "048_carried_plants.sql",
+    "sha256": "a1f936dab470ffe3b83164fa40ced813bf5d559c100f48e63ef9641ec3117f0b"
   }
 ]

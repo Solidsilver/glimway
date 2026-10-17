@@ -2,9 +2,11 @@ package api
 
 // Pell's recovery crates (roadmap rule 3; lamps.md 2.7): what a lapsed camp
 // packed waits at the deeds office for good, each entry its owner's. In
-// Pell's office the owner takes everything into their pack, free: pieces back
-// among their carried home pieces, stacks (oil, path stone, a plant's seed)
-// into the pack. Collecting marks each entry once, so a retried or repeated
+// Pell's office the owner takes what they pick, or everything, into their
+// pack, free: pieces back among their carried home pieces, stacks (oil, path
+// stone) into the pack, a plant as a carried plant, its planting kept (or as
+// its seed, if they'd rather). What they leave, or what the pack can't hold,
+// waits on. Collecting marks each entry once, so a retried or repeated
 // collect never gives twice.
 //
 // A lot's backland is the exception: its lapse sends pieces to the lot's own
@@ -15,6 +17,7 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
+	"slices"
 
 	"glimway/content"
 	contract "glimway/server/internal/gen/glimway/v1"
@@ -63,12 +66,17 @@ type recoveryEntry struct {
 	instance *string
 	// maker: a stack's maker, kept with it (a lost deed's chest).
 	maker string
+	// plant, plantedAt: a plant's own id and when it was first planted,
+	// kept in its state (packCamp, the lost deed's crate).
+	plant     string
+	plantedAt sql.NullInt64
 }
 
 // waiting are the caller's uncollected entries in this world, oldest first,
 // each naming the keeper who moved it off their camp, if one did.
 func waiting(ctx context.Context, tx *sql.Tx, world, account string) ([]recoveryEntry, error) {
-	rows, err := tx.QueryContext(ctx, `SELECT e.id,e.kind,e.item_def,e.qty,c.cx,c.cy,c.lapsed_at,e.instance_id,e.reason,coalesce(json_extract(e.state,'$.maker'),''),json_extract(e.state,'$.movedBy'),COALESCE(k.display_name,'') FROM recovery_entries e JOIN recovery_crates c ON c.id=e.crate_id
+	rows, err := tx.QueryContext(ctx, `SELECT e.id,e.kind,e.item_def,e.qty,c.cx,c.cy,c.lapsed_at,e.instance_id,e.reason,coalesce(json_extract(e.state,'$.maker'),''),json_extract(e.state,'$.movedBy'),COALESCE(k.display_name,''),
+ coalesce(json_extract(e.state,'$.id'),''),json_extract(e.state,'$.plantedAt') FROM recovery_entries e JOIN recovery_crates c ON c.id=e.crate_id
  LEFT JOIN players k ON k.account_id=json_extract(e.state,'$.movedBy')
  WHERE c.world_id=? AND e.account_id=? AND e.collected_at IS NULL ORDER BY c.lapsed_at,e.id`, world, account)
 	if err != nil {
@@ -81,7 +89,7 @@ func waiting(ctx context.Context, tx *sql.Tx, world, account string) ([]recovery
 		var at int64
 		var mover sql.NullString
 		var name string
-		if err = rows.Scan(&e.Id, &e.Kind, &e.ItemDef, &e.Qty, &e.Cx, &e.Cy, &at, &e.instance, &e.Reason, &e.maker, &mover, &name); err != nil {
+		if err = rows.Scan(&e.Id, &e.Kind, &e.ItemDef, &e.Qty, &e.Cx, &e.Cy, &at, &e.instance, &e.Reason, &e.maker, &mover, &name, &e.plant, &e.plantedAt); err != nil {
 			return nil, err
 		}
 		e.LapsedAt = float64(at)
@@ -125,8 +133,10 @@ func inPellsOffice(s *store.Snapshot) bool {
 	return s.State.Area == content.HomeRules.GetCommons().GetDeedTable().GetArea()
 }
 
-// recoveryCollect is POST /api/recovery/collect: everything waiting for the
-// caller, into their pack, in Pell's office.
+// recoveryCollect is POST /api/recovery/collect: what the caller picked
+// (req.Entries; none is everything waiting for them), into their pack, in
+// Pell's office. A plant comes as a carried plant unless it's picked as its
+// seed (req.AsSeed). What the pack can't hold stays in the crate (kept).
 func (a *Server) recoveryCollect(w http.ResponseWriter, r *http.Request) error {
 	req := &contract.RecoveryCollectRequest{}
 	if err := decodeOp(w, r, req); err != nil {
@@ -143,25 +153,75 @@ func (a *Server) recoveryCollect(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		got := []recoveryEntry{}
+		// An entry asked for that isn't waiting (taken already, or not the
+		// caller's) is skipped: a retry never gives twice.
+		if len(req.Entries) > 0 {
+			entries = slices.DeleteFunc(entries, func(e recoveryEntry) bool { return !slices.Contains(req.Entries, e.Id) })
+		}
+		room, err := plantRoom(ctx, tx, s.AccountID)
+		if err != nil {
+			return nil, err
+		}
+		got, kept := []recoveryEntry{}, []recoveryEntry{}
 		for _, e := range entries {
-			if ok, err := collectEntry(ctx, tx, s.AccountID, e, now); err != nil {
+			asPlant := e.Kind == "plant" && !slices.Contains(req.AsSeed, e.Id)
+			if asPlant && room <= 0 {
+				kept = append(kept, e)
+				continue
+			}
+			if ok, err := collectEntry(ctx, tx, s.AccountID, e, asPlant, now); err != nil {
 				return nil, err
 			} else if ok {
 				got = append(got, e)
+				if asPlant {
+					room--
+				}
 			}
 		}
 		if err = refreshItems(ctx, tx, s); err != nil {
 			return nil, err
 		}
 		m, err := materialsProto(ctx, tx, s.AccountID)
-		return &contract.RecoveryCollectResult{Collected: recoveryProto(got), Materials: m}, err
+		return &contract.RecoveryCollectResult{Collected: recoveryProto(got), Materials: m, Kept: recoveryProto(kept)}, err
 	})
 }
 
+// plantRoom: how many more plants the caller's pack carries (content
+// gathering.carriedPlants). The pack holds any number of everything else.
+func plantRoom(ctx context.Context, tx *sql.Tx, account string) (int, error) {
+	var n int
+	err := tx.QueryRowContext(ctx, "SELECT count(*) FROM carried_plants WHERE account_id=?", account).Scan(&n)
+	return int(content.GatheringRules.GetCarriedPlants()) - n, err
+}
+
+// carryPlant puts a crated plant into the pack as itself: its own id (a new
+// one if it has none, or its id is in use) and its first planting.
+func carryPlant(ctx context.Context, tx *sql.Tx, account string, e recoveryEntry, now int64) error {
+	id := e.plant
+	var used bool
+	if id != "" {
+		if err := tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM carried_plants WHERE id=?) OR EXISTS(SELECT 1 FROM homestead_plants WHERE id=?) OR EXISTS(SELECT 1 FROM camp_plants WHERE id=?)", id, id, id).Scan(&used); err != nil {
+			return err
+		}
+	}
+	if id == "" || used {
+		var err error
+		if id, err = store.Random(); err != nil {
+			return err
+		}
+	}
+	at := now
+	if e.plantedAt.Valid {
+		at = e.plantedAt.Int64
+	}
+	_, err := tx.ExecContext(ctx, "INSERT INTO carried_plants(id,account_id,item_def,planted_at,carried_at) VALUES(?,?,?,?,?)", id, account, e.ItemDef, at, now)
+	return err
+}
+
 // collectEntry marks one entry collected and gives it, once: false when it
-// was collected already.
-func collectEntry(ctx context.Context, tx *sql.Tx, account string, e recoveryEntry, now int64) (bool, error) {
+// was collected already. asPlant: a plant comes as itself (carryPlant), not
+// its seed.
+func collectEntry(ctx context.Context, tx *sql.Tx, account string, e recoveryEntry, asPlant bool, now int64) (bool, error) {
 	res, err := tx.ExecContext(ctx, "UPDATE recovery_entries SET collected_at=? WHERE id=? AND account_id=? AND collected_at IS NULL", now, e.Id, account)
 	if err != nil {
 		return false, err
@@ -198,6 +258,9 @@ func collectEntry(ctx context.Context, tx *sql.Tx, account string, e recoveryEnt
 			return false, err
 		}
 		return true, fittedLedger(ctx, tx, account, *e.instance, 1, "recovery-collect", *e.instance, now)
+	}
+	if e.Kind == "plant" && asPlant {
+		return true, carryPlant(ctx, tx, account, e, now)
 	}
 	return true, packPut(ctx, tx, account, e.ItemDef, []makerQty{{Maker: e.maker, Qty: int(e.Qty)}}, "recovery-collect", ref, now)
 }

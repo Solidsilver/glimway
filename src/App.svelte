@@ -55,6 +55,7 @@
   import HearthPanel from './ui/HearthPanel.svelte'
   import DeskPanel from './ui/DeskPanel.svelte'
   import WoodpilePanel from './ui/WoodpilePanel.svelte'
+  import CratePanel from './ui/CratePanel.svelte'
   import GateShelfPanel from './ui/GateShelfPanel.svelte'
   import MailPanel from './ui/MailPanel.svelte'
   import { villageFor, type VillagePanel } from './game/village'
@@ -894,6 +895,8 @@
       <DeskPanel {session} onClose={() => (panel = null)} />
     {:else if panel === 'woodpile'}
       <WoodpilePanel {session} onClose={() => (panel = null)} />
+    {:else if panel === 'crate'}
+      <CratePanel {session} onClose={() => (panel = null)} />
     {:else if panel === 'shelf'}
       <GateShelfPanel {session} gate={shelfGate} onClose={() => (panel = null)} />
     {:else if panel === 'mail'}

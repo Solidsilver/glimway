@@ -133,7 +133,7 @@ The first rows were added as 0.12 and 0.13 landed and describe the code as built
 |---|---|
 | Holds | [store/holds.go](../../server/internal/store/holds.go), migration 039: `Chunks.Hold`, `Release`, `HoldAt`, `HeldEpoch(s)`; one `Holder` per kind (`Keeps`, `Released`), registered in `api.New` and judged once when the new wick epoch is made. Fixed → held → generated. |
 | Lot lanterns | [api/lot_lanterns.go](../../server/internal/api/lot_lanterns.go), migration 040: holder kind `lot-lantern`. Fuel is `hearth-oil` (the chandler sells it at 4 glims, 3 a day), a 3-wick store in the lantern, one wick burned a turning, a wick of dimming, then lapse. |
-| Camps and Pell's crate | [api/camps.go](../../server/internal/api/camps.go), [api/recovery.go](../../server/internal/api/recovery.go), migration 041: holder kind `way-lamp`, `camps`, `camp_plants`, `recovery_crates`/`recovery_entries`; `GET`/`POST /api/camps`, `GET /api/recovery`, `POST /api/recovery/collect`. |
+| Camps and Pell's crate | [api/camps.go](../../server/internal/api/camps.go), [api/recovery.go](../../server/internal/api/recovery.go), migration 041: holder kind `way-lamp`, `camps`, `camp_plants`, `recovery_crates`/`recovery_entries`; `GET`/`POST /api/camps`, `GET /api/recovery`, `POST /api/recovery/collect` (picked entries, or everything). Migration 048: `carried_plants`, a crated plant taken whole. |
 | Wick Tree sap | [api/wick_sap.go](../../server/internal/api/wick_sap.go), no migration: `POST /api/items/tap` (one `wick-sap` a calendar wick, an `outcomes` row `wick-sap:<WickStart>`) and `POST /api/items/refine` (one sap → one `hearth-oil` at the chandler, free). Content `homestead.wickSap`. |
 | Ways home | [api/ways_home.go](../../server/internal/api/ways_home.go), migration 044: `GET`/`POST /api/ways-home` (`bind`, `turncap`, `pouch`), `ways_home_bindings` (one per player). Bench recipes with pages; the Keeper's-hand quest gives both pages. |
 
@@ -447,13 +447,34 @@ backland behavior.
 **As built.** Lot backland is a deliberate exception: a lot's own home storage is its recovery
 place, so a lapsed backland's pieces go there and its plants are archived with their seed in
 storage (0.12). Camps use the crate: one `recovery_crates` row per lapse, and entries per
-beneficiary. A piece is the same instance at location `crate`; a plant returns its seed, with its
-planting kept in the entry's state for a later replant; unspent oil goes to the lamp's setter; a
+beneficiary. A piece is the same instance at location `crate`; a plant waits with its planting
+(its id, tile, `plantedAt`) kept in the entry's state; unspent oil goes to the lamp's setter; a
 laid path tile's stone or plank goes to whoever laid it. A lapsed lot backland's paths, and Common
 paths that turn (an unvisited chunk, or a tile with nowhere safe to land), use the same crate:
 one per chunk and turning, a stack entry per layer and material (lane E, migration 042,
-`api/common_ways.go`). Collection in Pell's office takes everything at once into the pack; no destination can
-be full yet. Crates are per world.
+`api/common_ways.go`). Crates are per world.
+
+**The crate picker (0.13, owner decision 2026-10-17).** In Pell's office the owner takes what
+they pick, or everything. `POST /api/recovery/collect` takes `entries` (none is everything) and
+`as_seed`. Each entry is marked once, so a retry or a second pick never gives twice, and an id
+not waiting for the caller is skipped. What they leave waits on with no expiry. Pell's crate lines
+are unchanged; beside "Take your things from the crate" he offers "Choose what to take", which
+opens the crate panel (`src/ui/CratePanel.svelte`): a Take per entry, and "Take it whole" or "Take
+its seed" for a plant. The pack has no capacity limit (`item_stacks` holds any count), so the only
+full destination is the carried-plant limit below. What it can't hold stays in the crate and
+comes back in `RecoveryCollectResult.kept`, and Pell says so (`keptLine`).
+
+**Replanting from a crate.** A crated plant is taken whole by default: it becomes a carried plant
+(migration 048, `carried_plants`), keeping its own id and `planted_at` (its growth; nothing
+grows into a crop yet, so its age is all the growth there is). A pack carries
+`gathering.carriedPlants` (6) of them. `ItemsView.plants` lists them, and the pack shows each as
+its own row ("Birch sapling, lifted whole") with Plant wherever its seed could go. Planting one is
+the seed's own operation with the same rules: `POST /api/items/plant` with `instance` on the
+lot and in its lit backland (`ownLand`), and the camp's `plant` with `item_id` where the planter
+may build (`mayBuild`). It goes back in with the same id and `planted_at`. Its `planted_day` is
+the day it went in again, because a lot plant's daily wandering is replayed from that day and
+should start where it was set. Taking it as its seed is the old behaviour, offered alongside. A
+plant dug up with the trowel still comes up as its seed (`digUpPlant`).
 
 ### 2.8 The Keeper's hand and naming from parts
 

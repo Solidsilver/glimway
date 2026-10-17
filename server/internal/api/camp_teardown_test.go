@@ -141,7 +141,7 @@ func TestCampPackUp(t *testing.T) {
 		t.Fatalf("bob's path stone: %d", stone)
 	}
 	x.collect(bc, bs, "bob-collect", true, 200)
-	if x.packQty(bob, "stone") != stoneLeft+stone || x.packQty(bob, "birch-sapling") != 1 {
+	if x.packQty(bob, "stone") != stoneLeft+stone || len(x.carriedPlantsOf(bob)) != 1 {
 		t.Fatal("bob's collection")
 	}
 	if loc, _ := x.itemAt(bobs); loc != "inventory" {

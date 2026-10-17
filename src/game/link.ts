@@ -1987,10 +1987,13 @@ export class Link {
     return this.read(() => this.api.run(() => this.ops.recovery()))
   }
 
-  /** Take everything waiting at Pell's into the pack, at his desk. */
-  async recoveryCollect(): Promise<WildsOutcome<RecoveryCollectResult>> {
+  /**
+   * Take what waits at Pell's into the pack, at his desk: the entries picked
+   * (none: everything), any plant among them as its seed if it's in asSeed.
+   */
+  async recoveryCollect(pick: { entries?: readonly number[]; asSeed?: readonly number[] } = {}): Promise<WildsOutcome<RecoveryCollectResult>> {
     if (!this.session) return { ok: false, code: 'unknown' }
-    return wildsOutcome(await this.operation('recovery-collect', {}))
+    return wildsOutcome(await this.operation('recovery-collect', { entries: [...(pick.entries ?? [])], asSeed: [...(pick.asSeed ?? [])] }))
   }
 
   // ------------------------------------------------------------ communal lamps (lamps.md 1.3, 2.4)
