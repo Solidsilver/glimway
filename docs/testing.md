@@ -19,6 +19,24 @@ plus a few programs that aren't npm packages:
 
 `npx knip` lists these as "unlisted binaries": that's expected.
 
+### On the NixOS dev host (agent sandboxes)
+
+Two things fail there, and each has a fix:
+
+- **Vite can't start:** the sandbox blocks netlink, so `os.networkInterfaces()` throws
+  (errno 97). Preload the shim with `NODE_OPTIONS=--require=./scripts/netif-shim.cjs`.
+- **Playwright's downloaded Chromium won't launch on NixOS.** Point it at the nixpkgs build:
+  `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=$(ls -d /nix/store/*-chromium-1*[0-9] | tail -1)/bin/chromium`.
+  `playwright.config.ts` and `npm run atlases` both read it.
+
+Run one spec at a time inside `nix develop`:
+
+```sh
+NODE_OPTIONS=--require=./scripts/netif-shim.cjs \
+PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=… \
+npx playwright test e2e/camps.spec.ts --workers=1
+```
+
 ## The tiers
 
 | Command | What runs | When |

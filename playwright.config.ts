@@ -90,7 +90,11 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         viewport: { width: 1200, height: 760 },
         ...(GPU_LAUNCH.channel ? { channel: GPU_LAUNCH.channel } : {}),
-        launchOptions: { args: GPU_LAUNCH.args }
+        launchOptions: {
+          args: GPU_LAUNCH.args,
+          // A system Chromium where Playwright's own can't run (docs/testing.md).
+          ...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH } : {})
+        }
       }
     }
   ],
