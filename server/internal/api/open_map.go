@@ -188,7 +188,8 @@ func (a *Server) near(ctx context.Context, tx *sql.Tx, s store.Snapshot, cx, cy 
 				claimable[en.Id] = true
 			}
 			for _, site := range m.Sites {
-				if site.Kind == contract.SiteKind_SITE_KIND_RUMOUR {
+				// A held chunk's rumour site is its own wick's: no find.
+				if site.Kind == contract.SiteKind_SITE_KIND_RUMOUR && ep.held[[2]int{x, y}] == nil {
 					claimable[site.Id] = true
 				}
 			}
@@ -570,6 +571,19 @@ func (a *Server) openRumour(ctx context.Context, tx *sql.Tx, s *store.Snapshot, 
 	}
 	if req.Cycle != 0 {
 		return nil, fail(409, "old-cycle")
+	}
+	// The find is this wick's, and not in a held chunk (as rumour reads it):
+	// a held chunk's blob still carries its own wick's rumour site.
+	wick, err := a.Config.Epochs.Current(ctx, tx, s.WorldID, store.EpochWick, now)
+	if err != nil {
+		return nil, chunkError(err)
+	}
+	held, err := store.HeldEpoch(ctx, tx, s.WorldID, cx, cy)
+	if err != nil {
+		return nil, err
+	}
+	if wick.Id != e.Id || held != nil {
+		return nil, fail(404, "entity-not-found")
 	}
 	m, err := a.Config.Chunks.Chunk(ctx, tx, s.WorldID, e.Id, 0, int32(cx), int32(cy))
 	if err != nil {

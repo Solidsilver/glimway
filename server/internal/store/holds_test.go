@@ -51,6 +51,7 @@ func TestHoldKeepsChunkAcrossTurnings(t *testing.T) {
 	ctx := context.Background()
 	now := int64(1795000000)
 	c := NewChunks(func() time.Time { return time.Unix(now, 0) }, wildsgen.V3{})
+	c.Holders = map[string]Holder{"lot-lantern": &testHolder{keep: true}}
 	const world = "world-a"
 	w1 := wickNow(t, s, c, world, now)
 	var layout *contract.WorldChunk
@@ -215,6 +216,85 @@ func TestTurningJudgesHoldsOnce(t *testing.T) {
 	}
 	if n := countRows(t, s, "SELECT count(*) FROM wild_epochs WHERE id=?", w2.Id); n != 0 {
 		t.Fatal("cleanup kept an unpinned ended wick")
+	}
+}
+
+// A released hold of a kind with no registered Holder has no Released to
+// send its placed pieces home, so it keeps: its chunk and ground stay over
+// the turning (roadmap rule 3). Once a Holder for the kind is registered,
+// the release takes effect at the next turning, through its Released.
+func TestReleasedHoldWithNoHolderKeeps(t *testing.T) {
+	s := chunkStore(t)
+	ctx := context.Background()
+	now := int64(1795000000)
+	c := NewChunks(func() time.Time { return time.Unix(now, 0) }, fakegen.New())
+	const world = "world-a"
+	w1 := wickNow(t, s, c, world, now)
+	inTx(t, s, func(tx *sql.Tx) {
+		if _, err := c.Hold(ctx, tx, world, -3, 1, "lot-lantern", "1", now); err != nil {
+			t.Fatal(err)
+		}
+		if err := worldchange.Put(ctx, tx, worldchange.Row{Key: groundRow(world, w1.Id, -3, 1), Kind: "ground", State: []byte(`{}`)}, now); err != nil {
+			t.Fatal(err)
+		}
+		if ok, err := c.Release(ctx, tx, world, -3, 1, "lot-lantern", "1", now); !ok || err != nil {
+			t.Fatalf("release: %v %v", ok, err)
+		}
+	})
+	for turning := 1; turning <= 2; turning++ {
+		now = turnAfter(now)
+		wickNow(t, s, c, world, now)
+		inTx(t, s, func(tx *sql.Tx) {
+			if h, err := c.HoldAt(ctx, tx, world, -3, 1); err != nil || h == nil || h.Released == nil {
+				t.Fatalf("turning %d: a released hold with no holder went: %+v %v", turning, h, err)
+			}
+			if _, err := c.Chunk(ctx, tx, world, w1.Id, 0, -3, 1); err != nil {
+				t.Fatalf("turning %d: held chunk: %v", turning, err)
+			}
+			if r, err := worldchange.Get(ctx, tx, groundRow(world, w1.Id, -3, 1), "ground", now); err != nil || r == nil {
+				t.Fatalf("turning %d: the held chunk's ground went: %v", turning, err)
+			}
+		})
+	}
+	lantern := &testHolder{keep: true}
+	c.Holders = map[string]Holder{"lot-lantern": lantern}
+	now = turnAfter(now)
+	wickNow(t, s, c, world, now)
+	if lantern.asked != 0 || len(lantern.released) != 1 || lantern.released[0].Epoch != w1.Id {
+		t.Fatalf("asked %d, released %+v", lantern.asked, lantern.released)
+	}
+	if n := countRows(t, s, "SELECT count(*) FROM holds"); n != 0 {
+		t.Fatal("the release didn't take effect once a holder was registered")
+	}
+}
+
+// A held chunk whose blob has gone fails loudly rather than being made
+// again; and a hold asked for before the turning but locked after it is
+// refused, since the next wick's chunks may not mirror it.
+func TestHeldChunkNeverRemade(t *testing.T) {
+	s := chunkStore(t)
+	ctx := context.Background()
+	now := int64(1795000000)
+	c := NewChunks(func() time.Time { return time.Unix(now, 0) }, fakegen.New())
+	const world = "world-a"
+	w1 := wickNow(t, s, c, world, now)
+	inTx(t, s, func(tx *sql.Tx) {
+		late := chunks.WithReadClock(ctx, func() time.Time { return time.Unix(int64(w1.EndsAt.Value)+1, 0) })
+		if _, err := c.Hold(late, tx, world, -3, 2, "lot-lantern", "1", now); !errors.Is(err, chunks.ErrEpochEnded) {
+			t.Fatalf("held across the turning: %v", err)
+		}
+		if _, err := c.Hold(ctx, tx, world, -3, 1, "lot-lantern", "1", now); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := tx.ExecContext(ctx, "DELETE FROM wilds_chunks WHERE epoch_id=? AND cx=-3 AND cy=1", w1.Id); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := c.Chunk(ctx, tx, world, w1.Id, 0, -3, 1); !errors.Is(err, ErrHeldBlobMissing) {
+			t.Fatalf("a held chunk with no blob: %v", err)
+		}
+	})
+	if n := countRows(t, s, "SELECT count(*) FROM holds WHERE cy=2"); n != 0 {
+		t.Fatal("a hold across the turning was stored")
 	}
 }
 

@@ -11,7 +11,7 @@ import { epochKindAt } from '../src/lib/wilds/coords.ts';
 import { sourceOf } from '../src/lib/location.ts';
 import { DECOR_ART } from '../src/game/wilds/decor.ts';
 import { cachedTerrain, forgetChunks, loadChunk, pruneChunks } from '../src/game/wilds/chunks.ts';
-import { applyClaim, applyDiscovery, applyEchoSettled, applyLanterns, applyNear, chunkEpoch, knownPlaces, chunkThings, groundChanges, isClaimed, readMark, refreshNear, resetWilds, takeReadRequest, wildsEpoch, wildsFrontier, wildsLive, wildsStale, wildsView } from '../src/game/wilds/store.ts';
+import { applyClaim, applyDiscovery, applyEchoSettled, applyLanterns, applyNear, chunkEpoch, chunkHeld, knownPlaces, chunkThings, groundChanges, isClaimed, readMark, refreshNear, resetWilds, takeReadRequest, wildsEpoch, wildsFrontier, wildsLive, wildsStale, wildsView } from '../src/game/wilds/store.ts';
 import { bus, EV } from '../src/game/events.ts';
 import type { Session } from '../src/game/session.ts';
 import { chunkAt, fixtureChunk, fixtureTerrain } from './wilds-fixture.ts';
@@ -243,6 +243,7 @@ test('a held chunk keeps its pinned wick: its body, ground and states come under
   assert.equal(chunkEpoch(CENTER.cx, CENTER.cy)!.id, 'held-wick');
   assert.equal(chunkEpoch(CENTER.cx, CENTER.cy)!.kind, 'wick');
   assert.equal(chunkEpoch(CENTER.cx + 1, CENTER.cy)!.id, NEAR.wick.id, 'its neighbours are this wick’s');
+  assert.ok(chunkHeld(CENTER.cx, CENTER.cy) && !chunkHeld(CENTER.cx + 1, CENTER.cy));
   assert.equal(wildsEpoch('wick').id, NEAR.wick.id, 'a hold doesn’t turn the wick');
   const fetched = ops.calls.filter((c) => c.path.startsWith('/api/wilds/chunk/')).map((c) => c.path);
   assert.ok(fetched.includes(`/api/wilds/chunk/held-wick/0/${CENTER.cx}/${CENTER.cy}`));

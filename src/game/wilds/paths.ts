@@ -34,7 +34,7 @@ import { gameNow } from '../clock.ts'
 import type { Session } from '../session.ts'
 import type { Effects } from '../entities/fx.ts'
 import type { Interactable, Interactables } from '../entities/interactables.ts'
-import { chunkEpoch, predictGround, settlePrediction, wildsEpoch, wildsLive, wildsMaterials, wildsView } from './store.ts'
+import { chunkEpoch, chunkHeld, predictGround, settlePrediction, wildsEpoch, wildsLive, wildsMaterials, wildsView } from './store.ts'
 import { lastOutcome, noteOutcome, release, settleWildsOp, trackOp, tracked } from './ops.ts'
 import { newKey } from '../../lib/api/client.ts'
 import { pathTileAt } from './path-tile.ts'
@@ -284,9 +284,9 @@ export class WildsPaths {
       return
     }
     const { cx, cy } = chunkOf(tx, ty)
-    // Land that turns: say so before the first lay this wick (the Tangle keeps its paths).
+    // Land that turns: say so before the first lay this wick (the Tangle and held land keep their paths).
     const wick = wildsEpoch('wick')
-    if (epochKindAt(cx, cy) === 'wick' && wick.id && !this.confirmed(wick.id)) {
+    if (epochKindAt(cx, cy) === 'wick' && !chunkHeld(cx, cy) && wick.id && !this.confirmed(wick.id)) {
       this.holding = null
       const endsAt = wick.endsAt ?? gameNow() + 86_400
       openDialogue({
@@ -369,9 +369,10 @@ export class WildsPaths {
     return { world: this.deps.session.link?.worldId ?? '', wick: wildsEpoch('wick').id, epoch: chunkEpoch(cx, cy)?.id ?? '', cx, cy }
   }
 
-  /** Still the land the store holds? (A job from before the turning is never sent.) */
+  /** Still the land the store holds? (A job from before the turning is never sent, but on a held chunk that didn't turn.) */
   private stillHere(job: Job): boolean {
-    return wildsEpoch('wick').id === job.wick && chunkEpoch(job.cx, job.cy)?.id === job.epoch && (this.deps.session.link?.worldId ?? '') === job.world
+    const turned = wildsEpoch('wick').id !== job.wick && !chunkHeld(job.cx, job.cy)
+    return !turned && chunkEpoch(job.cx, job.cy)?.id === job.epoch && (this.deps.session.link?.worldId ?? '') === job.world
   }
 
   private send(job: Job): void {

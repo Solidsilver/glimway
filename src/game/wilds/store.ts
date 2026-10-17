@@ -206,6 +206,11 @@ export function chunkEpoch(cx: number, cy: number): WildsEpoch | null {
   return e.id ? e : null;
 }
 
+/** Is the chunk held (pinned to a wick epoch across turnings) as last read? */
+export function chunkHeld(cx: number, cy: number): boolean {
+  return view?.held.has(chunkKey(cx, cy)) ?? false;
+}
+
 /** The frontier as last read, or null. */
 export function wildsFrontier(): FrontierRect | null {
   return view?.frontier ?? null;

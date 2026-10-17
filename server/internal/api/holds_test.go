@@ -3,11 +3,13 @@ package api
 import (
 	"context"
 	"fmt"
+	"slices"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"glimway/content"
+	"glimway/server/internal/chunks/fakegen"
 	"glimway/server/internal/fights"
 	contract "glimway/server/internal/gen/glimway/v1"
 	wire "glimway/server/internal/gen/glimway/v2"
@@ -257,5 +259,60 @@ func TestFallenLanternInHeldChunk(t *testing.T) {
 	x.call("/api/wilds/lantern", &contract.WildsLanternRequest{Op: op(b.Lease, "relight"), Epoch: held.Id, OwnerId: x.account("alice"), LanternId: fell.LanternId, Where: where}, bc, 200)
 	if n := count(t, x.db, "SELECT count(*) FROM lanterns WHERE id=? AND epoch=? AND lit_by IS NOT NULL", fell.LanternId, held.Id); n != 1 {
 		t.Fatal("the held lantern wasn't relit")
+	}
+}
+
+// A held chunk's blob still carries its own wick's rumour site, but the
+// rumour isn't there (the player state drops it): the find can't be opened
+// under this wick or the pinned epoch, and the near read doesn't list a
+// claim on it.
+func TestNoRumourFindInHeldChunk(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	bc, b := x.member("bob", s.WorldID)
+	r := x.rumourState(c)
+	if r == nil {
+		t.Fatal("no rumour")
+	}
+	var cx, cy int
+	fmt.Sscanf(r.Site, "rumour:%d:%d", &cx, &cy)
+	held := x.near(c, cx, cy, 200).Wick
+	tx, ty := local(cx, cy, fakegen.Find)
+	find := &contract.WildsEntity{Id: r.Site, Kind: "rumour"}
+	x.claim(c, s, "open", held.Id, find, 0, tileWhere(tx, ty+1), 200)
+	x.holdChunk(s.WorldID, int32(cx), int32(cy))
+	if x.rumourState(bc) != nil {
+		t.Fatal("a rumour in a held chunk")
+	}
+	if _, code := x.claim(bc, b, "held", held.Id, find, 0, tileWhere(tx, ty+1), 404); code != "entity-not-found" {
+		t.Fatalf("opened in a held chunk: %s", code)
+	}
+	if v := x.near(c, cx, cy, 200); slices.ContainsFunc(v.PersonalClaims, func(p *contract.WildsPersonalClaim) bool { return p.EntityId == r.Site }) {
+		t.Fatal("the near read lists a held chunk's rumour claim")
+	}
+	x.now.Store(content.CalendarAt(content.CalendarRules, x.now.Load()).NextTurning + 60)
+	bc, b = x.again("bob")
+	if x.near(bc, cx, cy, 200).Wick.Id == held.Id {
+		t.Fatal("the wick didn't turn")
+	}
+	if _, code := x.claim(bc, b, "pinned", held.Id, find, 0, tileWhere(tx, ty+1), 404); code != "entity-not-found" {
+		t.Fatalf("opened under the pinned epoch: %s", code)
+	}
+}
+
+// A fall in a held chunk in the gap at the turning, before any request has
+// made the next wick, still leaves the lantern under the pinned epoch.
+func TestFallenLanternInHeldChunkAtTheTurning(t *testing.T) {
+	x := newRig(t)
+	x.hero("alice", "Alice", "")
+	c, s := x.ready("alice")
+	const cx, cy = -3, 1
+	held := x.near(c, cx, cy, 200).Wick
+	x.holdChunk(s.WorldID, cx, cy)
+	x.now.Store(int64(held.EndsAt.Value) + 1)
+	tx, ty := local(cx, cy, [2]int{3, 14})
+	env, _ := x.call("/api/fall", &contract.FallRequest{Op: op(s.Lease, "fell"), Where: atTile(tx, ty)}, c, 200)
+	if fell := env.GetFall(); fell.Lantern != "placed" || fell.Epoch != held.Id {
+		t.Fatalf("a fall in the held chunk at the turning: %v", fell)
 	}
 }
