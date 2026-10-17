@@ -1,5 +1,7 @@
 import type { LibrarySection } from '../content/library'
 import type { HomePlantView } from '../lib/api/types'
+import type { WaysHomeBinding } from '../lib/gen/glimway/v1/lamps_pb.js'
+import type { WayHome } from '../lib/ways-home.ts'
 import type { BeltKind } from '../lib/belt'
 import type { HabiticaProfile } from '../lib/habitica/types'
 import type { PurseView } from '../lib/purse'
@@ -109,6 +111,12 @@ export const EV = {
   communalPost: 'game:communal-post',
   /** Look at a Lantern Road lamp stone: dark to relight, or lit to tend (sites -> src/game/wilds/communal-lamps.ts). */
   lampStoneLook: 'game:lamp-stone-look',
+  /** Use a homing turncap or lamp-ash pouch: hold still, then travel (UI -> game; src/game/ways-home.ts). */
+  waysHome: 'game:ways-home',
+  /** Bind your lamp-ash pouch to the lamp beside you (UI -> game; src/game/ways-home.ts). */
+  waysHomeBind: 'game:ways-home-bind',
+  /** Your pouch was bound (game -> UI): the binding as it stands. */
+  waysHomeBound: 'ui:ways-home-bound',
   // ui -> game (and dialogue panel -> scene)
   action: 'game:action',
   cast: 'game:cast',
@@ -500,6 +508,9 @@ export interface EventMap {
   [EV.campDo]: { action: 'set' | 'place' | 'plant'; itemId?: string; itemDef?: string }
   [EV.communalPost]: { itemId: string }
   [EV.lampStoneLook]: { site: string }
+  [EV.waysHome]: { way: WayHome }
+  [EV.waysHomeBind]: void
+  [EV.waysHomeBound]: { binding: WaysHomeBinding | null }
   [EV.action]: void
   [EV.cast]: void
   [EV.castMove]: void

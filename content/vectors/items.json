@@ -960,6 +960,42 @@
   "offHand": false
  },
  {
+  "id": "homing-turncap",
+  "instanced": false,
+  "stackable": true,
+  "assetKind": "item",
+  "atZero": "never",
+  "slots": 0,
+  "maxPoints": 0,
+  "giveable": true,
+  "usableNow": false,
+  "offHand": false
+ },
+ {
+  "id": "lamp-ash-pouch",
+  "instanced": false,
+  "stackable": true,
+  "assetKind": "item",
+  "atZero": "never",
+  "slots": 0,
+  "maxPoints": 0,
+  "giveable": true,
+  "usableNow": false,
+  "offHand": false
+ },
+ {
+  "id": "lamp-ash",
+  "instanced": false,
+  "stackable": true,
+  "assetKind": "material",
+  "atZero": "never",
+  "slots": 0,
+  "maxPoints": 0,
+  "giveable": true,
+  "usableNow": false,
+  "offHand": false
+ },
+ {
   "id": "storm-oil",
   "instanced": false,
   "stackable": true,
@@ -1297,6 +1333,30 @@
  },
  {
   "id": "recipe-page-storm-oil",
+  "instanced": false,
+  "stackable": true,
+  "assetKind": "item",
+  "atZero": "never",
+  "slots": 0,
+  "maxPoints": 0,
+  "giveable": true,
+  "usableNow": false,
+  "offHand": false
+ },
+ {
+  "id": "recipe-homing-turncap",
+  "instanced": false,
+  "stackable": true,
+  "assetKind": "item",
+  "atZero": "never",
+  "slots": 0,
+  "maxPoints": 0,
+  "giveable": true,
+  "usableNow": false,
+  "offHand": false
+ },
+ {
+  "id": "recipe-lamp-ash-pouch",
   "instanced": false,
   "stackable": true,
   "assetKind": "item",

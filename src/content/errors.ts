@@ -189,6 +189,25 @@ export const HOME_ERRORS: Table = {
 }
 
 /**
+ * Ways home (lamps.md 1.4): binding a lamp-ash pouch, and travelling by
+ * turncap or pouch. A refusal never spends the item, so each line says so
+ * where it might worry someone.
+ */
+export const WAYS_HOME_ERRORS: Table = {
+  'in-a-fight': 'Not in a fight. Get clear first, then hold still.',
+  'pouch-unbound': 'Your pouch isn’t bound to a lamp yet. Stand by one and bind it.',
+  'lamp-elsewhere': 'That lamp burns in another world. Your pouch is safe; bind it to a lamp here.',
+  'lamp-packed': 'That lamp’s packed away at Pell’s. Your pouch is safe; bind it to another.',
+  'lamp-unlit': 'That lamp’s gone dark. Your pouch keeps till someone lights it again.',
+  'lamp-gone': 'That lamp isn’t standing any more. Your pouch is safe; bind it to another.',
+  'no-landing': 'There’s no open ground beside that lamp just now. Your pouch is safe.',
+  'not-needed': 'You’re on safe ground already. Keep the turncap for the woods.',
+  'no-lamp': 'Stand by a lit lamp to bind your pouch to it.',
+  'invalid-item': 'You don’t have one with you.',
+  pending: 'No answer yet. It may have gone through; nothing is spent twice.'
+}
+
+/**
  * Companions and the stable (crafts.md 6.2): a choice, a stall, Saddle up,
  * Build a stall. Every refusal changes nothing.
  */
@@ -272,5 +291,6 @@ export const villageErrorText = (code: string): string => errorText(VILLAGE_ERRO
 export const homeErrorText = (code: string): string => errorText(HOME_ERRORS, code, 'Silas didn’t catch that. Nothing changed — try again in a moment.')
 export const spendErrorText = (code: string): string => errorText(SPEND_ERRORS, code, 'The lantern didn’t answer. Nothing was spent — try again in a moment.')
 export const companionErrorText = (code: string): string => errorText(COMPANION_ERRORS, code)
+export const waysHomeErrorText = (code: string): string => errorText(WAYS_HOME_ERRORS, code, 'The way home didn’t open. Nothing was spent; try again in a moment.')
 export const purseErrorText = (code: string): string => errorText(PURSE_ERRORS, code, 'The top-up didn’t start. Nothing moved — try again in a moment.')
 export const questErrorText = (code: string): string => errorText(QUEST_ERRORS, code, 'That story step didn’t take. Nothing was lost.')

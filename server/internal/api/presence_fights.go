@@ -246,6 +246,10 @@ func (a *Server) fightOutputs(batch []fights.Emitted) {
 		h.mu.Lock()
 		for _, it := range chunk {
 			room, out := it.room, it.out
+			// An enemy winding up or locking its aim on someone: they're in a fight.
+			if e, ok := out.Message.(*wire.FightEvent); ok && e.Target != nil && (e.Kind == wire.FightEventKind_FIGHT_EVENT_KIND_WINDUP_START || e.Kind == wire.FightEventKind_FIGHT_EVENT_KIND_AIM_LOCK) {
+				h.markFought(e.GetTarget(), h.now())
+			}
 			for p := range room.viewers {
 				if p.fightRooms[room.handle] != room || p.detached || out.Observer != "" && out.Observer != p.fightToken {
 					continue
@@ -768,6 +772,9 @@ func (h *presenceHub) handleFightSwing(p *presencePeer, s *wire.FightSwing) {
 	if attack.Flight != nil {
 		attack.Flight.Seal()
 	}
+	if pending > 0 {
+		h.markFought(p.identity.ID, now)
+	}
 	h.answerFight(p, s.SwingCounter, crit, s.Predicted, replies, pending)
 }
 
@@ -821,6 +828,9 @@ func (h *presenceHub) handleFightCast(p *presencePeer, event *wire.PresenceAbili
 	}
 	if c.Flight != nil {
 		c.Flight.Seal()
+	}
+	if pending > 0 && damage > 0 {
+		h.markFought(p.identity.ID, h.now())
 	}
 	h.answerFight(p, cast.SwingCounter, crit, cast.Predicted, replies, pending)
 }

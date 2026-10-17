@@ -152,6 +152,14 @@ func TestPhase5WorkshopCostsGatingCraftingAndRollback(t *testing.T) {
 	x.give(x.account("alice"), "amberfall-sap", 50)
 	x.give(x.account("alice"), "frost-glass", 50)
 	x.give(x.account("alice"), "lamp-wick", 50)
+	x.give(x.account("alice"), "turncap-spawn", 50)
+	x.give(x.account("alice"), "lamp-ash", 50)
+	// Found bench recipes open with their pages.
+	for _, recipe := range content.CraftingRules.Recipes {
+		if recipe.GetPage() != "" {
+			x.give(x.account("alice"), recipe.GetPage(), 1)
+		}
+	}
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
 	for i, recipe := range content.CraftingRules.Recipes {
 		req = body(s, recipe.GetId(), map[string]any{"recipeId": recipe.GetId(), "qty": 2})

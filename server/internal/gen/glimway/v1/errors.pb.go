@@ -275,6 +275,14 @@ const (
 	ErrorCode_ERROR_CODE_LAMP_LIT      ErrorCode = 237
 	ErrorCode_ERROR_CODE_NOT_COMMON    ErrorCode = 238
 	ErrorCode_ERROR_CODE_NOT_YOUR_LAMP ErrorCode = 239
+	// 0.13 Ways home (lamps.md 1.4).
+	ErrorCode_ERROR_CODE_IN_A_FIGHT     ErrorCode = 240
+	ErrorCode_ERROR_CODE_POUCH_UNBOUND  ErrorCode = 241
+	ErrorCode_ERROR_CODE_LAMP_ELSEWHERE ErrorCode = 242
+	ErrorCode_ERROR_CODE_LAMP_PACKED    ErrorCode = 243
+	ErrorCode_ERROR_CODE_LAMP_UNLIT     ErrorCode = 244
+	ErrorCode_ERROR_CODE_LAMP_GONE      ErrorCode = 245
+	ErrorCode_ERROR_CODE_NO_LANDING     ErrorCode = 246
 )
 
 // Enum value maps for ErrorCode.
@@ -520,6 +528,13 @@ var (
 		237: "ERROR_CODE_LAMP_LIT",
 		238: "ERROR_CODE_NOT_COMMON",
 		239: "ERROR_CODE_NOT_YOUR_LAMP",
+		240: "ERROR_CODE_IN_A_FIGHT",
+		241: "ERROR_CODE_POUCH_UNBOUND",
+		242: "ERROR_CODE_LAMP_ELSEWHERE",
+		243: "ERROR_CODE_LAMP_PACKED",
+		244: "ERROR_CODE_LAMP_UNLIT",
+		245: "ERROR_CODE_LAMP_GONE",
+		246: "ERROR_CODE_NO_LANDING",
 	}
 	ErrorCode_value = map[string]int32{
 		"ERROR_CODE_UNSPECIFIED":               0,
@@ -762,6 +777,13 @@ var (
 		"ERROR_CODE_LAMP_LIT":                  237,
 		"ERROR_CODE_NOT_COMMON":                238,
 		"ERROR_CODE_NOT_YOUR_LAMP":             239,
+		"ERROR_CODE_IN_A_FIGHT":                240,
+		"ERROR_CODE_POUCH_UNBOUND":             241,
+		"ERROR_CODE_LAMP_ELSEWHERE":            242,
+		"ERROR_CODE_LAMP_PACKED":               243,
+		"ERROR_CODE_LAMP_UNLIT":                244,
+		"ERROR_CODE_LAMP_GONE":                 245,
+		"ERROR_CODE_NO_LANDING":                246,
 	}
 )
 
@@ -797,7 +819,7 @@ var File_glimway_v1_errors_proto protoreflect.FileDescriptor
 const file_glimway_v1_errors_proto_rawDesc = "" +
 	"\n" +
 	"\x17glimway/v1/errors.proto\x12\n" +
-	"glimway.v1*\x9d;\n" +
+	"glimway.v1*\xe8<\n" +
 	"\tErrorCode\x12\x1a\n" +
 	"\x16ERROR_CODE_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17ERROR_CODE_INVALID_JSON\x10\x01\x12\"\n" +
@@ -1039,7 +1061,14 @@ const file_glimway_v1_errors_proto_rawDesc = "" +
 	"\x12ERROR_CODE_NO_LAMP\x10\xec\x01\x12\x18\n" +
 	"\x13ERROR_CODE_LAMP_LIT\x10\xed\x01\x12\x1a\n" +
 	"\x15ERROR_CODE_NOT_COMMON\x10\xee\x01\x12\x1d\n" +
-	"\x18ERROR_CODE_NOT_YOUR_LAMP\x10\xef\x01B1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
+	"\x18ERROR_CODE_NOT_YOUR_LAMP\x10\xef\x01\x12\x1a\n" +
+	"\x15ERROR_CODE_IN_A_FIGHT\x10\xf0\x01\x12\x1d\n" +
+	"\x18ERROR_CODE_POUCH_UNBOUND\x10\xf1\x01\x12\x1e\n" +
+	"\x19ERROR_CODE_LAMP_ELSEWHERE\x10\xf2\x01\x12\x1b\n" +
+	"\x16ERROR_CODE_LAMP_PACKED\x10\xf3\x01\x12\x1a\n" +
+	"\x15ERROR_CODE_LAMP_UNLIT\x10\xf4\x01\x12\x19\n" +
+	"\x14ERROR_CODE_LAMP_GONE\x10\xf5\x01\x12\x1a\n" +
+	"\x15ERROR_CODE_NO_LANDING\x10\xf6\x01B1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
 
 var (
 	file_glimway_v1_errors_proto_rawDescOnce sync.Once

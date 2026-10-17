@@ -131,8 +131,8 @@ export declare type Recipe = Message<"glimway.content.v1.Recipe"> & {
   output?: Asset | undefined;
 
   /**
-   * Hearth recipes only: the recipe page a found recipe asks for (empty
-   * for a starting recipe), and where the world says it is found.
+   * The recipe page a found recipe asks for (empty for a starting
+   * recipe), and where the world says it is found. Bench and hearth alike.
    *
    * @generated from field: string page = 7;
    */
@@ -188,8 +188,8 @@ export declare type RecipeValid = Message<"glimway.content.v1.Recipe"> & {
   output: AssetValid;
 
   /**
-   * Hearth recipes only: the recipe page a found recipe asks for (empty
-   * for a starting recipe), and where the world says it is found.
+   * The recipe page a found recipe asks for (empty for a starting
+   * recipe), and where the world says it is found. Bench and hearth alike.
    *
    * @generated from field: string page = 7;
    */

@@ -33,6 +33,8 @@
   import { glimsPhrase, purseCopy } from '../content/purse'
   import Glim from './Glim.svelte'
   import { parseAmount } from '../lib/purse'
+  import { WAYS_HOME_LINES, wayOf, type WayHome } from '../lib/ways-home'
+  import type { WaysHomeBinding } from '../lib/gen/glimway/v1/lamps_pb.js'
 
   /**
    * Everything you carry, in one place (I or the HUD's bag button). At the
@@ -88,6 +90,9 @@
 
   const kit = $derived(ui.kit)
 
+  /** Your lamp-ash pouch's binding (lamps.md 1.4), once read. */
+  let pouchBinding = $state<WaysHomeBinding | null>(null)
+
   onMount(() => {
     inventory.syncPack(session.state.inventory)
     // In a world, ask for the item model and your home's pieces, both read
@@ -96,7 +101,12 @@
     if (session.link) {
       void items.load()
       void homes.fresh()
+      void session.link.waysHomeRead().then((r) => {
+        if (r.ok) pouchBinding = r.value.binding ?? null
+      })
     }
+    const onBound = (d: { binding: WaysHomeBinding | null }) => (pouchBinding = d.binding)
+    bus.on(EV.waysHomeBound, onBound)
     // The card sits under the pinned header (side column): measure it.
     const ro = new ResizeObserver(() => {
       if (!headEl || !panelEl) return
@@ -104,6 +114,7 @@
     })
     if (headEl) ro.observe(headEl)
     return () => {
+      bus.off(EV.waysHomeBound, onBound)
       ro.disconnect()
       // Everything carried was on screen (the bag opens on All): seen now.
       markTab('all')
@@ -302,6 +313,19 @@
 
   function useIt(e: InventoryEntry): void {
     void act(`use:${e.key}`, () => items.useItem(e.id, e.maker ? e.maker.id : '', ui.unmoored), `You used ${giftPhrase(e.id, 1)}.`)
+  }
+
+  /** A way home (lamps.md 1.4): the pack closes, and you hold still in the world. */
+  function travelBy(way: WayHome): void {
+    bus.emit(EV.notePosition)
+    onClose()
+    bus.emit(EV.waysHome, { way })
+  }
+
+  /** Bind your pouch to the lamp beside you (the world answers with a line). */
+  function bindPouch(): void {
+    bus.emit(EV.notePosition)
+    bus.emit(EV.waysHomeBind)
   }
 
   function pocketIt(e: InventoryEntry): void {
@@ -593,6 +617,8 @@
   {#if !full && model && e.section === 'main' && e.kind !== 'decoration' && e.kind !== 'material'}
     <small class="rule pick-hint">{inventoryCopy.pickToAct}</small>
   {:else if model && e.section === 'main' && e.kind !== 'decoration' && e.kind !== 'material'}
+    {@const way = wayOf(e.id)}
+    {#if way === 'pouch'}<small class="rule" data-testid="pouch-binding">{pouchBinding ? WAYS_HOME_LINES.boundTo(pouchBinding) : WAYS_HOME_LINES.unbound}</small>{/if}
     {#if k && k === hand.kind}
       <!-- In hand now: the belt, to take something else in hand (or put it away for the weapon). -->
       {@render beltRow()}
@@ -600,6 +626,8 @@
     <span class="acts">
       {#if k && k !== hand.kind}<button type="button" class="act primary" data-act="hold" onclick={() => hold(k)}>{inventoryCopy.holdThis}</button>{/if}
       {#if e.usable && session.state.hp > 0}<button type="button" class="act primary" data-act="use" disabled={action.busy !== null} onclick={() => useIt(e)}>{inventoryCopy.actions.use}</button>{/if}
+      {#if way && connected}<button type="button" class="act primary" data-act="travel" disabled={action.busy !== null} onclick={() => travelBy(way)}>{way === 'turncap' ? inventoryCopy.actions.goHome : inventoryCopy.actions.goToLamp}</button>{/if}
+      {#if way === 'pouch' && connected && session.state.area === 'outdoors'}<button type="button" class="act" data-act="bind" disabled={action.busy !== null} onclick={bindPouch}>{WAYS_HOME_LINES.bind}</button>{/if}
       {#if e.pocketable}<button type="button" class="act" data-act="pocket" disabled={action.busy !== null} onclick={() => pocketIt(e)}>{e.pocket ? inventoryCopy.actions.unpocket : inventoryCopy.actions.pocket}</button>{/if}
       {#if e.carryable}<button type="button" class="act" data-act="carry" disabled={action.busy !== null} onclick={() => carryIt(e)}>{e.inHand ? inventoryCopy.actions.putAway : inventoryCopy.actions.carry}</button>{/if}
       {#if e.mendable}<button type="button" class="act" data-act="mend" aria-expanded={open === `mend:${e.key}`} disabled={action.busy !== null} onclick={() => toggleOpen(`mend:${e.key}`)}>{inventoryCopy.actions.mend}…</button>{/if}

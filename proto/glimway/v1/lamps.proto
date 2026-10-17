@@ -52,3 +52,37 @@ message CommunalLampRequest {
 // The lamp after the operation (none: lifted) and the pack's material
 // balances.
 message CommunalLampResult { CommunalLampView lamp = 1; map<string,double> materials = 2; }
+
+// Ways home (roadmap 0.13; lamps.md 1.4). A lamp-ash pouch is bound to one
+// lamp by its stable id: a camp's way-lamp, or a communal lamp (a relit
+// stone or a post). Lot lanterns don't take a binding. The binding is the
+// player's, one at a time, for every pouch they carry. state says how the
+// lamp stands now: "lit", "unlit" (a stone gone dark), "packed" (in a crate
+// at Pell's), "elsewhere" (another world) or "gone" (taken down, or no
+// longer anywhere). While it's lit: kind ("stone", "post" or "camp"), its
+// world tile (x, y), and its naming's short name ("" while unnamed).
+message WaysHomeBinding {
+  string lamp_id = 1; string lamp_name = 2; string state = 3;
+  sint32 x = 4; sint32 y = 5; double bound_at = 6; string kind = 7;
+}
+// GET /api/ways-home: your pouch's binding, if any.
+message WaysHomeRead { WaysHomeBinding binding = 1; }
+
+// POST /api/ways-home: one way-home operation, by action. Travel takes
+// exactly one item, and only when it succeeds; any refusal keeps it. Both
+// refuse while you're in a fight. The client holds the three-second pause.
+//   bind:    bind your pouches to the lamp `lamp` beside you (a pouch in
+//            the pack, the lamp within reach).
+//   turncap: use a homing turncap: back to Hearthwick's Wilds entrance (the
+//            anchor its content names, resolved now).
+//   pouch:   use a lamp-ash pouch: to open ground beside its bound lamp.
+message WaysHomeRequest {
+  OpHeader op = 1; Where where = 2;
+  string action = 3; string lamp = 4;
+}
+// The binding after the operation, and where travel put you (the state's
+// place says the same).
+message WaysHomeResult {
+  string action = 1; WaysHomeBinding binding = 2;
+  string area = 3; double x = 4; double y = 5;
+}

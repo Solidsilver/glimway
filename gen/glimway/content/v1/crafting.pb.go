@@ -151,8 +151,8 @@ type Recipe struct {
 	// "dried-flowers"). The bill still names the primary.
 	Swaps  map[string]*RecipeSwap `protobuf:"bytes,5,rep,name=swaps,proto3" json:"swaps,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	Output *Asset                 `protobuf:"bytes,6,opt,name=output,proto3" json:"output,omitempty"`
-	// Hearth recipes only: the recipe page a found recipe asks for (empty
-	// for a starting recipe), and where the world says it is found.
+	// The recipe page a found recipe asks for (empty for a starting
+	// recipe), and where the world says it is found. Bench and hearth alike.
 	Page          string `protobuf:"bytes,7,opt,name=page,proto3" json:"page,omitempty"`
 	Found         string `protobuf:"bytes,8,opt,name=found,proto3" json:"found,omitempty"`
 	unknownFields protoimpl.UnknownFields

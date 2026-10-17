@@ -33,8 +33,8 @@ message Recipe {
   // "dried-flowers"). The bill still names the primary.
   map<string, RecipeSwap> swaps = 5;
   Asset output = 6 [(buf.validate.field).required = true];
-  // Hearth recipes only: the recipe page a found recipe asks for (empty
-  // for a starting recipe), and where the world says it is found.
+  // The recipe page a found recipe asks for (empty for a starting
+  // recipe), and where the world says it is found. Bench and hearth alike.
   string page = 7;
   string found = 8;
 }

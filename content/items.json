@@ -889,6 +889,42 @@
       "blurb": "Lights lantern posts and window lamps once each; a gift for Ada's window."
     },
     {
+      "id": "homing-turncap",
+      "name": "Homing turncap",
+      "tab": "supplies",
+      "kind": "consumable",
+      "marked": true,
+      "use": [
+        {
+          "type": "travel-home",
+          "seconds": 3,
+          "target": "hearthwick:arch"
+        }
+      ],
+      "blurb": "A turncap set in amber, still leaning toward town. Hold still a moment and it takes you back to the north arch."
+    },
+    {
+      "id": "lamp-ash-pouch",
+      "name": "Lamp-ash pouch",
+      "tab": "supplies",
+      "kind": "consumable",
+      "marked": true,
+      "use": [
+        {
+          "type": "travel-lamp",
+          "seconds": 3
+        }
+      ],
+      "blurb": "A fiber pouch with a pinch of lamp ash. Bind it at a lamp, and it brings you back beside that lamp."
+    },
+    {
+      "id": "lamp-ash",
+      "name": "Lamp ash",
+      "tab": "supplies",
+      "kind": "material",
+      "blurb": "A pinch of grey ash with one warm fleck still glowing."
+    },
+    {
       "id": "storm-oil",
       "name": "Storm oil",
       "tab": "supplies",
@@ -1103,6 +1139,22 @@
       "blurb": "A torn margin from Wenna's ledger in dense dark script. Storm-grade drop and tallow."
     },
     {
+      "id": "recipe-homing-turncap",
+      "name": "Recipe page: Homing turncap",
+      "tab": "papers",
+      "kind": "paper",
+      "marked": true,
+      "blurb": "A keeper's slip in a small, careful hand. One turncap spawn and two amber: set it while it still leans."
+    },
+    {
+      "id": "recipe-lamp-ash-pouch",
+      "name": "Recipe page: Lamp-ash pouch",
+      "tab": "papers",
+      "kind": "paper",
+      "marked": true,
+      "blurb": "A keeper's slip with a drawstring sketched in the margin. One lamp ash and two fiber, sewn tight."
+    },
+    {
       "id": "water",
       "name": "Well water",
       "tab": "supplies",
@@ -1305,6 +1357,22 @@
           "cap": 3,
           "label": "Buy a flask of hearth oil · 4 glims",
           "line": "Rendered from Wick Tree amber, the sap gone hard. One flask keeps a lot lantern burning a wick."
+        },
+        {
+          "item": "recipe-homing-turncap",
+          "qty": 1,
+          "glims": 3,
+          "cap": 1,
+          "label": "Buy the homing turncap recipe · 3 glims",
+          "line": "Turncap set in amber. It leans for home long after it's dry. Make one before you go far."
+        },
+        {
+          "item": "recipe-lamp-ash-pouch",
+          "qty": 1,
+          "glims": 3,
+          "cap": 1,
+          "label": "Buy the lamp-ash pouch recipe · 3 glims",
+          "line": "Ash from a lamp remembers where it burned. Bind the pouch at a lamp and it brings you back."
         }
       ]
     }

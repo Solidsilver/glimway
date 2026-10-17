@@ -68,13 +68,17 @@ func validateCrafting(c *Crafting) error {
 		}
 		items[i.GetId()] = true
 	}
-	// A bench recipe: tier 2, its output any catalogue good.
+	// A bench recipe: tier 2, its output any catalogue good; a found
+	// recipe names the page that teaches it, as a hearth recipe does.
 	for _, r := range c.Recipes {
 		if recipes[r.GetId()] {
 			return fmt.Errorf("invalid crafting: duplicate id %s", r.GetId())
 		}
 		if r.GetMinTier() != 2 || !validStackCosts(r.GetMaterials(), itemsByID) || !validateSwaps(r, itemsByID) {
 			return fmt.Errorf("invalid crafting: recipe %s", r.GetId())
+		}
+		if !validRecipePage(r) {
+			return fmt.Errorf("invalid crafting: recipe %s page", r.GetId())
 		}
 		switch r.GetOutput().GetKind() {
 		case "decoration":
@@ -102,14 +106,8 @@ func validateCrafting(c *Crafting) error {
 		if r.GetMinTier() != 1 || !validStackCosts(r.GetMaterials(), itemsByID) || !validateSwaps(r, itemsByID) {
 			return fmt.Errorf("invalid crafting: hearth recipe %s", r.GetId())
 		}
-		if (r.GetPage() == "") != (r.GetFound() == "") {
+		if !validRecipePage(r) {
 			return fmt.Errorf("invalid crafting: hearth recipe %s page", r.GetId())
-		}
-		if r.GetPage() != "" {
-			d, ok := ItemFor(r.GetPage())
-			if !ok || d.Kind != "paper" {
-				return fmt.Errorf("invalid crafting: hearth recipe %s page", r.GetId())
-			}
 		}
 		if r.GetOutput().GetKind() != "item" && r.GetOutput().GetKind() != "material" {
 			return fmt.Errorf("invalid crafting: hearth recipe %s output", r.GetId())
@@ -121,6 +119,19 @@ func validateCrafting(c *Crafting) error {
 		recipes[r.GetId()] = true
 	}
 	return nil
+}
+
+// validRecipePage: a starting recipe names neither a page nor where it is
+// found; a found one names both, and its page is a paper.
+func validRecipePage(r *Recipe) bool {
+	if (r.GetPage() == "") != (r.GetFound() == "") {
+		return false
+	}
+	if r.GetPage() == "" {
+		return true
+	}
+	d, ok := ItemFor(r.GetPage())
+	return ok && d.Kind == "paper"
 }
 
 func LoadCrafting() (*Crafting, error) {

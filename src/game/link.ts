@@ -63,7 +63,7 @@ import type { HomeAction, HomeActionResponse, HomeOp, HomeView, ItemsOp, Commons
 import { contributeRequest, deskCopyRequest, hearthCraftRequest, homesteadRequest, itemsRequest, mailKeyedRequest, mailSendRequest, shelfRequest, storageRequest, craftRequest, type ItemsFields, type MailSendAction, type ShelfAction, type StorageMoveAction } from '../lib/api/requests.ts'
 import { EnvelopeSchema, PlayerStateSchema, PlayRequestSchema, type PlayerState } from '../lib/gen/glimway/v1/state_pb.js'
 import type { CampResult, CampsRead, RecoveryCollectResult, RecoveryRead } from '../lib/gen/glimway/v1/camps_pb.js'
-import type { CommunalLampResult, CommunalLampsRead } from '../lib/gen/glimway/v1/lamps_pb.js'
+import type { CommunalLampResult, CommunalLampsRead, WaysHomeRead, WaysHomeResult } from '../lib/gen/glimway/v1/lamps_pb.js'
 import { FallRequestSchema, MarkRequestSchema, ProfileReportSchema, QuestStepRequestSchema, SpendRequestSchema, TakePaperRequestSchema, type ProfileResult, type SettleEchoResult, type WildsClaimResult as WildsClaimProto, type WildsLanternResult as WildsLanternProto, type WildsClearResult, type WildsLayResult, type WildsLiftResult, type WildsDiscoverResult } from '../lib/gen/glimway/v1/operations_pb.js'
 import { ContributeRequestSchema, CraftRequestSchema, DeskCopyRequestSchema, HearthCraftRequestSchema, MailKeyedRequestSchema, MailSendRequestSchema, StorageMoveRequestSchema } from '../lib/gen/glimway/v1/village_pb.js'
 import { HomesteadRequestSchema, ShelfRequestSchema } from '../lib/gen/glimway/v1/homestead_pb.js'
@@ -2004,6 +2004,28 @@ export class Link {
   /** The world's lit communal lamps (GET /api/communal-lamps). */
   async communalLampsRead(): Promise<HomeRead<CommunalLampsRead>> {
     return this.read(() => this.api.run(() => this.ops.communalLamps()))
+  }
+
+  // ------------------------------------------------------------ ways home (lamps.md 1.4)
+
+  /**
+   * Bind your lamp-ash pouch to the lamp beside you, or travel by turncap or
+   * pouch. Travel is the server's: it moves the hero, and the scene follows
+   * (EV.relocate) once the answer is in. Needs a connection.
+   */
+  async waysHome(fields: OperationFields<'ways-home'>): Promise<WildsOutcome<WaysHomeResult>> {
+    if (!this.session) return { ok: false, code: 'unknown' }
+    const r = wildsOutcome(await this.operation('ways-home', fields))
+    if (r.ok && fields.action !== 'bind') {
+      this.refresh({ relocate: true })
+      this.noteLive()
+    }
+    return r
+  }
+
+  /** Your pouch's binding (GET /api/ways-home). */
+  async waysHomeRead(): Promise<HomeRead<WaysHomeRead>> {
+    return this.read(() => this.api.run(() => this.ops.waysHomeRead()))
   }
 
   // ------------------------------------------------------------ fishing (design crafts 5.4)
