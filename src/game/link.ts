@@ -62,6 +62,7 @@ import { ReportPump } from '../lib/api/report-pump.ts'
 import type { HomeAction, HomeActionResponse, HomeOp, HomeView, ItemsOp, CommonsResponse, Snapshot } from '../lib/api/types.ts'
 import { contributeRequest, deskCopyRequest, hearthCraftRequest, homesteadRequest, itemsRequest, mailKeyedRequest, mailSendRequest, shelfRequest, storageRequest, craftRequest, type ItemsFields, type MailSendAction, type ShelfAction, type StorageMoveAction } from '../lib/api/requests.ts'
 import { EnvelopeSchema, PlayerStateSchema, PlayRequestSchema, type PlayerState } from '../lib/gen/glimway/v1/state_pb.js'
+import type { CampResult, CampsRead, RecoveryCollectResult, RecoveryRead } from '../lib/gen/glimway/v1/camps_pb.js'
 import { FallRequestSchema, MarkRequestSchema, ProfileReportSchema, QuestStepRequestSchema, SpendRequestSchema, TakePaperRequestSchema, type ProfileResult, type SettleEchoResult, type WildsClaimResult as WildsClaimProto, type WildsLanternResult as WildsLanternProto, type WildsClearResult, type WildsLayResult, type WildsLiftResult, type WildsDiscoverResult } from '../lib/gen/glimway/v1/operations_pb.js'
 import { ContributeRequestSchema, CraftRequestSchema, DeskCopyRequestSchema, HearthCraftRequestSchema, MailKeyedRequestSchema, MailSendRequestSchema, StorageMoveRequestSchema } from '../lib/gen/glimway/v1/village_pb.js'
 import { HomesteadRequestSchema, ShelfRequestSchema } from '../lib/gen/glimway/v1/homestead_pb.js'
@@ -1965,6 +1966,30 @@ export class Link {
     if (!s) return { ok: false, code: 'unknown' }
     if (!req.epoch) return { ok: false, code: 'epoch-not-found' }
     return wildsOutcome(await this.operation('wilds-discover', { epoch: req.epoch, place: req.place }, { key: req.key, where: req.where, valid: value => !!value.discovery }))
+  }
+
+  // ------------------------------------------------------------ camps (lamps.md 2.5, 2.7)
+
+  /** A camp operation (set, fill, place, remove, plant) from where the hero stands. Needs a connection. */
+  async camp(fields: OperationFields<'camp'>): Promise<WildsOutcome<CampResult>> {
+    if (!this.session) return { ok: false, code: 'unknown' }
+    return wildsOutcome(await this.operation('camp', fields))
+  }
+
+  /** The world's camps (GET /api/camps). */
+  async campsRead(): Promise<HomeRead<CampsRead>> {
+    return this.read(() => this.api.run(() => this.ops.camps()))
+  }
+
+  /** What waits for you in Pell's crates (GET /api/recovery). */
+  async recoveryRead(): Promise<HomeRead<RecoveryRead>> {
+    return this.read(() => this.api.run(() => this.ops.recovery()))
+  }
+
+  /** Take everything waiting at Pell's into the pack, at his desk. */
+  async recoveryCollect(): Promise<WildsOutcome<RecoveryCollectResult>> {
+    if (!this.session) return { ok: false, code: 'unknown' }
+    return wildsOutcome(await this.operation('recovery-collect', {}))
   }
 
   // ------------------------------------------------------------ fishing (design crafts 5.4)

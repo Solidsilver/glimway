@@ -1,0 +1,56 @@
+syntax = "proto3";
+package glimway.v1;
+option go_package = "glimway/server/internal/gen/glimway/v1;contract";
+import "glimway/v1/op.proto";
+
+// Camps (roadmap 0.13; docs/design/lamps.md 2.5, 2.7): a way-lamp set in a
+// Wilds chunk holds that one chunk while it has oil. Its setter (and their
+// household) set pieces out and plant there; anyone may top the lamp up.
+// When the oil has run out and a wick of dimming passes, the camp lapses:
+// everything there goes into a crate at Pell's, its owners' to collect.
+// Tiles on the wire are world tiles.
+
+// A piece standing at a camp (a home piece; the lamp is one): whose it is.
+message CampPiece { string id = 1; string item_def = 2; sint32 x = 3; sint32 y = 4; int32 rotation = 5; string owner_id = 6; }
+// A seed or sapling planted at a camp, by whom, and when.
+message CampPlant { string id = 1; string item_def = 2; sint32 x = 3; sint32 y = 4; double planted_at = 5; double planted_day = 6; string owner_id = 7; }
+// A camp: its chunk, its lamp (id, tile), who set it, its oil in wicks and
+// whether it dims (out of oil at the last turning: it lapses at the next
+// unless filled). builder: the caller may build here.
+message CampView {
+  string id = 1; sint32 cx = 2; sint32 cy = 3; sint32 x = 4; sint32 y = 5;
+  string setter_id = 6; string setter_name = 7;
+  int32 oil = 8; bool dimming = 9; bool builder = 10;
+  repeated CampPiece pieces = 11; repeated CampPlant plants = 12;
+}
+// GET /api/camps: the world's camps.
+message CampsRead { repeated CampView camps = 1; }
+
+// POST /api/camps: one camp operation, by action.
+//   set:    set the carried way-lamp item_id at tile (x, y), with a first flask of oil.
+//   fill:   pour a flask of oil into camp's lamp (anyone).
+//   place:  set the carried piece item_id out at (x, y) with rotation (a builder).
+//   remove: pick up a piece of yours, item_id (the lamp, once nothing else stands there).
+//   plant:  plant a seed or sapling item_def at (x, y) (a builder).
+message CampRequest {
+  OpHeader op = 1; Where where = 2;
+  string action = 3; string camp = 4; string item_id = 5; string item_def = 6;
+  sint32 x = 7; sint32 y = 8; int32 rotation = 9;
+}
+// The camp after the operation (none: the lamp was taken down) and the
+// pack's material balances.
+message CampResult { CampView camp = 1; map<string,double> materials = 2; }
+
+// One thing waiting in a crate at Pell's: a piece, a stack (oil, path stone)
+// or a plant's seed, from the camp at chunk (cx, cy) that lapsed at
+// lapsed_at.
+message RecoveryEntry {
+  int64 id = 1; string kind = 2; string item_def = 3; int32 qty = 4;
+  sint32 cx = 5; sint32 cy = 6; double lapsed_at = 7;
+}
+// GET /api/recovery: what waits for the caller at Pell's, in this world.
+message RecoveryRead { repeated RecoveryEntry entries = 1; }
+// POST /api/recovery/collect: take everything waiting into the pack (pieces
+// to the carried home pieces), in Pell's office.
+message RecoveryCollectRequest { OpHeader op = 1; Where where = 2; }
+message RecoveryCollectResult { repeated RecoveryEntry collected = 1; map<string,double> materials = 2; }

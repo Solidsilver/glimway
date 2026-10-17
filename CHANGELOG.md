@@ -20,6 +20,7 @@ the game can show the first part as "What's new":
 - The Wilds turn early once, when this version arrives: the current wick's land is replaced. The Tangle keeps everything.
 - Light your lot lantern: fill the lantern on your lot's back line with hearth oil and the woods behind your lot hold still through the turning. While it burns, that land is part of your yard: set pieces out there and plant in it. Each flask burns for a wick, up to three; anyone may top up a neighbour's lantern. Run dry, it gutters for a wick, then goes dark, and the woods turn; anything you set out there comes home to your storage, and planted seeds come back to your chest.
 - The chandler by the square sells hearth oil, so you can keep your light without amber.
+- Set out a way-lamp in the Wilds to make a camp. Craft one at your bench (six timber, four stone, a lamp head and a lamp wick), then set it down from your pack with a flask of hearth oil, and the land it lights holds through the turning. Set your home pieces out and plant there; friends can top up your lamp. When the oil runs out it gutters for a wick, then the camp goes, and everything you had there waits for you in a crate at Pell's office. Nothing is lost.
 
 ### Technical
 
@@ -41,6 +42,9 @@ the game can show the first part as "What's new":
   - **"Findings 4 and 6"** in `review-fixes.spec.ts` counts gate redraws from a baseline taken after the scene's start-up rebuilds and reads have settled, using two new read-only hooks: `__fsHomes().reading` and `__fsVillage().mailStatus`.
   - **Go API tests:** the fake Habitica and sprite upstreams ignore requests that didn't come from the server's clients. A loopback port sweep's bare `GET /` failed whichever test held that port with "invalid upstream request".
   - **Plants:** a seeded test covers the two-plants-on-one-tile overlap fixed in 19b55416.
+- Camps (lamps.md §2.5, §2.7): `POST /api/camps` (`CampRequest`, actions `set`, `fill`, `place`, `remove`, `plant`; `Envelope.camp`) and `GET /api/camps`. A `way-lamp` home piece (crafted, `where: camp`; `wayLamp` in `content/homestead.json`: hearth oil, 3 wicks, 1 a flask) holds its one generated wick chunk with holder kind `way-lamp` (refused on a lot backland, fixed ground, the Tangle, a footprint or another camp). The `wayLampHolder` burns, dims and lapses as the lot lantern does. The setter and their household build there (pieces, plants, Wilds clear and lay); anyone fills it; the setter can take down an empty lamp and gets its oil back.
+- Pell's recovery crate: a lapsed camp packs in the turning's transaction into `recovery_crates`/`recovery_entries`, one entry per beneficiary: pieces as the same instances (location `crate`), plants as their seed with the planting kept in the entry, unspent oil to the setter, and each laid path tile's material to whoever laid it. `GET /api/recovery` and `POST /api/recovery/collect` (in Pell's office; `Envelope.recovery_collect`) take everything into the pack, once per entry. Camp and recovery reads judge a pending turning first.
+- Migration 041: `camps`, `camp_plants`, `recovery_crates`, `recovery_entries`; `homestead_items` rebuilt with locations `camp` and `crate`, scene `camp` and `camp_id`. No data changes. New error codes `no-camp`, `camp-not-empty`. The way-lamp is drawn with the lot lantern's stake frames for now.
 
 ## [0.11.2] - 2026-10-16
 

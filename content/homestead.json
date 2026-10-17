@@ -381,6 +381,17 @@
       }
     },
     {
+      "id": "way-lamp",
+      "category": "utility",
+      "where": [
+        "camp"
+      ],
+      "minTier": 0,
+      "glims": 5,
+      "materials": {},
+      "craftOnly": true
+    },
+    {
       "id": "stable",
       "category": "utility",
       "building": true,
@@ -595,5 +606,12 @@
     "maxWicks": 3,
     "wicksPerOil": 1,
     "stakeY": 12
+  },
+  "wayLamp": {
+    "item": "way-lamp",
+    "oil": "hearth-oil",
+    "maxWicks": 3,
+    "wicksPerOil": 1,
+    "reach": 3
   }
 }

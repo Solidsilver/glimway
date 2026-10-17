@@ -88,6 +88,8 @@ export interface FsHooks {
   __fsPathTile: (tx: number, ty: number) => PathTile | null
   /** Way signs drawn and places asked about, and the discoveries the store holds. */
   __fsMarks: () => (ReturnType<WildsMarks['debug']> & { discoveries: { id: string; by: string; name: string }[]; places: { id: string; kind: string; tx: number; ty: number }[] }) | null
+  /** The camps the open map last read, and the spot beside the hero a lamp, piece or seed would go. */
+  __fsCamps: () => { camps: { id: string; cx: number; cy: number; x: number; y: number; oil: number; dimming: boolean; pieces: { id: string; itemDef: string; x: number; y: number }[]; plants: { id: string; itemDef: string }[] }[]; spot: { tx: number; ty: number } | null } | null
   /** This wick's rumour as the link holds it. */
   __fsRumour: () => ({ epoch: string; place: string; site: string; landmark: string; compass: string; ring: number; pastRiver: boolean; opened: boolean; current: boolean } | null)
   /** The workable pieces of this area and, at home, the lamps whose light holds the ground. */

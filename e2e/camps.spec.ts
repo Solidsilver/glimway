@@ -1,0 +1,109 @@
+import { randomUUID } from 'node:crypto'
+import { expect, test, type Page } from './fixtures'
+import { accountOf, moveServerClock, pinWorld, sql, wickSlack } from './connected'
+import { claimDeed, freshPlayer, fund, homes, pellSays, readOn, shot, talk } from './home-helpers'
+import { parkCreatures, waitForWilds, warp, windowWhole } from './helpers'
+import { calendarAt } from '../src/lib/calendar.ts'
+
+/**
+ * Camps (roadmap 0.13; docs/design/lamps.md §2.5, §2.7), against the real Go
+ * server: set a way-lamp out in the Wilds from the pack, top it up, set a
+ * stool out in its light; then the oil runs out (forced, then one turning)
+ * and the camp lapses, and Pell has the lamp and the stool in a crate to
+ * collect. The burn, dim and lapse across turnings are the server's tests.
+ */
+
+const S = 24
+const SEED = 'e2e-camps'
+
+type Camp = { id: string; cx: number; cy: number; x: number; y: number; oil: number; dimming: boolean; pieces: { id: string; itemDef: string; x: number; y: number }[] }
+type Hooks = {
+  __fsCamps: () => { camps: Camp[]; spot: { tx: number; ty: number } | null } | null
+  __fsPathTile: (tx: number, ty: number) => { surface: string | null; baseSolid: boolean; decor: string[]; occupied: boolean; change: unknown } | null
+  __fsHomes: { fresh: () => Promise<void> }
+  __fsImagesNamed: (p: string) => { key: string; x: number; y: number }[]
+}
+
+const camps = (page: Page) => page.evaluate(() => (window as unknown as Hooks).__fsCamps())
+
+/** Open land with open land above it, near the middle of a wick chunk past the Whitequiet. */
+async function standInTheWilds(page: Page): Promise<{ tx: number; ty: number }> {
+  for (const [cx, cy] of [[2, -4], [-2, -4], [2, -7], [-2, -7], [3, -1], [-3, -1]] as const) {
+    await warp(page, 'outdoors', cx * S + 12, cy * S + 12)
+    await windowWhole(page)
+    const open = await page.evaluate(([cx, cy]) => {
+      const w = window as unknown as Hooks
+      const ok = (tx: number, ty: number) => {
+        const t = w.__fsPathTile(tx, ty)
+        return !!t && t.surface === 'land' && !t.baseSolid && !t.occupied && !t.change && t.decor.length === 0
+      }
+      for (let r = 0; r < 8; r++)
+        for (let ty = cy * 24 + 12 - r; ty <= cy * 24 + 12 + r; ty++)
+          for (let tx = cx * 24 + 12 - r; tx <= cx * 24 + 12 + r; tx++) if (ok(tx, ty) && ok(tx, ty - 1)) return { tx, ty }
+      return null
+    }, [cx, cy] as const)
+    if (!open) continue
+    await warp(page, 'outdoors', open.tx, open.ty)
+    await waitForWilds(page)
+    await parkCreatures(page)
+    if ((await camps(page))?.spot) return open
+  }
+  throw new Error(`no open land for a way-lamp (seed ${SEED})`)
+}
+
+/** Open the pack on the Home page and pick a piece's card. */
+async function homeCard(page: Page, def: string) {
+  await page.keyboard.press('i')
+  const bag = page.getByRole('dialog', { name: 'Inventory' })
+  await expect(bag).toBeVisible()
+  await bag.getByRole('tab', { name: /Home/ }).click()
+  const goods = bag.getByTestId('inv-page-home')
+  await goods.locator(`[data-cell="decoration:${def}"]`).click()
+  return goods.locator(`[data-item="decoration:${def}"]`)
+}
+
+test('set a way-lamp, fill it, set a stool out; it lapses and Pell has everything', async ({ page }) => {
+  test.setTimeout(300_000)
+  const id = await freshPlayer(page, 'Wren')
+  await wickSlack(page)
+  await pinWorld(page, SEED)
+  await claimDeed(page)
+  const account = accountOf(id)
+  const lamp = randomUUID(), stool = randomUUID()
+  sql(`INSERT INTO homestead_items(id,item_def,location,account_id) VALUES('${lamp}','way-lamp','inventory','${account}'),('${stool}','wooden-stool','inventory','${account}');`)
+  fund(id, { items: { 'hearth-oil': 2 } })
+  await page.evaluate(() => (window as unknown as Hooks).__fsHomes.fresh())
+  await expect.poll(async () => (await homes(page)).mine?.items?.length ?? 0).toBeGreaterThanOrEqual(2)
+
+  // Out in the Wilds: the lamp from the pack, set down beside you.
+  await standInTheWilds(page)
+  const lampCard = await homeCard(page, 'way-lamp')
+  await lampCard.locator('[data-act="set-lamp"]').click()
+  await expect.poll(async () => (await camps(page))?.camps.find((c) => c.id === lamp)?.oil ?? null).toBe(1)
+  const set = (await camps(page))!.camps.find((c) => c.id === lamp)!
+  await expect.poll(() => page.evaluate(([x, y]) => (window as unknown as Hooks).__fsImagesNamed('hw2:lantern-stake-')
+    .filter((i) => Math.abs(i.x - x) < 9 && Math.abs(i.y - y) < 9).map((i) => i.key), [set.x * 16 + 8, set.y * 16 + 16] as const)).toEqual(['hw2:lantern-stake-1'])
+
+  // Topped up from beside it.
+  await talk(page, /Look at the way-lamp/, /Top it up with hearth oil/)
+  await readOn(page, /Your way-lamp\. It burns, 2 of 3 wicks/)
+  await shot(page, 'camp-lamp-lit')
+
+  // A stool out in its light.
+  const stoolCard = await homeCard(page, 'wooden-stool')
+  await stoolCard.locator('[data-act="set-out"]').click()
+  await expect.poll(async () => (await camps(page))?.camps.find((c) => c.id === lamp)?.pieces.map((p) => p.itemDef).sort()).toEqual(['way-lamp', 'wooden-stool'])
+  await shot(page, 'camp-stool')
+
+  // The oil runs out (forced), and the turning after it the camp lapses.
+  sql(`UPDATE camps SET oil=0,dimming=1 WHERE id='${lamp}';`)
+  await pellSays(page)
+  const now = await moveServerClock(page, 0)
+  await moveServerClock(page, calendarAt(now).nextTurning + 3600)
+  // Pell has the crate: the lamp and the stool, collected into the pack.
+  await pellSays(page, /Take your things from the crate/)
+  await readOn(page, /Signed out to you: .*way-lamp.*wooden stool|Signed out to you: .*wooden stool.*way-lamp/)
+  expect(sql(`SELECT location FROM homestead_items WHERE id IN ('${lamp}','${stool}') ORDER BY location;`).split('\n')).toEqual(['inventory', 'inventory'])
+  expect(sql(`SELECT count(*) FROM camps WHERE id='${lamp}';`)).toBe('0')
+  expect(sql(`SELECT count(*) FROM recovery_entries WHERE account_id='${account}' AND collected_at IS NULL;`)).toBe('0')
+})

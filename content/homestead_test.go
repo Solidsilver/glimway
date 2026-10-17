@@ -33,7 +33,7 @@ func TestHomesteadContent(t *testing.T) {
 			t.Fatal("tier identity")
 		}
 	}
-	if h.GetTiers()[1].GetGlims() != 15 || len(h.GetItems()) != 32 {
+	if h.GetTiers()[1].GetGlims() != 15 || len(h.GetItems()) != 33 {
 		t.Fatal("starting content")
 	}
 	for _, v := range h.GetItems() {

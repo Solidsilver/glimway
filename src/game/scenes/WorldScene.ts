@@ -66,6 +66,7 @@ import { WildsWindow } from '../wilds/window'
 import { waitingFixedAt } from '../wilds/wilds-world'
 import { WildsPaths } from '../wilds/paths'
 import { WildsMarks } from '../wilds/marks'
+import { WildsCamps } from '../wilds/camps'
 import { watchRumour } from '../rumour-watch'
 import { loadWilds } from '../../lib/wilds/data'
 import { displayArea, setWildsLand } from '../../content/world'
@@ -138,6 +139,7 @@ export class WorldScene extends Phaser.Scene {
   private paths: WildsPaths | null = null
   /** Way signs, finders' names and first finds on the open map (null in curated areas). */
   private marks: WildsMarks | null = null
+  private camps: WildsCamps | null = null
   /** The drift's line is said once a scene build (open-map.md 2.6). */
   private driftSaid = false
   /** Which of the open map's places the HUD names now. */
@@ -233,6 +235,7 @@ export class WorldScene extends Phaser.Scene {
     this.window = null
     this.paths = null
     this.marks = null
+    this.camps = null
     this.driftSaid = false
     this.occluders = []
     this.cinematic = false
@@ -394,6 +397,7 @@ export class WorldScene extends Phaser.Scene {
       homesteads: () => this.homesteads,
       wilds: () => this.wilds,
       paths: () => this.paths,
+      camps: () => this.camps,
       notePosition: () => this.notePosition(),
       refresh: () => {
         this.refreshMarkers()
@@ -476,6 +480,13 @@ export class WorldScene extends Phaser.Scene {
         interactables: this.interactables,
         fx: this.fx,
         reducedMotion: this.reducedMotion,
+        hero: () => this.hero.sprite,
+        notePosition: () => this.notePosition()
+      })
+      this.camps = new WildsCamps(this, {
+        session: this.session,
+        interactables: this.interactables,
+        solids: this.solids.group,
         hero: () => this.hero.sprite,
         notePosition: () => this.notePosition()
       })
@@ -785,6 +796,7 @@ export class WorldScene extends Phaser.Scene {
     this.projectiles.update(dt)
     this.paths?.update()
     this.marks?.update()
+    this.camps?.update()
     this.checkDrift()
     this.updateDiscoveries()
     this.checkExits()

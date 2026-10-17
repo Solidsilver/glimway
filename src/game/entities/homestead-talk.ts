@@ -1,5 +1,8 @@
 import { lanternStake, lotAtPixel, lotOrigin } from '../../lib/lots'
 import { lanternHasRoom, lanternLines } from '../../lib/lot-lantern'
+import { collectedLine, crateLines } from '../../lib/camps'
+import { homeErrorText } from '../../content/errors'
+import type { RecoveryEntry } from '../../lib/gen/glimway/v1/camps_pb.js'
 /**
  * Homesteads, talked to: everything you can use on the Commons, at Silas's
  * Yard, on a homestead's land and in a cottage (each point with its own
@@ -47,6 +50,8 @@ const PELL_MET = 'met'
 const PELL_PITCH = 'pitch'
 /** Silas pointed you at Pell and pinned the claim guide (once). */
 const SILAS_PINNED_PELL = 'pinned-pell'
+/** Pell's choice to take what waits in his crates. */
+const CRATE = 'home:crate'
 
 export class HomesteadTalk {
   private readonly scene: Phaser.Scene
@@ -465,7 +470,8 @@ export class HomesteadTalk {
     if (this.home.homes.connected && this.home.homes.status === 'ready') {
       // The world holds still while they read (the scene's end lets go, never this late answer).
       this.silasHold.take()
-      void this.home.homes.load().finally(() => {
+      // Pell reads his crates too: what a lapsed camp left for you (lamps.md 2.7).
+      void Promise.all([this.home.homes.load(), who === 'pell' ? this.readCrate() : null]).finally(() => {
         if (this.home.gone) return
         this.silasHold.settle()
         now()
@@ -523,6 +529,11 @@ export class HomesteadTalk {
       pitchHeard: heardStory(s.state.flags, 'pell', PELL_PITCH),
       atTable: standsAtTable(s.state.area, this.deps.hero())
     })
+    // A crate waiting comes first: what's in it, and taking it.
+    if (this.crate.length > 0 && talk.choices) {
+      talk.lines = [...talk.lines.slice(0, 1), ...crateLines(this.crate)]
+      talk.choices = [{ text: 'Take your things from the crate', action: CRATE }, ...talk.choices]
+    }
     if (talk.met) markStory(s, 'pell', PELL_MET)
     // The pitch (or the first meeting, which says the same) plays once.
     if (homes.status === 'ready' && !homes.claimed) markStory(s, 'pell', PELL_PITCH)
@@ -571,6 +582,7 @@ export class HomesteadTalk {
       return
     }
     if (action.startsWith('home:lantern:')) return this.fillLantern(Number(action.slice('home:lantern:'.length)))
+    if (action === CRATE) return this.collectCrate()
     if (action.startsWith('home:place-shelf:')) return this.placeGateShelf(action.slice('home:place-shelf:'.length))
     if (action.startsWith('home:claim:')) return this.claim(Number(action.slice('home:claim:'.length)))
     if (action.startsWith('home:sign:')) return this.signDeed(action.slice('home:sign:'.length))
@@ -598,6 +610,33 @@ export class HomesteadTalk {
       sfx('fizzle')
       this.say({ speaker: 'Gate Shelf', lines: [r.text] })
     }
+  }
+
+  /** What waits in Pell's crates for you (none offline). */
+  private crate: RecoveryEntry[] = []
+
+  private async readCrate(): Promise<void> {
+    const r = await this.deps.session.link?.recoveryRead()
+    this.crate = r?.ok ? r.value.entries : []
+  }
+
+  /** Everything in Pell's crates, into the pack (lamps.md 2.7). */
+  private async collectCrate(): Promise<void> {
+    const link = this.deps.session.link
+    if (!link) return
+    bus.emit(EV.notePosition)
+    const r = await link.recoveryCollect()
+    if (!this.scene.sys.isActive()) return
+    if (!r.ok) {
+      sfx('fizzle')
+      this.say({ speaker: PELL.name, lines: [homeErrorText(r.code)] })
+      return
+    }
+    this.crate = []
+    sfx('settle')
+    void itemsFor(this.deps.session).load()
+    void this.home.homes.load()
+    this.say({ speaker: PELL.name, lines: [collectedLine(r.result.collected)] })
   }
 
   /** Pell enters your name: a new deed, or an old one taken back. */

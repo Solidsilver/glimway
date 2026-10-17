@@ -331,6 +331,28 @@
       ]
     },
     {
+      "id": "way-lamp",
+      "name": "Way-lamp",
+      "facings": {
+        "front": ""
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "base": {
+        "x": 0,
+        "y": 0,
+        "w": 1,
+        "h": 1
+      },
+      "mount": "floor",
+      "size": "large",
+      "tags": [
+        "light"
+      ]
+    },
+    {
       "id": "gate-shelf",
       "name": "Gate shelf",
       "facings": {

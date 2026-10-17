@@ -13,8 +13,10 @@
   import { INVENTORY_FILTERS, inventoryCopy } from '../content/inventory'
   import { beltFor, heldSlot, KIND_WORDS, type BeltKind } from '../lib/belt'
   import { GATHERING_DATA, isPlantableSeed, PLANTS_FULL_LINE } from '../lib/gathering'
-  import { plantTileNear } from '../lib/homestead'
+  import { HOMESTEAD_DATA, homeItem, plantTileNear } from '../lib/homestead'
   import { backlandAtPixel, inBackland, lotOrigin, lotAtPixel } from '../lib/lots'
+  import { campAtTile } from '../lib/camps'
+  import { campsKnown as camps } from '../game/wilds/camps-state'
   import { ui } from './store.svelte'
   import { home } from './home.svelte'
   import { inventory } from './inventory.svelte'
@@ -331,15 +333,51 @@
     return back !== null && homes.mine?.gate === back && homes.mine.lantern.lit ? back : null
   }
 
-  /** Seeds and saplings go into your own land, at your feet. */
+  /** The camp you stand in, in the Wilds (lamps.md 2.5), if any. */
+  function campHere() {
+    if (session.state.area !== 'outdoors' || myLandGate() !== null) return null
+    const { x, y } = session.state.position
+    return campAtTile(camps.list, Math.floor(x / 16), Math.floor((y - 1) / 16))
+  }
+
+  /** A carried (not set out) home piece of this kind. */
+  function carried(def: string): string | null {
+    return homes.mine?.items.find((i) => i.itemDef === def && i.scene === null)?.id ?? null
+  }
+
+  /** A carried way-lamp can be set in the Wilds, outside any camp; the server says where it holds. */
+  function lampSettable(e: InventoryEntry): boolean {
+    return e.kind === 'decoration' && e.id === HOMESTEAD_DATA.wayLamp.item && session.state.area === 'outdoors' && myLandGate() === null && !campHere() && carried(e.id) !== null
+  }
+
+  /** A carried outdoor piece can be set out at a camp you may build at. */
+  function campSettable(e: InventoryEntry): boolean {
+    const def = homeItem(e.id)
+    return e.kind === 'decoration' && !!campHere()?.builder && !!def?.where.includes('outdoor') && e.id !== HOMESTEAD_DATA.lanternPosts.item && e.id !== HOMESTEAD_DATA.stable.item && carried(e.id) !== null
+  }
+
+  function setAtCamp(e: InventoryEntry, action: 'set' | 'place'): void {
+    const itemId = carried(e.id)
+    if (!itemId) return
+    bus.emit(EV.notePosition)
+    bus.emit(EV.campDo, { action, itemId })
+    onClose()
+  }
+
+  /** Seeds and saplings go into your own land, at your feet, or at a camp you build at. */
   function plantable(e: InventoryEntry): boolean {
     const gate = myLandGate()
-    return isPlantableSeed(e.id) && gate !== null && homes.mine?.gate === gate
+    return isPlantableSeed(e.id) && (gate !== null && homes.mine?.gate === gate || !!campHere()?.builder)
   }
 
   function plantIt(e: InventoryEntry): void {
     // Where the hero stands now (the server measures reach from the save).
     bus.emit(EV.notePosition)
+    if (myLandGate() === null && campHere()?.builder) {
+      bus.emit(EV.campDo, { action: 'plant', itemDef: e.id })
+      onClose()
+      return
+    }
     const gate = myLandGate()
     const mine = homes.mine
     if (mine && (mine.plants?.length ?? 0) >= GATHERING_DATA.plantsPerHome) {
@@ -535,6 +573,12 @@
   {#if e.helps && e.helps.length > 0}<small class="helps">{e.helps.join(' · ')}</small>{/if}
   {#if e.rule && e.kind === 'tool'}<small class="rule">{e.rule}</small>{/if}
   {#if e.kind === 'decoration'}<small class="where">{where(e)}</small>{/if}
+  {#if model && e.section === 'main' && (lampSettable(e) || campSettable(e))}
+    <span class="acts">
+      {#if lampSettable(e)}<button type="button" class="act primary" data-act="set-lamp" disabled={action.busy !== null} onclick={() => setAtCamp(e, 'set')}>{inventoryCopy.actions.setLamp}</button>{/if}
+      {#if campSettable(e)}<button type="button" class="act primary" data-act="set-out" disabled={action.busy !== null} onclick={() => setAtCamp(e, 'place')}>{inventoryCopy.actions.setOut}</button>{/if}
+    </span>
+  {/if}
   {#if e.section === 'road'}<small class="rule">{inventoryCopy.roadNote}</small>{/if}
   {#if !full && model && e.section === 'main' && e.kind !== 'decoration' && e.kind !== 'material'}
     <small class="rule pick-hint">{inventoryCopy.pickToAct}</small>

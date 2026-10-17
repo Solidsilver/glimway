@@ -702,6 +702,8 @@ type Envelope struct {
 	//	*Envelope_WildsLay
 	//	*Envelope_WildsLift
 	//	*Envelope_WildsDiscover
+	//	*Envelope_Camp
+	//	*Envelope_RecoveryCollect
 	Result        isEnvelope_Result `protobuf_oneof:"result"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1084,6 +1086,24 @@ func (x *Envelope) GetWildsDiscover() *WildsDiscoverResult {
 	return nil
 }
 
+func (x *Envelope) GetCamp() *CampResult {
+	if x != nil {
+		if x, ok := x.Result.(*Envelope_Camp); ok {
+			return x.Camp
+		}
+	}
+	return nil
+}
+
+func (x *Envelope) GetRecoveryCollect() *RecoveryCollectResult {
+	if x != nil {
+		if x, ok := x.Result.(*Envelope_RecoveryCollect); ok {
+			return x.RecoveryCollect
+		}
+	}
+	return nil
+}
+
 type isEnvelope_Result interface {
 	isEnvelope_Result()
 }
@@ -1236,6 +1256,14 @@ type Envelope_WildsDiscover struct {
 	WildsDiscover *WildsDiscoverResult `protobuf:"bytes,46,opt,name=wilds_discover,json=wildsDiscover,proto3,oneof"`
 }
 
+type Envelope_Camp struct {
+	Camp *CampResult `protobuf:"bytes,47,opt,name=camp,proto3,oneof"`
+}
+
+type Envelope_RecoveryCollect struct {
+	RecoveryCollect *RecoveryCollectResult `protobuf:"bytes,48,opt,name=recovery_collect,json=recoveryCollect,proto3,oneof"`
+}
+
 func (*Envelope_Report) isEnvelope_Result() {}
 
 func (*Envelope_QuestStep) isEnvelope_Result() {}
@@ -1309,6 +1337,10 @@ func (*Envelope_WildsLay) isEnvelope_Result() {}
 func (*Envelope_WildsLift) isEnvelope_Result() {}
 
 func (*Envelope_WildsDiscover) isEnvelope_Result() {}
+
+func (*Envelope_Camp) isEnvelope_Result() {}
+
+func (*Envelope_RecoveryCollect) isEnvelope_Result() {}
 
 type LoginRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1681,7 +1713,7 @@ var File_glimway_v1_state_proto protoreflect.FileDescriptor
 const file_glimway_v1_state_proto_rawDesc = "" +
 	"\n" +
 	"\x16glimway/v1/state.proto\x12\n" +
-	"glimway.v1\x1a\x1bglimway/v1/companions.proto\x1a\x18glimway/v1/fishing.proto\x1a\x18glimway/v1/profile.proto\x1a\x1bglimway/v1/operations.proto\x1a\x13glimway/v1/op.proto\x1a\x16glimway/v1/purse.proto\x1a\x19glimway/v1/wardrobe.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x18glimway/v1/village.proto\x1a\x16glimway/v1/world.proto\x1a\x16glimway/v1/wilds.proto\"\xe0\x01\n" +
+	"glimway.v1\x1a\x16glimway/v1/camps.proto\x1a\x1bglimway/v1/companions.proto\x1a\x18glimway/v1/fishing.proto\x1a\x18glimway/v1/profile.proto\x1a\x1bglimway/v1/operations.proto\x1a\x13glimway/v1/op.proto\x1a\x16glimway/v1/purse.proto\x1a\x19glimway/v1/wardrobe.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x18glimway/v1/village.proto\x1a\x16glimway/v1/world.proto\x1a\x16glimway/v1/wilds.proto\"\xe0\x01\n" +
 	"\aAccount\x12\x1d\n" +
 	"\n" +
 	"account_id\x18\x01 \x01(\tR\taccountId\x12!\n" +
@@ -1750,7 +1782,7 @@ const file_glimway_v1_state_proto_rawDesc = "" +
 	"\x04code\x18\x01 \x01(\tR\x04code\"g\n" +
 	"\aRefusal\x12-\n" +
 	"\x05error\x18\x01 \x01(\v2\x17.glimway.v1.ErrorDetailR\x05error\x12-\n" +
-	"\x05state\x18\x02 \x01(\v2\x17.glimway.v1.PlayerStateR\x05state\"\x99\x12\n" +
+	"\x05state\x18\x02 \x01(\v2\x17.glimway.v1.PlayerStateR\x05state\"\x97\x13\n" +
 	"\bEnvelope\x12-\n" +
 	"\x05state\x18\x01 \x01(\v2\x17.glimway.v1.PlayerStateR\x05state\x122\n" +
 	"\x06report\x18\n" +
@@ -1808,7 +1840,9 @@ const file_glimway_v1_state_proto_rawDesc = "" +
 	"\twilds_lay\x18, \x01(\v2\x1a.glimway.v1.WildsLayResultH\x00R\bwildsLay\x12<\n" +
 	"\n" +
 	"wilds_lift\x18- \x01(\v2\x1b.glimway.v1.WildsLiftResultH\x00R\twildsLift\x12H\n" +
-	"\x0ewilds_discover\x18. \x01(\v2\x1f.glimway.v1.WildsDiscoverResultH\x00R\rwildsDiscoverB\b\n" +
+	"\x0ewilds_discover\x18. \x01(\v2\x1f.glimway.v1.WildsDiscoverResultH\x00R\rwildsDiscover\x12,\n" +
+	"\x04camp\x18/ \x01(\v2\x16.glimway.v1.CampResultH\x00R\x04camp\x12N\n" +
+	"\x10recovery_collect\x180 \x01(\v2!.glimway.v1.RecoveryCollectResultH\x00R\x0frecoveryCollectB\b\n" +
 	"\x06result\"k\n" +
 	"\fLoginRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x14\n" +
@@ -1911,7 +1945,9 @@ var file_glimway_v1_state_proto_goTypes = []any{
 	(*WildsLayResult)(nil),         // 61: glimway.v1.WildsLayResult
 	(*WildsLiftResult)(nil),        // 62: glimway.v1.WildsLiftResult
 	(*WildsDiscoverResult)(nil),    // 63: glimway.v1.WildsDiscoverResult
-	(*WorldChoice)(nil),            // 64: glimway.v1.WorldChoice
+	(*CampResult)(nil),             // 64: glimway.v1.CampResult
+	(*RecoveryCollectResult)(nil),  // 65: glimway.v1.RecoveryCollectResult
+	(*WorldChoice)(nil),            // 66: glimway.v1.WorldChoice
 }
 var file_glimway_v1_state_proto_depIdxs = []int32{
 	18, // 0: glimway.v1.Account.party_id:type_name -> google.protobuf.StringValue
@@ -1971,15 +2007,17 @@ var file_glimway_v1_state_proto_depIdxs = []int32{
 	61, // 54: glimway.v1.Envelope.wilds_lay:type_name -> glimway.v1.WildsLayResult
 	62, // 55: glimway.v1.Envelope.wilds_lift:type_name -> glimway.v1.WildsLiftResult
 	63, // 56: glimway.v1.Envelope.wilds_discover:type_name -> glimway.v1.WildsDiscoverResult
-	5,  // 57: glimway.v1.SessionResponse.state:type_name -> glimway.v1.PlayerState
-	64, // 58: glimway.v1.SessionResponse.world_choice:type_name -> glimway.v1.WorldChoice
-	5,  // 59: glimway.v1.StateResponse.state:type_name -> glimway.v1.PlayerState
-	5,  // 60: glimway.v1.PlayResponse.state:type_name -> glimway.v1.PlayerState
-	61, // [61:61] is the sub-list for method output_type
-	61, // [61:61] is the sub-list for method input_type
-	61, // [61:61] is the sub-list for extension type_name
-	61, // [61:61] is the sub-list for extension extendee
-	0,  // [0:61] is the sub-list for field type_name
+	64, // 57: glimway.v1.Envelope.camp:type_name -> glimway.v1.CampResult
+	65, // 58: glimway.v1.Envelope.recovery_collect:type_name -> glimway.v1.RecoveryCollectResult
+	5,  // 59: glimway.v1.SessionResponse.state:type_name -> glimway.v1.PlayerState
+	66, // 60: glimway.v1.SessionResponse.world_choice:type_name -> glimway.v1.WorldChoice
+	5,  // 61: glimway.v1.StateResponse.state:type_name -> glimway.v1.PlayerState
+	5,  // 62: glimway.v1.PlayResponse.state:type_name -> glimway.v1.PlayerState
+	63, // [63:63] is the sub-list for method output_type
+	63, // [63:63] is the sub-list for method input_type
+	63, // [63:63] is the sub-list for extension type_name
+	63, // [63:63] is the sub-list for extension extendee
+	0,  // [0:63] is the sub-list for field type_name
 }
 
 func init() { file_glimway_v1_state_proto_init() }
@@ -1987,6 +2025,7 @@ func file_glimway_v1_state_proto_init() {
 	if File_glimway_v1_state_proto != nil {
 		return
 	}
+	file_glimway_v1_camps_proto_init()
 	file_glimway_v1_companions_proto_init()
 	file_glimway_v1_fishing_proto_init()
 	file_glimway_v1_profile_proto_init()
@@ -2035,6 +2074,8 @@ func file_glimway_v1_state_proto_init() {
 		(*Envelope_WildsLay)(nil),
 		(*Envelope_WildsLift)(nil),
 		(*Envelope_WildsDiscover)(nil),
+		(*Envelope_Camp)(nil),
+		(*Envelope_RecoveryCollect)(nil),
 	}
 	file_glimway_v1_state_proto_msgTypes[10].OneofWrappers = []any{
 		(*SessionResponse_State)(nil),

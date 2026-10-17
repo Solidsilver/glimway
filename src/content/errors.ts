@@ -176,6 +176,9 @@ export const HOME_ERRORS: Table = {
   'cannot-hold': 'The woods behind won’t hold just now. Try again after the turning.',
   'not-your-land': 'That’s someone else’s land. Leave it as you found it.',
   'too-far-away': 'Stand by the lantern to fill it.',
+  // Camps (roadmap 0.13).
+  'no-camp': 'There’s no way-lamp here to set things down by.',
+  'camp-not-empty': 'Everything set out here has to come up before the lamp does.',
   resolved: 'Your last order with Silas went through after all. Check what you have before trying again.',
   pending: 'No answer yet — it may have gone through. We’ll find out when the connection is back; nothing will be charged twice.'
 }

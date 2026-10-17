@@ -133,13 +133,17 @@ func New(s *store.Store, h habitica.Upstream, c Config) *Server {
 		}
 	}
 	// The holder kinds judged at the turning (store/holds.go): the server's
-	// own chunks always judge lot lanterns, so a lapse reaches Released.
+	// own chunks always judge lot lanterns and way-lamps, so a lapse
+	// reaches Released.
 	if held, ok := c.Epochs.(*store.Chunks); ok {
 		if held.Holders == nil {
 			held.Holders = map[string]store.Holder{}
 		}
 		if held.Holders[lotLanternKind] == nil {
 			held.Holders[lotLanternKind] = lotLanternHolder{}
+		}
+		if held.Holders[wayLampKind] == nil {
+			held.Holders[wayLampKind] = wayLampHolder{}
 		}
 	}
 	if c.Logger == nil {

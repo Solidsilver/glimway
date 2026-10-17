@@ -122,6 +122,14 @@ export declare type Homestead = Message<"glimway.content.v1.Homestead"> & {
    * @generated from field: glimway.content.v1.LotLantern lot_lantern = 15;
    */
   lotLantern?: LotLantern | undefined;
+
+  /**
+   * The way-lamp (roadmap 0.13; lamps.md 2.5): set in the Wilds, it holds
+   * one chunk as a camp while it has oil.
+   *
+   * @generated from field: glimway.content.v1.WayLamp way_lamp = 16;
+   */
+  wayLamp?: WayLamp | undefined;
 };
 
 /**
@@ -236,6 +244,14 @@ export declare type HomesteadValid = Message<"glimway.content.v1.Homestead"> & {
    * @generated from field: glimway.content.v1.LotLantern lot_lantern = 15;
    */
   lotLantern: LotLanternValid;
+
+  /**
+   * The way-lamp (roadmap 0.13; lamps.md 2.5): set in the Wilds, it holds
+   * one chunk as a camp while it has oil.
+   *
+   * @generated from field: glimway.content.v1.WayLamp way_lamp = 16;
+   */
+  wayLamp: WayLampValid;
 };
 
 /**
@@ -243,6 +259,48 @@ export declare type HomesteadValid = Message<"glimway.content.v1.Homestead"> & {
  * Use `create(HomesteadSchema)` to create a new message.
  */
 export declare const HomesteadSchema: GenMessage<Homestead, {validType: HomesteadValid}>;
+
+/**
+ * The way-lamp's camp (lamps.md 2.5): `item` is the home piece set as the
+ * lamp (a camp-only piece); its oil works as the lot lantern's does. reach
+ * is how far, in tiles, a player may set, fill or build from.
+ *
+ * @generated from message glimway.content.v1.WayLamp
+ */
+export declare type WayLamp = Message<"glimway.content.v1.WayLamp"> & {
+  /**
+   * @generated from field: string item = 1;
+   */
+  item: string;
+
+  /**
+   * @generated from field: string oil = 2;
+   */
+  oil: string;
+
+  /**
+   * @generated from field: int32 max_wicks = 3;
+   */
+  maxWicks: number;
+
+  /**
+   * @generated from field: int32 wicks_per_oil = 4;
+   */
+  wicksPerOil: number;
+
+  /**
+   * @generated from field: int32 reach = 5;
+   */
+  reach: number;
+};
+
+export declare type WayLampValid = WayLamp;
+
+/**
+ * Describes the message glimway.content.v1.WayLamp.
+ * Use `create(WayLampSchema)` to create a new message.
+ */
+export declare const WayLampSchema: GenMessage<WayLamp, {validType: WayLampValid}>;
 
 /**
  * The lot lantern's oil (roadmap 0.12): one `oil` item adds wicks_per_oil
