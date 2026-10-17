@@ -20,6 +20,7 @@ the game can show the first part as "What's new":
 - The Wilds turn early once, when this version arrives: the current wick's land is replaced. The Tangle keeps everything.
 - Light your lot lantern: fill the lantern on your lot's back line with hearth oil and the woods behind your lot hold still through the turning. While it burns, that land is part of your yard: set pieces out there and plant in it. Each flask burns for a wick, up to three; anyone may top up a neighbour's lantern. Run dry, it gutters for a wick, then goes dark, and the woods turn; anything you set out there comes home to your storage, and planted seeds come back to your chest.
 - The chandler by the square sells hearth oil, so you can keep your light without amber.
+- With reduced motion on, an enemy's "!" warning no longer pops, a defeated enemy fades without sinking, and your hero no longer squashes when you're knocked out.
 
 ### Technical
 
@@ -41,6 +42,9 @@ the game can show the first part as "What's new":
   - **"Findings 4 and 6"** in `review-fixes.spec.ts` counts gate redraws from a baseline taken after the scene's start-up rebuilds and reads have settled, using two new read-only hooks: `__fsHomes().reading` and `__fsVillage().mailStatus`.
   - **Go API tests:** the fake Habitica and sprite upstreams ignore requests that didn't come from the server's clients. A loopback port sweep's bare `GET /` failed whichever test held that port with "invalid upstream request".
   - **Plants:** a seeded test covers the two-plants-on-one-tile overlap fixed in 19b55416.
+  - **Paths, second account** (`paths.spec.ts`): a camp beside the stone (new landform) hit and knocked the arriving second account off the tile before its late park, so L laid instead of refusing. It now parks with `keep` before the warp and is set down on the stone before L. Fixture only; the path rules were never reached.
+  - **Reduced-motion Wilds** (`open-map.spec.ts`): a camp near the spot fights the hero. The enemy telegraph's "!" pop, the death dissolve's sink and squash, and the defeat collapse now respect reduced motion. The test asserts that nothing moves or loops; short alpha fades stay, as `thoughts.ts` already keeps them. `__fsSceneSize().tweening` names each tween's target and properties.
+  - **Hazel's walk** (`rooms.spec.ts`): `present` drops as she sets off, and the walk to the door takes ~4.3 s, against the 5 s default poll; that poll now waits 30 s.
 
 ## [0.11.2] - 2026-10-16
 

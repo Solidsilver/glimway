@@ -1282,7 +1282,7 @@ export class WorldScene extends Phaser.Scene {
     this.notePosition()
     this.session.defeat()
     this.hero.sprite.setVelocity(0, 0)
-    this.tweens.add({ targets: this.avatar.container ?? this.hero.sprite, scaleY: (this.avatar.container ?? this.hero.sprite).scaleY * 0.6, duration: 380, ease: 'Quad.easeIn' })
+    if (!this.reducedMotion) this.tweens.add({ targets: this.avatar.container ?? this.hero.sprite, scaleY: (this.avatar.container ?? this.hero.sprite).scaleY * 0.6, duration: 380, ease: 'Quad.easeIn' })
     this.hero.sprite.setTint(0x8a7a9a)
     // The scene wakes once the fall is queued and its recovery shown.
     this.moveTo({ save: false }, { fromDefeat: true }, { fadeMs: 1100, inDark: () => this.session.falling ?? undefined })

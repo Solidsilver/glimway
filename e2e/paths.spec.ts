@@ -221,13 +221,21 @@ test('clear a thicket with a spade, lay stone after the turning-land confirm, se
   try {
     await freshPlayer(other, 'Wren', invite.code)
     await calendarOnServer(other)
+    // Parked from the arrival's first frame: a camp beside the stone hits
+    // and knocks an arriving hero off it before a later park.
+    await parkCreatures(other, { keep: true })
     await warp(other, 'outdoors', stand.tx, stand.ty)
     await waitForWilds(other)
-    await other.evaluate(() => (window as unknown as Hooks).__fsDevParkCreatures())
     await expect.poll(async () => (await tileAt(other, stand.tx, stand.ty))?.change ?? null, { timeout: 20_000 }).toEqual({ change: 'stone', by: accountOf(id) })
     expect((await tileAt(other, cleared.tx, cleared.ty))!.change).toEqual({ change: 'plank', by: accountOf(id) })
     await shot(other, '93-paths-second-player-desktop')
-    await waitForLive(other)
+    // On the stone itself, not beside it: L there is Tansy's path, not a lay of Wren's own.
+    await other.evaluate(([x, y]) => (window as unknown as { __fsDevPlace: (x: number, y: number) => void }).__fsDevPlace(x, y), [stand.tx * 16 + 8, stand.ty * 16 + 8] as const)
+    await steady(other, () => other.evaluate(() => {
+      const w = window as unknown as Hooks & { __fsFrame: () => { live: boolean } }
+      const hero = w.__fsPlayer()
+      return { live: w.__fsFrame().live, tx: Math.floor(hero.x / 16), ty: Math.floor(hero.y / 16) }
+    }), { frames: 3, seconds: 10, message: `Wren on Tansy's stone at ${stand.tx},${stand.ty}`, ready: (s) => s.live && s.tx === stand.tx && s.ty === stand.ty })
     await other.keyboard.press('l')
     await expectToast(other, 'There’s a path here already.')
   } finally {
