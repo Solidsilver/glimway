@@ -84,7 +84,16 @@ func putGround(ctx context.Context, tx *sql.Tx, world string, e *contract.WildsE
 	if err != nil {
 		return err
 	}
-	return worldchange.Put(ctx, tx, worldchange.Row{Key: key, Kind: groundKind, State: b, ChangedBy: by, EndsAt: epochEnds(e)}, now)
+	// A held chunk's changes last as long as the hold (store.Chunks.Hold).
+	ends := epochEnds(e)
+	held, err := store.HeldEpoch(ctx, tx, world, cx, cy)
+	if err != nil {
+		return err
+	}
+	if held != nil && held.Id == e.Id {
+		ends = nil
+	}
+	return worldchange.Put(ctx, tx, worldchange.Row{Key: key, Kind: groundKind, State: b, ChangedBy: by, EndsAt: ends}, now)
 }
 
 // ---------------------------------------------------------------- the tile

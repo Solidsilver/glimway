@@ -15,7 +15,8 @@ type Generator interface {
 	// Chunk makes the chunk (cx, cy) of the epoch. kept holds the stored
 	// neighbours that lie in another, kept epoch (in 0.8 the Tangle's
 	// chunks beside a wick chunk), whose edges the new chunk copies at the
-	// seam (2.3). It is empty for a chunk with no such neighbour.
+	// seam (2.3), and the held neighbours pinned to another wick epoch. It is
+	// empty for a chunk with no such neighbour.
 	Chunk(epoch *contract.WildsEpoch, cx, cy int32, kept []Kept) (*contract.WorldChunk, error)
 	// Glimpses are chunks' main lands and whether the Wend crosses each,
 	// from the lands and river passes alone (decision 22), for chunks past
@@ -28,10 +29,12 @@ type Generator interface {
 }
 
 // Kept is a stored neighbour in a kept epoch (wilds.Kept's twin): the
-// chunk (CX, CY), one of the eight around the chunk being made.
+// chunk (CX, CY), one of the eight around the chunk being made. Held: a
+// held wick chunk pinned to another wick epoch (store/holds.go).
 type Kept struct {
 	CX, CY int
 	Chunk  *contract.WorldChunk
+	Held   bool
 }
 
 // ChunkXY is a chunk's signed coordinates.

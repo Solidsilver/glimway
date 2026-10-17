@@ -24,7 +24,7 @@ import { epochKindAt } from '../../lib/wilds/coords.ts'
 import { sourceOf } from '../../lib/location.ts'
 import { gameNow } from '../clock.ts'
 import { effectiveTerrain, type ChunkTerrain } from './terrain.ts'
-import { groundChanges, knownPlaces, readRequested, refreshNear, wickEnded, wildsView } from './store.ts'
+import { groundChanges, knownPlaces, placeKey, readRequested, refreshNear, wickEnded, wildsView } from './store.ts'
 import { seenAt, seenLandmarks, walkedChunks } from './walked.ts'
 import { PLACES } from '../../lib/places.ts'
 import { fixedChunkKeys, footprint, prepareFixed } from './fixed.ts'
@@ -115,9 +115,12 @@ export async function loadMap(session: Session, opts: { read?: boolean } = {}): 
   const wickEpoch = { ...view.wick }
   const frontier = { ...view.frontier }
   const cache: ScopeCache = current?.scope === scope ? current : (current = { scope, built: new Map(), chunks: new Map(), located: new Map() })
-  // Fixed ground has no generated epoch (its chunks come from ./fixed.ts).
+  // Fixed ground has no generated epoch (its chunks come from ./fixed.ts); a held chunk is its pinned epoch's.
+  const held = new Map(view.held)
   const epochOf = (cx: number, cy: number) => {
     if (sourceOf(cx, cy).kind === 'fixed') return null
+    const pinned = held.get(chunkKey(cx, cy))
+    if (pinned) return pinned
     const e = epochKindAt(cx, cy) === 'still' ? still : wickEpoch
     return e.id ? e : null
   }
@@ -284,13 +287,15 @@ async function findPlace(
   if (had) return had
   const link = session.link
   if (!link) return null
-  for (const { cx, cy } of cellChunks(id)) {
+  // A held chunk's place is keyed `<id>@<epoch>` (placeKey): its cell's chunks, in that epoch.
+  const raw = id.split('@')[0]!
+  for (const { cx, cy } of cellChunks(raw)) {
     const epoch = epochOf(cx, cy)
     if (!epoch || !inside(cx, cy)) continue
     try {
       const t = cachedTerrain(epoch.id, cx, cy) ?? (await loadChunk(link.api.operations, epoch.id, cx, cy))
       if (!live()) return null
-      const p = t.places.find((x) => x.id === id)
+      const p = t.places.find((x) => x.id === raw && placeKey(x.id, epoch.id) === id)
       if (p) {
         const where = { id, kind: p.kind, tx: cx * t.size + p.tx, ty: cy * t.size + p.ty }
         cache.located.set(id, where)

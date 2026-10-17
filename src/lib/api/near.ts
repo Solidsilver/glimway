@@ -28,10 +28,26 @@ export function validateNear(out: WildsNearResult, cx: number, cy: number): Wild
   if (!inFrontier(c) && !onGrid(c.cx, c.cy)) throw new Error('invalid near window');
   const keyed = (k: WildsChunkKey | undefined): k is WildsChunkKey => !!k && k.realm === w.realm && k.layer === 0;
   const inWindow = (k: WildsChunkKey) => Math.abs(k.cx - cx) <= NEAR_RADIUS && Math.abs(k.cy - cy) <= NEAR_RADIUS;
-  // A chunk's epoch follows from its coordinates: the still epoch inside a
-  // still footprint (the Tangle), else the wick's.
-  const epochOf = (k: { cx: number; cy: number }) => (epochKindAt(k.cx, k.cy) === 'still' ? out.still!.id : out.wick!.id);
-  const epochs = [out.still.id, out.wick.id];
+  // Held chunks (roadmap 0.12) keep an older wick's land: each held epoch
+  // is a wick epoch, named once, and only the window's held chunks use it.
+  const held = out.held.map((e) => e.id);
+  for (const e of out.held) {
+    if (!e.id || e.kind !== 'wick' || e.id === out.still.id || e.id === out.wick.id || held.indexOf(e.id) !== held.lastIndexOf(e.id)) throw new Error('invalid epoch authority');
+  }
+  const heldAt = new Map<string, string>();
+  for (const n of out.chunks) {
+    const k = n.chunk;
+    if (n.source !== 'held') continue;
+    if (!keyed(k) || !inWindow(k) || !inFrontier(k) || sourceOf(k.cx, k.cy).kind !== 'generated' || epochKindAt(k.cx, k.cy) !== 'wick' || (n.epoch !== out.wick.id && !held.includes(n.epoch))) throw new Error('invalid held chunk');
+    heldAt.set(`${k.cx}:${k.cy}`, n.epoch);
+  }
+  // A chunk's epoch follows from its coordinates: a held chunk's pinned
+  // epoch, the still epoch inside a still footprint (the Tangle), else the
+  // wick's.
+  const epochOf = (k: { cx: number; cy: number }) => heldAt.get(`${k.cx}:${k.cy}`) ?? (epochKindAt(k.cx, k.cy) === 'still' ? out.still!.id : out.wick!.id);
+  const epochs = [out.still.id, out.wick.id, ...held];
+
+  for (const d of out.discoveries) if (!d.entityId || !epochs.includes(d.epoch)) throw new Error('invalid discovery');
 
   for (const e of out.entities) {
     if (!e.id || !epochs.includes(e.epoch) || !Number.isSafeInteger(e.cycle) || e.cycle < 0 || !ENTITY_STATES.includes(e.state)) throw new Error('invalid mutable entity');

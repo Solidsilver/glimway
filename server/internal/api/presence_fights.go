@@ -569,7 +569,7 @@ func (a *Server) wakeFightRooms(p *presencePeer, world string, missing []fightLo
 // nothing to claim again), until the row's timer.
 func (a *Server) loadFightChunk(ctx context.Context, tx *sql.Tx, world string, loc fightLocation, now time.Time) (fightWake, error) {
 	cx, cy := int(loc.cx), int(loc.cy)
-	ep, err := a.epochAt(ctx, tx, world, cx, cy, now.Unix())
+	ep, current, err := a.epochsAt(ctx, tx, world, cx, cy, now.Unix())
 	if err != nil {
 		return fightWake{}, err
 	}
@@ -581,8 +581,11 @@ func (a *Server) loadFightChunk(ctx context.Context, tx *sql.Tx, world string, l
 		return fightWake{}, fmt.Errorf("fight wake: chunk %d,%d answered for %d,%d", chunk.Cx, chunk.Cy, cx, cy)
 	}
 	w := fightWake{location: loc, key: fights.Key{World: world, Realm: chunk.Realm, Epoch: ep.Id, Layer: chunk.Layer, CX: chunk.Cx, CY: chunk.Cy}}
-	if ep.EndsAt != nil {
-		w.endsAt = int64(ep.EndsAt.Value * 1000)
+	// A held chunk keeps its pinned epoch's camps, falls and timers (the key),
+	// but its room lasts only to the current turning, where the hold is
+	// judged: the pinned epoch's own end has passed.
+	if current.EndsAt != nil {
+		w.endsAt = int64(current.EndsAt.Value * 1000)
 	}
 	for _, entity := range chunk.Entities {
 		if entity.Kind != "camp" || len(entity.Enemies) == 0 {

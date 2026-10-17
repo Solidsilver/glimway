@@ -97,7 +97,7 @@ func (w *world) drawnPoint(lx, ly int) landPoint {
 	}
 	data := contentRules()
 	L := landCellTiles()
-	rng := NewRng(w.e.hash("land", lx, ly))
+	rng := NewRng(w.e.landform("land", lx, ly))
 	p := landPoint{lx: lx, ly: ly, x: lx*L + L*rng.Between(200, 800)/1000, y: ly*L + L*rng.Between(200, 800)/1000}
 	sizes := data.GetLandSizes()
 	var bw []int

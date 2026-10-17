@@ -60,7 +60,7 @@ import { paintTable } from './ground-table.ts'
 import { chunkOrigin } from './terrain.ts'
 import { fnv1a32 } from '../../lib/hash.ts'
 import { TILE } from '../../lib/tile.ts'
-import { chunkTerrain, insideNamedFrontier, loadWildsChunk, NEAR_MAX_AGE_MS, refreshNear, wildsEpoch, wildsFrontier, wildsView } from './store.ts'
+import { chunkTerrain, insideNamedFrontier, loadWildsChunk, NEAR_MAX_AGE_MS, placeKey, refreshNear, wildsEpoch, wildsFrontier, wildsView } from './store.ts'
 import { markSeen, markWalked } from './walked.ts'
 import { perfSpan, perfTime, perfWithout } from '../perf.ts'
 import { addAll, destroyAll, looseImage } from '../area/bulk.ts'
@@ -490,7 +490,7 @@ export class WildsWindow {
       if (!t) continue
       const { scene } = this.deps
       this.far.set(key, perfTime('landmarks', () => {
-        const imgs = chunkLandmarks(t, (k) => scene.textures.exists(k)).map((s) => looseImage(scene, s.x, s.y, s.key).setOrigin(0.5, 1).setFlipX(s.flipX ?? false).setDepth(s.y).setData('place', s.place).setData('at', { tx: s.tx, ty: s.ty }))
+        const imgs = chunkLandmarks(t, (k) => scene.textures.exists(k)).map((s) => looseImage(scene, s.x, s.y, s.key).setOrigin(0.5, 1).setFlipX(s.flipX ?? false).setDepth(s.y).setData('place', s.place && placeKey(s.place, t.epochId)).setData('at', { tx: s.tx, ty: s.ty }))
         addAll(scene, imgs)
         return imgs
       }))

@@ -17,9 +17,10 @@ import (
 // clearings and paths and dresses everything.
 //
 // What decides a tile, first match wins:
-//  1. Another epoch's chunk (kept): its own tile. Beside one, within two
-//     tiles of it: a mirror of its edge (the seam, 2.3), open where it's
-//     open, solid where it's solid; water there becomes bank.
+//  1. Another epoch's chunk (kept: fixed, the other kind, or held): its own
+//     tile. Beside one, within two tiles of it: a mirror of its edge (the
+//     seam, 2.3), open where it's open, solid where it's solid; water there
+//     becomes bank.
 //  2. A footprint's fixed opening (the gate, the crossing, the road's).
 //  3. The Wend's water: a ford within fordWidth/2 of a route, else water.
 //  4. The Lantern Road's paving and verge.
@@ -164,6 +165,7 @@ func (w *world) fill(x0, y0, x1, y1 int, kept *keptReader) []baseTile {
 	W := x1 - x0 + 1
 	out := make([]baseTile, W*(y1-y0+1))
 	corners := map[[2]int][]bool{}
+	pockets := map[[2]int]map[[2]int]bool{}
 	for ty := y0; ty <= y1; ty++ {
 		for tx := x0; tx <= x1; tx++ {
 			t := at(tx, ty)
@@ -175,8 +177,138 @@ func (w *world) fill(x0, y0, x1, y1 int, kept *keptReader) []baseTile {
 					t.ground = landGround[max(int(t.land), 0)].floor
 				}
 			}
+			if len(w.held) > 0 && !t.walk && (t.kind == bField || t.kind == bSeam) && w.heldOpens(tx, ty, at, pockets) {
+				t.walk, t.ground = true, landGround[max(int(t.land), 0)].open
+			}
 			out[(ty-y0)*W+tx-x0] = t
 		}
+	}
+	return out
+}
+
+// Held corners (location-seam.md §0 #8: access survives the turning). A
+// held chunk's edge tiles were decided beside its own wick's neighbours, so
+// an opening at one of its corners may have led out through a corner block
+// that the new land round it now mirrors with no way on. In a corner block
+// with a held quadrant every other quadrant's tiles are mirrors (seamMirror).
+// Where open tiles of the block join nothing open round it, each new
+// quadrant they touch opens whole, and so does its throat: the edge tile
+// one in, beside the block, toward its chunk's middle. The throat borders
+// the chunk's inside, so detail's reach joins it to the rest. Everything
+// it reads is the raw base round the block, so every chunk at the corner
+// decides the same.
+
+// heldThrough: beside a held chunk's side, does the mirrored tile one in
+// from the edge (tx, ty, mirroring mx, my) open? It does where the held
+// edge tile it backs is open: that tile may have been open only toward its
+// own wick's neighbour, and the mirror would leave its copy shut in.
+func (w *world) heldThrough(tx, ty, mx, my int, kept *keptReader) bool {
+	S := chunkSize()
+	cx, cy := floorDiv(tx, S), floorDiv(ty, S)
+	dx, dy := floorDiv(mx, S)-cx, floorDiv(my, S)-cy
+	if dx != 0 && dy != 0 || !w.held[[2]int{cx + dx, cy + dy}] {
+		return false
+	}
+	lx, ly := tx-cx*S, ty-cy*S
+	depth := map[[2]int]int{{1, 0}: S - 1 - lx, {-1, 0}: lx, {0, 1}: S - 1 - ly, {0, -1}: ly}[[2]int{dx, dy}]
+	if depth != 1 {
+		return false
+	}
+	walk, _ := kept.tile(mx-dx, my-dy)
+	return walk
+}
+
+// heldOpens: does the held-corner rule open this tile of a new chunk?
+func (w *world) heldOpens(tx, ty int, at func(tx, ty int) baseTile, pockets map[[2]int]map[[2]int]bool) bool {
+	S := chunkSize()
+	cx, cy := floorDiv(tx, S), floorDiv(ty, S)
+	if w.keptAt(cx, cy) {
+		return false
+	}
+	lx, ly := tx-cx*S, ty-cy*S
+	east, south := lx >= S/2, ly >= S/2
+	vx, vy := cx*S, cy*S // the corner this tile is in, or the throat of
+	if east {
+		vx += S
+	}
+	if south {
+		vy += S
+	}
+	edge := band // the throat's column
+	if east {
+		edge = S - 1 - band
+	}
+	switch {
+	case (lx < band || lx >= S-band) && (ly < band || ly >= S-band): // in the corner block
+	case lx == edge && (ly == band-1 || ly == S-band): // a throat
+	default:
+		return false
+	}
+	v := [2]int{vx, vy}
+	open, ok := pockets[v]
+	if !ok {
+		open = w.heldPockets(vx, vy, at)
+		pockets[v] = open
+	}
+	return open[[2]int{cx, cy}]
+}
+
+// heldPockets: at the corner where chunks meet at tile (vx, vy) (the first
+// tile east and south of the meeting point), the new chunks whose quadrant
+// opens (nil: no held quadrant, or nothing cut off).
+func (w *world) heldPockets(vx, vy int, at func(tx, ty int) baseTile) map[[2]int]bool {
+	S := chunkSize()
+	held := false
+	for _, d := range [4][2]int{{-1, -1}, {0, -1}, {-1, 0}, {0, 0}} {
+		held = held || w.held[[2]int{floorDiv(vx, S) + d[0], floorDiv(vy, S) + d[1]}]
+	}
+	if !held || !w.wick {
+		return nil
+	}
+	const n = 2 * band
+	in := func(x, y int) bool { return x >= vx-band && x < vx+band && y >= vy-band && y < vy+band }
+	reached := make([]bool, n*n)
+	var queue []int
+	for i := range reached {
+		x, y := vx-band+i%n, vy-band+i/n
+		if !at(x, y).walk {
+			continue
+		}
+		for _, d := range dirs4 {
+			nx, ny := x+d[0], y+d[1]
+			if in(nx, ny) {
+				continue
+			}
+			r := at(nx, ny)
+			if r.kind == bField && w.columnOpen(nx, ny, at) || r.kind != bField && r.walk {
+				reached[i] = true
+				queue = append(queue, i)
+				break
+			}
+		}
+	}
+	for len(queue) > 0 {
+		i := queue[0]
+		queue = queue[1:]
+		for _, d := range dirs4 {
+			x, y := i%n+d[0], i/n+d[1]
+			if j := y*n + x; x >= 0 && y >= 0 && x < n && y < n && !reached[j] && at(vx-band+x, vy-band+y).walk {
+				reached[j] = true
+				queue = append(queue, j)
+			}
+		}
+	}
+	var out map[[2]int]bool
+	for i := range reached {
+		x, y := vx-band+i%n, vy-band+i/n
+		c := [2]int{floorDiv(x, S), floorDiv(y, S)}
+		if reached[i] || !at(x, y).walk || w.keptAt(c[0], c[1]) {
+			continue
+		}
+		if out == nil {
+			out = map[[2]int]bool{}
+		}
+		out[c] = true
 	}
 	return out
 }
@@ -251,7 +383,7 @@ func (w *world) fillRaw(x0, y0, x1, y1 int, kept *keptReader) []baseTile {
 		for tx := x0; tx <= x1; tx++ {
 			t := &out[(ty-y0)*W+tx-x0]
 			cx, cy := floorDiv(tx, S), floorDiv(ty, S)
-			if FixedFootprintAt(cx, cy) != nil || EpochKindAt(cx, cy) != w.e.Kind {
+			if w.keptAt(cx, cy) {
 				if !w.wick {
 					// The kept side can't know a newer epoch's land: left
 					// solid and unknown (only tests look this far).
@@ -277,7 +409,10 @@ func (w *world) fillRaw(x0, y0, x1, y1 int, kept *keptReader) []baseTile {
 				if FixedFootprintAt(floorDiv(mx, S), floorDiv(my, S)) != nil {
 					t.kind = bSeamFixed
 				}
-				if walk && (wet || banked || groundSurface[g] == "water" || groundSurface[g] == "ford") {
+				if !walk && w.heldThrough(tx, ty, mx, my, kept) {
+					t.walk, t.ground = true, lg.open
+				}
+				if t.walk && (wet || banked || groundSurface[t.ground] == "water" || groundSurface[t.ground] == "ford") {
 					t.ground = groundRiverBank
 				}
 				continue
@@ -354,6 +489,12 @@ func (w *world) fillRaw(x0, y0, x1, y1 int, kept *keptReader) []baseTile {
 		}
 	}
 	return out
+}
+
+// keptAt: is chunk (cx, cy) another epoch's, which this one only reads? A
+// fixed chunk, a chunk of the other epoch kind, or a held neighbour.
+func (w *world) keptAt(cx, cy int) bool {
+	return FixedFootprintAt(cx, cy) != nil || EpochKindAt(cx, cy) != w.e.Kind || w.held[[2]int{cx, cy}]
 }
 
 // footprintLand is the footprint's land at a chunk, or "".
@@ -452,7 +593,7 @@ func (w *world) columnOpen(tx, ty int, at func(tx, ty int) baseTile) bool {
 	if at(tx-ox, ty-oy).walk {
 		return true
 	}
-	if FixedFootprintAt(cx+ox, cy+oy) != nil || EpochKindAt(cx+ox, cy+oy) != w.e.Kind {
+	if w.keptAt(cx+ox, cy+oy) {
 		return false
 	}
 	return at(tx+ox, ty+oy).walk && at(tx+2*ox, ty+2*oy).walk
@@ -552,7 +693,7 @@ func (w *world) gapAt(tx, ty int, lg landGrounds) (Ground, bool) {
 // seamOrder: the four sides first, then the corners.
 var seamOrder = [8][2]int{{0, -1}, {1, 0}, {0, 1}, {-1, 0}, {1, -1}, {1, 1}, {-1, 1}, {-1, -1}}
 
-// seamMirror: within two tiles of a chunk of another epoch kind, the kept
+// seamMirror: within two tiles of a kept chunk (keptAt), the kept
 // tile this one mirrors (across the shared edge, or the shared corner).
 func (w *world) seamMirror(tx, ty int) (int, int, bool) {
 	if !w.wick {
@@ -562,7 +703,7 @@ func (w *world) seamMirror(tx, ty int) (int, int, bool) {
 	cx, cy := floorDiv(tx, S), floorDiv(ty, S)
 	lx, ly := tx-cx*S, ty-cy*S
 	for _, d := range seamOrder {
-		if FixedFootprintAt(cx+d[0], cy+d[1]) == nil && EpochKindAt(cx+d[0], cy+d[1]) == w.e.Kind {
+		if !w.keptAt(cx+d[0], cy+d[1]) {
 			continue
 		}
 		mx, my := tx, ty

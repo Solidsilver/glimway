@@ -290,7 +290,7 @@ func TestServerFirstWireFixtures(t *testing.T) {
 		Frontier: &contract.WildsFrontier{Rect: &contract.WildsChunkRect{MinCx: -6, MinCy: -8, MaxCx: 4, MaxCy: 7}},
 		Center:   key(-2, -4), Radius: 2,
 		Entities: []*contract.WildsEntityState{{Id: "node:-2:-4:0", Epoch: "wick-epoch", Cycle: 1, State: "harvested", AvailableAt: 1791400020, By: wrapperspb.String("fixture-account"), At: wrapperspb.Double(1791400000)}}, PersonalClaims: []*contract.WildsPersonalClaim{{EntityId: "chest:-2:-4:0", At: 1791400000}},
-		Discoveries: []*contract.WildsDiscovery{{EntityId: "place:-1:-2", DiscovererId: "fixture-account", DisplayName: "Fixture", At: 1791400000}},
+		Discoveries: []*contract.WildsDiscovery{{EntityId: "place:-1:-2", DiscovererId: "fixture-account", DisplayName: "Fixture", At: 1791400000, Epoch: "wick-epoch"}},
 		Lanterns:    []*contract.WildsLantern{lamp}, Echoes: []*contract.EchoAssignment{{Site: "echo:0", Member: "tam"}},
 		Ground: []*contract.ChunkGroundChanges{ground}, Materials: map[string]float64{"stone": 4},
 		Glimpse: []*contract.WildsGlimpse{{Chunk: key(-5, -4), Land: "meadow", River: true}},
@@ -307,7 +307,7 @@ func TestServerFirstWireFixtures(t *testing.T) {
 		"wilds-lift":        &contract.WildsLiftResult{Ground: ground, Materials: map[string]float64{"stone": 4}, WaysBroken: []string{way.Id}},
 		"wilds-lay-branch":  &contract.WildsLayResult{Ground: ground, Materials: map[string]float64{"stone": 2}, WaysMade: []*contract.WildsWay{branchAC, branchBC}},
 		"wilds-lift-branch": &contract.WildsLiftResult{Ground: ground, Materials: map[string]float64{"stone": 3}, WaysBroken: []string{"way:place:-1:-2:place:0:-2", "way:place:-1:-2:place:1:-2"}},
-		"discover-first":    &contract.WildsDiscoverResult{Epoch: "wick-epoch", Discovery: &contract.WildsDiscovery{EntityId: "place:-1:-2", DiscovererId: "fixture-account", DisplayName: "Fixture", At: 1791400000}, First: true, Loot: loot, Materials: map[string]float64{"timber": 3}},
+		"discover-first":    &contract.WildsDiscoverResult{Epoch: "wick-epoch", Discovery: &contract.WildsDiscovery{EntityId: "place:-1:-2", DiscovererId: "fixture-account", DisplayName: "Fixture", At: 1791400000, Epoch: "wick-epoch"}, First: true, Loot: loot, Materials: map[string]float64{"timber": 3}},
 	} {
 		envelope, err := typedEnvelope(state.State, result)
 		if err != nil {

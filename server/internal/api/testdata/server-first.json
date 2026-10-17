@@ -1314,7 +1314,8 @@
           "poiId": "",
           "discovererId": "fixture-account",
           "displayName": "Fixture",
-          "at": 1791400000
+          "at": 1791400000,
+          "epoch": "wick-epoch"
         },
         "first": true,
         "loot": {
@@ -9225,7 +9226,8 @@
         "poiId": "fixture",
         "discovererId": "fixture",
         "displayName": "fixture",
-        "at": 1
+        "at": 1,
+        "epoch": "fixture"
       },
       "first": true,
       "loot": {
@@ -9250,7 +9252,8 @@
       "poiId": "",
       "discovererId": "",
       "displayName": "",
-      "at": 0
+      "at": 0,
+      "epoch": ""
     }
   },
   {
@@ -9261,7 +9264,8 @@
       "poiId": "fixture",
       "discovererId": "fixture",
       "displayName": "fixture",
-      "at": 1
+      "at": 1,
+      "epoch": "fixture"
     }
   },
   {
@@ -9752,7 +9756,8 @@
       "materials": {},
       "glimpse": [],
       "ways": [],
-      "chunks": []
+      "chunks": [],
+      "held": []
     }
   },
   {
@@ -9816,7 +9821,8 @@
           "poiId": "fixture",
           "discovererId": "fixture",
           "displayName": "fixture",
-          "at": 1
+          "at": 1,
+          "epoch": "fixture"
         }
       ],
       "lanterns": [
@@ -9912,6 +9918,17 @@
           "source": "fixture",
           "epoch": "fixture"
         }
+      ],
+      "held": [
+        {
+          "id": "fixture",
+          "worldSeed": "fixture",
+          "generatorVersion": 1,
+          "season": "fixture",
+          "startsAt": 1,
+          "endsAt": 1,
+          "kind": "fixture"
+        }
       ]
     }
   },
@@ -9976,7 +9993,8 @@
           "poiId": "",
           "discovererId": "fixture-account",
           "displayName": "Fixture",
-          "at": 1791400000
+          "at": 1791400000,
+          "epoch": "wick-epoch"
         }
       ],
       "lanterns": [
@@ -10551,7 +10569,8 @@
           "source": "generated",
           "epoch": "wick-epoch"
         }
-      ]
+      ],
+      "held": []
     }
   },
   {
@@ -10640,7 +10659,8 @@
           "poiId": "fixture",
           "discovererId": "fixture",
           "displayName": "fixture",
-          "at": 1
+          "at": 1,
+          "epoch": "fixture"
         }
       ],
       "lanterns": [

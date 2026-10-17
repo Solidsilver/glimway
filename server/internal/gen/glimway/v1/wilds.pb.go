@@ -1920,6 +1920,8 @@ func (x *WildsPersonalClaim) GetAt() float64 {
 }
 
 // All time fields are Unix seconds.
+// epoch: the epoch the place was found in (this wick's, or a held chunk's
+// pinned one: place ids repeat across wicks).
 type WildsDiscovery struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	EntityId      string                 `protobuf:"bytes,1,opt,name=entity_id,json=entityId,proto3" json:"entity_id,omitempty"`
@@ -1927,6 +1929,7 @@ type WildsDiscovery struct {
 	DiscovererId  string                 `protobuf:"bytes,3,opt,name=discoverer_id,json=discovererId,proto3" json:"discoverer_id,omitempty"`
 	DisplayName   string                 `protobuf:"bytes,4,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	At            float64                `protobuf:"fixed64,5,opt,name=at,proto3" json:"at,omitempty"`
+	Epoch         string                 `protobuf:"bytes,6,opt,name=epoch,proto3" json:"epoch,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1994,6 +1997,13 @@ func (x *WildsDiscovery) GetAt() float64 {
 		return x.At
 	}
 	return 0
+}
+
+func (x *WildsDiscovery) GetEpoch() string {
+	if x != nil {
+		return x.Epoch
+	}
+	return ""
 }
 
 // All time fields are Unix seconds.
@@ -2771,9 +2781,14 @@ type WildsNearResult struct {
 	// Ways with a tile in the window.
 	Ways []*WildsWay `protobuf:"bytes,14,rep,name=ways,proto3" json:"ways,omitempty"`
 	// Every chunk of the window on the grid (location.OnGrid), row-major:
-	// its source ("fixed" or "generated") and the epoch its body is read
-	// under (a fixed chunk's pseudo-epoch). Only generated chunks carry state.
-	Chunks        []*NearChunk `protobuf:"bytes,15,rep,name=chunks,proto3" json:"chunks,omitempty"`
+	// its source ("fixed", "generated" or "held") and the epoch its body is
+	// read under (a fixed chunk's pseudo-epoch, a held chunk's pinned wick
+	// epoch). Only generated and held chunks carry state.
+	Chunks []*NearChunk `protobuf:"bytes,15,rep,name=chunks,proto3" json:"chunks,omitempty"`
+	// The wick epochs the window's held chunks are pinned to, other than this
+	// wick (roadmap 0.12 holds): their entity states, claims and ground
+	// changes ride under them.
+	Held          []*WildsEpoch `protobuf:"bytes,16,rep,name=held,proto3" json:"held,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2909,6 +2924,13 @@ func (x *WildsNearResult) GetWays() []*WildsWay {
 func (x *WildsNearResult) GetChunks() []*NearChunk {
 	if x != nil {
 		return x.Chunks
+	}
+	return nil
+}
+
+func (x *WildsNearResult) GetHeld() []*WildsEpoch {
+	if x != nil {
+		return x.Held
 	}
 	return nil
 }
@@ -3421,13 +3443,14 @@ const file_glimway_v1_wilds_proto_rawDesc = "" +
 	"\x0ecamp_claimable\x18\b \x01(\bR\rcampClaimable\"A\n" +
 	"\x12WildsPersonalClaim\x12\x1b\n" +
 	"\tentity_id\x18\x01 \x01(\tR\bentityId\x12\x0e\n" +
-	"\x02at\x18\x02 \x01(\x01R\x02at\"\x9c\x01\n" +
+	"\x02at\x18\x02 \x01(\x01R\x02at\"\xb2\x01\n" +
 	"\x0eWildsDiscovery\x12\x1b\n" +
 	"\tentity_id\x18\x01 \x01(\tR\bentityId\x12\x15\n" +
 	"\x06poi_id\x18\x02 \x01(\tR\x05poiId\x12#\n" +
 	"\rdiscoverer_id\x18\x03 \x01(\tR\fdiscovererId\x12!\n" +
 	"\fdisplay_name\x18\x04 \x01(\tR\vdisplayName\x12\x0e\n" +
-	"\x02at\x18\x05 \x01(\x01R\x02at\"\xf2\x01\n" +
+	"\x02at\x18\x05 \x01(\x01R\x02at\x12\x14\n" +
+	"\x05epoch\x18\x06 \x01(\tR\x05epoch\"\xf2\x01\n" +
 	"\fWildsLantern\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bowner_id\x18\x02 \x01(\tR\aownerId\x12!\n" +
@@ -3485,7 +3508,7 @@ const file_glimway_v1_wilds_proto_rawDesc = "" +
 	"\x04path\x18\t \x03(\v2\x15.glimway.v1.WorldTileR\x04path\x12,\n" +
 	"\x06sign_a\x18\n" +
 	" \x01(\v2\x15.glimway.v1.WorldTileR\x05signA\x12,\n" +
-	"\x06sign_b\x18\v \x01(\v2\x15.glimway.v1.WorldTileR\x05signB\"\xe5\x06\n" +
+	"\x06sign_b\x18\v \x01(\v2\x15.glimway.v1.WorldTileR\x05signB\"\x91\a\n" +
 	"\x0fWildsNearResult\x12,\n" +
 	"\x05still\x18\x01 \x01(\v2\x16.glimway.v1.WildsEpochR\x05still\x12*\n" +
 	"\x04wick\x18\x02 \x01(\v2\x16.glimway.v1.WildsEpochR\x04wick\x125\n" +
@@ -3502,7 +3525,8 @@ const file_glimway_v1_wilds_proto_rawDesc = "" +
 	"\tmaterials\x18\f \x03(\v2*.glimway.v1.WildsNearResult.MaterialsEntryR\tmaterials\x122\n" +
 	"\aglimpse\x18\r \x03(\v2\x18.glimway.v1.WildsGlimpseR\aglimpse\x12(\n" +
 	"\x04ways\x18\x0e \x03(\v2\x14.glimway.v1.WildsWayR\x04ways\x12-\n" +
-	"\x06chunks\x18\x0f \x03(\v2\x15.glimway.v1.NearChunkR\x06chunks\x1a<\n" +
+	"\x06chunks\x18\x0f \x03(\v2\x15.glimway.v1.NearChunkR\x06chunks\x12*\n" +
+	"\x04held\x18\x10 \x03(\v2\x16.glimway.v1.WildsEpochR\x04held\x1a<\n" +
 	"\x0eMaterialsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"j\n" +
@@ -3659,14 +3683,15 @@ var file_glimway_v1_wilds_proto_depIdxs = []int32{
 	28, // 47: glimway.v1.WildsNearResult.glimpse:type_name -> glimway.v1.WildsGlimpse
 	30, // 48: glimway.v1.WildsNearResult.ways:type_name -> glimway.v1.WildsWay
 	32, // 49: glimway.v1.WildsNearResult.chunks:type_name -> glimway.v1.NearChunk
-	14, // 50: glimway.v1.NearChunk.chunk:type_name -> glimway.v1.WildsChunkKey
-	34, // 51: glimway.v1.WildsLoot.materials:type_name -> glimway.v1.WildsMaterial
-	40, // 52: glimway.v1.WildsLoot.trinket:type_name -> google.protobuf.StringValue
-	53, // [53:53] is the sub-list for method output_type
-	53, // [53:53] is the sub-list for method input_type
-	53, // [53:53] is the sub-list for extension type_name
-	53, // [53:53] is the sub-list for extension extendee
-	0,  // [0:53] is the sub-list for field type_name
+	17, // 50: glimway.v1.WildsNearResult.held:type_name -> glimway.v1.WildsEpoch
+	14, // 51: glimway.v1.NearChunk.chunk:type_name -> glimway.v1.WildsChunkKey
+	34, // 52: glimway.v1.WildsLoot.materials:type_name -> glimway.v1.WildsMaterial
+	40, // 53: glimway.v1.WildsLoot.trinket:type_name -> google.protobuf.StringValue
+	54, // [54:54] is the sub-list for method output_type
+	54, // [54:54] is the sub-list for method input_type
+	54, // [54:54] is the sub-list for extension type_name
+	54, // [54:54] is the sub-list for extension extendee
+	0,  // [0:54] is the sub-list for field type_name
 }
 
 func init() { file_glimway_v1_wilds_proto_init() }

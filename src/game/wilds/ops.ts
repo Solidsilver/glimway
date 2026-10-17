@@ -217,8 +217,11 @@ export async function discoverPlace(session: Session, place: { id: string; cx: n
   const wick = wildsEpoch('wick').id
   if (!link || !wick || !wildsLive(session) || !mayAsk(place.id)) return
   const key = newKey()
-  trackOp({ key, kind: 'discover', world: link.worldId, wick, epoch: wick, cx: place.cx, cy: place.cy, token: null, place: place.id, account: link.accountId })
-  const res = await link.wildsDiscover({ epoch: wick, place: place.id, where: { area: 'outdoors', x: Math.round(where.x), y: Math.round(where.y) }, key })
+  // A held chunk's place (`<id>@<epoch>`, placeKey) is found in that chunk's pinned epoch.
+  const [id, pinned] = place.id.split('@') as [string, string | undefined]
+  const epoch = pinned ?? wick
+  trackOp({ key, kind: 'discover', world: link.worldId, wick, epoch, cx: place.cx, cy: place.cy, token: null, place: place.id, account: link.accountId })
+  const res = await link.wildsDiscover({ epoch, place: id, where: { area: 'outdoors', x: Math.round(where.x), y: Math.round(where.y) }, key })
   if (res.ok || !tracked(key)) return
   // In the outbox, unanswered: its replay settles it (this key, never a new one).
   if (res.code === 'pending') return
