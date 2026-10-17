@@ -44,6 +44,8 @@
   import LibraryPanel from './ui/LibraryPanel.svelte'
   import { homesteadsFor, type ArrangeView, type NamePrompt as NamePromptView, type PlacementView } from './game/homestead'
   import NamePrompt from './ui/NamePrompt.svelte'
+  import LampNamingPanel from './ui/LampNamingPanel.svelte'
+  import type { LampNamingAsk } from './lib/lamp-naming'
   import { HOMESTEAD_DATA } from './lib/homestead'
   import { home } from './ui/home.svelte'
   import YardPanel from './ui/YardPanel.svelte'
@@ -303,6 +305,9 @@
     const onNamePrompt = (v: NamePromptView) => {
       home.namePrompt = v
     }
+    const onLampNaming = (v: LampNamingAsk) => {
+      home.lampNaming = v
+    }
     const onHomeGoal = (v: { text: string | null }) => {
       home.goal = v?.text ?? null
     }
@@ -362,6 +367,7 @@
       [EV.homePlacement]: onPlacement,
       [EV.homeThumbs]: onThumbs,
       [EV.homeNamePrompt]: onNamePrompt,
+      [EV.lampNamingOpen]: onLampNaming,
       [EV.homeGoal]: onHomeGoal,
       [EV.homeRoom]: onRoom,
       [EV.villageOpen]: onVillageOpen,
@@ -566,7 +572,7 @@
       move: account.moving !== null,
       confirm: confirms.open > 0,
       logout: confirmLogout,
-      naming: home.namePrompt !== null,
+      naming: home.namePrompt !== null || home.lampNaming !== null,
       'leave-deed': home.leaveAsk !== null,
       panel: panel !== null,
       ending: ui.endingOpen,
@@ -675,7 +681,7 @@
   /** May the map open now? One answer for M and the HUD's button. */
   function mapAllowed(): boolean {
     if (phase !== 'playing' || blocked(layers, BLOCKS.appKeys)) return false
-    return !home.placement && !home.namePrompt && !home.leaveAsk
+    return !home.placement && !home.namePrompt && !home.lampNaming && !home.leaveAsk
   }
   // The map over everything: no emote picker or HUD explanation left open under it.
   $effect(() => {
@@ -1065,6 +1071,21 @@
       onCancel={() => {
         home.namePrompt = null
         bus.emit(EV.homeNamed, { name: null })
+      }}
+    />
+  {/if}
+
+  {#if home.lampNaming}
+    {@const ask = home.lampNaming}
+    <LampNamingPanel
+      landmarks={ask.landmarks}
+      onName={(parts) => {
+        home.lampNaming = null
+        bus.emit(EV.lampNamed, { lamp: ask.lamp, kind: ask.kind, parts })
+      }}
+      onCancel={() => {
+        home.lampNaming = null
+        bus.emit(EV.lampNamed, { lamp: ask.lamp, kind: ask.kind, parts: null })
       }}
     />
   {/if}

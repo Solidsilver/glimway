@@ -96,6 +96,7 @@ func TestMapTiersExploredOnlyAndNoVisit(t *testing.T) {
 func TestMapOwnLotAndCampVisibility(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
+	x.keeper(s.AccountID) // setting a way-lamp takes the Keeper's hand
 	x.claimGate(c, &s, 0)
 	x.stack(s.AccountID, "hearth-oil", "", 3)
 	sx, sy := atStake(0)

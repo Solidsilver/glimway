@@ -2,6 +2,7 @@ syntax = "proto3";
 package glimway.v1;
 option go_package = "glimway/server/internal/gen/glimway/v1;contract";
 import "glimway/v1/op.proto";
+import "glimway/v1/lamps.proto";
 
 // Camps (roadmap 0.13; docs/design/lamps.md 2.5, 2.7): a way-lamp set in a
 // Wilds chunk holds that one chunk while it has oil. Its setter (and their
@@ -22,6 +23,8 @@ message CampView {
   string setter_id = 6; string setter_name = 7;
   int32 oil = 8; bool dimming = 9; bool builder = 10;
   repeated CampPiece pieces = 11; repeated CampPlant plants = 12;
+  // The lamp's naming (lamps.md 2.8), unset until its Keeper names it.
+  LampNaming naming = 13;
 }
 // GET /api/camps: the world's camps.
 message CampsRead { repeated CampView camps = 1; }
@@ -32,14 +35,17 @@ message CampsRead { repeated CampView camps = 1; }
 //   place:  set the carried piece item_id out at (x, y) with rotation (a builder).
 //   remove: pick up a piece of yours, item_id (the lamp, once nothing else stands there).
 //   plant:  plant a seed or sapling item_def at (x, y) (a builder).
+//   name:   give camp's lamp its naming from `parts` (a Keeper who builds there).
+// Setting a way-lamp, or naming one, takes the Keeper's hand.
 message CampRequest {
   OpHeader op = 1; Where where = 2;
   string action = 3; string camp = 4; string item_id = 5; string item_def = 6;
   sint32 x = 7; sint32 y = 8; int32 rotation = 9;
+  repeated string parts = 10;
 }
-// The camp after the operation (none: the lamp was taken down) and the
-// pack's material balances.
-message CampResult { CampView camp = 1; map<string,double> materials = 2; }
+// The camp after the operation (none: the lamp was taken down), the
+// pack's material balances, and what a naming gave (lamp ash, once).
+message CampResult { CampView camp = 1; map<string,double> materials = 2; repeated string given = 3; }
 
 // One thing waiting in a crate at Pell's: a piece, a stack (oil, path stone)
 // or a plant's seed, from the camp at chunk (cx, cy) that lapsed at

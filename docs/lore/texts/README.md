@@ -19,6 +19,7 @@ Canon reference: [`../chronicle.md`](../chronicle.md)
 | [Note Found in a Linseed Box](note-in-the-linseed-box.md) | Aldo Tolley's sealed instruction to his son Finn, under twenty-seven wooden foxes. |
 | [The Hame-Polishers' List](the-hame-polishers-list.md) | The roll of who polished the empty hame each Carting Day for thirty years. |
 | [Ada's Oil Receipts](adas-oil-receipts.md) | Thirty years of the village quietly paying for a mother's window lamp. |
+| [The Form of a Naming](the-form-of-a-naming.md) | Wenna's rule for naming a lamp from parts, copied out of the ledger by Mara. |
 
 ## Voices of the Drift: Found Texts, Vol. II
 

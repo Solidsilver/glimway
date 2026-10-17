@@ -9,7 +9,7 @@ import { file_glimway_v1_op } from "./op_pb.js";
  * Describes the file glimway/v1/lamps.proto.
  */
 export const file_glimway_v1_lamps = /*@__PURE__*/
-  fileDesc("ChZnbGltd2F5L3YxL2xhbXBzLnByb3RvEgpnbGltd2F5LnYxIocBCgpMYW1wTmFtaW5nEg0KBXBhcnRzGAEgAygJEhAKCGxhbmRtYXJrGAIgASgJEgwKBHRleHQYAyABKAkSEgoKc2hvcnRfbmFtZRgEIAEoCRIQCghuYW1lcl9pZBgFIAEoCRISCgpuYW1lcl9uYW1lGAYgASgJEhAKCG5hbWVkX2F0GAcgASgBIssBChBDb21tdW5hbExhbXBWaWV3EgoKAmlkGAEgASgJEgwKBGtpbmQYAiABKAkSCgoCY3gYAyABKBESCgoCY3kYBCABKBESCQoBeBgFIAEoERIJCgF5GAYgASgREhEKCXNldHRlcl9pZBgHIAEoCRITCgtzZXR0ZXJfbmFtZRgIIAEoCRIOCgZsaXRfYXQYCSABKAESDwoHdmlzaXRlZBgKIAEoCBImCgZuYW1pbmcYCyABKAsyFi5nbGltd2F5LnYxLkxhbXBOYW1pbmciQAoRQ29tbXVuYWxMYW1wc1JlYWQSKwoFbGFtcHMYASADKAsyHC5nbGltd2F5LnYxLkNvbW11bmFsTGFtcFZpZXcingEKE0NvbW11bmFsTGFtcFJlcXVlc3QSIAoCb3AYASABKAsyFC5nbGltd2F5LnYxLk9wSGVhZGVyEiAKBXdoZXJlGAIgASgLMhEuZ2xpbXdheS52MS5XaGVyZRIOCgZhY3Rpb24YAyABKAkSDAoEbGFtcBgEIAEoCRIPCgdpdGVtX2lkGAUgASgJEgkKAXgYBiABKBESCQoBeRgHIAEoESK0AQoSQ29tbXVuYWxMYW1wUmVzdWx0EioKBGxhbXAYASABKAsyHC5nbGltd2F5LnYxLkNvbW11bmFsTGFtcFZpZXcSQAoJbWF0ZXJpYWxzGAIgAygLMi0uZ2xpbXdheS52MS5Db21tdW5hbExhbXBSZXN1bHQuTWF0ZXJpYWxzRW50cnkaMAoOTWF0ZXJpYWxzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgBOgI4ASJ6Cg9XYXlzSG9tZUJpbmRpbmcSDwoHbGFtcF9pZBgBIAEoCRIRCglsYW1wX25hbWUYAiABKAkSDQoFc3RhdGUYAyABKAkSCQoBeBgEIAEoERIJCgF5GAUgASgREhAKCGJvdW5kX2F0GAYgASgBEgwKBGtpbmQYByABKAkiPAoMV2F5c0hvbWVSZWFkEiwKB2JpbmRpbmcYASABKAsyGy5nbGltd2F5LnYxLldheXNIb21lQmluZGluZyJzCg9XYXlzSG9tZVJlcXVlc3QSIAoCb3AYASABKAsyFC5nbGltd2F5LnYxLk9wSGVhZGVyEiAKBXdoZXJlGAIgASgLMhEuZ2xpbXdheS52MS5XaGVyZRIOCgZhY3Rpb24YAyABKAkSDAoEbGFtcBgEIAEoCSJyCg5XYXlzSG9tZVJlc3VsdBIOCgZhY3Rpb24YASABKAkSLAoHYmluZGluZxgCIAEoCzIbLmdsaW13YXkudjEuV2F5c0hvbWVCaW5kaW5nEgwKBGFyZWEYAyABKAkSCQoBeBgEIAEoARIJCgF5GAUgASgBQjFaL2dsaW13YXkvc2VydmVyL2ludGVybmFsL2dlbi9nbGltd2F5L3YxO2NvbnRyYWN0YgZwcm90bzM", [file_glimway_v1_op]);
+  fileDesc("ChZnbGltd2F5L3YxL2xhbXBzLnByb3RvEgpnbGltd2F5LnYxIocBCgpMYW1wTmFtaW5nEg0KBXBhcnRzGAEgAygJEhAKCGxhbmRtYXJrGAIgASgJEgwKBHRleHQYAyABKAkSEgoKc2hvcnRfbmFtZRgEIAEoCRIQCghuYW1lcl9pZBgFIAEoCRISCgpuYW1lcl9uYW1lGAYgASgJEhAKCG5hbWVkX2F0GAcgASgBIssBChBDb21tdW5hbExhbXBWaWV3EgoKAmlkGAEgASgJEgwKBGtpbmQYAiABKAkSCgoCY3gYAyABKBESCgoCY3kYBCABKBESCQoBeBgFIAEoERIJCgF5GAYgASgREhEKCXNldHRlcl9pZBgHIAEoCRITCgtzZXR0ZXJfbmFtZRgIIAEoCRIOCgZsaXRfYXQYCSABKAESDwoHdmlzaXRlZBgKIAEoCBImCgZuYW1pbmcYCyABKAsyFi5nbGltd2F5LnYxLkxhbXBOYW1pbmciUwoRQ29tbXVuYWxMYW1wc1JlYWQSKwoFbGFtcHMYASADKAsyHC5nbGltd2F5LnYxLkNvbW11bmFsTGFtcFZpZXcSEQoJY3V0X3N0b25lGAIgASgJIq0BChNDb21tdW5hbExhbXBSZXF1ZXN0EiAKAm9wGAEgASgLMhQuZ2xpbXdheS52MS5PcEhlYWRlchIgCgV3aGVyZRgCIAEoCzIRLmdsaW13YXkudjEuV2hlcmUSDgoGYWN0aW9uGAMgASgJEgwKBGxhbXAYBCABKAkSDwoHaXRlbV9pZBgFIAEoCRIJCgF4GAYgASgREgkKAXkYByABKBESDQoFcGFydHMYCCADKAkiegoPV2F5c0hvbWVCaW5kaW5nEg8KB2xhbXBfaWQYASABKAkSEQoJbGFtcF9uYW1lGAIgASgJEg0KBXN0YXRlGAMgASgJEgkKAXgYBCABKBESCQoBeRgFIAEoERIQCghib3VuZF9hdBgGIAEoARIMCgRraW5kGAcgASgJIjwKDFdheXNIb21lUmVhZBIsCgdiaW5kaW5nGAEgASgLMhsuZ2xpbXdheS52MS5XYXlzSG9tZUJpbmRpbmcicwoPV2F5c0hvbWVSZXF1ZXN0EiAKAm9wGAEgASgLMhQuZ2xpbXdheS52MS5PcEhlYWRlchIgCgV3aGVyZRgCIAEoCzIRLmdsaW13YXkudjEuV2hlcmUSDgoGYWN0aW9uGAMgASgJEgwKBGxhbXAYBCABKAkicgoOV2F5c0hvbWVSZXN1bHQSDgoGYWN0aW9uGAEgASgJEiwKB2JpbmRpbmcYAiABKAsyGy5nbGltd2F5LnYxLldheXNIb21lQmluZGluZxIMCgRhcmVhGAMgASgJEgkKAXgYBCABKAESCQoBeRgFIAEoASLDAQoSQ29tbXVuYWxMYW1wUmVzdWx0EioKBGxhbXAYASABKAsyHC5nbGltd2F5LnYxLkNvbW11bmFsTGFtcFZpZXcSQAoJbWF0ZXJpYWxzGAIgAygLMi0uZ2xpbXdheS52MS5Db21tdW5hbExhbXBSZXN1bHQuTWF0ZXJpYWxzRW50cnkSDQoFZ2l2ZW4YAyADKAkaMAoOTWF0ZXJpYWxzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgBOgI4ASIqCgxMYW1wTGFuZG1hcmsSCgoCaWQYASABKAkSDgoGcGhyYXNlGAIgASgJIkAKEUxhbXBMYW5kbWFya3NSZWFkEisKCWxhbmRtYXJrcxgBIAMoCzIYLmdsaW13YXkudjEuTGFtcExhbmRtYXJrQjFaL2dsaW13YXkvc2VydmVyL2ludGVybmFsL2dlbi9nbGltd2F5L3YxO2NvbnRyYWN0YgZwcm90bzM", [file_glimway_v1_op]);
 
 /**
  * Describes the message glimway.v1.LampNaming.
@@ -40,37 +40,51 @@ export const CommunalLampRequestSchema = /*@__PURE__*/
   messageDesc(file_glimway_v1_lamps, 3);
 
 /**
- * Describes the message glimway.v1.CommunalLampResult.
- * Use `create(CommunalLampResultSchema)` to create a new message.
- */
-export const CommunalLampResultSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_lamps, 4);
-
-/**
  * Describes the message glimway.v1.WaysHomeBinding.
  * Use `create(WaysHomeBindingSchema)` to create a new message.
  */
 export const WaysHomeBindingSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_lamps, 5);
+  messageDesc(file_glimway_v1_lamps, 4);
 
 /**
  * Describes the message glimway.v1.WaysHomeRead.
  * Use `create(WaysHomeReadSchema)` to create a new message.
  */
 export const WaysHomeReadSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_lamps, 6);
+  messageDesc(file_glimway_v1_lamps, 5);
 
 /**
  * Describes the message glimway.v1.WaysHomeRequest.
  * Use `create(WaysHomeRequestSchema)` to create a new message.
  */
 export const WaysHomeRequestSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_lamps, 7);
+  messageDesc(file_glimway_v1_lamps, 6);
 
 /**
  * Describes the message glimway.v1.WaysHomeResult.
  * Use `create(WaysHomeResultSchema)` to create a new message.
  */
 export const WaysHomeResultSchema = /*@__PURE__*/
+  messageDesc(file_glimway_v1_lamps, 7);
+
+/**
+ * Describes the message glimway.v1.CommunalLampResult.
+ * Use `create(CommunalLampResultSchema)` to create a new message.
+ */
+export const CommunalLampResultSchema = /*@__PURE__*/
   messageDesc(file_glimway_v1_lamps, 8);
+
+/**
+ * Describes the message glimway.v1.LampLandmark.
+ * Use `create(LampLandmarkSchema)` to create a new message.
+ */
+export const LampLandmarkSchema = /*@__PURE__*/
+  messageDesc(file_glimway_v1_lamps, 9);
+
+/**
+ * Describes the message glimway.v1.LampLandmarksRead.
+ * Use `create(LampLandmarksReadSchema)` to create a new message.
+ */
+export const LampLandmarksReadSchema = /*@__PURE__*/
+  messageDesc(file_glimway_v1_lamps, 10);
 

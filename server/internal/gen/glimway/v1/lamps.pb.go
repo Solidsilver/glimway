@@ -248,10 +248,14 @@ func (x *CommunalLampView) GetNaming() *LampNaming {
 	return nil
 }
 
-// GET /api/communal-lamps: the world's lit communal lamps.
+// GET /api/communal-lamps: the world's lit communal lamps, and cut_stone:
+// the Lantern Road stone whose cut the Keeper's-hand quest copies (lamps.md
+// 2.8), the first along the road past the Whitequiet. It is a function of
+// the world's seed, the same every wick.
 type CommunalLampsRead struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Lamps         []*CommunalLampView    `protobuf:"bytes,1,rep,name=lamps,proto3" json:"lamps,omitempty"`
+	CutStone      string                 `protobuf:"bytes,2,opt,name=cut_stone,json=cutStone,proto3" json:"cut_stone,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -293,14 +297,24 @@ func (x *CommunalLampsRead) GetLamps() []*CommunalLampView {
 	return nil
 }
 
+func (x *CommunalLampsRead) GetCutStone() string {
+	if x != nil {
+		return x.CutStone
+	}
+	return ""
+}
+
 // POST /api/communal-lamps: one communal-lamp operation, by action. Each
 // one that succeeds visits the lamp's chunk for this wick, even across a
-// seam from where the player stands.
+// seam from where the player stands (copy and read only look).
 //
 //	relight: light the dark stone `lamp` (a lamp-stone site id), anyone.
 //	tend:    look after the lit lamp `lamp`, anyone (it only visits).
 //	post:    set the carried way-lamp item_id at tile (x, y) as a communal post.
 //	lift:    take your own post `lamp` back into your pack.
+//	copy:    copy the cut from the quest's stone `lamp` (the Keeper's hand).
+//	read:    read the lit lamp `lamp`'s naming.
+//	name:    give the lit lamp `lamp` its naming from `parts` (a Keeper).
 type CommunalLampRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Op            *OpHeader              `protobuf:"bytes,1,opt,name=op,proto3" json:"op,omitempty"`
@@ -310,6 +324,7 @@ type CommunalLampRequest struct {
 	ItemId        string                 `protobuf:"bytes,5,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
 	X             int32                  `protobuf:"zigzag32,6,opt,name=x,proto3" json:"x,omitempty"`
 	Y             int32                  `protobuf:"zigzag32,7,opt,name=y,proto3" json:"y,omitempty"`
+	Parts         []string               `protobuf:"bytes,8,rep,name=parts,proto3" json:"parts,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -393,56 +408,9 @@ func (x *CommunalLampRequest) GetY() int32 {
 	return 0
 }
 
-// The lamp after the operation (none: lifted) and the pack's material
-// balances.
-type CommunalLampResult struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Lamp          *CommunalLampView      `protobuf:"bytes,1,opt,name=lamp,proto3" json:"lamp,omitempty"`
-	Materials     map[string]float64     `protobuf:"bytes,2,rep,name=materials,proto3" json:"materials,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed64,2,opt,name=value"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *CommunalLampResult) Reset() {
-	*x = CommunalLampResult{}
-	mi := &file_glimway_v1_lamps_proto_msgTypes[4]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CommunalLampResult) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CommunalLampResult) ProtoMessage() {}
-
-func (x *CommunalLampResult) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_lamps_proto_msgTypes[4]
+func (x *CommunalLampRequest) GetParts() []string {
 	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CommunalLampResult.ProtoReflect.Descriptor instead.
-func (*CommunalLampResult) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_lamps_proto_rawDescGZIP(), []int{4}
-}
-
-func (x *CommunalLampResult) GetLamp() *CommunalLampView {
-	if x != nil {
-		return x.Lamp
-	}
-	return nil
-}
-
-func (x *CommunalLampResult) GetMaterials() map[string]float64 {
-	if x != nil {
-		return x.Materials
+		return x.Parts
 	}
 	return nil
 }
@@ -470,7 +438,7 @@ type WaysHomeBinding struct {
 
 func (x *WaysHomeBinding) Reset() {
 	*x = WaysHomeBinding{}
-	mi := &file_glimway_v1_lamps_proto_msgTypes[5]
+	mi := &file_glimway_v1_lamps_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -482,7 +450,7 @@ func (x *WaysHomeBinding) String() string {
 func (*WaysHomeBinding) ProtoMessage() {}
 
 func (x *WaysHomeBinding) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_lamps_proto_msgTypes[5]
+	mi := &file_glimway_v1_lamps_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -495,7 +463,7 @@ func (x *WaysHomeBinding) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WaysHomeBinding.ProtoReflect.Descriptor instead.
 func (*WaysHomeBinding) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_lamps_proto_rawDescGZIP(), []int{5}
+	return file_glimway_v1_lamps_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *WaysHomeBinding) GetLampId() string {
@@ -557,7 +525,7 @@ type WaysHomeRead struct {
 
 func (x *WaysHomeRead) Reset() {
 	*x = WaysHomeRead{}
-	mi := &file_glimway_v1_lamps_proto_msgTypes[6]
+	mi := &file_glimway_v1_lamps_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -569,7 +537,7 @@ func (x *WaysHomeRead) String() string {
 func (*WaysHomeRead) ProtoMessage() {}
 
 func (x *WaysHomeRead) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_lamps_proto_msgTypes[6]
+	mi := &file_glimway_v1_lamps_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -582,7 +550,7 @@ func (x *WaysHomeRead) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WaysHomeRead.ProtoReflect.Descriptor instead.
 func (*WaysHomeRead) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_lamps_proto_rawDescGZIP(), []int{6}
+	return file_glimway_v1_lamps_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *WaysHomeRead) GetBinding() *WaysHomeBinding {
@@ -613,7 +581,7 @@ type WaysHomeRequest struct {
 
 func (x *WaysHomeRequest) Reset() {
 	*x = WaysHomeRequest{}
-	mi := &file_glimway_v1_lamps_proto_msgTypes[7]
+	mi := &file_glimway_v1_lamps_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -625,7 +593,7 @@ func (x *WaysHomeRequest) String() string {
 func (*WaysHomeRequest) ProtoMessage() {}
 
 func (x *WaysHomeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_lamps_proto_msgTypes[7]
+	mi := &file_glimway_v1_lamps_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -638,7 +606,7 @@ func (x *WaysHomeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WaysHomeRequest.ProtoReflect.Descriptor instead.
 func (*WaysHomeRequest) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_lamps_proto_rawDescGZIP(), []int{7}
+	return file_glimway_v1_lamps_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *WaysHomeRequest) GetOp() *OpHeader {
@@ -684,7 +652,7 @@ type WaysHomeResult struct {
 
 func (x *WaysHomeResult) Reset() {
 	*x = WaysHomeResult{}
-	mi := &file_glimway_v1_lamps_proto_msgTypes[8]
+	mi := &file_glimway_v1_lamps_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -696,7 +664,7 @@ func (x *WaysHomeResult) String() string {
 func (*WaysHomeResult) ProtoMessage() {}
 
 func (x *WaysHomeResult) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_lamps_proto_msgTypes[8]
+	mi := &file_glimway_v1_lamps_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -709,7 +677,7 @@ func (x *WaysHomeResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WaysHomeResult.ProtoReflect.Descriptor instead.
 func (*WaysHomeResult) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_lamps_proto_rawDescGZIP(), []int{8}
+	return file_glimway_v1_lamps_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *WaysHomeResult) GetAction() string {
@@ -747,6 +715,169 @@ func (x *WaysHomeResult) GetY() float64 {
 	return 0
 }
 
+// The lamp after the operation (none: lifted, or a stone's cut copied),
+// the pack's material balances, and what a naming gave (lamp ash, once).
+type CommunalLampResult struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Lamp          *CommunalLampView      `protobuf:"bytes,1,opt,name=lamp,proto3" json:"lamp,omitempty"`
+	Materials     map[string]float64     `protobuf:"bytes,2,rep,name=materials,proto3" json:"materials,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed64,2,opt,name=value"`
+	Given         []string               `protobuf:"bytes,3,rep,name=given,proto3" json:"given,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CommunalLampResult) Reset() {
+	*x = CommunalLampResult{}
+	mi := &file_glimway_v1_lamps_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CommunalLampResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CommunalLampResult) ProtoMessage() {}
+
+func (x *CommunalLampResult) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_lamps_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CommunalLampResult.ProtoReflect.Descriptor instead.
+func (*CommunalLampResult) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_lamps_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *CommunalLampResult) GetLamp() *CommunalLampView {
+	if x != nil {
+		return x.Lamp
+	}
+	return nil
+}
+
+func (x *CommunalLampResult) GetMaterials() map[string]float64 {
+	if x != nil {
+		return x.Materials
+	}
+	return nil
+}
+
+func (x *CommunalLampResult) GetGiven() []string {
+	if x != nil {
+		return x.Given
+	}
+	return nil
+}
+
+// A landmark a lamp may be named by (lamps.md 2.8): one the server found
+// near the lamp, or a fallback (the road, the Whitequiet). id is the part
+// id after "landmark:"; phrase how the naming says it ("the old shrine").
+type LampLandmark struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Phrase        string                 `protobuf:"bytes,2,opt,name=phrase,proto3" json:"phrase,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LampLandmark) Reset() {
+	*x = LampLandmark{}
+	mi := &file_glimway_v1_lamps_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LampLandmark) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LampLandmark) ProtoMessage() {}
+
+func (x *LampLandmark) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_lamps_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LampLandmark.ProtoReflect.Descriptor instead.
+func (*LampLandmark) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_lamps_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *LampLandmark) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *LampLandmark) GetPhrase() string {
+	if x != nil {
+		return x.Phrase
+	}
+	return ""
+}
+
+// GET /api/lamp-landmarks/<lamp>: the landmarks a naming of that lamp may
+// use, nearest first. The naming refuses any other.
+type LampLandmarksRead struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Landmarks     []*LampLandmark        `protobuf:"bytes,1,rep,name=landmarks,proto3" json:"landmarks,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LampLandmarksRead) Reset() {
+	*x = LampLandmarksRead{}
+	mi := &file_glimway_v1_lamps_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LampLandmarksRead) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LampLandmarksRead) ProtoMessage() {}
+
+func (x *LampLandmarksRead) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_lamps_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LampLandmarksRead.ProtoReflect.Descriptor instead.
+func (*LampLandmarksRead) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_lamps_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *LampLandmarksRead) GetLandmarks() []*LampLandmark {
+	if x != nil {
+		return x.Landmarks
+	}
+	return nil
+}
+
 var File_glimway_v1_lamps_proto protoreflect.FileDescriptor
 
 const file_glimway_v1_lamps_proto_rawDesc = "" +
@@ -777,9 +908,10 @@ const file_glimway_v1_lamps_proto_rawDesc = "" +
 	"\x06lit_at\x18\t \x01(\x01R\x05litAt\x12\x18\n" +
 	"\avisited\x18\n" +
 	" \x01(\bR\avisited\x12.\n" +
-	"\x06naming\x18\v \x01(\v2\x16.glimway.v1.LampNamingR\x06naming\"G\n" +
+	"\x06naming\x18\v \x01(\v2\x16.glimway.v1.LampNamingR\x06naming\"d\n" +
 	"\x11CommunalLampsRead\x122\n" +
-	"\x05lamps\x18\x01 \x03(\v2\x1c.glimway.v1.CommunalLampViewR\x05lamps\"\xc5\x01\n" +
+	"\x05lamps\x18\x01 \x03(\v2\x1c.glimway.v1.CommunalLampViewR\x05lamps\x12\x1b\n" +
+	"\tcut_stone\x18\x02 \x01(\tR\bcutStone\"\xdb\x01\n" +
 	"\x13CommunalLampRequest\x12$\n" +
 	"\x02op\x18\x01 \x01(\v2\x14.glimway.v1.OpHeaderR\x02op\x12'\n" +
 	"\x05where\x18\x02 \x01(\v2\x11.glimway.v1.WhereR\x05where\x12\x16\n" +
@@ -787,13 +919,8 @@ const file_glimway_v1_lamps_proto_rawDesc = "" +
 	"\x04lamp\x18\x04 \x01(\tR\x04lamp\x12\x17\n" +
 	"\aitem_id\x18\x05 \x01(\tR\x06itemId\x12\f\n" +
 	"\x01x\x18\x06 \x01(\x11R\x01x\x12\f\n" +
-	"\x01y\x18\a \x01(\x11R\x01y\"\xd1\x01\n" +
-	"\x12CommunalLampResult\x120\n" +
-	"\x04lamp\x18\x01 \x01(\v2\x1c.glimway.v1.CommunalLampViewR\x04lamp\x12K\n" +
-	"\tmaterials\x18\x02 \x03(\v2-.glimway.v1.CommunalLampResult.MaterialsEntryR\tmaterials\x1a<\n" +
-	"\x0eMaterialsEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"\xa8\x01\n" +
+	"\x01y\x18\a \x01(\x11R\x01y\x12\x14\n" +
+	"\x05parts\x18\b \x03(\tR\x05parts\"\xa8\x01\n" +
 	"\x0fWaysHomeBinding\x12\x17\n" +
 	"\alamp_id\x18\x01 \x01(\tR\x06lampId\x12\x1b\n" +
 	"\tlamp_name\x18\x02 \x01(\tR\blampName\x12\x14\n" +
@@ -814,7 +941,19 @@ const file_glimway_v1_lamps_proto_rawDesc = "" +
 	"\abinding\x18\x02 \x01(\v2\x1b.glimway.v1.WaysHomeBindingR\abinding\x12\x12\n" +
 	"\x04area\x18\x03 \x01(\tR\x04area\x12\f\n" +
 	"\x01x\x18\x04 \x01(\x01R\x01x\x12\f\n" +
-	"\x01y\x18\x05 \x01(\x01R\x01yB1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
+	"\x01y\x18\x05 \x01(\x01R\x01y\"\xe7\x01\n" +
+	"\x12CommunalLampResult\x120\n" +
+	"\x04lamp\x18\x01 \x01(\v2\x1c.glimway.v1.CommunalLampViewR\x04lamp\x12K\n" +
+	"\tmaterials\x18\x02 \x03(\v2-.glimway.v1.CommunalLampResult.MaterialsEntryR\tmaterials\x12\x14\n" +
+	"\x05given\x18\x03 \x03(\tR\x05given\x1a<\n" +
+	"\x0eMaterialsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"6\n" +
+	"\fLampLandmark\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
+	"\x06phrase\x18\x02 \x01(\tR\x06phrase\"K\n" +
+	"\x11LampLandmarksRead\x126\n" +
+	"\tlandmarks\x18\x01 \x03(\v2\x18.glimway.v1.LampLandmarkR\tlandmarksB1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
 
 var (
 	file_glimway_v1_lamps_proto_rawDescOnce sync.Once
@@ -828,37 +967,40 @@ func file_glimway_v1_lamps_proto_rawDescGZIP() []byte {
 	return file_glimway_v1_lamps_proto_rawDescData
 }
 
-var file_glimway_v1_lamps_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_glimway_v1_lamps_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_glimway_v1_lamps_proto_goTypes = []any{
 	(*LampNaming)(nil),          // 0: glimway.v1.LampNaming
 	(*CommunalLampView)(nil),    // 1: glimway.v1.CommunalLampView
 	(*CommunalLampsRead)(nil),   // 2: glimway.v1.CommunalLampsRead
 	(*CommunalLampRequest)(nil), // 3: glimway.v1.CommunalLampRequest
-	(*CommunalLampResult)(nil),  // 4: glimway.v1.CommunalLampResult
-	(*WaysHomeBinding)(nil),     // 5: glimway.v1.WaysHomeBinding
-	(*WaysHomeRead)(nil),        // 6: glimway.v1.WaysHomeRead
-	(*WaysHomeRequest)(nil),     // 7: glimway.v1.WaysHomeRequest
-	(*WaysHomeResult)(nil),      // 8: glimway.v1.WaysHomeResult
-	nil,                         // 9: glimway.v1.CommunalLampResult.MaterialsEntry
-	(*OpHeader)(nil),            // 10: glimway.v1.OpHeader
-	(*Where)(nil),               // 11: glimway.v1.Where
+	(*WaysHomeBinding)(nil),     // 4: glimway.v1.WaysHomeBinding
+	(*WaysHomeRead)(nil),        // 5: glimway.v1.WaysHomeRead
+	(*WaysHomeRequest)(nil),     // 6: glimway.v1.WaysHomeRequest
+	(*WaysHomeResult)(nil),      // 7: glimway.v1.WaysHomeResult
+	(*CommunalLampResult)(nil),  // 8: glimway.v1.CommunalLampResult
+	(*LampLandmark)(nil),        // 9: glimway.v1.LampLandmark
+	(*LampLandmarksRead)(nil),   // 10: glimway.v1.LampLandmarksRead
+	nil,                         // 11: glimway.v1.CommunalLampResult.MaterialsEntry
+	(*OpHeader)(nil),            // 12: glimway.v1.OpHeader
+	(*Where)(nil),               // 13: glimway.v1.Where
 }
 var file_glimway_v1_lamps_proto_depIdxs = []int32{
 	0,  // 0: glimway.v1.CommunalLampView.naming:type_name -> glimway.v1.LampNaming
 	1,  // 1: glimway.v1.CommunalLampsRead.lamps:type_name -> glimway.v1.CommunalLampView
-	10, // 2: glimway.v1.CommunalLampRequest.op:type_name -> glimway.v1.OpHeader
-	11, // 3: glimway.v1.CommunalLampRequest.where:type_name -> glimway.v1.Where
-	1,  // 4: glimway.v1.CommunalLampResult.lamp:type_name -> glimway.v1.CommunalLampView
-	9,  // 5: glimway.v1.CommunalLampResult.materials:type_name -> glimway.v1.CommunalLampResult.MaterialsEntry
-	5,  // 6: glimway.v1.WaysHomeRead.binding:type_name -> glimway.v1.WaysHomeBinding
-	10, // 7: glimway.v1.WaysHomeRequest.op:type_name -> glimway.v1.OpHeader
-	11, // 8: glimway.v1.WaysHomeRequest.where:type_name -> glimway.v1.Where
-	5,  // 9: glimway.v1.WaysHomeResult.binding:type_name -> glimway.v1.WaysHomeBinding
-	10, // [10:10] is the sub-list for method output_type
-	10, // [10:10] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	12, // 2: glimway.v1.CommunalLampRequest.op:type_name -> glimway.v1.OpHeader
+	13, // 3: glimway.v1.CommunalLampRequest.where:type_name -> glimway.v1.Where
+	4,  // 4: glimway.v1.WaysHomeRead.binding:type_name -> glimway.v1.WaysHomeBinding
+	12, // 5: glimway.v1.WaysHomeRequest.op:type_name -> glimway.v1.OpHeader
+	13, // 6: glimway.v1.WaysHomeRequest.where:type_name -> glimway.v1.Where
+	4,  // 7: glimway.v1.WaysHomeResult.binding:type_name -> glimway.v1.WaysHomeBinding
+	1,  // 8: glimway.v1.CommunalLampResult.lamp:type_name -> glimway.v1.CommunalLampView
+	11, // 9: glimway.v1.CommunalLampResult.materials:type_name -> glimway.v1.CommunalLampResult.MaterialsEntry
+	9,  // 10: glimway.v1.LampLandmarksRead.landmarks:type_name -> glimway.v1.LampLandmark
+	11, // [11:11] is the sub-list for method output_type
+	11, // [11:11] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_glimway_v1_lamps_proto_init() }
@@ -873,7 +1015,7 @@ func file_glimway_v1_lamps_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_glimway_v1_lamps_proto_rawDesc), len(file_glimway_v1_lamps_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

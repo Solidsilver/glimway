@@ -203,19 +203,21 @@ func (x *CampPlant) GetOwnerId() string {
 // whether it dims (out of oil at the last turning: it lapses at the next
 // unless filled). builder: the caller may build here.
 type CampView struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Cx            int32                  `protobuf:"zigzag32,2,opt,name=cx,proto3" json:"cx,omitempty"`
-	Cy            int32                  `protobuf:"zigzag32,3,opt,name=cy,proto3" json:"cy,omitempty"`
-	X             int32                  `protobuf:"zigzag32,4,opt,name=x,proto3" json:"x,omitempty"`
-	Y             int32                  `protobuf:"zigzag32,5,opt,name=y,proto3" json:"y,omitempty"`
-	SetterId      string                 `protobuf:"bytes,6,opt,name=setter_id,json=setterId,proto3" json:"setter_id,omitempty"`
-	SetterName    string                 `protobuf:"bytes,7,opt,name=setter_name,json=setterName,proto3" json:"setter_name,omitempty"`
-	Oil           int32                  `protobuf:"varint,8,opt,name=oil,proto3" json:"oil,omitempty"`
-	Dimming       bool                   `protobuf:"varint,9,opt,name=dimming,proto3" json:"dimming,omitempty"`
-	Builder       bool                   `protobuf:"varint,10,opt,name=builder,proto3" json:"builder,omitempty"`
-	Pieces        []*CampPiece           `protobuf:"bytes,11,rep,name=pieces,proto3" json:"pieces,omitempty"`
-	Plants        []*CampPlant           `protobuf:"bytes,12,rep,name=plants,proto3" json:"plants,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	Id         string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Cx         int32                  `protobuf:"zigzag32,2,opt,name=cx,proto3" json:"cx,omitempty"`
+	Cy         int32                  `protobuf:"zigzag32,3,opt,name=cy,proto3" json:"cy,omitempty"`
+	X          int32                  `protobuf:"zigzag32,4,opt,name=x,proto3" json:"x,omitempty"`
+	Y          int32                  `protobuf:"zigzag32,5,opt,name=y,proto3" json:"y,omitempty"`
+	SetterId   string                 `protobuf:"bytes,6,opt,name=setter_id,json=setterId,proto3" json:"setter_id,omitempty"`
+	SetterName string                 `protobuf:"bytes,7,opt,name=setter_name,json=setterName,proto3" json:"setter_name,omitempty"`
+	Oil        int32                  `protobuf:"varint,8,opt,name=oil,proto3" json:"oil,omitempty"`
+	Dimming    bool                   `protobuf:"varint,9,opt,name=dimming,proto3" json:"dimming,omitempty"`
+	Builder    bool                   `protobuf:"varint,10,opt,name=builder,proto3" json:"builder,omitempty"`
+	Pieces     []*CampPiece           `protobuf:"bytes,11,rep,name=pieces,proto3" json:"pieces,omitempty"`
+	Plants     []*CampPlant           `protobuf:"bytes,12,rep,name=plants,proto3" json:"plants,omitempty"`
+	// The lamp's naming (lamps.md 2.8), unset until its Keeper names it.
+	Naming        *LampNaming `protobuf:"bytes,13,opt,name=naming,proto3" json:"naming,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -334,6 +336,13 @@ func (x *CampView) GetPlants() []*CampPlant {
 	return nil
 }
 
+func (x *CampView) GetNaming() *LampNaming {
+	if x != nil {
+		return x.Naming
+	}
+	return nil
+}
+
 // GET /api/camps: the world's camps.
 type CampsRead struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -386,6 +395,9 @@ func (x *CampsRead) GetCamps() []*CampView {
 //	place:  set the carried piece item_id out at (x, y) with rotation (a builder).
 //	remove: pick up a piece of yours, item_id (the lamp, once nothing else stands there).
 //	plant:  plant a seed or sapling item_def at (x, y) (a builder).
+//	name:   give camp's lamp its naming from `parts` (a Keeper who builds there).
+//
+// Setting a way-lamp, or naming one, takes the Keeper's hand.
 type CampRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Op            *OpHeader              `protobuf:"bytes,1,opt,name=op,proto3" json:"op,omitempty"`
@@ -397,6 +409,7 @@ type CampRequest struct {
 	X             int32                  `protobuf:"zigzag32,7,opt,name=x,proto3" json:"x,omitempty"`
 	Y             int32                  `protobuf:"zigzag32,8,opt,name=y,proto3" json:"y,omitempty"`
 	Rotation      int32                  `protobuf:"varint,9,opt,name=rotation,proto3" json:"rotation,omitempty"`
+	Parts         []string               `protobuf:"bytes,10,rep,name=parts,proto3" json:"parts,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -494,12 +507,20 @@ func (x *CampRequest) GetRotation() int32 {
 	return 0
 }
 
-// The camp after the operation (none: the lamp was taken down) and the
-// pack's material balances.
+func (x *CampRequest) GetParts() []string {
+	if x != nil {
+		return x.Parts
+	}
+	return nil
+}
+
+// The camp after the operation (none: the lamp was taken down), the
+// pack's material balances, and what a naming gave (lamp ash, once).
 type CampResult struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Camp          *CampView              `protobuf:"bytes,1,opt,name=camp,proto3" json:"camp,omitempty"`
 	Materials     map[string]float64     `protobuf:"bytes,2,rep,name=materials,proto3" json:"materials,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed64,2,opt,name=value"`
+	Given         []string               `protobuf:"bytes,3,rep,name=given,proto3" json:"given,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -544,6 +565,13 @@ func (x *CampResult) GetCamp() *CampView {
 func (x *CampResult) GetMaterials() map[string]float64 {
 	if x != nil {
 		return x.Materials
+	}
+	return nil
+}
+
+func (x *CampResult) GetGiven() []string {
+	if x != nil {
+		return x.Given
 	}
 	return nil
 }
@@ -801,7 +829,7 @@ var File_glimway_v1_camps_proto protoreflect.FileDescriptor
 const file_glimway_v1_camps_proto_rawDesc = "" +
 	"\n" +
 	"\x16glimway/v1/camps.proto\x12\n" +
-	"glimway.v1\x1a\x13glimway/v1/op.proto\"\x89\x01\n" +
+	"glimway.v1\x1a\x13glimway/v1/op.proto\x1a\x16glimway/v1/lamps.proto\"\x89\x01\n" +
 	"\tCampPiece\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bitem_def\x18\x02 \x01(\tR\aitemDef\x12\f\n" +
@@ -818,7 +846,7 @@ const file_glimway_v1_camps_proto_rawDesc = "" +
 	"planted_at\x18\x05 \x01(\x01R\tplantedAt\x12\x1f\n" +
 	"\vplanted_day\x18\x06 \x01(\x01R\n" +
 	"plantedDay\x12\x19\n" +
-	"\bowner_id\x18\a \x01(\tR\aownerId\"\xb8\x02\n" +
+	"\bowner_id\x18\a \x01(\tR\aownerId\"\xe8\x02\n" +
 	"\bCampView\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x0e\n" +
 	"\x02cx\x18\x02 \x01(\x11R\x02cx\x12\x0e\n" +
@@ -833,9 +861,10 @@ const file_glimway_v1_camps_proto_rawDesc = "" +
 	"\abuilder\x18\n" +
 	" \x01(\bR\abuilder\x12-\n" +
 	"\x06pieces\x18\v \x03(\v2\x15.glimway.v1.CampPieceR\x06pieces\x12-\n" +
-	"\x06plants\x18\f \x03(\v2\x15.glimway.v1.CampPlantR\x06plants\"7\n" +
+	"\x06plants\x18\f \x03(\v2\x15.glimway.v1.CampPlantR\x06plants\x12.\n" +
+	"\x06naming\x18\r \x01(\v2\x16.glimway.v1.LampNamingR\x06naming\"7\n" +
 	"\tCampsRead\x12*\n" +
-	"\x05camps\x18\x01 \x03(\v2\x14.glimway.v1.CampViewR\x05camps\"\xf4\x01\n" +
+	"\x05camps\x18\x01 \x03(\v2\x14.glimway.v1.CampViewR\x05camps\"\x8a\x02\n" +
 	"\vCampRequest\x12$\n" +
 	"\x02op\x18\x01 \x01(\v2\x14.glimway.v1.OpHeaderR\x02op\x12'\n" +
 	"\x05where\x18\x02 \x01(\v2\x11.glimway.v1.WhereR\x05where\x12\x16\n" +
@@ -845,11 +874,14 @@ const file_glimway_v1_camps_proto_rawDesc = "" +
 	"\bitem_def\x18\x06 \x01(\tR\aitemDef\x12\f\n" +
 	"\x01x\x18\a \x01(\x11R\x01x\x12\f\n" +
 	"\x01y\x18\b \x01(\x11R\x01y\x12\x1a\n" +
-	"\brotation\x18\t \x01(\x05R\brotation\"\xb9\x01\n" +
+	"\brotation\x18\t \x01(\x05R\brotation\x12\x14\n" +
+	"\x05parts\x18\n" +
+	" \x03(\tR\x05parts\"\xcf\x01\n" +
 	"\n" +
 	"CampResult\x12(\n" +
 	"\x04camp\x18\x01 \x01(\v2\x14.glimway.v1.CampViewR\x04camp\x12C\n" +
-	"\tmaterials\x18\x02 \x03(\v2%.glimway.v1.CampResult.MaterialsEntryR\tmaterials\x1a<\n" +
+	"\tmaterials\x18\x02 \x03(\v2%.glimway.v1.CampResult.MaterialsEntryR\tmaterials\x12\x14\n" +
+	"\x05given\x18\x03 \x03(\tR\x05given\x1a<\n" +
 	"\x0eMaterialsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"\x9d\x01\n" +
@@ -899,27 +931,29 @@ var file_glimway_v1_camps_proto_goTypes = []any{
 	(*RecoveryCollectResult)(nil),  // 9: glimway.v1.RecoveryCollectResult
 	nil,                            // 10: glimway.v1.CampResult.MaterialsEntry
 	nil,                            // 11: glimway.v1.RecoveryCollectResult.MaterialsEntry
-	(*OpHeader)(nil),               // 12: glimway.v1.OpHeader
-	(*Where)(nil),                  // 13: glimway.v1.Where
+	(*LampNaming)(nil),             // 12: glimway.v1.LampNaming
+	(*OpHeader)(nil),               // 13: glimway.v1.OpHeader
+	(*Where)(nil),                  // 14: glimway.v1.Where
 }
 var file_glimway_v1_camps_proto_depIdxs = []int32{
 	0,  // 0: glimway.v1.CampView.pieces:type_name -> glimway.v1.CampPiece
 	1,  // 1: glimway.v1.CampView.plants:type_name -> glimway.v1.CampPlant
-	2,  // 2: glimway.v1.CampsRead.camps:type_name -> glimway.v1.CampView
-	12, // 3: glimway.v1.CampRequest.op:type_name -> glimway.v1.OpHeader
-	13, // 4: glimway.v1.CampRequest.where:type_name -> glimway.v1.Where
-	2,  // 5: glimway.v1.CampResult.camp:type_name -> glimway.v1.CampView
-	10, // 6: glimway.v1.CampResult.materials:type_name -> glimway.v1.CampResult.MaterialsEntry
-	6,  // 7: glimway.v1.RecoveryRead.entries:type_name -> glimway.v1.RecoveryEntry
-	12, // 8: glimway.v1.RecoveryCollectRequest.op:type_name -> glimway.v1.OpHeader
-	13, // 9: glimway.v1.RecoveryCollectRequest.where:type_name -> glimway.v1.Where
-	6,  // 10: glimway.v1.RecoveryCollectResult.collected:type_name -> glimway.v1.RecoveryEntry
-	11, // 11: glimway.v1.RecoveryCollectResult.materials:type_name -> glimway.v1.RecoveryCollectResult.MaterialsEntry
-	12, // [12:12] is the sub-list for method output_type
-	12, // [12:12] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	12, // 2: glimway.v1.CampView.naming:type_name -> glimway.v1.LampNaming
+	2,  // 3: glimway.v1.CampsRead.camps:type_name -> glimway.v1.CampView
+	13, // 4: glimway.v1.CampRequest.op:type_name -> glimway.v1.OpHeader
+	14, // 5: glimway.v1.CampRequest.where:type_name -> glimway.v1.Where
+	2,  // 6: glimway.v1.CampResult.camp:type_name -> glimway.v1.CampView
+	10, // 7: glimway.v1.CampResult.materials:type_name -> glimway.v1.CampResult.MaterialsEntry
+	6,  // 8: glimway.v1.RecoveryRead.entries:type_name -> glimway.v1.RecoveryEntry
+	13, // 9: glimway.v1.RecoveryCollectRequest.op:type_name -> glimway.v1.OpHeader
+	14, // 10: glimway.v1.RecoveryCollectRequest.where:type_name -> glimway.v1.Where
+	6,  // 11: glimway.v1.RecoveryCollectResult.collected:type_name -> glimway.v1.RecoveryEntry
+	11, // 12: glimway.v1.RecoveryCollectResult.materials:type_name -> glimway.v1.RecoveryCollectResult.MaterialsEntry
+	13, // [13:13] is the sub-list for method output_type
+	13, // [13:13] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_glimway_v1_camps_proto_init() }
@@ -928,6 +962,7 @@ func file_glimway_v1_camps_proto_init() {
 		return
 	}
 	file_glimway_v1_op_proto_init()
+	file_glimway_v1_lamps_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

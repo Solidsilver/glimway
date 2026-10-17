@@ -134,7 +134,7 @@ The first rows were added as 0.12 and 0.13 landed and describe the code as built
 | Holds | [store/holds.go](../../server/internal/store/holds.go), migration 039: `Chunks.Hold`, `Release`, `HoldAt`, `HeldEpoch(s)`; one `Holder` per kind (`Keeps`, `Released`), registered in `api.New` and judged once when the new wick epoch is made. Fixed → held → generated. |
 | Lot lanterns | [api/lot_lanterns.go](../../server/internal/api/lot_lanterns.go), migration 040: holder kind `lot-lantern`. Fuel is `hearth-oil` (the chandler sells it at 4 glims, 3 a day), a 3-wick store in the lantern, one wick burned a turning, a wick of dimming, then lapse. |
 | Camps and Pell's crate | [api/camps.go](../../server/internal/api/camps.go), [api/recovery.go](../../server/internal/api/recovery.go), migration 041: holder kind `way-lamp`, `camps`, `camp_plants`, `recovery_crates`/`recovery_entries`; `GET`/`POST /api/camps`, `GET /api/recovery`, `POST /api/recovery/collect`. |
-| Ways home | [api/ways_home.go](../../server/internal/api/ways_home.go), migration 044: `GET`/`POST /api/ways-home` (`bind`, `turncap`, `pouch`), `ways_home_bindings` (one per player). Bench recipes with pages; the chandler sells both pages until the Keeper's hand gives them. |
+| Ways home | [api/ways_home.go](../../server/internal/api/ways_home.go), migration 044: `GET`/`POST /api/ways-home` (`bind`, `turncap`, `pouch`), `ways_home_bindings` (one per player). Bench recipes with pages; the Keeper's-hand quest gives both pages. |
 
 | Existing seam | Source and consequence |
 |---|---|
@@ -428,6 +428,19 @@ Store part ids, validated landmark reference and a rendered snapshot on the stab
 Offer only server-resolved landmarks, with road/Whitequiet fallback phrases. A moved Common
 landmark leaves the original naming as history, not a silently rewritten name. Recovery keeps
 it. Separate naming rewards from fuel/tending so neither ash nor naming rights can be repeated.
+
+As built (0.13): quest `keepers-hand` (hear-mara → copy-cut → check-ledger → keep-a-lamp). The
+quest stone is the first Lantern Road stone out of the Whitequiet inside the frontier, a function of
+the world seed (`wilds.RoadStones`). Its flag steps wait on server marks in a `keeper:` namespace:
+`keeper:cut` from the communal-lamp `copy` action there, and `keeper:lamp` when a holder of
+`keeper:hand` relights, sets, tends, reads or names a communal lamp. Check-ledger also gives
+the two ways-home recipe pages and one lamp wick for the relight.
+A naming is six part ids (ordinal, relation, landmark, behind, ahead,
+closing; content `lampNaming`). Landmarks are content-worded place marks and sites in the lamp's
+chunk and its eight neighbours, plus the road and Whitequiet fallbacks. Behind/ahead take a side
+phrase or one of those landmarks. The short name is "<Ordinal> lamp <relation> <landmark>". The
+first naming of a lamp id gives one `lamp-ash`. Camp setting and naming need `keeper:hand`, and
+naming a camp also needs one of its builders.
 
 The mage's deeper naming is a later working: a dark-stone rest light until the turning, even
 inside a hold. It grants no hold or recurring oil exemption. Retire the old oil-substitution

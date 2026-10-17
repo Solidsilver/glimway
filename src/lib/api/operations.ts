@@ -13,7 +13,7 @@ import { WardrobeReadSchema, type WardrobeCheckRequest, type WardrobeRead, type 
 import { FishingWatersSchema, type FishCastRequest, type FishSettleRequest, type FishCancelRequest, type FishingWaters } from '../gen/glimway/v1/fishing_pb.js';
 import { PurseReadSchema, type PurseRead, type PurseTopUpRequest } from '../gen/glimway/v1/purse_pb.js';
 import { CampsReadSchema, RecoveryReadSchema, type CampRequest, type CampsRead, type RecoveryCollectRequest, type RecoveryRead } from '../gen/glimway/v1/camps_pb.js';
-import { CommunalLampsReadSchema, WaysHomeReadSchema, type CommunalLampRequest, type CommunalLampsRead, type WaysHomeRead, type WaysHomeRequest } from '../gen/glimway/v1/lamps_pb.js';
+import { CommunalLampsReadSchema, LampLandmarksReadSchema, WaysHomeReadSchema, type CommunalLampRequest, type CommunalLampsRead, type LampLandmarksRead, type WaysHomeRead, type WaysHomeRequest } from '../gen/glimway/v1/lamps_pb.js';
 import { type ReportRequest, type QuestStepRequest, type MarkRequest, type TakePaperRequest, type SettleEchoRequest, type FallRequest, type ProfileReport, type SpendRequest, type WildsClaimRequest, type WildsLanternRequest, type WildsClearRequest, type WildsLayRequest, type WildsLiftRequest, type WildsDiscoverRequest } from '../gen/glimway/v1/operations_pb.js';
 
 export type Transport = (method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown, extra?: { headers?: Record<string, string>; binary?: boolean; keepalive?: boolean }) => Promise<unknown>;
@@ -55,6 +55,8 @@ export interface OperationsApi {
   /** Communal lamps (lamps.md 1.3, 2.4): relight, tend, post, lift; and the world's lit ones. */
   communalLamp(request: CommunalLampRequest): Promise<Envelope>;
   communalLamps(): Promise<CommunalLampsRead>;
+  /** The landmarks a naming of this lamp may use (lamps.md 2.8). */
+  lampLandmarks(lamp: string): Promise<LampLandmarksRead>;
   /** Ways home (lamps.md 1.4): bind your pouch, travel by turncap or pouch; and your pouch's binding. */
   waysHome(request: WaysHomeRequest): Promise<Envelope>;
   waysHomeRead(): Promise<WaysHomeRead>;
@@ -138,6 +140,7 @@ export function createOperationsApi(send: Transport): OperationsApi {
     async recoveryCollect(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['recovery-collect'], req)); },
     async communalLamp(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['communal-lamp'], req)); },
     async communalLamps() { return decodeMixed(await send('GET', '/api/communal-lamps'), (r) => decodeWire(CommunalLampsReadSchema, r)).result; },
+    async lampLandmarks(lamp) { return decodeMixed(await send('GET', `/api/lamp-landmarks/${encodeURIComponent(lamp)}`), (r) => decodeWire(LampLandmarksReadSchema, r)).result; },
     async waysHome(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['ways-home'], req)); },
     async waysHomeRead() { return decodeMixed(await send('GET', '/api/ways-home'), (r) => decodeWire(WaysHomeReadSchema, r)).result; },
     async companions(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['companions'], req)); },

@@ -50,6 +50,8 @@ export const inventoryCopy = {
   },
   road: 'For the road',
   roadNote: 'Quest things. They stay with you.',
+  /** Under a carried way-lamp before Mara's ledger (lamps.md 2.8): a communal lamp still sets. */
+  keeperNote: 'Setting a way-lamp for a camp wants a Keeper’s hand. Mara keeps the ledger. You can still set it as a communal lamp.',
   placed: (n: number) => `${n} set out`,
   stored: (n: number) => `${n} put away`,
   papersNote: 'Also in your Journal (J).',

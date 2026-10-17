@@ -70,13 +70,20 @@ export function campHasRoom(c: Pick<CampView, 'oil'>): boolean {
 }
 
 /** The readout at the lamp: whose it is, the wicks of oil left, and what the next turning brings. */
-export function campLines(c: Pick<CampView, 'oil' | 'dimming' | 'setterName' | 'setterId'>, me: string | null): string[] {
+export function campLines(c: Pick<CampView, 'oil' | 'dimming' | 'setterName' | 'setterId' | 'naming'>, me: string | null): string[] {
   const max = HOMESTEAD_DATA.wayLamp.maxWicks
   const whose = c.setterId === me ? 'Your way-lamp.' : `${c.setterName || 'Someone'}’s way-lamp.`
   const wicks = `${c.oil} of ${max} ${max === 1 ? 'wick' : 'wicks'} of oil`
-  if (c.dimming) return [`${whose} It’s guttering: ${wicks}. Unless it’s filled, it goes dark at the turning and the camp turns with it. Everything set out here would wait at Pell’s.`]
-  if (c.oil === 0) return [`${whose} It burns, ${wicks} left. It dims at the turning: fill it to keep this camp.`]
-  return [`${whose} It burns, ${wicks} left. The woods it lights hold while it does.`]
+  // Its Keeper's naming first, as a stone's is (lamps.md 2.8).
+  const named = c.naming?.text ? [`“${c.naming.text}”`] : []
+  if (c.dimming) return [...named, `${whose} It’s guttering: ${wicks}. Unless it’s filled, it goes dark at the turning and the camp turns with it. Everything set out here would wait at Pell’s.`]
+  if (c.oil === 0) return [...named, `${whose} It burns, ${wicks} left. It dims at the turning: fill it to keep this camp.`]
+  return [...named, `${whose} It burns, ${wicks} left. The woods it lights hold while it does.`]
+}
+
+/** A camp lamp's name in the world: its naming's short name, or plain way-lamp. */
+export function campLampName(c: Pick<CampView, 'naming'>): string {
+  return c.naming?.shortName || 'Way-lamp'
 }
 
 /** What an entry is, in a list: "a wooden stool", "3 stone". */

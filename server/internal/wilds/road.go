@@ -176,3 +176,22 @@ func (r *road) lampNear(samples []pt, along []int, j, side int) (lampMark, bool)
 
 // lampStoneID is a lamp stone's site id.
 func lampStoneID(cx, cy int) string { return fmt.Sprintf("lamp-stone:%d:%d", cx, cy) }
+
+// RoadStone is one of the Lantern Road's lamp stones: its site id, chunk
+// and chunk-local tile.
+type RoadStone struct {
+	ID     string
+	CX, CY int
+	Tile   Tile
+}
+
+// RoadStones are the Lantern Road's lamp stones in order along it, from the
+// Whitequiet out. Like the road, a function of the world seed alone.
+func RoadStones(seed string) []RoadStone {
+	r := newRoad(seed)
+	out := make([]RoadStone, 0, len(r.marks))
+	for _, m := range r.marks {
+		out = append(out, RoadStone{ID: lampStoneID(m.chunk[0], m.chunk[1]), CX: m.chunk[0], CY: m.chunk[1], Tile: m.tile})
+	}
+	return out
+}

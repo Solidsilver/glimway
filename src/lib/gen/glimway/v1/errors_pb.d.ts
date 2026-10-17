@@ -1269,6 +1269,23 @@ export enum ErrorCode {
    * @generated from enum value: ERROR_CODE_NO_LANDING = 246;
    */
   NO_LANDING = 246,
+
+  /**
+   * 0.13 The Keeper's hand and naming (lamps.md 2.8).
+   *
+   * @generated from enum value: ERROR_CODE_NEEDS_KEEPER = 247;
+   */
+  NEEDS_KEEPER = 247,
+
+  /**
+   * @generated from enum value: ERROR_CODE_LAMP_NAMED = 248;
+   */
+  LAMP_NAMED = 248,
+
+  /**
+   * @generated from enum value: ERROR_CODE_INVALID_NAMING = 249;
+   */
+  INVALID_NAMING = 249,
 }
 
 /**

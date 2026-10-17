@@ -12,11 +12,13 @@
  */
 import Phaser from 'phaser'
 import type { CampView } from '../../lib/gen/glimway/v1/camps_pb.js'
-import { CAMP_ERRORS, campAtTile, campFrame, campHasRoom, campLines, campLook, campPieceName, campSpot, campTaken } from '../../lib/camps.ts'
+import { CAMP_ERRORS, campAtTile, campFrame, campHasRoom, campLampName, campLines, campLook, campPieceName, campSpot, campTaken } from '../../lib/camps.ts'
 import { HOMESTEAD_DATA, homeItem, rotatedFootprint } from '../../lib/homestead.ts'
 import { TILE, tileFeet } from '../../lib/tile.ts'
 import { chunkOf } from '../../lib/wilds/coords.ts'
 import { homeErrorText } from '../../content/errors.ts'
+import { LAMP_NAMING } from '../../content/lamp-naming.ts'
+import { isKeeper } from '../../lib/lamp-naming.ts'
 import { campsKnown as campsUi } from './camps-state.ts'
 import { bus, EV } from '../events.ts'
 import { openDialogue } from '../dialogue.ts'
@@ -57,9 +59,15 @@ export class WildsCamps {
 
   constructor(private scene: Phaser.Scene, private deps: CampsDeps) {
     const onDo = (d: { action: 'set' | 'place' | 'plant'; itemId?: string; itemDef?: string }) => void this.fromPack(d)
+    // A Keeper's naming of the lamp, from the naming panel (lamps.md 2.8).
+    const onNamed = (d: { lamp: string; kind: string; parts: string[] | null }) => {
+      if (d.kind === 'camp' && d.parts) void this.act({ action: 'name', camp: d.lamp, parts: d.parts }, () => bus.emit(EV.toast, { text: LAMP_NAMING.named, icon: 'lantern' }))
+    }
     bus.on(EV.campDo, onDo)
+    bus.on(EV.lampNamed, onNamed)
     scene.events.once('shutdown', () => {
       bus.off(EV.campDo, onDo)
+      bus.off(EV.lampNamed, onNamed)
       this.clear()
       deps.interactables.register(this, [])
     })
@@ -154,7 +162,7 @@ export class WildsCamps {
       const glow = this.scene.add.image(at.x, at.y - 22, 'glow').setBlendMode(Phaser.BlendModes.ADD).setScale(c.dimming ? 0.35 : 0.6).setAlpha(c.dimming ? 0.45 : 0.8).setDepth(4001)
       this.images.push(glow)
       this.body(at.x, at.y - TILE / 2, TILE - 6, TILE - 6)
-      points.push({ ...wildsPoint(`camp:${c.id}`, at, 30, () => ({ label: 'Look at the way-lamp', verb: 'Look', claim: () => this.look(c.id) })), rank: 0 })
+      points.push({ ...wildsPoint(`camp:${c.id}`, at, 30, () => ({ label: c.naming?.shortName ? `Look at ${c.naming.shortName}` : 'Look at the way-lamp', verb: 'Look', claim: () => this.look(c.id) })), rank: 0 })
     }
     this.deps.interactables.register(this, points)
   }
@@ -203,17 +211,31 @@ export class WildsCamps {
       const oil = this.oilCarried()
       choices.push({ text: 'Top it up with hearth oil', action: `camp:fill:${c.id}`, disabled: oil < 1, ...(oil < 1 ? { note: 'You need hearth oil (the chandler sells it)' } : {}) })
     }
+    if (c.builder && !c.naming && isKeeper(this.deps.session.state.flags)) choices.push({ ...LAMP_NAMING.name, action: `camp:name:${c.id}` })
     if (c.setterId === this.me && c.pieces.length === 1 && c.plants.length === 0) choices.push({ text: 'Take the lamp down', note: 'The camp goes; its oil comes back to you', action: `camp:down:${c.id}` })
     choices.push({ text: 'Leave it' })
-    openDialogue({ id: 'camp', speaker: 'Way-lamp', lines: campLines(c, this.me), choices })
+    openDialogue({ id: 'camp', speaker: campLampName(c), lines: campLines(c, this.me), choices })
   }
 
   /** A choice picked in the lamp's talk (WorldActions routes `camp:` here). */
   onAction(rest: string): void {
     const [what, id] = rest.split(':')
     if (!id) return
-    if (what === 'fill') void this.act({ action: 'fill', camp: id }, (c) => { if (c) openDialogue({ id: 'camp', speaker: 'Way-lamp', lines: campLines(c, this.me) }) })
+    if (what === 'fill') void this.act({ action: 'fill', camp: id }, (c) => { if (c) openDialogue({ id: 'camp', speaker: campLampName(c), lines: campLines(c, this.me) }) })
+    else if (what === 'name') void this.beginNaming(id)
     else if (what === 'down') void this.act({ action: 'remove', itemId: id }, () => bus.emit(EV.toast, { text: 'You take the way-lamp down. Its oil is back in your pack.', icon: 'glim' }))
+  }
+
+  /** A Keeper's naming: the landmarks around the lamp, then the panel (answered on EV.lampNamed). */
+  private async beginNaming(id: string): Promise<void> {
+    const link = this.deps.session.link
+    if (!link) return
+    const r = await link.lampLandmarksRead(id)
+    if (!r.ok) {
+      bus.emit(EV.toast, { text: CAMP_ERRORS[r.code] ?? homeErrorText(r.code), icon: 'glim', kind: 'error' })
+      return
+    }
+    bus.emit(EV.lampNamingOpen, { lamp: id, kind: 'camp', landmarks: r.value.landmarks.map((m) => ({ id: m.id, phrase: m.phrase })) })
   }
 
   // ------------------------------------------------------------ doing
@@ -238,13 +260,13 @@ export class WildsCamps {
     await this.act({ action: d.action, itemId: d.itemId ?? '', itemDef: d.itemDef ?? '', x: spot.tx, y: spot.ty }, () => bus.emit(EV.toast, { text: done, icon: 'glim' }))
   }
 
-  private async act(fields: { action: string; camp?: string; itemId?: string; itemDef?: string; x?: number; y?: number; rotation?: number }, then?: (c: CampView | null) => void): Promise<void> {
+  private async act(fields: { action: string; camp?: string; itemId?: string; itemDef?: string; x?: number; y?: number; rotation?: number; parts?: string[] }, then?: (c: CampView | null) => void): Promise<void> {
     const link = this.deps.session.link
     if (!link || this.busy) return
     this.busy = true
     this.deps.notePosition()
     try {
-      const r = await link.camp({ camp: '', itemId: '', itemDef: '', x: 0, y: 0, rotation: 0, ...fields })
+      const r = await link.camp({ camp: '', itemId: '', itemDef: '', x: 0, y: 0, rotation: 0, parts: [], ...fields })
       if (!r.ok) {
         sfx('fizzle')
         bus.emit(EV.toast, { text: CAMP_ERRORS[r.code] ?? homeErrorText(r.code), icon: 'glim', kind: 'error' })

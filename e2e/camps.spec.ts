@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { expect, test, type Page } from './fixtures'
-import { accountOf, moveServerClock, pinWorld, sql, wickSlack } from './connected'
+import { accountOf, moveServerClock, pinWorld, reenter, seedMarks, sql, wickSlack } from './connected'
 import { AT_PELL, claimDeed, DEEDS, freshPlayer, fund, go, homes, pellSays, readOn, shot, talk } from './home-helpers'
 import { parkCreatures, spotsAround, standFor, waitForWilds, warp, windowWhole } from './helpers'
 import { calendarAt } from '../src/lib/calendar.ts'
@@ -68,6 +68,9 @@ test('set a way-lamp, fill it, set a stool out; it lapses and Pell has everythin
   await wickSlack(page)
   await pinWorld(page, SEED)
   await claimDeed(page)
+  // A camp's way-lamp takes the Keeper's hand (Mara's ledger; lamps.md 2.8).
+  seedMarks(id, 'keeper:hand')
+  await reenter(page)
   const account = accountOf(id)
   const lamp = randomUUID(), stool = randomUUID()
   sql(`INSERT INTO homestead_items(id,item_def,location,account_id) VALUES('${lamp}','way-lamp','inventory','${account}'),('${stool}','wooden-stool','inventory','${account}');`)

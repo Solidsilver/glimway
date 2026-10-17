@@ -65,6 +65,12 @@ export interface LotLanternRules { oil: string; maxWicks: number; wicksPerOil: n
 export interface WayLampRules { item: string; oil: string; maxWicks: number; wicksPerOil: number; reach: number }
 /** Communal lamps (roadmap 0.13): what relighting a dark stone burns (relightQty 0: free), and the reach to relight, tend, set or lift from. */
 export interface CommunalLampRules { relight: string; relightQty: number; reach: number }
+/** Naming a lamp from parts (src/lib/lamp-naming.ts): each list's ids and words, the found landmarks' phrases, the ash a first naming gives. */
+export interface LampNamingRules {
+  ordinals: NamingWord[]; relations: NamingWord[]; fallbacks: NamingWord[]; sides: NamingWord[]; closings: NamingWord[];
+  places: Record<string, string>; sites: Record<string, string>; ash: string; ashQty: number;
+}
+export interface NamingWord { id: string; words: string }
 export interface HomesteadData {
   tiers: HomeTier[];
   indoor: HomeGrid;
@@ -85,6 +91,7 @@ export interface HomesteadData {
   lotLantern: LotLanternRules;
   wayLamp: WayLampRules;
   communalLamp: CommunalLampRules;
+  lampNaming: LampNamingRules;
 }
 
 /** Throws on anything content/homestead.go would refuse. */
