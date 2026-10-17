@@ -11,7 +11,7 @@
  */
 import type Phaser from 'phaser'
 import { PACKED_MANIFEST_KEY, type PackedManifest } from './atlas-plan.ts'
-import { explodeFrames, registerAnims, type PassAnimation } from './art-pass.ts'
+import { explodingFrames, registerAnims, type Steps, type PassAnimation } from './art-pass.ts'
 import { TILE } from '../lib/tile.ts'
 import { artDataUrl, artSource } from './density.ts'
 import { ABILITIES, type Ability } from '../lib/abilities.ts'
@@ -38,13 +38,13 @@ export const CRAFTS_LOOPS: PassAnimation[] = [
 /** Placed pieces the crafts pass draws, by item id: the frame that stands for the whole piece (the stable's west end). */
 export const CRAFTS_WORLD_ART: Readonly<Record<string, string>> = { stable: 'stable-west-front-shut' }
 
-/** Make the crafts textures and loops, once. False when the pack didn't load. */
-export function createCraftsArt(scene: Phaser.Scene): boolean {
+/** Make the crafts textures and loops, once, a texture a step (./art-pass.ts `Steps`). False when the pack didn't load. */
+export function* createCraftsArt(scene: Phaser.Scene): Steps<boolean> {
   const packed = (scene.cache.json.get(PACKED_MANIFEST_KEY) as PackedManifest | undefined)?.crafts
   if (!packed) return false
   const perPx = packed.density / TILE
   const frames = Object.entries(packed.frames).map(([key, r]) => ({ key, width: r[2] / perPx, height: r[3] / perPx }))
-  const made = explodeFrames(scene, CRAFTS_PACKED_KEY, { ...packed, density: perPx }, frames, crArt)
+  const made = yield* explodingFrames(scene, CRAFTS_PACKED_KEY, { ...packed, density: perPx }, frames, crArt)
   if (!made) return false
   registerAnims(scene, CRAFTS_LOOPS.map((l) => ({ ...l, key: crArt(l.key), frames: l.frames.map(crArt) })), (f) => scene.textures.exists(f))
   return true

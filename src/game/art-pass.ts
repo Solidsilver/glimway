@@ -32,9 +32,74 @@ export interface PassAnimation {
 }
 
 /**
+ * Packed atlases that are only copied out of (into each frame's own
+ * texture), by game: loaded as decoded images and never made textures, so
+ * the loader doesn't upload them to the GPU only for boot to release them.
+ */
+const staged = new WeakMap<Phaser.Game, { images: Map<string, CanvasImageSource>; decoding: Promise<unknown>[] }>()
+
+function stagedFor(game: Phaser.Game) {
+  let s = staged.get(game)
+  if (!s) staged.set(game, (s = { images: new Map(), decoding: [] }))
+  return s
+}
+
+/**
+ * Load a packed atlas as staging (`packedSource` reads it, `releasePacked`
+ * drops it). The image decodes off the main thread (`stagedDecoded`).
+ */
+export function loadStaged(scene: Phaser.Scene, key: string, url: string): void {
+  const s = stagedFor(scene.sys.game)
+  const onAdd = (added: string, _type: string, _loader: unknown, file: { addToCache(): void; data: HTMLImageElement }) => {
+    if (added !== key) return
+    file.addToCache = () => {
+      s.images.set(key, file.data)
+      s.decoding.push(file.data.decode().catch(() => undefined))
+    }
+  }
+  scene.load.on('addfile', onAdd)
+  scene.load.image(key, url)
+  scene.load.off('addfile', onAdd)
+}
+
+/** Every staged atlas loaded so far, decoded (or failed to). */
+export function stagedDecoded(scene: Phaser.Scene): Promise<unknown> {
+  return Promise.all(stagedFor(scene.sys.game).decoding)
+}
+
+/** A packed atlas's image: staged, else its texture's (null when it didn't load). */
+export function packedSource(scene: Phaser.Scene, key: string): CanvasImageSource | null {
+  const image = staged.get(scene.sys.game)?.images.get(key)
+  if (image) return image
+  return scene.textures.exists(key) ? (scene.textures.get(key).getSourceImage() as CanvasImageSource) : null
+}
+
+/** Drop a packed atlas once it is copied out (a pass may keep the image it had). */
+export function releasePacked(scene: Phaser.Scene, key: string): void {
+  staged.get(scene.sys.game)?.images.delete(key)
+  if (scene.textures.exists(key)) scene.textures.remove(key)
+}
+
+/** Work done a step at a time: it yields between steps (BootScene runs it in slices). */
+export type Steps<T> = Generator<void, T, void>
+
+/** Whether a value is `Steps` (and not some other result). */
+export function isSteps(v: unknown): v is Steps<unknown> {
+  return typeof v === 'object' && v !== null && typeof (v as { next?: unknown }).next === 'function'
+}
+
+/** Run steps to the end at once; their result. */
+export function drain<T>(steps: Steps<T>): T {
+  for (;;) {
+    const r = steps.next()
+    if (r.done) return r.value
+  }
+}
+
+/**
  * One native texture per frame the atlas holds, under `keyOf(frame)` at
  * the frame's native world size (existing keys are left alone), then the
- * atlas's GPU copy is released: it was staging. Returns the frames the
+ * atlas is released (`releasePacked`): it was staging. Returns the frames the
  * atlas held, and the atlas image (a pass may keep sampling it), or null
  * when the pass isn't loaded.
  */
@@ -45,8 +110,19 @@ export function explodeFrames<F extends { key: string; width: number; height: nu
   frames: readonly F[],
   keyOf: (frame: string) => string
 ): { held: F[]; atlas: CanvasImageSource } | null {
-  if (!packed || !scene.textures.exists(packedKey)) return null
-  const atlas = scene.textures.get(packedKey).getSourceImage() as CanvasImageSource
+  return drain(explodingFrames(scene, packedKey, packed, frames, keyOf))
+}
+
+/** `explodeFrames`, yielding after each texture it makes. */
+export function* explodingFrames<F extends { key: string; width: number; height: number }>(
+  scene: Phaser.Scene,
+  packedKey: string,
+  packed: PackedCanvasPack | undefined,
+  frames: readonly F[],
+  keyOf: (frame: string) => string
+): Steps<{ held: F[]; atlas: CanvasImageSource } | null> {
+  const atlas = packedSource(scene, packedKey)
+  if (!packed || !atlas) return null
   const k = artDensity(scene)
   const held: F[] = []
   for (const item of frames) {
@@ -55,14 +131,21 @@ export function explodeFrames<F extends { key: string; width: number; height: nu
     held.push(item)
     const key = keyOf(item.key)
     if (scene.textures.exists(key)) continue
-    const output = scene.textures.createCanvas(key, item.width * k, item.height * k)
+    // Drawn before it becomes a texture, so the GPU gets it in one upload
+    // (createCanvas, then refresh, uploaded every frame twice).
+    const canvas = document.createElement('canvas')
+    canvas.width = item.width * k
+    canvas.height = item.height * k
+    const context = canvas.getContext('2d')
+    if (!context) continue
+    resampleFor(context, packed.density ?? 1, k)
+    context.drawImage(atlas, r[0], r[1], r[2], r[3], 0, 0, item.width * k, item.height * k)
+    const output = scene.textures.addCanvas(key, canvas)
     if (!output) continue
-    resampleFor(output.context, packed.density ?? 1, k)
-    output.context.drawImage(atlas, r[0], r[1], r[2], r[3], 0, 0, item.width * k, item.height * k)
-    output.refresh()
     setDensity(output, k)
+    yield
   }
-  scene.textures.remove(packedKey)
+  releasePacked(scene, packedKey)
   return { held, atlas }
 }
 

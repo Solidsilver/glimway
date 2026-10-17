@@ -13,6 +13,14 @@ the game can show the first part as "What's new":
 
 ## [Unreleased]
 
+### For players
+
+- Signing in, reloading and stepping outdoors no longer freeze the game for a moment as the world appears.
+
+### Technical
+
+- Arrival has no long frame: boot builds its art a slice a frame (8 ms budget; the heavy passes yield a texture at a time, `Steps` in `src/game/art-pass.ts`), each frame's texture is uploaded once instead of twice, and the packed atlases boot only copies out of are staged as decoded images instead of GPU textures (`loadStaged`). Portraits and UI icons are drawn once per game during boot, and the open map no longer paints an empty area tileset. Desktop (GPU), longest arrival frame: sign-in ~480–680 → ~80–85 ms, reload ~560–660 → ~85–105 ms, door-out ~110–120 → ~60 ms; at a 4× CPU throttle, ~2.4–2.7 s → ~0.3 s. No change in what's drawn.
+
 ## [0.11.2] - 2026-10-16
 
 ### For players
