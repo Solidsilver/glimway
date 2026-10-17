@@ -109,8 +109,8 @@ interface PaintedChunk {
   sig: string
 }
 
-/** Where a paint was made: a worker, this thread, or the page's kept fixed paints. */
-type PaintThread = 'worker' | 'main' | 'cache'
+/** Where a paint was made: a worker, this thread (`'late'`: after the worker's deadline), or the page's kept fixed paints. */
+type PaintThread = 'worker' | 'main' | 'late' | 'cache'
 
 /**
  * Fixed chunks' last paints, by signature, for the page: a scene built again

@@ -12,7 +12,7 @@ import { adminInvite,
   setHabitica,
   syncFromMenu,
   waitForWorld, CONTRACT, served } from './connected'
-import { readDialogue, settleWarden, talkThrough, untilChoices, warp, waitForArea, waitForLive, expectToast, atTile, paperOf, standOf, talkSpotOf } from './helpers'
+import { readDialogue, settleWarden, talkThrough, untilChoices, warp, waitForArea, waitForLive, expectToast, atTile, paperOf, standOf, talkSpotOf, PAGE_RELOAD_MS, SERVER_ANSWER_MS } from './helpers'
 
 /**
  * Connected play against the real Go server (playwright.config.ts starts it
@@ -282,7 +282,7 @@ test('invites: create a code (shown once), list it, revoke it, and respect the l
   const initialInvites = await page.request.get('/api/invites', CONTRACT)
   expect(initialInvites.ok()).toBe(true)
   expect(await initialInvites.json()).toEqual({ invites: [], remaining: 5, outstandingLimit: 3, partyWorld: false, partyAdmitted: false })
-  await expect(card.getByTestId('invite-budget')).toContainText('5 of 5 invite codes left')
+  await expect(card.getByTestId('invite-budget')).toContainText('5 of 5 invite codes left', { timeout: SERVER_ANSWER_MS })
   await expect(card.getByTestId('invite-budget')).toContainText('Up to 3 can wait at once.')
   await card.getByRole('button', { name: 'Create an invite code' }).click()
   await expect(card.getByTestId('invite-code')).toContainText('only shown once')
@@ -315,8 +315,8 @@ test('logout ends the session and returns to the title', async ({ page }) => {
   await page.keyboard.press('Escape')
   await page.getByTestId('world-card').getByRole('button', { name: 'Log out' }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Log out' }).click()
-  // Back to the title: the connect card, and nothing playing.
-  await expect(page.getByTestId('connect-hero')).toBeVisible()
+  // Back to the title (after a full reload): the connect card, and nothing playing.
+  await expect(page.getByTestId('connect-hero')).toBeVisible({ timeout: PAGE_RELOAD_MS })
   expect((await serverState(page)).status).toBe(401)
 })
 
@@ -358,7 +358,7 @@ test('logout with unsent progress keeps it on the device, and the next sign-in u
   const dialog = page.getByRole('alertdialog')
   await expect(dialog).toContainText('hasn’t reached your world yet')
   await dialog.getByRole('button', { name: 'Log out' }).click()
-  await expect(page.getByTestId('connect-hero')).toBeVisible()
+  await expect(page.getByTestId('connect-hero')).toBeVisible({ timeout: PAGE_RELOAD_MS })
   expect((await serverState(page)).status).toBe(401)
   // The outbox keeps the unsent step for the next sign-in on this device.
   const kept = await cacheRecord(page, accountOf(id))
@@ -383,7 +383,7 @@ test('a logout with nothing unsent clears the device copy', async ({ page }) => 
   await page.getByTestId('world-card').getByRole('button', { name: 'Log out' }).click()
   await expect(page.getByRole('alertdialog')).toContainText('Your journey stays in your world')
   await page.getByRole('alertdialog').getByRole('button', { name: 'Log out' }).click()
-  await expect(page.getByTestId('connect-hero')).toBeVisible()
+  await expect(page.getByTestId('connect-hero')).toBeVisible({ timeout: PAGE_RELOAD_MS })
   expect(await cacheRecord(page, accountOf(id))).toBeNull()
 })
 

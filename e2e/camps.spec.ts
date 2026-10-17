@@ -115,3 +115,33 @@ test('set a way-lamp, fill it, set a stool out; it lapses and Pell has everythin
   expect(sql(`SELECT count(*) FROM camps WHERE id='${lamp}';`)).toBe('0')
   expect(sql(`SELECT count(*) FROM recovery_entries WHERE account_id='${account}' AND collected_at IS NULL;`)).toBe('0')
 })
+
+test('a communal post in view comes through leaving the Wilds and coming back', async ({ page }) => {
+  test.setTimeout(240_000)
+  const id = await freshPlayer(page, 'Wren')
+  await wickSlack(page)
+  await pinWorld(page, SEED)
+  await claimDeed(page)
+  await reenter(page)
+  const lamp = randomUUID()
+  sql(`INSERT INTO homestead_items(id,item_def,location,account_id) VALUES('${lamp}','way-lamp','inventory','${accountOf(id)}');`)
+  await page.evaluate(() => (window as unknown as Hooks).__fsHomes.fresh())
+  await expect.poll(async () => (await homes(page)).mine?.items?.length ?? 0).toBeGreaterThanOrEqual(1)
+
+  // Set out in the Wilds as a communal lamp: drawn, with its solid body.
+  const at = await standInTheWilds(page)
+  await (await homeCard(page, 'way-lamp')).locator('[data-act="set-communal-lamp"]').click()
+  const posts = () => page.evaluate(() => (window as unknown as { __fsCommunalLamps: () => { lamps: { id: string; kind: string }[] } | null }).__fsCommunalLamps()?.lamps.filter((l) => l.kind === 'post').map((l) => l.id) ?? [])
+  await expect.poll(posts).toEqual([lamp])
+  const drawn = () => page.evaluate(() => (window as unknown as Hooks).__fsImagesNamed('om-art:way-lamp-').length)
+  await expect.poll(drawn).toBe(1)
+
+  // The scene goes (Phaser destroys the collision group before the lamps'
+  // shutdown) and comes back: no throw (the fixture fails on any page
+  // error), and the post is drawn once again.
+  await go(page, DEEDS, AT_PELL.tx, AT_PELL.ty)
+  await warp(page, 'outdoors', at.tx, at.ty)
+  await waitForWilds(page)
+  await expect.poll(posts).toEqual([lamp])
+  await expect.poll(drawn).toBe(1)
+})
