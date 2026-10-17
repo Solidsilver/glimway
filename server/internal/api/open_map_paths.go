@@ -4,8 +4,9 @@ package api
 // world-changes layer's first users. A chunk and epoch's ground changes are
 // one world_changes row (entity "ground", kind "ground", a GroundChanges
 // message); a named way is one row (entity its id, kind "way", a WildsWay)
-// under the wick epoch, so both go when their land turns and last for good
-// in the Tangle's still epoch.
+// under the wick epoch. They last for good in the Tangle's still epoch; at a
+// wick's turning a visited chunk's laid tiles, and the ways over them, carry
+// onto the next wick, and an unvisited one's are refunded (common_ways.go).
 
 import (
 	"context"
@@ -144,9 +145,12 @@ func (a *Server) spotFor(ctx context.Context, tx *sql.Tx, s *store.Snapshot, x, 
 }
 
 // occupied: a site, an entity or a place's landmark stands on the tile.
-func (p *pathSpot) occupied() bool {
-	c := p.eff.Chunk
-	x, y := uint32(p.lx), uint32(p.ly)
+func (p *pathSpot) occupied() bool { return occupiedAt(p.eff.Chunk, p.lx, p.ly) }
+
+// occupiedAt: a site, an entity or a place's landmark stands on the chunk's
+// tile (lx, ly).
+func occupiedAt(c *contract.WorldChunk, lx, ly int) bool {
+	x, y := uint32(lx), uint32(ly)
 	return slices.ContainsFunc(c.Sites, func(s *contract.StorySite) bool { return s.Tx == x && s.Ty == y }) ||
 		slices.ContainsFunc(c.Entities, func(e *contract.WildsEntity) bool { return e.Tx == x && e.Ty == y }) ||
 		slices.ContainsFunc(c.Places, func(m *contract.WildsPlaceMark) bool { return m.Tx == x && m.Ty == y })
@@ -304,6 +308,12 @@ func (a *Server) wildsLay(w http.ResponseWriter, r *http.Request) error {
 		p.set(&contract.GroundChange{Tx: uint32(p.lx), Ty: uint32(p.ly), Change: lay.GetKind(), By: s.AccountID, At: float64(now)})
 		if err = p.put(ctx, tx, s, now); err != nil {
 			return nil, err
+		}
+		// Laying across a seam visits the chunk it lays in (lamps.md 1.1).
+		if visitable(s.WorldID, p.cx, p.cy) {
+			if err = store.Visit(ctx, tx, s.WorldID, p.cx, p.cy, now); err != nil {
+				return nil, err
+			}
 		}
 		changedWorld, changedEpoch, changedCX, changedCY, changedGround = s.WorldID, p.epoch.Id, int32(p.cx), int32(p.cy), true
 		made, err := a.waysAfterLay(ctx, tx, s, p.x, p.y, now)

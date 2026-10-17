@@ -1138,7 +1138,7 @@
     "needTool": "You'd need {tool} for this.",
     "needMaterial": "You're out of {material}.",
     "notOnWater": "Not on water. Cross at a ford.",
-    "turnsIn": "This land turns in {days} days. A path here goes with it.",
+    "turnsIn": "This land turns in {days} days. A path here stays if someone walks here each wick.",
     "foundBy": "Found by {name}",
     "firstFind": "Nobody's been here yet this wick. You find {loot}.",
     "wayName": "{name}'s way",

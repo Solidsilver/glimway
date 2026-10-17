@@ -47,6 +47,9 @@ type Call struct {
 type Generator struct {
 	V    int
 	Hook func(epoch *contract.WildsEpoch, cx, cy int32)
+	// Edit, when set, changes a made chunk before it is answered (a test's
+	// way to turn the detail of one wick's land).
+	Edit func(epoch *contract.WildsEpoch, c *contract.WorldChunk)
 
 	mu    sync.Mutex
 	Calls []Call
@@ -179,6 +182,9 @@ func (g *Generator) Chunk(e *contract.WildsEpoch, cx, cy int32, kept []chunks.Ke
 		if s {
 			c.Solid[i/8] |= 1 << (i % 8)
 		}
+	}
+	if g.Edit != nil {
+		g.Edit(e, c)
 	}
 	return c, nil
 }

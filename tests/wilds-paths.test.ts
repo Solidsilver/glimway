@@ -86,10 +86,10 @@ test('every refusal reads in plain words, with the tool or material named', () =
 
 test('the confirm on turning land counts whole days, at least one', () => {
   const now = 1_000_000;
-  assert.equal(turnsInText(now + 3 * 86_400, now), 'This land turns in 3 days. A path here goes with it.');
-  assert.equal(turnsInText(now + 2 * 86_400 + 5, now), 'This land turns in 3 days. A path here goes with it.');
-  assert.equal(turnsInText(now + 3600, now), 'This land turns in a day. A path here goes with it.');
-  assert.equal(turnsInText(now - 10, now), 'This land turns in a day. A path here goes with it.');
+  assert.equal(turnsInText(now + 3 * 86_400, now), 'This land turns in 3 days. A path here stays if someone walks here each wick.');
+  assert.equal(turnsInText(now + 2 * 86_400 + 5, now), 'This land turns in 3 days. A path here stays if someone walks here each wick.');
+  assert.equal(turnsInText(now + 3600, now), 'This land turns in a day. A path here stays if someone walks here each wick.');
+  assert.equal(turnsInText(now - 10, now), 'This land turns in a day. A path here stays if someone walks here each wick.');
 });
 
 test('a way’s sign, a finder and a first find in words', () => {

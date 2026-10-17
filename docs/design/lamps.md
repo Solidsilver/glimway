@@ -377,8 +377,10 @@ place, so a lapsed backland's pieces go there and its plants are archived with t
 storage (0.12). Camps use the crate: one `recovery_crates` row per lapse, and entries per
 beneficiary. A piece is the same instance at location `crate`; a plant returns its seed, with its
 planting kept in the entry's state for a later replant; unspent oil goes to the lamp's setter; a
-laid path tile's stone or plank goes to whoever laid it (the lot backland's paths still turn with
-the land). Collection in Pell's office takes everything at once into the pack; no destination can
+laid path tile's stone or plank goes to whoever laid it. A lapsed lot backland's paths, and Common
+paths that turn (an unvisited chunk, or a tile with nowhere safe to land), use the same crate:
+one per chunk and turning, a stack entry per layer and material (lane E, migration 042,
+`api/common_ways.go`). Collection in Pell's office takes everything at once into the pack; no destination can
 be full yet. Crates are per world.
 
 ### 2.8 The Keeper's hand and naming from parts
@@ -480,7 +482,7 @@ No way-lamps, camps, Keeper gate or presence-kept Common land in this release.
 **As built in 0.12:** holds and lasting geography (migrations 038, 039) and lot lanterns (040)
 shipped; the backland lapses to home storage, not Pell's crate, and its laid paths turn with it
 without a refund (§2.7). The tree/sap supply is the chandler's `hearth-oil`. Pell's crate came
-with camps in 0.13 (migration 041).
+with camps in 0.13 (migration 041); common ways (042) then crated the backland's paths on lapse.
 
 A leads; B/C can build against that contract, D against its view types. Integrate recovery before
 real lapse. Warnings, buffer and safe backland collection cannot wait for 0.13. Common preservation

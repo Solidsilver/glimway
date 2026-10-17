@@ -294,8 +294,11 @@ func (a *Server) presenceReader(p *presencePeer) {
 			return
 		}
 		p.lastActivity = now
+		visit := false
 		switch event := message.Event.(type) {
 		case *contract.PresenceMessage_Heartbeat:
+			// Still standing there: a new wick's visit too (lamps.md 2.4).
+			visit = true
 		case *contract.PresenceMessage_Join:
 			if !validPresenceRoom(event.Join.Area) {
 				p.stop(websocket.StatusPolicyViolation, "invalid-room")
@@ -358,6 +361,7 @@ func (a *Server) presenceReader(p *presencePeer) {
 			}
 			p.lastPos = now
 			p.pos = sample
+			visit = true
 			h.broadcastEncoded(p, encoded, encodeErr)
 		case *contract.PresenceMessage_Emote:
 			if p.area == "" || !slices.Contains(h.config.GetEmotes(), event.Emote.Id) {
@@ -406,9 +410,16 @@ func (a *Server) presenceReader(p *presencePeer) {
 			h.mu.Unlock()
 			return
 		}
+		vx, vy, visiting := 0, 0, false
+		if visit {
+			vx, vy, visiting = peerVisit(p)
+		}
 		h.mu.Unlock()
 		if message.GetPos() != nil || message.GetJoin() != nil {
 			a.syncFightPresence(p)
+		}
+		if visiting {
+			a.presenceVisit(p.identity.World, vx, vy)
 		}
 	}
 }

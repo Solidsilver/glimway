@@ -174,13 +174,13 @@ func (c *Chunks) Release(ctx context.Context, tx *sql.Tx, world string, cx, cy i
 // has no Holder for keeps, released or not: with no Released to send its
 // placed pieces home, its land never turns (roadmap rule 3), and a release
 // takes effect at the first turning a Holder for it is registered. It
-// answers whether any hold went.
-func (c *Chunks) judgeHolds(ctx context.Context, tx *sql.Tx, world string, now int64) (bool, error) {
+// answers the holds that went.
+func (c *Chunks) judgeHolds(ctx context.Context, tx *sql.Tx, world string, now int64) ([]Hold, error) {
 	holds, err := c.Holds(ctx, tx, world)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
-	gone := false
+	var gone []Hold
 	for _, h := range holds {
 		holder := c.Holders[h.HolderKind]
 		if holder == nil {
@@ -189,18 +189,18 @@ func (c *Chunks) judgeHolds(ctx context.Context, tx *sql.Tx, world string, now i
 		keeps := h.Released == nil
 		if keeps {
 			if keeps, err = holder.Keeps(ctx, tx, h, now); err != nil {
-				return false, err
+				return nil, err
 			}
 		}
 		if keeps {
 			continue
 		}
 		if _, err = tx.ExecContext(ctx, "DELETE FROM holds WHERE world_id=? AND realm=? AND layer=0 AND cx=? AND cy=?", world, content.WildsRules.GetRealm(), h.CX, h.CY); err != nil {
-			return false, err
+			return nil, err
 		}
-		gone = true
+		gone = append(gone, h)
 		if err = holder.Released(ctx, tx, h, now); err != nil {
-			return false, err
+			return nil, err
 		}
 	}
 	return gone, nil
