@@ -13,6 +13,10 @@ the game can show the first part as "What's new":
 
 ## [Unreleased]
 
+### Technical
+
+- New `glimway-server verify-backup FILE`: opens a snapshot read-only (writing nothing to or beside it, and never opening `-db`), runs SQLite's integrity check, confirms the schema is this version's or an older one it can migrate, and prints the schema plus account, world and home counts. Non-zero exit on any failure. The NixOS backup service now verifies each new snapshot and fails the unit if the check fails; the bad snapshot is renamed `.sqlite.unverified` and no old snapshots are pruned. A Go test runs the documented restore (back up, verify, copy to a new path, open, read back). [docs/home-server.md](docs/home-server.md) adds it to the NixOS, Docker and manual routes and before upgrades. No migrations.
+
 ## [0.11.2] - 2026-10-16
 
 ### For players

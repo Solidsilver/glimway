@@ -35,10 +35,18 @@ let
     RestrictAddressFamilies = [ "AF_UNIX" "AF_INET" "AF_INET6" ];
     ReadWritePaths = writable;
   };
+  # A failed backup or restore check fails the unit (systemctl --failed) before
+  # pruning, so old snapshots stay until a new one verifies. A snapshot that
+  # fails the check is kept as .sqlite.unverified, out of retention and restores.
   backup = pkgs.writeShellScript "glimway-backup" ''
     set -eu
     backup_dir=${lib.escapeShellArg cfg.backups.directory}
-    ${lib.getExe cfg.package} -db ${lib.escapeShellArg cfg.database} backup "$backup_dir/$(${pkgs.coreutils}/bin/date -u +%Y-%m-%dT%H-%M-%S)-$$.sqlite"
+    snapshot="$backup_dir/$(${pkgs.coreutils}/bin/date -u +%Y-%m-%dT%H-%M-%S)-$$.sqlite"
+    ${lib.getExe cfg.package} -db ${lib.escapeShellArg cfg.database} backup "$snapshot"
+    if ! ${lib.getExe cfg.package} verify-backup "$snapshot"; then
+      ${pkgs.coreutils}/bin/mv "$snapshot" "$snapshot.unverified"
+      exit 1
+    fi
     ${pkgs.findutils}/bin/find "$backup_dir" -type f -name '*.sqlite' -mtime +${toString cfg.backups.retentionDays} -delete
   '';
 in {

@@ -59,6 +59,10 @@ let
   service = cfg: cfg.systemd.services.glimway-server.serviceConfig;
   assertionsPass = cfg: lib.all (a: a.assertion) cfg.assertions;
   configs = [ defaults legacy custom scheduled disabled ];
+  backupScript = (scheduled.systemd.services.glimway-server-backup.serviceConfig.ExecStart).text;
+  # Line order: back up, verify (keeping a failure out of retention), then prune.
+  before = a: b: lib.length (lib.splitString a backupScript) == 2
+    && lib.hasInfix b (lib.elemAt (lib.splitString a backupScript) 1);
 in
 assert lib.all assertionsPass configs;
 assert !(assertionsPass invalidRootDB);
@@ -90,6 +94,11 @@ assert !(lib.elem 9090 custom.networking.firewall.allowedTCPPorts);
 assert lib.elem 9000 scheduled.networking.firewall.allowedTCPPorts;
 assert scheduled.systemd.timers.glimway-server-backup.timerConfig.OnCalendar == "weekly";
 assert lib.elem "/srv/game/backups" scheduled.systemd.services.glimway-server-backup.serviceConfig.ReadWritePaths;
+assert lib.hasPrefix "#!" backupScript && lib.hasInfix "set -eu" backupScript;
+assert before " backup \"$snapshot\"" "verify-backup \"$snapshot\"";
+assert before "verify-backup \"$snapshot\"" "\"$snapshot.unverified\"";
+assert before "\"$snapshot.unverified\"" "exit 1";
+assert before "exit 1" "-mtime +7 -delete";
 assert !(disabled.systemd.services ? glimway-server);
 assert !(disabled.systemd.services ? glimway);
 pkgs.runCommand "glimway-nixos-module-evaluation" {

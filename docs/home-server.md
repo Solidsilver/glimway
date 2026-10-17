@@ -176,7 +176,9 @@ sudo nixos-rebuild build --flake .#example
 sudo nixos-rebuild switch --flake .#example
 ```
 
-Back up before switching. Review migrations before upgrading an existing
+Back up before switching, and check the snapshot with `verify-backup` (see
+[Admission and backups](#admission-and-backups)) so you know you can go back.
+Review migrations before upgrading an existing
 database: migration 010 deliberately resets early homestead data. A database
 with real players that has not applied it needs a preserving migration before
 this version is used. Rolling back NixOS switches binaries, not the database;
@@ -220,6 +222,7 @@ sudo -u glimway-server glimway-server -db "$DB" allowlist add HABITICA_USER_ID
 sudo -u glimway-server glimway-server -db "$DB" allowlist list
 sudo -u glimway-server glimway-server -db "$DB" invite
 sudo -u glimway-server glimway-server -db "$DB" backup /var/lib/glimway-server/backups/manual.sqlite
+sudo -u glimway-server glimway-server verify-backup /var/lib/glimway-server/backups/manual.sqlite
 ```
 
 An invite without a world ID creates a solo world for its recipient; supply an
@@ -228,12 +231,25 @@ after 30 days. `allowlist remove ID` revokes access; `party close PARTY-ID`
 closes party admission. Use `glimway-server -h` for configuration flags.
 
 The Nix timer makes consistent standalone SQLite snapshots using `VACUUM INTO`,
-then removes `.sqlite` backups older than the retention setting. Backups include
+checks each new one with `verify-backup`, then removes `.sqlite` backups older
+than the retention setting. Backups include
 session hashes and gameplay records. Copy snapshots to a separate machine or
 storage service; keeping them on the same disk does not protect against disk
 failure. The backup command refuses to overwrite an existing file.
 
-To restore, stop both the backend and backup timer, retain the current database
+`verify-backup FILE` opens a snapshot read-only and never writes to it or
+creates files beside it; it does not open `-db`. It runs SQLite's integrity
+check, confirms this server version can use the snapshot's schema (the same, or
+older and migrated when restored), and prints the schema with counts of
+accounts, worlds and homes. It exits non-zero on any problem, including a
+snapshot from a newer server version. Run it on the snapshot you take before an
+upgrade, and on one you are about to restore. If the timer's check fails,
+`glimway-server-backup.service` fails (it shows in `systemctl --failed`), the
+new snapshot is renamed to `.sqlite.unverified` and nothing is pruned. Look at
+it with `journalctl -u glimway-server-backup`.
+
+To restore, check the snapshot with `verify-backup`, then stop both the backend
+and backup timer, retain the current database
 and its `-wal`/`-shm` sidecars separately, and move them out of the live directory.
 Copy the chosen standalone snapshot to the configured database filename with
 owner/group matching the service and mode 0600. Do not leave old WAL/SHM files
@@ -302,9 +318,11 @@ Enable it with `sudo systemctl daemon-reload` and
 static bundle with a site block using the same two API/socket handlers above
 and a final `handle { root * /srv/glimway/dist; file_server }`. Keep static
 files readable by the Caddy account. Arrange a cron/systemd timer for the CLI
-backup command and retention; the manual route does not install one for you.
-To update, build a new binary and `dist/`, take a backup, install both, restart
-the backend, and check `/api/calendar` and the page.
+backup command, `verify-backup` on the new file, and retention; the manual
+route does not install one for you. Prune old snapshots only after the new one
+verifies. To update, build a new binary and `dist/`, take a backup and check it
+with `glimway-server verify-backup FILE`, install both, restart the backend,
+and check `/api/calendar` and the page.
 
 ## Docker Compose
 
@@ -392,6 +410,7 @@ Before changing `GLIMWAY_IMAGE_TAG`, take a backup. For example:
 ```sh
 docker compose exec -T glimway mkdir -p /data/backups
 docker compose exec -T glimway glimway-server -db /data/glimway.sqlite backup /data/backups/before-update.sqlite
+docker compose exec -T glimway glimway-server verify-backup /data/backups/before-update.sqlite
 mkdir -p backups
 docker compose cp glimway:/data/backups/before-update.sqlite ./backups/
 # Review migrations, then select a release tag in .env and update.
@@ -400,9 +419,11 @@ docker compose up -d --no-build --wait
 ```
 
 The CLI runs as the same non-root user as the service. The backup filename must
-be new each time. Schedule those commands using your host's cron or systemd,
-use timestamped names, enforce your retention policy, and copy snapshots off the
-host. Compose does not install the NixOS backup timer. Avoid archiving the live
+be new each time. `verify-backup` checks the snapshot without writing to it and
+exits non-zero if it is damaged or from a newer version (more under
+[Admission and backups](#admission-and-backups)). Schedule those commands using
+your host's cron or systemd, use timestamped names, enforce your retention
+policy only after the new snapshot verifies, and copy snapshots off the host. Compose does not install the NixOS backup timer. Avoid archiving the live
 volume while writes are occurring: use the consistent CLI snapshot, or stop the
 service first. `docker compose down` preserves volumes; `down --volumes` deletes
 them and must not be used for a production update.
@@ -414,7 +435,8 @@ docker compose exec -T glimway glimway-server -db /data/glimway.sqlite allowlist
 docker compose exec -T glimway glimway-server -db /data/glimway.sqlite invite
 ```
 
-For restore, stop the backend and any external backup scheduler. Copy the live
+For restore, check the snapshot with `verify-backup` first, then stop the
+backend and any external backup scheduler. Copy the live
 database and WAL/SHM sidecars to a separate recovery location, remove them from
 the volume, then use a one-off container with the same named volume to install
 the standalone snapshot as `/data/glimway.sqlite`, owned by 10001:10001 and mode

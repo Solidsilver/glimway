@@ -140,13 +140,20 @@ func run(args []string) error {
 	if *spriteDir == "" {
 		*spriteDir = filepath.Join(filepath.Dir(*path), "habitica-sprites")
 	}
+	ctx := context.Background()
+	cmd := f.Args()
+	// Before store.Open: checking a snapshot must not open or migrate -db.
+	if len(cmd) > 0 && cmd[0] == "verify-backup" {
+		if len(cmd) != 2 {
+			return fmt.Errorf("usage: verify-backup backup.sqlite")
+		}
+		return verifyBackup(ctx, cmd[1])
+	}
 	s, err := store.Open(*path)
 	if err != nil {
 		return fmt.Errorf("open database: %w", err)
 	}
 	defer s.Close()
-	ctx := context.Background()
-	cmd := f.Args()
 	if len(cmd) > 0 {
 		switch cmd[0] {
 		case "invite":
@@ -370,6 +377,21 @@ func run(args []string) error {
 	}
 	return err
 }
+
+func verifyBackup(ctx context.Context, path string) error {
+	sum, err := store.VerifyBackup(ctx, path)
+	if err != nil {
+		return fmt.Errorf("verify-backup %s: %w", path, err)
+	}
+	state := "current"
+	if sum.Pending > 0 {
+		state = fmt.Sprintf("older; %d migrations apply on restore", sum.Pending)
+	}
+	fmt.Printf("ok %s\nschema %s (%s)\naccounts %d, worlds %d, homes %d\n", path, sum.Schema, state,
+		sum.Counts["players"], sum.Counts["worlds"], sum.Counts["homesteads"])
+	return nil
+}
+
 func main() {
 	if err := run(os.Args[1:]); err != nil {
 		fmt.Fprintln(os.Stderr, err)
