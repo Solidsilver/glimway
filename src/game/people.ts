@@ -14,6 +14,7 @@
  */
 import type Phaser from 'phaser'
 import { PACKED_MANIFEST_KEY, PEOPLE, type PackedManifest, type PersonId } from './atlas-plan.ts'
+import { packedSource, releasePacked } from './art-pass.ts'
 import { artDensity, resampleFor } from './density.ts'
 
 /** The packed atlas as loaded (staging: released once `people` is built). */
@@ -36,8 +37,8 @@ const hands = new Map<string, [number, number]>()
 export function createPeople(scene: Phaser.Scene): boolean {
   if (scene.textures.exists(PEOPLE_KEY)) return true
   const packed = (scene.cache.json.get(PACKED_MANIFEST_KEY) as PackedManifest | undefined)?.people
-  if (!packed || !scene.textures.exists(PEOPLE_PACKED_KEY)) return false
-  const image = scene.textures.get(PEOPLE_PACKED_KEY).getSourceImage() as HTMLImageElement | HTMLCanvasElement
+  const image = packedSource(scene, PEOPLE_PACKED_KEY) as HTMLImageElement | HTMLCanvasElement | null
+  if (!packed || !image) return false
   const k = Math.min(artDensity(scene), packed.density)
   const s = k / packed.density
   let source: HTMLImageElement | HTMLCanvasElement = image
@@ -65,7 +66,7 @@ export function createPeople(scene: Phaser.Scene): boolean {
   const t = scene.textures.addAtlasJSONHash(PEOPLE_KEY, source as HTMLImageElement, { frames })
   if (!t) return false
   ;(t.customData as { density?: number }).density = k
-  scene.textures.remove(PEOPLE_PACKED_KEY)
+  releasePacked(scene, PEOPLE_PACKED_KEY)
   for (const a of packed.animations) {
     const key = `people:${a.key}`
     if (scene.anims.exists(key)) continue

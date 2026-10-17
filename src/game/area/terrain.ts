@@ -195,6 +195,9 @@ export function buildGround(scene: Phaser.Scene, world: WorldData): Promise<void
     buildTangleGround(scene, world)
     return null
   }
+  // The open map has no grid of its own: its chunks bring their ground
+  // (../wilds/window.ts), so there's no tileset to paint.
+  if (!world.width || !world.height) return null
   const g = groundTiles(scene, world, false)
   if (!g) return null
   layGround(g, { tx: 0, ty: 0, tw: world.width, th: world.height }, { x: 0, y: 0 }, -10, 'ground')
