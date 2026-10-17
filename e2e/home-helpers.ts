@@ -34,6 +34,8 @@ export interface Home {
 }
 export interface HomesView {
   status: string
+  /** Lane and home reads still to land. */
+  reading: number
   claimed: boolean
   myGate: number | null
   gateCount: number

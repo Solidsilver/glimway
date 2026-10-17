@@ -438,16 +438,29 @@ export class Homesteads {
     })
   }
 
+  /** Home reads in flight. */
+  private fetching = 0
+
+  /** Reads still to land, the lane's and the homes' (playtests wait them out before counting redraws). */
+  get reading(): number {
+    return this.fetching + (this.loading ? 1 : 0)
+  }
+
   /** The homestead behind a gate, fresh from the server (walking through it). */
   async fetchHome(gate: number): Promise<HomeView | null> {
     const link = this.session.link
     if (!link) return null
-    for (let tries = 0; tries < 3; tries++) {
-      const mark = nextMark()
-      const r = await link.readHome(gate)
-      if (!r.ok) break
-      // Older than something told since: the cached home stands only if its row still agrees with it; else ask again.
-      if (this.adoptRead(r.value, mark) || this.cacheAgrees(gate)) break
+    this.fetching++
+    try {
+      for (let tries = 0; tries < 3; tries++) {
+        const mark = nextMark()
+        const r = await link.readHome(gate)
+        if (!r.ok) break
+        // Older than something told since: the cached home stands only if its row still agrees with it; else ask again.
+        if (this.adoptRead(r.value, mark) || this.cacheAgrees(gate)) break
+      }
+    } finally {
+      this.fetching--
     }
     // The home as held: this read's, or a newer answer's.
     return this.homes.get(gate) ?? null

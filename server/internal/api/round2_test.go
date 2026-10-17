@@ -283,7 +283,7 @@ func TestRound2ERetrySharesGlobalUpstreamBudget(t *testing.T) {
 	if err := x.db.Allow(t.Context(), "alice", true, x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
-	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	up := httptest.NewServer(fromHabiticaClient(func(w http.ResponseWriter, r *http.Request) {
 		x.calls.Add(1)
 		w.Header().Set("Retry-After", "0")
 		w.WriteHeader(429)
@@ -301,7 +301,7 @@ func TestRound2CRemovalIsRecheckedAfterProof(t *testing.T) {
 	code := inviteReq(t, x, "POST", "/api/invites", owner, 200)
 	entered := make(chan struct{})
 	release := make(chan struct{})
-	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	up := httptest.NewServer(fromHabiticaClient(func(w http.ResponseWriter, r *http.Request) {
 		close(entered)
 		<-release
 		fmt.Fprint(w, `{"success":true,"data":{"_id":"new","profile":{"name":"Hero"},"flags":{"classSelected":false},"stats":{"lvl":1,"exp":0,"hp":20,"mp":10,"str":0,"int":0,"con":0,"per":0}}}`)

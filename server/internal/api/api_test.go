@@ -484,3 +484,22 @@ func TestLogoutReleasesThatSessionsLease(t *testing.T) {
 	x.expect("DELETE", "/api/session", nil, nil, 200)
 	x.expect("DELETE", "/api/session", nil, first, 200)
 }
+
+// Another program on the machine reaching the fake Habitica's loopback port
+// (a port sweep's bare GET /) is not the server calling Habitica: it fails
+// no test and moves no call count.
+func TestFakeHabiticaIgnoresStrayLoopbackRequests(t *testing.T) {
+	x := newRig(t)
+	res, err := http.Get(x.upstream.URL + "/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
+	if res.StatusCode != 404 || x.calls.Load() != 0 {
+		t.Fatal("stray request served", res.StatusCode, x.calls.Load())
+	}
+	x.ready("alice")
+	if x.calls.Load() != 1 {
+		t.Fatal("sign-in calls", x.calls.Load())
+	}
+}

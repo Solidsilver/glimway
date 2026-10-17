@@ -151,7 +151,7 @@ export interface FsHooks {
   __fsDevFrameTimes: (ms: number, finish?: boolean) => Promise<{ frames: number; gap: { p50: number; p95: number }; step: { p50: number; p95: number }; canvas: [number, number] }>
   __fsDevDodge: (dx: number, dy: number) => void
   __fsDevAttack: () => void
-  __fsDevParkCreatures: () => void
+  __fsDevParkCreatures: (keep?: boolean) => void
   /** Local (curated) enemies take `n`; a server camp's enemies only show it (their room decides). */
   __fsDevStrike: (n: number, type?: EnemyType) => void
   /** Finish a generated camp's fight for this account (a `-tags dev` server's /api/dev/fight-fall), then read the Wilds again. */
