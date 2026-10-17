@@ -3,7 +3,8 @@
  * hearthwick-2.md 7): the Wick Tree in each Mark, the hearth-stone, the
  * town's new buildings (townhouses, cottages, the inn, chandler, land
  * office, smithy, guildhouse, Orrin's workshop, the barn), the shop signs,
- * the town and farm dressing, the lot stakes and side gateposts, and the
+ * the town and farm dressing, the lot stakes (including the dimming state)
+ * and side gateposts, and the
  * wildgate arch.
  * The build packs each frame's whole canvas at 64 texels per 16-px tile
  * (scripts/build-atlases.ts → hearthwick2.webp, loaded as

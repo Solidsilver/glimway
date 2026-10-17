@@ -143,6 +143,7 @@
   "assets/generated/hearthwick2-pass/frames/land-office.png": "3015b84afe0f21c37902b3220d26c4a082aad5772f08825bd894db0ca05f8f91",
   "assets/generated/hearthwick2-pass/frames/lantern-stake-0.png": "39fdaaa8b311213540ed51f6a4f38891350f526170718c8988a54dfbfb55dd26",
   "assets/generated/hearthwick2-pass/frames/lantern-stake-1.png": "519302ae713437b3f7ec00a55454f77bd7e8bd477d2d4574bdb83f31f1dd8d63",
+  "assets/generated/hearthwick2-pass/frames/lantern-stake-2.png": "de415511bd858608005d31fbf363b4088dcd1d858bd0bd64c9c4f1d851ff085c",
   "assets/generated/hearthwick2-pass/frames/living-portal-0.png": "91c966d9925d08dce1c3a395deabeea00e8082c20f2402d7a4fc7230f02c8214",
   "assets/generated/hearthwick2-pass/frames/living-portal-1.png": "ac9b62812d8f478a8a980ef0e946a0f46ed22ab0d925393eadd37dedd2810391",
   "assets/generated/hearthwick2-pass/frames/living-portal-2.png": "9a47631f3411800eae5cb282c04dca43cb180b3e0b77e36779e4996ad7b8f6fa",
@@ -173,7 +174,7 @@
   "assets/generated/hearthwick2-pass/frames/wildgate-arch-side.png": "28ea0f7e0ec7e574e40b3ce658cccbeb36f8ae6af4ffa1caf4ad016494a2e2ae",
   "assets/generated/hearthwick2-pass/frames/wildgate-arch.png": "4f79dc1c609b6d665dc85e2fce9c2eecd77d0d3fbbd86940e34ef77e0ed5ff54",
   "assets/generated/hearthwick2-pass/frames/workshop-orrin.png": "3aaa9116f4c3a1705ec8dfedc9d95467b8807891f43e691bba3f9160ab7e1565",
-  "assets/generated/hearthwick2-pass/manifest.json": "5b2c767fd82beaff8c0352e6c26032b663f06b4fd0d3f4210511cab271d3e030",
+  "assets/generated/hearthwick2-pass/manifest.json": "0286d05265bbfb3fa312274d76a2334a5e23931897af5564c564e9e2dfbc00a4",
   "assets/generated/indoors-pass/manifest.json": "7c002164a907320483239b16eb568c9ab8ecb54b9dd286160e3b035fb2e20562",
   "assets/generated/indoors-pass/sheets/edge-clean/cellar-ladder.png": "247bbd8e77d9950f2bd5c980139e8bdec4b8e6d6b20bd492fe6018fb75bcd424",
   "assets/generated/indoors-pass/sheets/edge-clean/chimney-smoke-5.png": "47b54c84740536f8a503c9f30ce4bd8450a3dd668231b1f04199c57a3ff924d3",
@@ -390,7 +391,7 @@
   "fingersnap-village.webp": "55741365aef1f255193af044288f16e68d9fb918b71ad464aad62dab5d42f842",
   "glims.webp": "64e0c927c1d0dd1dd4a101d2de9b19e6a7fe7ef7a907589815a1b5f50e81214e",
   "ground.webp": "6151b5306345edf22bdea4211e20910d3a83dbe0ede013999a3d65f5a7529d94",
-  "hearthwick2.webp": "cc3f7eddd78cab53e18d6f8bb1a0f6bfe3f69d5041aa9c6ade054ed509fbd097",
+  "hearthwick2.webp": "3447b45149fbf73ca91ccfa7a07b280a0d193d813c73ac045ee336d0ec8c3ebc",
   "indoors.webp": "f8a34227b29a345347126c09304e318a9c2bdb0e6269b3e360c1593e542ab1d2",
   "items.webp": "ecd2b4d308db0615f50126868db6e5acb40718c52e0c098296c25bf323ceb020",
   "open-map.webp": "6d3750d12794aef4646ea5448d087fed329e77ec1911480088a653d38a13ec7b",
@@ -4826,7 +4827,7 @@
  "hearthwick2": {
   "image": "hearthwick2.webp",
   "size": [
-   2232,
+   2233,
    2016
   ],
   "density": 64,
@@ -5005,50 +5006,56 @@
     160,
     192
    ],
+   "lantern-stake-2": [
+    128,
+    1920,
+    64,
+    96
+   ],
    "shop-sign-bread": [
-    1104,
+    1168,
     1920,
     48,
     48
    ],
    "shop-sign-mug": [
-    1200,
+    1264,
     1920,
     48,
     48
    ],
    "shop-sign-candle": [
-    1152,
+    1216,
     1920,
     48,
     48
    ],
    "shop-sign-scroll": [
-    1248,
+    1312,
     1920,
     48,
     48
    ],
    "shop-sign-wheel": [
-    1296,
+    1360,
     1920,
     48,
     48
    ],
    "barrel": [
-    736,
-    1920,
-    64,
-    80
-   ],
-   "crate-stack": [
     800,
     1920,
     64,
     80
    ],
-   "sack-pile": [
+   "crate-stack": [
     864,
+    1920,
+    64,
+    80
+   ],
+   "sack-pile": [
+    928,
     1920,
     64,
     80
@@ -5060,7 +5067,7 @@
     96
    ],
    "water-trough": [
-    608,
+    672,
     1920,
     128,
     80
@@ -5078,7 +5085,7 @@
     128
    ],
    "shop-sign-anvil": [
-    1056,
+    1120,
     1920,
     48,
     48
@@ -5108,7 +5115,7 @@
     160
    ],
    "allotment-bed": [
-    928,
+    992,
     1920,
     128,
     64
@@ -5180,19 +5187,19 @@
     96
    ],
    "garden-flowers-white": [
-    448,
+    512,
     1920,
     160,
     80
    ],
    "garden-flowers-pink": [
-    288,
+    352,
     1920,
     160,
     80
    ],
    "garden-flowers-gold": [
-    128,
+    192,
     1920,
     160,
     80

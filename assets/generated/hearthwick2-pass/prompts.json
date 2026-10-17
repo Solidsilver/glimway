@@ -152,6 +152,17 @@
         ".agent/wilds-refs/seam-north.png"
       ],
       "prompt": "Transparent 3-column by 2-row production sprite sheet with six isolated garden sprites in exact order: shrub A, shrub B, white flower bed, pink flower bed, golden flower bed, 1x1 hedge segment that joins horizontally. Shrubs one tile square, beds two tiles wide by one deep. Wilds-matching dark teal-green shadows, muted layered leaves, speckled natural accents, warm upper-left light, coarse flat pixel clusters and dark warm-brown outline. No labels, roads, houses, people or backgrounds."
+    },
+    {
+      "id": "lantern-stake-dimming-round4",
+      "source": "sheets/generated-lantern-stake-dim.png",
+      "generation_file": "exec-58cc2d46-4244-4fb1-8126-b62f61277a1a.png",
+      "style_reference": "assets/generated/hearthwick2-pass/frames/lantern-stake-0.png and lantern-stake-1.png",
+      "references": [
+        "assets/generated/hearthwick2-pass/frames/lantern-stake-0.png",
+        "assets/generated/hearthwick2-pass/frames/lantern-stake-1.png"
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: low-resolution game sprite that will be reduced to a 64x96 pixel canvas and displayed tiny in a tile-based RPG. Input images: Image 1 is the unlit lantern; Image 2 is the same stake lantern brightly lit. Make a third state. Keep the entire timber post, stone foot, iron bracket and hanging lantern identical to Image 2 in placement, size and silhouette. Change only the light: oil is nearly exhausted. Inside the lantern, make a distinctly visible low amber flame that occupies roughly the lower third of the glass and consists of several chunky pixels, including one pale yellow pixel, clearly readable after substantial pixel reduction. It must be smaller and dimmer than the bright solid flame in Image 2, yet obviously burning. Glass is subdued cool blue-teal; glow is very faint and tightly confined to the lantern. Preserve the warm wood. True transparent background, crisp flat coarse pixel clusters, dark warm brown #3a2a28 outlines. No haze, broad halo, shadows, extra parts, gradients, blur, text or watermark."
     }
   ]
 }

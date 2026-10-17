@@ -6,8 +6,8 @@ prompts, reference files, and generation file IDs are recorded in `prompts.json`
 
 ## Contents
 
-- 62 transparent native-canvas frames in `frames/`, with bottom-centre foot points.
-- Twelve full-resolution generated source sheets in `sheets/`.
+- 63 transparent native-canvas frames in `frames/`, with bottom-centre foot points.
+- Thirteen full-resolution generated source images in `sheets/`.
 - `manifest.json` with each frame's source rectangle, destination rectangle,
   footprint, canvas size, and foot point.
 - Five animation loops for hearth embers, forge glow, washing line, spring water,
@@ -26,7 +26,8 @@ speckled soil. No ground tiles were added, as §7 assigns those to H3.
 The original §7 set totals 49 frames. Round 3 adds the side-on Wildgate arch,
 Silas’s farmhouse, a three-frame spring, a four-frame living portal, and six
 garden dressing frames, bringing the pass to 62 frames. The garden set was the
-optional lower-priority request and is included.
+optional lower-priority request and is included. Round 4 adds a dimming
+lot-lantern frame with a guttering flame and weak cool glow.
 
 Rebuild with `python3 assets/generated/hearthwick2-pass/build_pass.py` from the
 repository root.

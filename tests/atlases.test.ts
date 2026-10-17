@@ -281,7 +281,7 @@ test('the Hearthwick 2 pass: every frame packed whole at 64 texels a tile, its l
   assert.deepEqual([w, h], built.hearthwick2.size)
   assert.equal(built.hearthwick2.density, 64)
   assert.deepEqual(Object.keys(built.hearthwick2.frames).sort(), hw2.frames.map((f) => f.key).sort())
-  assert.equal(hw2.frames.length, 62)
+  assert.equal(hw2.frames.length, 63)
   for (const f of hw2.frames) {
     const r = built.hearthwick2.frames[f.key]
     assert.deepEqual([r[2], r[3]], [f.canvasSize.w, f.canvasSize.h], `${f.key} keeps its canvas`)
