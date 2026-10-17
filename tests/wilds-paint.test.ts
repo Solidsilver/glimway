@@ -319,7 +319,7 @@ test('the painter thread’s fallback: settled once each, the normal painter’s
       assert.equal(w.terminated, true);
       assert.equal((await paintAway(job, src)).thread, 'main');
     });
-    await tc.test('a reply that never comes: painted here at the deadline; a late one is dropped, and the worker paints the next', async (t) => {
+    await tc.test('a reply that never comes: painted here at the deadline (and said to be late); a late one is dropped, and the worker paints the next', async (t) => {
       t.mock.timers.enable({ apis: ['setTimeout'] });
       const { paintAway, paintHere, PAINT_DEADLINE_MS } = await painter();
       const { src, job } = riverJob();
@@ -331,7 +331,7 @@ test('the painter thread’s fallback: settled once each, the normal painter’s
       assert.equal(settled, 0, 'still waiting just before the deadline');
       t.mock.timers.tick(1);
       const r = await p;
-      assert.equal(r.thread, 'main');
+      assert.equal(r.thread, 'late');
       assert.deepEqual(r.rgba, paintHere(job, src).rgba);
       w.reply(0);
       await Promise.resolve();
