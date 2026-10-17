@@ -16,14 +16,8 @@ the game can show the first part as "What's new":
 ### For players
 
 - The world map shows held land, common paths and dimming warnings. Open Details for the Lamps ledger: see each known light’s reserve and what happens at the turning, then pick a row to find it on the map.
-
 - Signing in, reloading and stepping outdoors no longer freeze the game for a moment as the world appears.
-
 - Choose who may build at your camp. Look at your way-lamp and pick "Who may build here": just your household, your household and people you name, everyone but people you name, or everyone in the world. Anyone can still walk through your camp, pick forage there and add oil, and you can always pick up your own things. Felling trees and breaking stone at a camp count as building. You can also move someone else's piece off your camp; it waits for them in a crate at Pell's office.
-
-### Technical
-
-- Add palette-matched relit lamp stones, route stones and three lamp inventory icons to the art atlases.
 - The Wilds keep their shape across the turning: the Wend runs the same course and woods and meadows stay where they are. Only the living detail (trees, forage, camps, chests, places and paths) changes each wick.
 - The Wilds turn early once, when this version arrives: the current wick's land is replaced. The Tangle keeps everything.
 - Light your lot lantern: fill the lantern on your lot's back line with hearth oil and the woods behind your lot hold still through the turning. While it burns, that land is part of your yard: set pieces out there and plant in it. Each flask burns for a wick, up to three; anyone may top up a neighbour's lantern. Run dry, it gutters for a wick, then goes dark, and the woods turn; anything you set out there comes home to your storage, and planted seeds come back to your chest.
@@ -41,6 +35,7 @@ the game can show the first part as "What's new":
 
 ### Technical
 
+- Add palette-matched relit lamp stones, route stones and three lamp inventory icons to the art atlases.
 - The Keeper's hand (lamps.md 2.8): quest `keepers-hand` (after `lantern-road`, from Mara) uses the existing schema. Its flag steps wait on server-written marks in a new `keeper:` namespace: `keeper:cut` from the communal-lamp `copy` action at the world's quest stone (the first Lantern Road stone out of the Whitequiet inside the frontier, `wilds.RoadStones`, a function of the seed; sent as `CommunalLampsRead.cut_stone`), and `keeper:lamp` when a holder of `keeper:hand` relights, sets, tends, reads (new `read` action) or names a communal lamp. Its gated `check-ledger` step gives `keeper:hand`, a lamp head, a lamp wick, the ways-home recipe pages `recipe-homing-turncap` and `recipe-lamp-ash-pouch` (the chandler no longer sells them), and the new paper `the-form-of-a-naming` (a `quest-step` find source in `src/content/papers.ts`).
 - Naming from parts: the `name` action on `POST /api/communal-lamps` and `POST /api/camps` takes six part ids (ordinal, relation, landmark, behind, ahead, closing; content `homestead.json` `lampNaming`). The server re-resolves landmarks (place marks and sites with content words in the lamp's chunk and its eight neighbours, plus the road and Whitequiet fallbacks; `GET /api/lamp-landmarks/<lamp>` offers the same list), refuses anything else (`invalid-naming`), renders the sentence and short name, and writes `lamp_namings` once (`lamp-named` after). The first naming gives one `lamp-ash`; tending, relighting and reinstalling never do. Naming needs `keeper:hand` (`needs-keeper`); a camp's lamp also needs a builder there. Setting a camp now needs `keeper:hand`; communal posts don't. Camp views and the map ledger carry the naming. No migration.
 - Client: `src/lib/lamp-naming.ts` renders the preview; `src/ui/LampNamingPanel.svelte` picks each part (selects and chips, one column on phones). New error codes `needs-keeper`, `lamp-named`, `invalid-naming` (247–249).
