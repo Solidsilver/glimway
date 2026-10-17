@@ -15,6 +15,7 @@ the game can show the first part as "What's new":
 
 ### For players
 
+- Glimway's home-screen icon and favicon now show the glowing Wick Tree.
 - The world map shows held land, common paths and dimming warnings. Open Details for the Lamps ledger: see each known light’s reserve and what happens at the turning, then pick a row to find it on the map.
 - Signing in, reloading and stepping outdoors no longer freeze the game for a moment as the world appears.
 - Choose who may build at your camp. Look at your way-lamp and pick "Who may build here": just your household, your household and people you name, everyone but people you name, or everyone in the world. Anyone can still walk through your camp, pick forage there and add oil, and you can always pick up your own things. Felling trees and breaking stone at a camp count as building. You can also move someone else's piece off your camp; it waits for them in a crate at Pell's office.
