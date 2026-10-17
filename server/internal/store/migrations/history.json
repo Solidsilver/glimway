@@ -150,5 +150,13 @@
     "sha256": "23c9aed59b159b82424f96df3366e4b7daf7c80808c0ecd3050ae90b9b5347aa",
     "backfill": "migration_037_backfill.go",
     "backfillSha256": "43d6aacda852c33b0db4ea6f603646d240d07685f80938d59cffb3dd31b2d304"
+  },
+  {
+    "name": "038_lasting_geography.sql",
+    "sha256": "f23bd4e7441b28409bb993def327f6c905c6305800867f8ff4bcc023a02cf098"
+  },
+  {
+    "name": "039_holds.sql",
+    "sha256": "967b01dd8a672256716b582afbf49f8522cb2f5d04f6a13b4f66cfa03e103404"
   }
 ]

@@ -65,8 +65,11 @@ func chunkError(err error) error {
 }
 
 // epochFor reads a named epoch for a mutation: the caller's world, the
-// generator version this server makes, not ended.
-func (a *Server) epochFor(ctx context.Context, tx *sql.Tx, s store.Snapshot, id string, now int64) (*contract.WildsEpoch, error) {
+// generator version this server makes, not ended. held: an epoch a hold
+// pins passes too, for what stands in a held chunk (a claim, a relight, a
+// discovery); each caller checks the thing is in a chunk held under it (the
+// chunk read refuses the pinned epoch's other chunks).
+func (a *Server) epochFor(ctx context.Context, tx *sql.Tx, s store.Snapshot, id string, now int64, held bool) (*contract.WildsEpoch, error) {
 	var world string
 	var starts int64
 	var ends sql.NullInt64
@@ -81,25 +84,49 @@ func (a *Server) epochFor(ctx context.Context, tx *sql.Tx, s store.Snapshot, id 
 	if world != s.WorldID {
 		return nil, fail(403, "world-access-denied")
 	}
-	if g := a.Config.WildsGenerator; g != nil && int(e.GeneratorVersion) != g.Version() {
+	pinned := false
+	if held {
+		if pinned, err = store.Pins(ctx, tx, world, id); err != nil {
+			return nil, err
+		}
+	}
+	if g := a.Config.WildsGenerator; g != nil && int(e.GeneratorVersion) != g.Version() && !pinned {
 		return nil, fail(503, "generator-unavailable")
 	}
 	e.StartsAt = float64(starts)
 	if ends.Valid {
 		e.EndsAt = wrapperspb.Double(float64(ends.Int64))
-		if ends.Int64 <= now {
+		if ends.Int64 <= now && !pinned {
 			return nil, fail(409, "epoch-ended")
 		}
 	}
 	return e, nil
 }
 
-// epochAt is the current epoch a chunk lies in (made when there is none).
+// epochAt is the current epoch a chunk lies in (made when there is none):
+// a held chunk's pinned epoch, else its kind's current one.
 func (a *Server) epochAt(ctx context.Context, tx *sql.Tx, world string, cx, cy int, now int64) (*contract.WildsEpoch, error) {
+	served, _, err := a.epochsAt(ctx, tx, world, cx, cy, now)
+	return served, err
+}
+
+// epochsAt is epochAt with the chunk's kind's current epoch too: they differ
+// for a held chunk, whose pinned epoch may have ended while what is served
+// there lasts until the current epoch's turning (where holds are judged).
+func (a *Server) epochsAt(ctx context.Context, tx *sql.Tx, world string, cx, cy int, now int64) (served, current *contract.WildsEpoch, err error) {
 	if a.Config.Epochs == nil {
-		return nil, store.ErrGeneratorUnavailable
+		return nil, nil, store.ErrGeneratorUnavailable
 	}
-	return chunks.Epoch(ctx, tx, a.Config.Epochs, world, wilds.EpochKindAt(cx, cy), now)
+	current, err = chunks.Epoch(ctx, tx, a.Config.Epochs, world, wilds.EpochKindAt(cx, cy), now)
+	if err != nil {
+		return nil, nil, err
+	}
+	// After the current epoch: reading it is the turning, which judges holds.
+	held, err := store.HeldEpoch(ctx, tx, world, cx, cy)
+	if err != nil || held != nil {
+		return held, current, err
+	}
+	return current, current, nil
 }
 
 // ---------------------------------------------------------------- entity state
@@ -359,7 +386,7 @@ func (a *Server) wildsClaim(w http.ResponseWriter, r *http.Request) error {
 		a.falls.await(r.Context(), req.Epoch, req.EntityId, int64(req.Cycle), fallClaimWait)
 	}
 	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
-		e, err := a.epochFor(ctx, tx, *s, req.Epoch, now)
+		e, err := a.epochFor(ctx, tx, *s, req.Epoch, now, true)
 		if err != nil {
 			return nil, err
 		}
@@ -558,7 +585,7 @@ func (a *Server) wildsRelight(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
-		e, err := a.epochFor(ctx, tx, *s, req.Epoch, now)
+		e, err := a.epochFor(ctx, tx, *s, req.Epoch, now, true)
 		if err != nil {
 			return nil, err
 		}
@@ -576,6 +603,17 @@ func (a *Server) wildsRelight(w http.ResponseWriter, r *http.Request) error {
 		}
 		if err = nearWilds(*s, lx, ly); err != nil {
 			return nil, err
+		}
+		// An ended (pinned) epoch's lantern only where a hold keeps its land.
+		if e.EndsAt != nil && int64(e.EndsAt.Value) <= now {
+			S := chunkSize()
+			held, err := store.HeldEpoch(ctx, tx, s.WorldID, wilds.FloorDiv(lx, S), wilds.FloorDiv(ly, S))
+			if err != nil {
+				return nil, err
+			}
+			if held == nil || held.Id != e.Id {
+				return nil, fail(409, "epoch-ended")
+			}
 		}
 		if lit.Valid {
 			return nil, fail(409, "already-lit")
@@ -628,7 +666,7 @@ func (a *Server) settleEcho(w http.ResponseWriter, r *http.Request) error {
 	}
 	var witness func()
 	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
-		e, err := a.epochFor(ctx, tx, *s, req.Epoch, now)
+		e, err := a.epochFor(ctx, tx, *s, req.Epoch, now, false)
 		if err != nil {
 			return nil, err
 		}

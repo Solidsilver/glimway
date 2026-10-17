@@ -52,10 +52,21 @@ func LootSeed(e Epoch, entityID string, cycle int) uint32 {
 	return Hash(e.WorldSeed, e.Kind, e.GeneratorVersion, e.Season, entityID, cycle)
 }
 
-// epochHash hashes the epoch with more parts: every epoch-wide choice
-// (lands, river, places, routes, gaps) draws from one of these.
+// hash hashes the epoch with more parts: every epoch-wide choice of the
+// living detail (places, routes and their fords, gaps, seams) draws from
+// one of these, so it turns with the wick.
 func (e Epoch) hash(parts ...any) uint32 {
 	return Hash(append([]any{e.WorldSeed, e.Kind, e.GeneratorVersion, e.Season}, parts...)...)
+}
+
+// landform hashes a pass of the macro landform (the land cells and their
+// sizes, the warp of their borders, the Wend's course and width): the
+// world seed, the generator version and the pass, without the season or
+// the kind, so the still epoch and every wick epoch of a world lie on the
+// same lands and the same river (lasting geography, roadmap "Land: the
+// three tiers"; overturns open-map decision 18).
+func (e Epoch) landform(pass string, parts ...any) uint32 {
+	return Hash(append([]any{e.WorldSeed, e.GeneratorVersion, "landform", pass}, parts...)...)
 }
 
 // check refuses an epoch this code can't make.

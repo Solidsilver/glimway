@@ -207,6 +207,17 @@ func (a *Server) fall(w http.ResponseWriter, r *http.Request) error {
 				tx0, ty0 := wildsTileOf(req.Where.X, req.Where.Y)
 				epoch, e := a.Config.Epochs.Current(ctx, tx, s.WorldID, wilds.EpochKindAt(wilds.ChunkOf(tx0, ty0)), now)
 				if e == nil {
+					// A held chunk's ground is its pinned epoch's: the lantern goes there.
+					cx, cy := wilds.ChunkOf(tx0, ty0)
+					held, he := store.HeldEpoch(ctx, tx, s.WorldID, cx, cy)
+					if he != nil {
+						return nil, he
+					}
+					if held != nil {
+						epoch = held
+					}
+				}
+				if e == nil {
 					g, e := a.Config.Lanterns.PlaceFallen(ctx, tx, s, epoch, req.Where, now)
 					if errors.Is(e, chunks.ErrUnavailable) || errors.Is(e, store.ErrGeneratorUnavailable) {
 						out.Reason = "generator-unavailable"

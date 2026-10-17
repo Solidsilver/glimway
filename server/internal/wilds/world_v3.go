@@ -20,7 +20,8 @@ type world struct {
 	landFinal map[[2]int]landPoint // islands settled
 	places    map[[2]int]*Place
 	routes    map[[4]int][]*route
-	gaps      map[gapKey]int // edge gap offsets (-1: none)
+	gaps      map[gapKey]int  // edge gap offsets (-1: none)
+	held      map[[2]int]bool // neighbours held in another wick epoch (kept, gen_v3.go)
 
 	river *river // nil in a still epoch
 	road  *road
@@ -40,9 +41,10 @@ func newWorld(e Epoch) *world {
 		places:    map[[2]int]*Place{},
 		routes:    map[[4]int][]*route{},
 		gaps:      map[gapKey]int{},
-		warpX:     noise{e.hash("warp-x")},
-		warpY:     noise{e.hash("warp-y")},
-		dither:    noise{e.hash("dither")},
+		held:      map[[2]int]bool{},
+		warpX:     noise{e.landform("warp-x")},
+		warpY:     noise{e.landform("warp-y")},
+		dither:    noise{e.landform("dither")},
 		thicket:   noise{e.hash("thicket")},
 	}
 	w.road = newRoad(e.WorldSeed)

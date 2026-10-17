@@ -967,6 +967,8 @@ export declare const WildsPersonalClaimSchema: GenMessage<WildsPersonalClaim, {v
 
 /**
  * All time fields are Unix seconds.
+ * epoch: the epoch the place was found in (this wick's, or a held chunk's
+ * pinned one: place ids repeat across wicks).
  *
  * @generated from message glimway.v1.WildsDiscovery
  */
@@ -995,6 +997,11 @@ export declare type WildsDiscovery = Message<"glimway.v1.WildsDiscovery"> & {
    * @generated from field: double at = 5;
    */
   at: number;
+
+  /**
+   * @generated from field: string epoch = 6;
+   */
+  epoch: string;
 };
 
 export declare type WildsDiscoveryValid = WildsDiscovery;
@@ -1490,12 +1497,22 @@ export declare type WildsNearResult = Message<"glimway.v1.WildsNearResult"> & {
 
   /**
    * Every chunk of the window on the grid (location.OnGrid), row-major:
-   * its source ("fixed" or "generated") and the epoch its body is read
-   * under (a fixed chunk's pseudo-epoch). Only generated chunks carry state.
+   * its source ("fixed", "generated" or "held") and the epoch its body is
+   * read under (a fixed chunk's pseudo-epoch, a held chunk's pinned wick
+   * epoch). Only generated and held chunks carry state.
    *
    * @generated from field: repeated glimway.v1.NearChunk chunks = 15;
    */
   chunks: NearChunk[];
+
+  /**
+   * The wick epochs the window's held chunks are pinned to, other than this
+   * wick (roadmap 0.12 holds): their entity states, claims and ground
+   * changes ride under them.
+   *
+   * @generated from field: repeated glimway.v1.WildsEpoch held = 16;
+   */
+  held: WildsEpoch[];
 };
 
 export declare type WildsNearResultValid = WildsNearResult;

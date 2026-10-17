@@ -13,6 +13,20 @@ the game can show the first part as "What's new":
 
 ## [Unreleased]
 
+### For players
+
+- The Wilds keep their shape across the turning: the Wend runs the same course and woods and meadows stay where they are. Only the living detail (trees, forage, camps, chests, places and paths) changes each wick.
+- The Wilds turn early once, when this version arrives: the current wick's land is replaced. The Tangle keeps everything.
+
+### Technical
+
+- Lasting geography (overturns open-map decision 18): land cells and their sizes, the border warp and the Wend hash the world seed, generator version and pass, without the season or epoch kind (`wilds.Epoch.landform`). Living detail keeps the seasoned hash. Still-epoch output is byte-identical (its goldens are unchanged), so the generator version stays 3; the wick goldens, the pinned rumour counts and the client's ford fixtures are regenerated.
+- Migration 038 ends the current wick (clean break, as 037 did): wick epochs, their chunks and world changes go, fallen way-lamp markers are archived to `one_town_lantern_archive`. The still epoch and the Tangle's changes stay.
+- The holds engine (migration 039, `holds`; `store/holds.go`): a generated wick chunk pinned to one wick epoch, served from that epoch's stored chunk through any number of turnings, with its ground changes kept. `Hold`, `Release` and the turning's judge (`Holder` per holder kind, asked once when the next wick epoch is made; a released hold turns at the next turning; `Released` is the hook for sending placed pieces home). Epoch cleanup keeps pinned epochs, trimmed to their held chunks. No player action creates holds yet.
+- New wick land beside a held chunk copies its edge, as at the Tangle, and opens dead-end seam pockets so each held patch keeps an opening onto the network (location-seam decision 8).
+- The near read lists held chunks with source `held` and their pinned epoch, and names the older epochs in a new `WildsNearResult.held` field; the client reads held chunks, their ground and entity states under that epoch.
+- Held chunks are full Wilds land: a place in one is discovered in its pinned epoch (`WildsDiscovery.epoch`; the client keys a held place `place:x:y@<epoch>`, as place ids repeat across wicks), its camps fight in a room keyed by the pinned epoch that lives to the current turning (a held room was closed at once as ended), and a fall there leaves its lantern under the pinned epoch (it left none). Falls, camp claims, loot and respawn timers key on the pinned epoch. Footprint chunks (the Whitequiet) can't be held: their story sites turn.
+
 ## [0.11.2] - 2026-10-16
 
 ### For players

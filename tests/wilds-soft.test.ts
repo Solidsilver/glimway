@@ -91,8 +91,8 @@ test('the ground has no tile squares: a verge in meadow paints meadow grass, and
 test('real generated fords show a connected line of stones through bends and across chunk edges', () => {
   const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]] as const;
   for (const [names, start] of [
-    [['ford-bend', 'ford-bend-east'], { tx: -75, ty: -61 }],
-    [['ford-diagonal-west', 'ford-diagonal-east'], { tx: -97, ty: 43 }],
+    [['ford-bend', 'ford-bend-east'], { tx: -74, ty: -88 }],
+    [['ford-diagonal-west', 'ford-diagonal-east'], { tx: -94, ty: 61 }],
   ] as const) {
     const chunks = names.map((name: FixtureName) => fixtureTerrain(name));
     const tile = (tx: number, ty: number) => {
