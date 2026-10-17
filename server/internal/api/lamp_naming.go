@@ -16,7 +16,10 @@ package api
 // keeps the parts, the landmark and the words on the lamp's stable id
 // (lamp_namings). A lamp is named once: its naming outlives the light, a
 // crate and a reinstall, and the lamp ash it gives comes with that one
-// naming, never with tending or lighting again.
+// naming, never with tending or lighting again. A portable lamp's naming
+// (a communal post's or a camp's: a way-lamp piece) follows the piece into
+// any world, so it is named once ever; a road stone's id repeats between
+// worlds, so its naming is its world's.
 
 import (
 	"context"
@@ -158,7 +161,7 @@ func (a *Server) nameCommunalLamp(ctx context.Context, tx *sql.Tx, s *store.Snap
 	if !nearLamp(s, l.CX, l.CY, l.X, l.Y) {
 		return nil, nil, fail(409, "too-far-away")
 	}
-	given, err := a.nameLamp(ctx, tx, s, l.ID, l.CX, l.CY, l.X, l.Y, req.Parts, now)
+	given, err := a.nameLamp(ctx, tx, s, l.ID, l.Kind == "post", l.CX, l.CY, l.X, l.Y, req.Parts, now)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -188,14 +191,16 @@ func (a *Server) nameCamp(ctx context.Context, tx *sql.Tx, s *store.Snapshot, re
 	if !nearTile(s, outdoorsArea, c.CX*S+c.X, c.CY*S+c.Y, int(content.HomeRules.GetWayLamp().GetReach())) {
 		return nil, nil, fail(409, "too-far-away")
 	}
-	given, err := a.nameLamp(ctx, tx, s, c.ID, c.CX, c.CY, c.X, c.Y, req.Parts, now)
+	given, err := a.nameLamp(ctx, tx, s, c.ID, true, c.CX, c.CY, c.X, c.Y, req.Parts, now)
 	return c, given, err
 }
 
 // nameLamp writes a lamp's naming from its parts, once, and gives its ash.
-func (a *Server) nameLamp(ctx context.Context, tx *sql.Tx, s *store.Snapshot, id string, cx, cy, x, y int, parts []string, now int64) ([]string, error) {
+// A portable lamp's naming has no world: it is the piece's, wherever it
+// stands.
+func (a *Server) nameLamp(ctx context.Context, tx *sql.Tx, s *store.Snapshot, id string, portable bool, cx, cy, x, y int, parts []string, now int64) ([]string, error) {
 	var named bool
-	if err := tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM lamp_namings WHERE world_id=? AND lamp_id=?)", s.WorldID, id).Scan(&named); err != nil {
+	if err := tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM lamp_namings WHERE lamp_id=? AND (world_id=? OR world_id IS NULL))", id, s.WorldID).Scan(&named); err != nil {
 		return nil, err
 	}
 	if named {
@@ -213,7 +218,7 @@ func (a *Server) nameLamp(ctx context.Context, tx *sql.Tx, s *store.Snapshot, id
 	if err != nil {
 		return nil, err
 	}
-	if _, err = tx.ExecContext(ctx, "INSERT INTO lamp_namings(world_id,lamp_id,parts,landmark,text,short_name,namer,named_at) VALUES(?,?,?,?,?,?,?,?)", s.WorldID, id, string(raw), n.landmark, n.text, n.short, s.AccountID, now); err != nil {
+	if _, err = tx.ExecContext(ctx, "INSERT INTO lamp_namings(world_id,lamp_id,parts,landmark,text,short_name,namer,named_at) VALUES(?,?,?,?,?,?,?,?)", sql.NullString{String: s.WorldID, Valid: !portable}, id, string(raw), n.landmark, n.text, n.short, s.AccountID, now); err != nil {
 		return nil, err
 	}
 	rules := content.HomeRules.GetLampNaming()

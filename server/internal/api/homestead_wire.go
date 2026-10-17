@@ -118,6 +118,10 @@ func itemsViewProto(v itemsView) *contract.ItemsView {
 	for _, t := range v.Thanks {
 		out.Thanks = append(out.Thanks, &contract.Thanks{FromName: t.FromName, ItemDef: t.ItemDef, At: float64(t.At)})
 	}
+	out.Carried = make([]*contract.HomeInstance, 0, len(v.Carried))
+	for _, i := range v.Carried {
+		out.Carried = append(out.Carried, homeInstanceProto(i))
+	}
 	return out
 }
 

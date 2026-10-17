@@ -3,6 +3,9 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"os"
+	"reflect"
+	"strings"
 	"testing"
 
 	"glimway/server/internal/chunks"
@@ -12,6 +15,16 @@ import (
 )
 
 func (x *rig) mapLand(c *http.Cookie, keys ...[2]int) *contract.WildsMapStatus {
+	x.t.Helper()
+	out := &contract.WildsMapStatus{}
+	if err := protojson.Unmarshal(x.mapRaw(c, keys...), out); err != nil {
+		x.t.Fatal(err)
+	}
+	return out
+}
+
+// mapRaw is the map endpoint's answer as it goes over the wire.
+func (x *rig) mapRaw(c *http.Cookie, keys ...[2]int) []byte {
 	x.t.Helper()
 	req := &contract.WildsMapRequest{}
 	for _, k := range keys {
@@ -29,11 +42,7 @@ func (x *rig) mapLand(c *http.Cookie, keys ...[2]int) *contract.WildsMapStatus {
 	if w.Code != 200 {
 		x.t.Fatalf("map status: %d %s", w.Code, w.Body.String())
 	}
-	out := &contract.WildsMapStatus{}
-	if err = protojson.Unmarshal(w.Body.Bytes(), out); err != nil {
-		x.t.Fatal(err)
-	}
-	return out
+	return w.Body.Bytes()
 }
 
 func TestMapBuiltPrediction(t *testing.T) {
@@ -139,5 +148,60 @@ func TestMapOwnLotAndCampVisibility(t *testing.T) {
 	n := x.near(bc, campCX, campCY, 200)
 	if n.Land != nil && len(n.Land.Chunks) > 1 {
 		t.Fatal("near exposed neighbouring tiers", n.Land)
+	}
+}
+
+// A chunk whose only Common work is a communal lamp, as the map endpoint
+// answers it before and after this wick's visit (review B4): the client's
+// decoder reads testdata/map-lamps.json (tests/map-lamps.test.ts). The
+// lamp's id and the wick are the run's own, so they're written as "post"
+// and "wick". UPDATE_PROTO_FIXTURES=1 rewrites it.
+func TestMapLampOnlyFixture(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	post := x.carry(s.AccountID, "way-lamp")
+	spots := x.campSpots(s.WorldID, campCX, campCY)
+	x.lampOp(c, s, &contract.CommunalLampRequest{Action: "post", ItemId: post, X: int32(spots[0][0]), Y: int32(spots[0][1])}, spots[1][0], spots[1][1], 200)
+	capture := func(want string) json.RawMessage {
+		t.Helper()
+		raw := x.mapRaw(c, [2]int{campCX, campCY})
+		out := &contract.WildsMapStatus{}
+		if err := protojson.Unmarshal(raw, out); err != nil {
+			t.Fatal(err)
+		}
+		if len(out.Chunks) != 1 || out.Chunks[0].Tier != "common" || out.Chunks[0].NextTurning != want || len(out.Lamps) != 1 {
+			t.Fatalf("%s: %v", want, out)
+		}
+		raw = []byte(strings.ReplaceAll(strings.ReplaceAll(string(raw), post, "post"), out.Wick, "wick"))
+		var v any
+		if err := json.Unmarshal(raw, &v); err != nil {
+			t.Fatal(err)
+		}
+		pretty, _ := json.Marshal(v)
+		return pretty
+	}
+	fixture := map[string]json.RawMessage{"visited": capture("lamps-carry")}
+	// The post carries into the next wick; nobody has been by yet.
+	x.turn()
+	c, _ = x.again("alice")
+	fixture["unvisited"] = capture("lamps-turn")
+	raw, err := json.MarshalIndent(fixture, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw = append(raw, '\n')
+	path := "testdata/map-lamps.json"
+	if os.Getenv("UPDATE_PROTO_FIXTURES") == "1" {
+		if err = os.WriteFile(path, raw, 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var a, b any
+	if json.Unmarshal(raw, &a) != nil || json.Unmarshal(want, &b) != nil || !reflect.DeepEqual(a, b) {
+		t.Fatalf("%s is stale: UPDATE_PROTO_FIXTURES=1 rewrites it", path)
 	}
 }

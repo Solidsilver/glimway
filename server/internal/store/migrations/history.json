@@ -182,5 +182,9 @@
   {
     "name": "045_claim_rules.sql",
     "sha256": "cda781eef55b72d2090bf5d08b76707a7dae9475de6f9be16da31bfd86e39e8c"
+  },
+  {
+    "name": "046_lamp_naming_follows_lamp.sql",
+    "sha256": "f96dfa5d71a4126ddbc7a0c3d1b68b1efaf105891dc2025b256a77042d288369"
   }
 ]

@@ -395,6 +395,14 @@ export declare type ItemsView = Message<"glimway.v1.ItemsView"> & {
    * @generated from field: repeated glimway.v1.Thanks thanks = 6;
    */
   thanks: Thanks[];
+
+  /**
+   * The home pieces in the pack (a way-lamp, a stool), deed or no deed:
+   * what can be set as a camp, a communal post or a piece at a camp.
+   *
+   * @generated from field: repeated glimway.v1.HomeInstance carried = 7;
+   */
+  carried: HomeInstance[];
 };
 
 export declare type ItemsViewValid = ItemsView;

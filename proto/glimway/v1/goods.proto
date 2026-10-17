@@ -60,6 +60,9 @@ message ItemsView {
   repeated Stack stacks = 1; repeated Instance instances = 2;
   repeated Slot pockets = 3; OffHand off_hand = 4;
   repeated string picked_up = 5; repeated Thanks thanks = 6;
+  // The home pieces in the pack (a way-lamp, a stool), deed or no deed:
+  // what can be set as a camp, a communal post or a piece at a camp.
+  repeated HomeInstance carried = 7;
 }
 
 // A homestead member (everyone on a deed is equal).

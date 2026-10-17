@@ -134,6 +134,8 @@ type itemsView struct {
 	OffHand   offHandView    `json:"offHand"`
 	PickedUp  []string       `json:"pickedUp"`
 	Thanks    []thanksView   `json:"thanks"`
+	// Carried are the home pieces in the pack, deed or no deed.
+	Carried []homeInstance `json:"carried"`
 }
 
 // maintainAndReadItems keeps flower drying at its historical read boundary.
@@ -147,7 +149,7 @@ func maintainAndReadItems(ctx context.Context, tx *sql.Tx, s *store.Snapshot, no
 }
 
 func emptyItemsView() itemsView {
-	return itemsView{Stacks: []stackView{}, Pockets: []slotView{}, PickedUp: []string{}, Thanks: []thanksView{}}
+	return itemsView{Stacks: []stackView{}, Pockets: []slotView{}, PickedUp: []string{}, Thanks: []thanksView{}, Carried: []homeInstance{}}
 }
 
 // projectItems only assembles the pack view from rows; it never dries flowers.
@@ -234,6 +236,14 @@ func projectItems(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (itemsView
 	err = rows.Err()
 	rows.Close()
 	if err != nil {
+		return v, err
+	}
+	// Home pieces in the pack: a way-lamp is set from here, deed or not.
+	rows, err = tx.QueryContext(ctx, "SELECT id,item_def,scene,x,y,rotation,name,stalls FROM homestead_items WHERE account_id=? AND location='inventory' ORDER BY id", s.AccountID)
+	if err != nil {
+		return v, err
+	}
+	if v.Carried, err = scanInstances(rows, v.Carried); err != nil {
 		return v, err
 	}
 	rows, err = tx.QueryContext(ctx, "SELECT p.display_name,t.item_def,t.at FROM item_thanks t JOIN players p ON p.account_id=t.user_id WHERE t.maker_id=? ORDER BY t.at DESC,t.id DESC LIMIT 10", s.AccountID)

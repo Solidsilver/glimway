@@ -43,7 +43,7 @@ test('the chandler offers refining only to someone carrying sap', () => {
 });
 
 test('items results keep a tap and a refine', () => {
-  const items = { stacks: [{ itemDef: 'wick-sap', qty: 1, maker: null }], instances: [], pockets: [], offHand: { open: false, class: null, itemDef: null, instance: null }, pickedUp: [], thanks: [] };
+  const items = { stacks: [{ itemDef: 'wick-sap', qty: 1, maker: null }], instances: [], pockets: [], offHand: { open: false, class: null, itemDef: null, instance: null }, pickedUp: [], thanks: [], carried: [] };
   const fields = { wear: null, used: '', pickup: '', given: null, mended: '', created: [], gathered: [], plant: null, land: null, returned: '', paper: null, heirloom: '', adaOilCount: 0, glimsGiven: 0, bought: null, tapped: null, firstTap: false, refined: null };
   const tapped = parseItemsResult({ items, ...fields, tapped: { itemDef: 'wick-sap', qty: 1, maker: null }, firstTap: true });
   assert.deepEqual([tapped.tapped, tapped.firstTap, tapped.refined], [{ itemDef: 'wick-sap', qty: 1 }, true, undefined]);

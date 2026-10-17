@@ -282,7 +282,8 @@ func (a *Server) campsRead(w http.ResponseWriter, r *http.Request) error {
 	return a.finishRead(w, r, tx, s, out)
 }
 
-// campOp is POST /api/camps: set, fill, place, remove, plant, name or rule.
+// campOp is POST /api/camps: set, fill, place, remove, plant, uproot,
+// name, rule or pack (camp_teardown.go).
 func (a *Server) campOp(w http.ResponseWriter, r *http.Request) error {
 	req := &contract.CampRequest{}
 	if err := decodeOp(w, r, req); err != nil {
@@ -308,6 +309,10 @@ func (a *Server) campOp(w http.ResponseWriter, r *http.Request) error {
 			c, given, err = a.nameCamp(ctx, tx, s, req, now)
 		case "rule":
 			c, err = setCampRule(ctx, tx, s, req, now)
+		case "uproot":
+			c, err = uprootCampPlant(ctx, tx, s, req, now)
+		case "pack":
+			err = a.packUpCamp(ctx, tx, s, req, now)
 		default:
 			err = fail(400, "invalid-request")
 		}
@@ -682,7 +687,7 @@ func (wayLampHolder) Keeps(ctx context.Context, tx *sql.Tx, h store.Hold, now in
 // Released: the camp has lapsed and its chunk turns. Nothing a player
 // placed is lost (roadmap rule 3): it all packs into a crate at Pell's.
 func (wayLampHolder) Released(ctx context.Context, tx *sql.Tx, h store.Hold, now int64) error {
-	return packCamp(ctx, tx, h, now)
+	return packCamp(ctx, tx, h, false, now)
 }
 
 // packCamp packs a lapsed camp into one crate at Pell's, in the turning's
@@ -690,8 +695,11 @@ func (wayLampHolder) Released(ctx context.Context, tx *sql.Tx, h store.Hold, now
 // same instance, every plant with its planting kept (its seed to collect),
 // the unspent oil to the lamp's setter, and each laid path tile's stone or
 // plank to whoever laid it. Then the camp is gone. A hold released with no
-// camp left (its lamp taken down) still refunds its paths.
-func packCamp(ctx context.Context, tx *sql.Tx, h store.Hold, now int64) error {
+// camp left (its lamp taken down, or the camp packed up) still refunds its
+// paths. packedUp: its keeper packed it up (camp_teardown.go), not a lapse:
+// the paths wait for the turning, and what was someone else's names the
+// keeper who moved it off (movedBy), as crateCampPiece does.
+func packCamp(ctx context.Context, tx *sql.Tx, h store.Hold, packedUp bool, now int64) error {
 	type entry struct {
 		account, kind, def string
 		qty                int
@@ -712,7 +720,11 @@ func packCamp(ctx context.Context, tx *sql.Tx, h store.Hold, now int64) error {
 			return err
 		}
 		for i, p := range pieces {
-			state, _ := json.Marshal(map[string]int{"x": *p.X, "y": *p.Y, "rotation": *p.Rotation})
+			st := map[string]any{"x": *p.X, "y": *p.Y, "rotation": *p.Rotation}
+			if packedUp && owners[i] != c.Setter {
+				st["movedBy"] = c.Setter
+			}
+			state, _ := json.Marshal(st)
 			entries = append(entries, entry{owners[i], "piece", p.ItemDef, 1, p.ID, string(state)})
 		}
 		plants, err := campPlants(ctx, tx, c.ID)
@@ -720,22 +732,29 @@ func packCamp(ctx context.Context, tx *sql.Tx, h store.Hold, now int64) error {
 			return err
 		}
 		for _, p := range plants {
-			state, _ := json.Marshal(map[string]any{"id": p.ID, "x": p.X, "y": p.Y, "plantedAt": p.At, "plantedDay": p.Day})
+			st := map[string]any{"id": p.ID, "x": p.X, "y": p.Y, "plantedAt": p.At, "plantedDay": p.Day}
+			if packedUp && p.Owner != c.Setter {
+				st["movedBy"] = c.Setter
+			}
+			state, _ := json.Marshal(st)
 			entries = append(entries, entry{p.Owner, "plant", p.Def, 1, nil, string(state)})
 		}
 		if flasks := c.Oil / int(content.HomeRules.GetWayLamp().GetWicksPerOil()); flasks > 0 {
 			stacks[[2]string{c.Setter, content.HomeRules.GetWayLamp().GetOil()}] += flasks
 		}
 	}
-	g, err := groundChanges(ctx, tx, h.World, &contract.WildsEpoch{Id: h.Epoch}, int(h.CX), int(h.CY), now)
-	if err != nil {
-		return err
-	}
-	for _, ch := range g.GetChanges() {
-		if lay := chunks.LayKind(ch.Change); lay != nil && ch.By != "" {
-			stacks[[2]string{ch.By, lay.GetMaterial()}] += int(lay.GetCost())
+	if !packedUp {
+		g, err := groundChanges(ctx, tx, h.World, &contract.WildsEpoch{Id: h.Epoch}, int(h.CX), int(h.CY), now)
+		if err != nil {
+			return err
+		}
+		for _, ch := range g.GetChanges() {
+			if lay := chunks.LayKind(ch.Change); lay != nil && ch.By != "" {
+				stacks[[2]string{ch.By, lay.GetMaterial()}] += int(lay.GetCost())
+			}
 		}
 	}
+	var err error
 	keys := make([][2]string, 0, len(stacks))
 	for k := range stacks {
 		keys = append(keys, k)
