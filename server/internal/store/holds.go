@@ -139,6 +139,11 @@ func (c *Chunks) Hold(ctx context.Context, tx *sql.Tx, world string, cx, cy int3
 	if err != nil {
 		return Hold{}, err
 	}
+	// A request from before the turning that got its lock after it: the
+	// next wick's chunks may be made already, not mirroring this one.
+	if e.EndsAt != nil && e.EndsAt.Value <= float64(c.readNow(ctx)) {
+		return Hold{}, chunks.ErrEpochEnded
+	}
 	if _, err = c.Chunk(ctx, tx, world, e.Id, 0, cx, cy); err != nil {
 		return Hold{}, err
 	}
@@ -165,9 +170,11 @@ func (c *Chunks) Release(ctx context.Context, tx *sql.Tx, world string, cx, cy i
 
 // judgeHolds is the turning's judgement, run once as a new wick epoch is
 // made: a released hold goes; any other asks its holder kind whether it
-// keeps. A kind this server has no Holder for keeps (its land never turns
-// by accident). A hold that goes calls its holder's Released. It answers
-// whether any hold went.
+// keeps. A hold that goes calls its holder's Released. A kind this server
+// has no Holder for keeps, released or not: with no Released to send its
+// placed pieces home, its land never turns (roadmap rule 3), and a release
+// takes effect at the first turning a Holder for it is registered. It
+// answers whether any hold went.
 func (c *Chunks) judgeHolds(ctx context.Context, tx *sql.Tx, world string, now int64) (bool, error) {
 	holds, err := c.Holds(ctx, tx, world)
 	if err != nil {
@@ -176,8 +183,11 @@ func (c *Chunks) judgeHolds(ctx context.Context, tx *sql.Tx, world string, now i
 	gone := false
 	for _, h := range holds {
 		holder := c.Holders[h.HolderKind]
+		if holder == nil {
+			continue
+		}
 		keeps := h.Released == nil
-		if keeps && holder != nil {
+		if keeps {
 			if keeps, err = holder.Keeps(ctx, tx, h, now); err != nil {
 				return false, err
 			}
@@ -189,10 +199,8 @@ func (c *Chunks) judgeHolds(ctx context.Context, tx *sql.Tx, world string, now i
 			return false, err
 		}
 		gone = true
-		if holder != nil {
-			if err = holder.Released(ctx, tx, h, now); err != nil {
-				return false, err
-			}
+		if err = holder.Released(ctx, tx, h, now); err != nil {
+			return false, err
 		}
 	}
 	return gone, nil

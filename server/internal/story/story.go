@@ -162,6 +162,19 @@ func (r Rules) Eligible(ctx context.Context, tx *sql.Tx, s store.Snapshot, in po
 			epoch = e
 		}
 	}
+	// A claim in a held chunk names the wick epoch its chunk is pinned to
+	// (holds): good for the claimed entity's facts only, since sites and
+	// Echoes are footprints', which are never held.
+	held := false
+	if cx, cy, ok := EntityChunk(in.Entity); epoch == nil && ok {
+		e, err := store.HeldEpoch(ctx, tx, s.WorldID, cx, cy)
+		if err != nil {
+			return false, err
+		}
+		if e != nil && e.Id == in.Epoch {
+			epoch, held = e, true
+		}
+	}
 	if epoch == nil {
 		return false, nil
 	}
@@ -170,7 +183,7 @@ func (r Rules) Eligible(ctx context.Context, tx *sql.Tx, s store.Snapshot, in po
 		return near(w, float64((int(cx)*S+int(tx))*16+8), float64((int(cy)*S+int(ty))*16+8))
 	}
 	if p.Source == "echo" {
-		if epoch.Kind != "wick" {
+		if epoch.Kind != "wick" || held {
 			return false, nil
 		}
 		sites, e := FootprintSites(ctx, tx, r.Chunks, s.WorldID, epoch, EchoFootprint)
@@ -198,6 +211,9 @@ func (r Rules) Eligible(ctx context.Context, tx *sql.Tx, s store.Snapshot, in po
 		return f != nil && cx == int(f.GetCx()+f.GetWidth())-1
 	}
 	if in.Site != "" && q.GetSite() != "" {
+		if held {
+			return false, nil
+		}
 		// Sites are the footprints' (the papers' sites never leave them).
 		for _, f := range content.WildsRules.Places {
 			if f.GetEpochKind() != epoch.Kind {

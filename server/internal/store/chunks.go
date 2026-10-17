@@ -33,6 +33,10 @@ const ChunkCacheSize = 512
 // an epoch names a generator version it can't make.
 var ErrGeneratorUnavailable = errors.New("generator unavailable")
 
+// ErrHeldBlobMissing: a held chunk has no stored blob. It is never made
+// again (that would unfreeze it), so its reads fail until it is restored.
+var ErrHeldBlobMissing = errors.New("held chunk blob missing")
+
 type Chunks struct {
 	// Now is the clock for epoch lifetimes on chunk reads (the port's read
 	// takes no time). Nil is time.Now.
@@ -272,8 +276,12 @@ func (c *Chunks) Chunk(ctx context.Context, tx *sql.Tx, world, epoch string, lay
 	}
 	key := chunkKey{epoch, layer, cx, cy}
 	// A held chunk is its pinned epoch's stored blob, whatever the epoch's
-	// end or generator version: never made again.
-	if held && stored {
+	// end or generator version: never made again. Without its blob it is
+	// lost terrain, not new land.
+	if held {
+		if !stored {
+			return nil, fmt.Errorf("held chunk %d,%d of %s: %w", cx, cy, epoch, ErrHeldBlobMissing)
+		}
 		return c.readStored(ctx, tx, key)
 	}
 	if int(e.GeneratorVersion) != c.version() {
