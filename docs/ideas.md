@@ -152,3 +152,7 @@ rather than rewritten.
 - **Tethers** (maybe, owner idea): each player gets a small fixed number of tethers that hold a
   chunk of land for good, with no oil, as a permanent alternative to lamps. Optional; the
   chartered Wilds hearth's core plot is permanent either way (roadmap 0.14).
+- **Kept shortcuts** (maybe, owner 10-17): bare clearing turns every week even when visited;
+  only laid paths stay. The cost is that an unpaved shortcut must be cut again each week. If that
+  grates in play, let a visited path keep a one-tile shoulder, or let a communal lamp keep a small
+  rest clearing around it.
