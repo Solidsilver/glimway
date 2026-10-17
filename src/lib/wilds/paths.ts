@@ -141,7 +141,7 @@ export function refusalText(code: string, ctx: { action?: string; material?: str
 }
 
 /**
- * "This land turns in N days. A path here goes with it." `endsAt` and `now`
+ * "This land turns in N days. A path here stays if someone walks here each wick." `endsAt` and `now`
  * are Unix seconds. N counts whole days, at least one ("a day").
  */
 export function turnsInText(endsAt: number, now: number): string {

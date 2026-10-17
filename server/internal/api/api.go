@@ -102,6 +102,9 @@ type Server struct {
 	// falls is the one durable fall writer (fall_writer.go): camp falls
 	// leave the fight rooms through it, never from a tick.
 	falls *fallWriter
+	// visits are the presence socket's chunk visits written this wick
+	// (common_ways.go).
+	visits visitCache
 }
 
 func New(s *store.Store, h habitica.Upstream, c Config) *Server {
@@ -158,6 +161,10 @@ func New(s *store.Store, h habitica.Upstream, c Config) *Server {
 		c.Placement = sr
 	}
 	a := newServer(s, h, c)
+	// …and Common ways after them (common_ways.go).
+	if held, ok := c.Epochs.(*store.Chunks); ok && held.Commons == nil {
+		held.Commons = commonWays{a}
+	}
 	// …and this wick's rumour (open-map.md 2.10), read through the server's
 	// own epochs and generator.
 	a.Config.State = rumourComposition{StateComposition: a.Config.State, a: a}

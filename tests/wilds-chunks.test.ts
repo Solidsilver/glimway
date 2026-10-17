@@ -11,6 +11,7 @@ import { epochKindAt } from '../src/lib/wilds/coords.ts';
 import { sourceOf } from '../src/lib/location.ts';
 import { DECOR_ART } from '../src/game/wilds/decor.ts';
 import { cachedTerrain, forgetChunks, loadChunk, pruneChunks } from '../src/game/wilds/chunks.ts';
+import { effectiveTerrain } from '../src/game/wilds/terrain.ts';
 import { applyClaim, applyDiscovery, applyEchoSettled, applyLanterns, applyNear, chunkEpoch, chunkHeld, knownPlaces, chunkThings, groundChanges, isClaimed, readMark, refreshNear, resetWilds, takeReadRequest, wildsEpoch, wildsFrontier, wildsLive, wildsStale, wildsView } from '../src/game/wilds/store.ts';
 import { bus, EV } from '../src/game/events.ts';
 import type { Session } from '../src/game/session.ts';
@@ -309,6 +310,41 @@ test('a read in another wick is the turning: the view starts over and the scene 
   } finally {
     bus.off(EV.turning, on);
   }
+});
+
+test('a Common path carried through the turning draws on the new wick’s land, its way with it', async () => {
+  forgetChunks();
+  resetWilds();
+  const ops = new FakeOperations();
+  const session = fakeSession(ops);
+  ops.responses.set(`/api/wilds/near/${CENTER.cx}/${CENTER.cy}`, [nearAt(CENTER.cx, CENTER.cy)]);
+  serveWindow(ops, CENTER.cx, CENTER.cy);
+  await refreshNear(session, CENTER.cx, CENTER.cy);
+  // The server carried the visited chunk's stone onto the next wick (bare
+  // clearing stays Wild) and found the way again over it.
+  ops.responses.set(`/api/wilds/near/${CENTER.cx}/${CENTER.cy}`, [nearAt(CENTER.cx, CENTER.cy, (j) => {
+    j.wick = { ...j.wick, id: 'wick-epoch-2', startsAt: j.wick.endsAt, endsAt: j.wick.endsAt + 604800, season: `t:${j.wick.endsAt}:${j.wick.endsAt + 604800}` };
+    for (const c of j.chunks) c.epoch = 'wick-epoch-2';
+    for (const g of j.ground) Object.assign(g, { epoch: 'wick-epoch-2', changes: { changes: g.changes.changes.filter((c: { change: string }) => c.change !== 'cleared') } });
+    for (const w of j.ways) w.epoch = 'wick-epoch-2';
+    Object.assign(j, { entities: [], personalClaims: [], discoveries: [] });
+  })]);
+  serveWindow(ops, CENTER.cx, CENTER.cy, 'wick-epoch-2');
+  assert.equal(await refreshNear(session, CENTER.cx, CENTER.cy), true);
+  assert.equal(chunkEpoch(-2, -4)!.id, 'wick-epoch-2');
+  assert.deepEqual(groundChanges(-2, -4).map((c) => [c.tx, c.ty, c.change]), [[4, 4, 'stone']]);
+  assert.equal(wildsView()!.ways.get('way:place:0:-2:place:1:-1')?.name, "Fixture's way");
+  // The new wick's detail grew a blocking piece on the path's tile: the path
+  // clears it and is walked on stone.
+  const base = cachedTerrain('wick-epoch-2', -2, -4)!;
+  const piece = base.decor.find((d) => DECOR_ART[d.kind].blocking)!;
+  const solid = base.solid.map((row) => [...row]);
+  solid[piece.ty]![piece.tx] = true;
+  const grown = { ...base, solid };
+  const drawn = effectiveTerrain(grown, [{ tx: piece.tx, ty: piece.ty, change: 'stone' }]);
+  assert.equal(drawn.solid[piece.ty]![piece.tx], false);
+  assert.notEqual(drawn.ground[piece.ty]![piece.tx], base.ground[piece.ty]![piece.tx], 'laid stone shows');
+  assert.ok(!drawn.decor.some((d) => d.tx === piece.tx && d.ty === piece.ty && DECOR_ART[d.kind].blocking), 'the regrown piece is cleared');
 });
 
 // ------------------------------------------------------------ late reads (step-back review F1, F3)

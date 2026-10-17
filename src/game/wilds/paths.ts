@@ -13,7 +13,7 @@
  *   laying as you walk, and context buttons while the spade is in hand or
  *   you stand on or beside a laid path.
  * - The first lay on land that turns, each wick, asks first: "This land
- *   turns in N days. A path here goes with it."
+ *   turns in N days. A path here stays if someone walks here each wick.
  * - A lay that joins two places names a way; a lift that breaks one says so.
  */
 import type Phaser from 'phaser'

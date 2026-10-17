@@ -47,7 +47,7 @@ export const TURNS_CONFIRM = {
   yes: 'Lay it',
   no: 'Not here',
   /** On land a lot lantern holds (roadmap 0.12): it keeps while the lantern burns. */
-  held: 'This land holds while the lantern burns. A path here stays with it, until the lantern goes dark.',
+  held: 'This land holds while the lantern burns. A path here stays with it; if the lantern goes dark, its stone or timber waits for you at Pell’s.',
 } as const;
 
 /** "Found by <name>" and the first finder's lines (open-map.md 2.10). */

@@ -120,6 +120,10 @@ func (a *Server) keyedOpFinalized(w http.ResponseWriter, r *http.Request, op *co
 		if a.Config.Placement != nil {
 			err = a.Config.Placement.Record(ctx, tx, &s, where, now)
 		}
+		// Standing in a Wilds chunk keeps its Common paths this wick.
+		if err == nil && where.Area == outdoorsArea {
+			err = creditVisit(ctx, tx, s.WorldID, where.X, where.Y, now)
+		}
 	}
 	// Apply begins after the savepoint/placement; domain callbacks own their
 	// required pre-apply maintenance and result-specific settlement.

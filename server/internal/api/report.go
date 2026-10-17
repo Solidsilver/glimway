@@ -116,6 +116,11 @@ func (a *Server) report(w http.ResponseWriter, r *http.Request) error {
 						return err
 					}
 				}
+				if req.Place.Area == outdoorsArea {
+					if err = creditVisit(ctx, tx, s.WorldID, req.Place.X, req.Place.Y, now.Unix()); err != nil {
+						return err
+					}
+				}
 			}
 			_, err = tx.ExecContext(ctx, "UPDATE player_vitals SET hp=?,mana=?,vitals_at=?,cast_ready_at=?,report_seq=?,report_basis=?,report_at=? WHERE account_id=?", s.State.HP, s.State.Mana, at, ready, req.Seq, req.Basis, now.Unix(), s.AccountID)
 			if err != nil {

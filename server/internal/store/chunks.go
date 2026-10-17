@@ -11,6 +11,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"sync"
@@ -47,6 +48,9 @@ type Chunks struct {
 	// Holders judge the holds of each holder kind at the turning
 	// (holds.go). A kind with none keeps its holds.
 	Holders map[string]Holder
+	// Commons judges Common work at the turning, after the holds
+	// (commons.go). Nil: none is judged, and it turns with the land.
+	Commons Commons
 
 	mu    sync.Mutex
 	order *list.List // front: most recent
@@ -118,8 +122,9 @@ func (c *Chunks) EpochByID(ctx context.Context, tx *sql.Tx, world, id string) (*
 // deletes the world's ended wick epochs and an epoch of another generator
 // version left for the same season, with everything stored under them, but
 // for epochs a hold pins. Making a wick epoch is the turning: the holds are
-// judged then, once (holds.go), before any chunk of it is made.
-// A Create that races another for the same season answers the one stored.
+// judged then, once (holds.go), then Common work (commons.go), before any
+// chunk of it is made but those Common work carries onto, and before the
+// ended wick is deleted. A Create that races another for the same season answers the one stored.
 func (c *Chunks) Create(ctx context.Context, tx *sql.Tx, world, kind string, now int64) (*contract.WildsEpoch, error) {
 	if kind != EpochStill && kind != EpochWick {
 		return nil, sql.ErrNoRows
@@ -137,7 +142,10 @@ func (c *Chunks) Create(ctx context.Context, tx *sql.Tx, world, kind string, now
 		end := day.NextTurning
 		ends = &end
 	}
-	if err := deleteStaleEpochs(ctx, tx, world, kind, season, version, content.CalendarAt(content.CalendarRules, now).StartsAt); err != nil {
+	// Only another version's epoch for this season goes before the insert:
+	// the wick that ended stays for the turning to judge (and a missed
+	// turning's older one with it), and goes after.
+	if err := deleteStaleEpochs(ctx, tx, world, kind, season, version, math.MinInt64); err != nil {
 		return nil, err
 	}
 	var seed string
@@ -166,15 +174,25 @@ func (c *Chunks) Create(ctx context.Context, tx *sql.Tx, world, kind string, now
 		return e, nil
 	}
 	if kind == EpochWick {
-		gone, err := c.judgeHolds(ctx, tx, world, now)
+		ended, err := endedWick(ctx, tx, world, e)
 		if err != nil {
 			return nil, err
 		}
-		wickStart := content.CalendarAt(content.CalendarRules, now).StartsAt
-		if gone {
-			if err = deleteStaleEpochs(ctx, tx, world, kind, season, version, wickStart); err != nil {
+		lapsed, err := c.judgeHolds(ctx, tx, world, now)
+		if err != nil {
+			return nil, err
+		}
+		if c.Commons != nil {
+			if err = c.Commons.Turn(ctx, tx, world, ended, e, lapsed, now); err != nil {
 				return nil, err
 			}
+		}
+		wickStart := content.CalendarAt(content.CalendarRules, now).StartsAt
+		if err = deleteStaleEpochs(ctx, tx, world, kind, season, version, wickStart); err != nil {
+			return nil, err
+		}
+		if err = trimVisits(ctx, tx, world, wickStart); err != nil {
+			return nil, err
 		}
 		if err = trimPinned(ctx, tx, world, wickStart); err != nil {
 			return nil, err

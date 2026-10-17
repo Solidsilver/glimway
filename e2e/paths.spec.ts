@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
 import { devices, type BrowserContext } from '@playwright/test'
-import { accountOf, calendarOnServer, pinWorld, sql, wickSlack, CONTRACT } from './connected'
+import { accountOf, calendarOnServer, moveServerClock, pinWorld, sql, wickSlack, CONTRACT } from './connected'
 import { freshPlayer, fund, giveInstance } from './home-helpers'
 import { loadWilds } from '../src/lib/wilds/data'
 import { diagnose, dialogueState, expectTarget, expectToast, parkCreatures, pressOn, readDialogue, steady, targetNow, waitForLive, waitForWilds, warp, wilds, windowWhole } from './helpers'
@@ -194,7 +194,7 @@ test('clear a thicket with a spade, lay stone after the turning-land confirm, se
   // Lay stone underfoot: the first lay on turning land this wick asks first.
   await page.keyboard.press('l')
   await expect.poll(async () => (await dialogueState(page)).open).toBe(true)
-  expect((await dialogueState(page)).said.join(' ')).toMatch(/This land turns in (a day|\d+ days)\. A path here goes with it\./)
+  expect((await dialogueState(page)).said.join(' ')).toMatch(/This land turns in (a day|\d+ days)\. A path here stays if someone walks here each wick\./)
   await shot(page, '91-paths-turning-confirm-desktop')
   await readDialogue(page, { pick: /Lay it/ })
   await landed(page, 'lay')
@@ -284,6 +284,52 @@ test('clear a thicket with a spade, lay stone after the turning-land confirm, se
   expect((await tileAt(page, stand.tx, stand.ty))!.change).toBeNull()
   // The refusal showed the pack was wrong: a fresh read says what it holds now.
   await expect.poll(async () => (await paths(page))!.materials!.timber, { timeout: 15_000, message: 'timber read again' }).toBe(0)
+})
+
+test('a path laid on land that turns is Common: walked this wick, it is still there after the turning', async ({ page }) => {
+  test.setTimeout(150_000)
+  const id = await freshPlayer(page)
+  await wickSlack(page)
+  await pinWorld(page, SEED)
+  fund(id, { materials: { stone: 10 } })
+  await warp(page, 'outdoors', 2 * S + 12, -4 * S + 12)
+  await windowWhole(page)
+  await parkCreatures(page)
+  // Open land near the hero: laying it is the wick's visit to its chunk.
+  const stand = await page.evaluate(() => {
+    const w = window as unknown as Hooks
+    const p = w.__fsPlayer()
+    const open = (t: PathTile | null) => !!t && t.surface === 'land' && !t.baseSolid && !t.occupied && !t.change && t.decor.length === 0
+    const hx = Math.floor(p.x / 16)
+    const hy = Math.floor(p.y / 16)
+    for (let r = 0; r < 8; r++)
+      for (let ty = hy - r; ty <= hy + r; ty++)
+        for (let tx = hx - r; tx <= hx + r; tx++)
+          if (Math.floor(tx / 24) === 2 && Math.floor(ty / 24) === -4 && open(w.__fsPathTile(tx, ty))) return { tx, ty }
+    return null
+  })
+  expect(stand, `open land in chunk 2,-4 (seed ${SEED}; ${await diagnose(page)})`).not.toBeNull()
+  await page.evaluate(([x, y]) => (window as unknown as { __fsDevPlace: (x: number, y: number) => void }).__fsDevPlace(x, y), [stand!.tx * 16 + 8, stand!.ty * 16 + 8] as const)
+  await waitForLive(page)
+  await page.keyboard.press('l')
+  await expect.poll(async () => (await dialogueState(page)).open).toBe(true)
+  await readDialogue(page, { pick: /Lay it/ })
+  await landed(page, 'lay')
+  expect((await tileAt(page, stand!.tx, stand!.ty))!.change).toEqual({ change: 'stone', by: accountOf(id) })
+  const before = (await wilds(page)).season
+
+  // Away across the turning, then back: the new wick's land, the same stone.
+  const end = Number(before.split(':')[2])
+  await page.goto('/')
+  await expect(page.getByTestId('continue-world')).toBeVisible()
+  await moveServerClock(page, end + 60)
+  await page.reload()
+  await page.getByTestId('continue-world').click()
+  await waitForWilds(page)
+  await parkCreatures(page)
+  await expect.poll(async () => (await wilds(page)).season, { message: 'the wick turned' }).not.toBe(before)
+  await expect.poll(async () => (await tileAt(page, stand!.tx, stand!.ty))?.change ?? null, { timeout: 20_000, message: 'the stone carried' }).toEqual({ change: 'stone', by: accountOf(id) })
+  await shot(page, '92c-paths-carried-desktop')
 })
 
 test('the joining tile of a run between two places makes a named way, with signs at its ends and its name on the world map', async ({ page, browser, baseURL }) => {

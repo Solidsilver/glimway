@@ -225,6 +225,8 @@ func (a *Server) Close(ctx context.Context) {
 	done := make(chan struct{})
 	go func() {
 		a.workers.Wait()
+		// …and the presence socket's visit writes (common_ways.go).
+		a.visits.writes.Wait()
 		close(done)
 	}()
 	select {
