@@ -356,7 +356,7 @@ test('two players in neighbouring chunks see each other; two chunks apart they d
   await ctx.close()
 })
 
-type SceneSize = { list: number; tweens: number; transientTweens: number; statics: number; textures: number; listeners: number; kinds: Record<string, number> }
+type SceneSize = { list: number; tweens: number; transientTweens: number; tweening: string[]; statics: number; textures: number; listeners: number; kinds: Record<string, number> }
 const sceneSize = (p: Page) => p.evaluate(() => (window as unknown as { __fsSceneSize: () => SceneSize }).__fsSceneSize())
 
 /** The churn invariant: animation frames are one sprite; thought bubbles come and go. */
@@ -570,7 +570,13 @@ test.describe('with reduced motion', () => {
     await standAt(page, (await openNear(page, 12, -3 * S + 12))!)
     const outer = (await steady(page, () => wildsWindow(page), { frames: 4, seconds: 20, message: 'reduced-motion Whitequiet window' }))!.outer
     expect(await motes(page)).toBe(MOTES * outer.length)
-    const tweens = await steady(page, async () => (await sceneSize(page)).tweens, { frames: 5, seconds: 20, message: 'reduced-motion scene tween count' })
-    expect(tweens, 'nothing in the Wilds tweens with motion reduced').toBe(0)
+    // A passing fade may stay (a thought bubble going, an enemy dissolving, if a camp
+    // nearby fights); nothing moves, grows or turns, and nothing loops.
+    const motion = async () => {
+      const z = await sceneSize(page)
+      return { moving: z.tweening.filter((t) => t.split(' ').pop()!.split(',').some((k) => !/alpha/i.test(k))), looping: z.tweens - z.transientTweens }
+    }
+    const tweens = await steady(page, motion, { frames: 5, seconds: 20, message: 'reduced-motion scene tweens' })
+    expect(tweens, 'nothing in the Wilds moves by tween with motion reduced').toEqual({ moving: [], looping: 0 })
   })
 })

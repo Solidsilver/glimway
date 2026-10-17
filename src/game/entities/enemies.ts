@@ -516,11 +516,11 @@ export class EnemySystem {
     const corpseBody = enemy.sprite.body as Phaser.Physics.Arcade.Body
     corpseBody.setVelocity(0, 0)
     corpseBody.enable = false
+    // With motion reduced it fades where it stands, without sinking.
     this.scene.tweens.add({
       targets: enemy.sprite,
       alpha: 0,
-      y: '+=4',
-      scaleY: 0.6,
+      ...(this.deps.reducedMotion ? {} : { y: '+=4', scaleY: 0.6 }),
       duration: 320,
       onComplete: () => enemy.sprite.destroy()
     })
@@ -595,7 +595,8 @@ export class EnemySystem {
       strokeThickness: 4,
       resolution: 3
     }).setOrigin(0.5, 1).setDepth(6100)
-    this.scene.tweens.add({ targets: bang, y: bang.y - 4, scale: { from: 0.4, to: 1 }, duration: 140, ease: 'Back.easeOut' })
+    if (this.deps.reducedMotion) bang.setY(bang.y - 4)
+    else this.scene.tweens.add({ targets: bang, y: bang.y - 4, scale: { from: 0.4, to: 1 }, duration: 140, ease: 'Back.easeOut' })
     this.scene.time.delayedCall(seconds * 1000, () => bang.destroy())
     if (enemy.type === 'beetle' && !this.deps.reducedMotion) {
       // Pawing the ground: a small shiver while it winds up.
