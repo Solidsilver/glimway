@@ -45,6 +45,7 @@ the game can show the first part as "What's new":
 
 ### Technical
 
+- CI: pushes to `exp/*` lane branches run only the E2E specs their changes touch (`test:changed` against `origin/dev`) on the self-hosted GPU runner; `dev` and `main` keep the full suite. Lanes check E2E through CI instead of on the host.
 - Server review fixes (Codex reviews A and B):
   - Migration 038 copies the old wick's ground rows into `lasting_geography_paths` before deleting them. Migration 047's Go backfill (`migration_047_backfill.go`, with frozen 0.11.2 lay costs) refunds each laid tile to whoever laid it, one crate a chunk (source `land-changed:<cx>:<cy>`), then drops the table. Test: `TestUpgradeRefundsPaidPaths` on a 037-shaped database.
   - Turnings are judged per calendar boundary: 047 adds `wick_turnings(world_id, judged_through)`, and `store.judgeTurnings` judges each missed boundary in order at its own time, then the current one. A boundary already judged (such as a new generator version's epoch for the same wick) is never judged again.

@@ -1,4 +1,5 @@
 import { devices, type Request } from '@playwright/test'
+import { JOURNAL_PAPERS } from './paper-totals'
 import { expect, test, type Page } from './fixtures'
 import { reenter, seedStory, sql, accountOf } from './connected'
 import { claimDeed, earnGlims, freshPlayer, fund, myHome, shot } from './home-helpers'
@@ -77,7 +78,7 @@ test.describe('the pack', () => {
     await page.keyboard.press('End')
     const papers = dialog(page).getByTestId('inv-page-papers')
     await expect(papers).toContainText('Also in your Journal')
-    await expect(papers).toContainText('of 39 found')
+    await expect(papers).toContainText(`of ${JOURNAL_PAPERS} found`)
 
     // I closes it; everything has been seen, so the dot is gone.
     await page.keyboard.press('i')
@@ -288,6 +289,6 @@ test.describe('in a world', () => {
     await expect(dialog(page).getByTestId('inv-page-tools')).toContainText('No tools yet.')
     await expect(dialog(page).getByTestId('inv-page-tools')).toContainText('Field Journal')
     await tab(page, /Papers/).click()
-    await expect(dialog(page).getByTestId('inv-page-papers')).toContainText('of 39 found')
+    await expect(dialog(page).getByTestId('inv-page-papers')).toContainText(`of ${JOURNAL_PAPERS} found`)
   })
 })

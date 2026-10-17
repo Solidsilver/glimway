@@ -1,4 +1,5 @@
 import { expect, test, type Page } from './fixtures'
+import { JOURNAL_PAPERS } from './paper-totals'
 import { expectStage, settleWarden, talkThrough, warp, expectToast, atTile, paperOf, talkSpotOf } from './helpers'
 import { freshPlayer } from './home-helpers'
 import { reenter, serverState } from './connected'
@@ -36,7 +37,7 @@ test('pick up a paper in the world, read it in the journal, and it stays found a
   await journalButton.click()
   const journal = page.getByRole('dialog', { name: 'Journal' })
   await journal.getByRole('tab', { name: /Papers/ }).click()
-  await expect(journal.getByText('1 of 39 found', { exact: false })).toBeVisible()
+  await expect(journal.getByText(`1 of ${JOURNAL_PAPERS} found`, { exact: false })).toBeVisible()
   // Unfound papers show only what kind of thing they are and where to look.
   await expect(journal.getByText('Mara keeps her grandmother’s ledger. Bring her news from Ashwatch.')).toBeVisible()
   await expect(journal.getByText('Amber-wick, 3rd')).toHaveCount(0)

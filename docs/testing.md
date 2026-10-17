@@ -111,6 +111,10 @@ plus uncommitted and untracked files, and maps them through
   Add a rule when that happens;
 - docs, unit tests and other `ignore` paths run nothing.
 
+CI does the same on lane branches: a push to `exp/*` runs `test:changed`
+against `origin/dev` on the self-hosted GPU runner, so lanes don't queue behind
+each other's full runs. Pushes to `dev` and `main` run the full suite.
+
 The fight selector maps server fight/fall code, presence protobuf output,
 interpolation, the server enemy renderer, camp outcome polling and fight
 content to `fights-server.spec.ts` and `fights-shared.spec.ts`. The two-client

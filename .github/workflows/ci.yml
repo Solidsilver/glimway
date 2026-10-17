@@ -197,6 +197,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           lfs: true
+          # exp/* branches diff against origin/dev to pick their specs.
+          fetch-depth: 0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '24'
@@ -217,8 +219,15 @@ jobs:
           done
       - name: Check the WebGL renderer
         run: npx playwright install chromium && node scripts/webgl-renderer.ts
-      - name: Run the full suite
-        run: nice -n 10 npx playwright test
+      # Lane branches (exp/*) run only the specs their changes touch
+      # (scripts/e2e-changed.ts, e2e/changed-map.json), so lanes don't queue
+      # behind each other's full runs. dev and main run the full suite.
+      - name: Run the E2E suite
+        run: |
+          case "$GITHUB_REF" in
+            refs/heads/exp/*) E2E_BASE=origin/dev nice -n 10 node scripts/e2e-changed.ts ;;
+            *) nice -n 10 npx playwright test ;;
+          esac
       - name: Prepare bounded E2E evidence
         if: always()
         run: node scripts/e2e-artifacts.mjs
