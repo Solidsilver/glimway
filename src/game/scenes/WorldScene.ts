@@ -928,16 +928,27 @@ export class WorldScene extends Phaser.Scene {
     this.safeSpot = at
   }
 
-  /** Dev: the steering toward the next waypoint (dropping those reached). */
+  /**
+   * Dev: the steering toward the next waypoint (dropping those reached).
+   * Arcade has already stepped the body this frame (postUpdate copies it to
+   * the sprite), so it steers from the body. The last stretch is walked at a
+   * pace that ends on the waypoint: a slow frame steps the hero six pixels
+   * or more, which went a tile past a waypoint near its edge.
+   */
   private devSteer(): Phaser.Math.Vector2 {
     const h = this.hero.sprite
-    while (this.devWalk?.length && Math.hypot(this.devWalk[0].x - h.x, this.devWalk[0].y - h.y) < 3) this.devWalk.shift()
+    const body = h.body as Phaser.Physics.Arcade.Body
+    const at = { x: h.x + body.position.x - body.prevFrame.x, y: h.y + body.position.y - body.prevFrame.y }
+    while (this.devWalk?.length && Math.hypot(this.devWalk[0].x - at.x, this.devWalk[0].y - at.y) < 3) this.devWalk.shift()
     if (!this.devWalk?.length) {
       this.devWalk = null
       return new Phaser.Math.Vector2(0, 0)
     }
-    const d = new Phaser.Math.Vector2(this.devWalk[0].x - h.x, this.devWalk[0].y - h.y)
-    return d.normalize()
+    const d = new Phaser.Math.Vector2(this.devWalk[0].x - at.x, this.devWalk[0].y - at.y)
+    const left = d.length()
+    // The step this frame took; from a standstill, full pace.
+    const step = Math.hypot(body.position.x - body.prevFrame.x, body.position.y - body.prevFrame.y)
+    return d.normalize().scale(step > 0 ? Math.min(1, left / step) : 1)
   }
 
   /**

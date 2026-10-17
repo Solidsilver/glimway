@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto'
 import { expect, test, type Page } from './fixtures'
 import { accountOf, moveServerClock, pinWorld, sql, wickSlack } from './connected'
-import { claimDeed, freshPlayer, fund, homes, pellSays, readOn, shot, talk } from './home-helpers'
-import { parkCreatures, waitForWilds, warp, windowWhole } from './helpers'
+import { AT_PELL, claimDeed, DEEDS, freshPlayer, fund, go, homes, pellSays, readOn, shot, talk } from './home-helpers'
+import { parkCreatures, spotsAround, standFor, waitForWilds, warp, windowWhole } from './helpers'
 import { calendarAt } from '../src/lib/calendar.ts'
 
 /**
@@ -81,10 +81,14 @@ test('set a way-lamp, fill it, set a stool out; it lapses and Pell has everythin
   await lampCard.locator('[data-act="set-lamp"]').click()
   await expect.poll(async () => (await camps(page))?.camps.find((c) => c.id === lamp)?.oil ?? null).toBe(1)
   const set = (await camps(page))!.camps.find((c) => c.id === lamp)!
-  await expect.poll(() => page.evaluate(([x, y]) => (window as unknown as Hooks).__fsImagesNamed('hw2:lantern-stake-')
-    .filter((i) => Math.abs(i.x - x) < 9 && Math.abs(i.y - y) < 9).map((i) => i.key), [set.x * 16 + 8, set.y * 16 + 16] as const)).toEqual(['hw2:lantern-stake-1'])
+  await expect.poll(() => page.evaluate(([x, y]) => (window as unknown as Hooks).__fsImagesNamed('om-art:way-lamp-')
+    .filter((i) => Math.abs(i.x - x) < 9 && Math.abs(i.y - y) < 9).map((i) => i.key), [set.x * 16 + 8, set.y * 16 + 16] as const)).toEqual(['om-art:way-lamp-1'])
 
-  // Topped up from beside it.
+  // Topped up from beside it. A Wilds claim in reach (a stone node) outranks
+  // the lamp, as it does a way sign: stand where the game elects the lamp.
+  const why: string[] = []
+  if (!(await standFor(page, `wilds:camp:${lamp}`, await spotsAround(page, { tx: set.x, ty: set.y }), why)))
+    throw new Error(`no spot elects the way-lamp at ${set.x},${set.y} (seed ${SEED}): ${why.join(' ')}`)
   await talk(page, /Look at the way-lamp/, /Top it up with hearth oil/)
   await readOn(page, /Your way-lamp\. It burns, 2 of 3 wicks/)
   await shot(page, 'camp-lamp-lit')
@@ -97,7 +101,8 @@ test('set a way-lamp, fill it, set a stool out; it lapses and Pell has everythin
 
   // The oil runs out (forced), and the turning after it the camp lapses.
   sql(`UPDATE camps SET oil=0,dimming=1 WHERE id='${lamp}';`)
-  await pellSays(page)
+  // Out of the Wilds, into Pell’s office (a talk now would pick his first reply, the deed).
+  await go(page, DEEDS, AT_PELL.tx, AT_PELL.ty)
   const now = await moveServerClock(page, 0)
   await moveServerClock(page, calendarAt(now).nextTurning + 3600)
   // Pell has the crate: the lamp and the stool, collected into the pack.

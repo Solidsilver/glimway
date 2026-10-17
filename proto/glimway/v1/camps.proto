@@ -44,8 +44,10 @@ message CampResult { CampView camp = 1; map<string,double> materials = 2; }
 // One thing waiting in a crate at Pell's: a piece, a stack (oil, path stone)
 // or a plant's seed, from the camp at chunk (cx, cy) that lapsed at
 // lapsed_at.
+// The id is int32: the HTTP JSON carries numbers, and protojson writes a
+// 64-bit integer as a string, which the client refuses.
 message RecoveryEntry {
-  int64 id = 1; string kind = 2; string item_def = 3; int32 qty = 4;
+  int32 id = 1; string kind = 2; string item_def = 3; int32 qty = 4;
   sint32 cx = 5; sint32 cy = 6; double lapsed_at = 7;
 }
 // GET /api/recovery: what waits for the caller at Pell's, in this world.
