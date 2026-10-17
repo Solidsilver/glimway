@@ -43,9 +43,12 @@ the game can show the first part as "What's new":
 - A camp you take down and set again somewhere else in the same wick keeps its new place at the turning. When nobody comes by for several turnings, each one is still counted, so lamps burn and dim the same as if people had been around.
 - Everyone at a camp now sees whose each plant and piece is, not only its keeper. When you pack up your own camp, Pell greets you about your own things instead of saying the woods turned.
 - The world map no longer misses a lamp that stands alone on common land.
+- A relit lamp stone on the Lantern Road now shows its wick burning in the niche, and the stone with Wenna's cut beside it (the Keeper's-hand stone) has its carved panel, dark or lit.
+- With the map's lamps shown, each lamp has a mark where it stands, paler while it's dimming.
 
 ### Technical
 
+- Lamp art: relit road stones draw the open-map pass's `lamp-stone-relit-*` loop over the dark stone, and the Keeper's-hand quest stone (`cut_stone`) draws `route-stone-dark`/`route-stone-relit-*` (`roadStoneArt` in `src/lib/communal-lamps.ts`). `__fsCommunalLamps()` also returns the stones it drew; new spec `e2e/lamp-art.spec.ts`. The map's Lamps layer marks each lamp with a placeholder icon (`item-way-lamp`, `mapLampMark` in `src/lib/wilds/map-lamps.ts`); the request for its own icon is in `docs/art-request-lamps.md`. `way-lamp-0` stays unused: no game state shows a dark way-lamp.
 - CI: pushes to `exp/*` lane branches run only the E2E specs their changes touch (`test:changed` against `origin/dev`) on the self-hosted GPU runner; `dev` and `main` keep the full suite. Lanes check E2E through CI instead of on the host.
 - NixOS: a staging instance beside the live one. The module is now a function of an instance name (`deploy/nixos/instance.nix`); `nixosModules.default` still defines `services.glimway` with the same units, account, paths and ports (generated units, users and tmpfiles are byte-identical), and the new `nixosModules.dev` defines `services.glimway-dev` (units `glimway-dev-server`, `glimway-dev` and `glimway-dev-server-backup`, account and state `glimway-dev-server`, ports 8091/4174, admin command `glimway-dev-server`). Each uses the package from its own flake input. The module check imports both and asserts they share no unit, account, tmpfiles path, command or Caddy site. [docs/home-server.md](docs/home-server.md) adds "Dev Glimway (staging)".
 - Server review fixes (Codex reviews A and B):
