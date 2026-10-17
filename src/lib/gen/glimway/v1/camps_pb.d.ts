@@ -14,6 +14,7 @@ export declare const file_glimway_v1_camps: GenFile;
 
 /**
  * A piece standing at a camp (a home piece; the lamp is one): whose it is.
+ * owner_name: the owner's display name, for every viewer.
  *
  * @generated from message glimway.v1.CampPiece
  */
@@ -47,6 +48,11 @@ export declare type CampPiece = Message<"glimway.v1.CampPiece"> & {
    * @generated from field: string owner_id = 6;
    */
   ownerId: string;
+
+  /**
+   * @generated from field: string owner_name = 7;
+   */
+  ownerName: string;
 };
 
 export declare type CampPieceValid = CampPiece;
@@ -58,7 +64,8 @@ export declare type CampPieceValid = CampPiece;
 export declare const CampPieceSchema: GenMessage<CampPiece, {validType: CampPieceValid}>;
 
 /**
- * A seed or sapling planted at a camp, by whom, and when.
+ * A seed or sapling planted at a camp, by whom (owner_name: the planter's
+ * display name, for every viewer), and when.
  *
  * @generated from message glimway.v1.CampPlant
  */
@@ -97,6 +104,11 @@ export declare type CampPlant = Message<"glimway.v1.CampPlant"> & {
    * @generated from field: string owner_id = 7;
    */
   ownerId: string;
+
+  /**
+   * @generated from field: string owner_name = 8;
+   */
+  ownerName: string;
 };
 
 export declare type CampPlantValid = CampPlant;
@@ -370,13 +382,17 @@ export declare type CampResultValid = CampResult;
 export declare const CampResultSchema: GenMessage<CampResult, {validType: CampResultValid}>;
 
 /**
- * One thing waiting in a crate at Pell's: a piece, a stack (oil, path stone)
- * or a plant's seed, from the camp at chunk (cx, cy) that lapsed at
- * lapsed_at.
+ * One thing waiting in a crate at Pell's: a piece, a tool, a stack (oil,
+ * path stone) or a plant's seed, from the place at chunk (cx, cy) it left
+ * at lapsed_at.
  * The id is int32: the HTTP JSON carries numbers, and protojson writes a
  * 64-bit integer as a string, which the client refuses.
  * moved_by: the camp keeper's name when they moved the piece off their camp
  * (empty for what a lapse packed).
+ * reason: why it waits. "" a lapsed claim packed it (the woods turned);
+ * "land-changed" 0.12's lasting geography ended the wick it was paid on (old
+ * paths refunded); "deed-lost" its home's deed was lost; "packed-up" its
+ * camp's keeper packed the camp up (moved_by names them on what wasn't theirs).
  *
  * @generated from message glimway.v1.RecoveryEntry
  */
@@ -420,6 +436,11 @@ export declare type RecoveryEntry = Message<"glimway.v1.RecoveryEntry"> & {
    * @generated from field: string moved_by = 8;
    */
   movedBy: string;
+
+  /**
+   * @generated from field: string reason = 9;
+   */
+  reason: string;
 };
 
 export declare type RecoveryEntryValid = RecoveryEntry;

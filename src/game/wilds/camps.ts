@@ -14,7 +14,7 @@
  */
 import Phaser from 'phaser'
 import type { CampView } from '../../lib/gen/glimway/v1/camps_pb.js'
-import { CAMP_ERRORS, CAMP_PACK_WORDS, CAMP_RULE_WORDS, CAMP_RULES, campAtTile, campFrame, campHasRoom, campLampName, campLines, campLook, campNameable, campPieceName, campPlantLines, campRefusal, campRule, campRuleLines, campSpot, campTaken, movedOffLine, moveOffLines, personName, ruleNames, uprootedLine, withMember, withoutMember, type CampRule } from '../../lib/camps.ts'
+import { CAMP_ERRORS, CAMP_PACK_WORDS, CAMP_RULE_WORDS, CAMP_RULES, campAtTile, campFrame, campHasRoom, campLampName, campLines, campLook, campNameable, campPieceName, campPlantLines, campRefusal, ownerName, campRule, campRuleLines, campSpot, campTaken, movedOffLine, moveOffLines, ruleNames, uprootedLine, withMember, withoutMember, type CampRule } from '../../lib/camps.ts'
 import { HOMESTEAD_DATA, homeItem, rotatedFootprint } from '../../lib/homestead.ts'
 import { TILE, tileFeet } from '../../lib/tile.ts'
 import { chunkOf } from '../../lib/wilds/coords.ts'
@@ -150,7 +150,7 @@ export class WildsCamps {
         } else if (c.setterId === this.me) {
           // The keeper may move someone's piece off: it waits at Pell's, still theirs.
           const at = tileFeet(p.x, p.y)
-          points.push(wildsPoint(`camp-piece:${p.id}`, at, 20, () => ({ label: `Move ${personName(campsUi.people, p.ownerId)}’s ${campPieceName(p.itemDef).toLowerCase()} off`, verb: 'Move off', claim: () => this.askMoveOff(p.id) })))
+          points.push(wildsPoint(`camp-piece:${p.id}`, at, 20, () => ({ label: `Move ${ownerName(campsUi.people, p)}’s ${campPieceName(p.itemDef).toLowerCase()} off`, verb: 'Move off', claim: () => this.askMoveOff(p.id) })))
         }
       }
       for (const p of c.plants) {
@@ -241,7 +241,7 @@ export class WildsCamps {
     const p = c?.plants.find((x) => x.id === plantId)
     if (!c || !p) return
     const name = campPieceName(p.itemDef)
-    const owner = p.ownerId === this.me ? null : personName(campsUi.people, p.ownerId)
+    const owner = p.ownerId === this.me ? null : ownerName(campsUi.people, p)
     openDialogue({ id: 'camp', speaker: name, lines: campPlantLines(name, owner), choices: [{ ...CAMP_PACK_WORDS.dig, action: `camp:uproot:${p.id}` }, { text: 'Leave it', dismiss: true }] })
   }
 
@@ -280,7 +280,7 @@ export class WildsCamps {
     const c = campsUi.list.find((x) => x.pieces.some((p) => p.id === pieceId))
     const p = c?.pieces.find((x) => x.id === pieceId)
     if (!c || !p) return
-    const owner = personName(campsUi.people, p.ownerId)
+    const owner = ownerName(campsUi.people, p)
     openDialogue({ id: 'camp', speaker: campLampName(c), lines: moveOffLines(owner, campPieceName(p.itemDef)), choices: [{ text: 'Send it to Pell’s', action: `camp:moveoff:${pieceId}` }, { text: 'Leave it', dismiss: true }] })
   }
 
@@ -297,7 +297,7 @@ export class WildsCamps {
     if (what === 'moveoff') {
       const camp = campsUi.list.find((x) => x.pieces.some((p) => p.id === id))
       const p = camp?.pieces.find((x) => x.id === id)
-      const said = p ? movedOffLine(personName(campsUi.people, p.ownerId), campPieceName(p.itemDef)) : ''
+      const said = p ? movedOffLine(ownerName(campsUi.people, p), campPieceName(p.itemDef)) : ''
       return void this.act({ action: 'remove', itemId: id }, () => { if (said) bus.emit(EV.toast, { text: said, icon: 'glim' }) })
     }
     if (what === 'pack') return this.askPack(id)

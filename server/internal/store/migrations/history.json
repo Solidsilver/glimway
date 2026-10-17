@@ -153,7 +153,7 @@
   },
   {
     "name": "038_lasting_geography.sql",
-    "sha256": "f23bd4e7441b28409bb993def327f6c905c6305800867f8ff4bcc023a02cf098"
+    "sha256": "d771e68b382de21eb5b984854285e58ed7e1b6c0028488901889fac172bbe444"
   },
   {
     "name": "039_holds.sql",
@@ -186,5 +186,11 @@
   {
     "name": "046_lamp_naming_follows_lamp.sql",
     "sha256": "f96dfa5d71a4126ddbc7a0c3d1b68b1efaf105891dc2025b256a77042d288369"
+  },
+  {
+    "name": "047_turnings_and_crates.sql",
+    "sha256": "5cfad6a954f87ca9e43e8b2c51366c60a058923a7d75ce75fc847ed60185f13d",
+    "backfill": "migration_047_backfill.go",
+    "backfillSha256": "d2173c0e16195b4263c5f77403ec492b971c45b65671f665919f6bf697d9738d"
   }
 ]

@@ -22,6 +22,7 @@ const (
 )
 
 // A piece standing at a camp (a home piece; the lamp is one): whose it is.
+// owner_name: the owner's display name, for every viewer.
 type CampPiece struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -30,6 +31,7 @@ type CampPiece struct {
 	Y             int32                  `protobuf:"zigzag32,4,opt,name=y,proto3" json:"y,omitempty"`
 	Rotation      int32                  `protobuf:"varint,5,opt,name=rotation,proto3" json:"rotation,omitempty"`
 	OwnerId       string                 `protobuf:"bytes,6,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
+	OwnerName     string                 `protobuf:"bytes,7,opt,name=owner_name,json=ownerName,proto3" json:"owner_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -106,7 +108,15 @@ func (x *CampPiece) GetOwnerId() string {
 	return ""
 }
 
-// A seed or sapling planted at a camp, by whom, and when.
+func (x *CampPiece) GetOwnerName() string {
+	if x != nil {
+		return x.OwnerName
+	}
+	return ""
+}
+
+// A seed or sapling planted at a camp, by whom (owner_name: the planter's
+// display name, for every viewer), and when.
 type CampPlant struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -116,6 +126,7 @@ type CampPlant struct {
 	PlantedAt     float64                `protobuf:"fixed64,5,opt,name=planted_at,json=plantedAt,proto3" json:"planted_at,omitempty"`
 	PlantedDay    float64                `protobuf:"fixed64,6,opt,name=planted_day,json=plantedDay,proto3" json:"planted_day,omitempty"`
 	OwnerId       string                 `protobuf:"bytes,7,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
+	OwnerName     string                 `protobuf:"bytes,8,opt,name=owner_name,json=ownerName,proto3" json:"owner_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -195,6 +206,13 @@ func (x *CampPlant) GetPlantedDay() float64 {
 func (x *CampPlant) GetOwnerId() string {
 	if x != nil {
 		return x.OwnerId
+	}
+	return ""
+}
+
+func (x *CampPlant) GetOwnerName() string {
+	if x != nil {
+		return x.OwnerName
 	}
 	return ""
 }
@@ -675,13 +693,17 @@ func (x *CampResult) GetGiven() []string {
 	return nil
 }
 
-// One thing waiting in a crate at Pell's: a piece, a stack (oil, path stone)
-// or a plant's seed, from the camp at chunk (cx, cy) that lapsed at
-// lapsed_at.
+// One thing waiting in a crate at Pell's: a piece, a tool, a stack (oil,
+// path stone) or a plant's seed, from the place at chunk (cx, cy) it left
+// at lapsed_at.
 // The id is int32: the HTTP JSON carries numbers, and protojson writes a
 // 64-bit integer as a string, which the client refuses.
 // moved_by: the camp keeper's name when they moved the piece off their camp
 // (empty for what a lapse packed).
+// reason: why it waits. "" a lapsed claim packed it (the woods turned);
+// "land-changed" 0.12's lasting geography ended the wick it was paid on (old
+// paths refunded); "deed-lost" its home's deed was lost; "packed-up" its
+// camp's keeper packed the camp up (moved_by names them on what wasn't theirs).
 type RecoveryEntry struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -692,6 +714,7 @@ type RecoveryEntry struct {
 	Cy            int32                  `protobuf:"zigzag32,6,opt,name=cy,proto3" json:"cy,omitempty"`
 	LapsedAt      float64                `protobuf:"fixed64,7,opt,name=lapsed_at,json=lapsedAt,proto3" json:"lapsed_at,omitempty"`
 	MovedBy       string                 `protobuf:"bytes,8,opt,name=moved_by,json=movedBy,proto3" json:"moved_by,omitempty"`
+	Reason        string                 `protobuf:"bytes,9,opt,name=reason,proto3" json:"reason,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -778,6 +801,13 @@ func (x *RecoveryEntry) GetLapsedAt() float64 {
 func (x *RecoveryEntry) GetMovedBy() string {
 	if x != nil {
 		return x.MovedBy
+	}
+	return ""
+}
+
+func (x *RecoveryEntry) GetReason() string {
+	if x != nil {
+		return x.Reason
 	}
 	return ""
 }
@@ -938,14 +968,16 @@ var File_glimway_v1_camps_proto protoreflect.FileDescriptor
 const file_glimway_v1_camps_proto_rawDesc = "" +
 	"\n" +
 	"\x16glimway/v1/camps.proto\x12\n" +
-	"glimway.v1\x1a\x13glimway/v1/op.proto\x1a\x16glimway/v1/lamps.proto\"\x89\x01\n" +
+	"glimway.v1\x1a\x13glimway/v1/op.proto\x1a\x16glimway/v1/lamps.proto\"\xa8\x01\n" +
 	"\tCampPiece\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bitem_def\x18\x02 \x01(\tR\aitemDef\x12\f\n" +
 	"\x01x\x18\x03 \x01(\x11R\x01x\x12\f\n" +
 	"\x01y\x18\x04 \x01(\x11R\x01y\x12\x1a\n" +
 	"\brotation\x18\x05 \x01(\x05R\brotation\x12\x19\n" +
-	"\bowner_id\x18\x06 \x01(\tR\aownerId\"\xad\x01\n" +
+	"\bowner_id\x18\x06 \x01(\tR\aownerId\x12\x1d\n" +
+	"\n" +
+	"owner_name\x18\a \x01(\tR\townerName\"\xcc\x01\n" +
 	"\tCampPlant\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bitem_def\x18\x02 \x01(\tR\aitemDef\x12\f\n" +
@@ -955,7 +987,9 @@ const file_glimway_v1_camps_proto_rawDesc = "" +
 	"planted_at\x18\x05 \x01(\x01R\tplantedAt\x12\x1f\n" +
 	"\vplanted_day\x18\x06 \x01(\x01R\n" +
 	"plantedDay\x12\x19\n" +
-	"\bowner_id\x18\a \x01(\tR\aownerId\"?\n" +
+	"\bowner_id\x18\a \x01(\tR\aownerId\x12\x1d\n" +
+	"\n" +
+	"owner_name\x18\b \x01(\tR\townerName\"?\n" +
 	"\n" +
 	"CampMember\x12\x1d\n" +
 	"\n" +
@@ -1003,7 +1037,7 @@ const file_glimway_v1_camps_proto_rawDesc = "" +
 	"\x05given\x18\x03 \x03(\tR\x05given\x1a<\n" +
 	"\x0eMaterialsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"\xb8\x01\n" +
+	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"\xd0\x01\n" +
 	"\rRecoveryEntry\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x19\n" +
@@ -1012,7 +1046,8 @@ const file_glimway_v1_camps_proto_rawDesc = "" +
 	"\x02cx\x18\x05 \x01(\x11R\x02cx\x12\x0e\n" +
 	"\x02cy\x18\x06 \x01(\x11R\x02cy\x12\x1b\n" +
 	"\tlapsed_at\x18\a \x01(\x01R\blapsedAt\x12\x19\n" +
-	"\bmoved_by\x18\b \x01(\tR\amovedBy\"C\n" +
+	"\bmoved_by\x18\b \x01(\tR\amovedBy\x12\x16\n" +
+	"\x06reason\x18\t \x01(\tR\x06reason\"C\n" +
 	"\fRecoveryRead\x123\n" +
 	"\aentries\x18\x01 \x03(\v2\x19.glimway.v1.RecoveryEntryR\aentries\"g\n" +
 	"\x16RecoveryCollectRequest\x12$\n" +

@@ -122,9 +122,10 @@ func (c *Chunks) EpochByID(ctx context.Context, tx *sql.Tx, world, id string) (*
 // deletes the world's ended wick epochs and an epoch of another generator
 // version left for the same season, with everything stored under them, but
 // for epochs a hold pins. Making a wick epoch is the turning: the holds are
-// judged then, once (holds.go), then Common work (commons.go), before any
-// chunk of it is made but those Common work carries onto, and before the
-// ended wick is deleted. A Create that races another for the same season answers the one stored.
+// judged then, once for each calendar turning since the last one judged
+// (holds.go), then Common work (commons.go), before any chunk of it is made
+// but those Common work carries onto, and before the ended wick is deleted.
+// A Create that races another for the same season answers the one stored.
 func (c *Chunks) Create(ctx context.Context, tx *sql.Tx, world, kind string, now int64) (*contract.WildsEpoch, error) {
 	if kind != EpochStill && kind != EpochWick {
 		return nil, sql.ErrNoRows
@@ -178,7 +179,7 @@ func (c *Chunks) Create(ctx context.Context, tx *sql.Tx, world, kind string, now
 		if err != nil {
 			return nil, err
 		}
-		lapsed, err := c.judgeHolds(ctx, tx, world, now)
+		lapsed, err := c.judgeTurnings(ctx, tx, world, e, now)
 		if err != nil {
 			return nil, err
 		}

@@ -158,7 +158,13 @@ func (a *Server) chunkTier(ctx context.Context, tx *sql.Tx, world string, ep ope
 			lamp.X, lamp.Y = int32(ox+x), int32(oy+y)
 		case wayLampKind:
 			var x, y int
-			err = tx.QueryRowContext(ctx, `SELECT c.oil,c.dimming,c.set_at,i.x,i.y,coalesce(i.name,'') FROM camps c JOIN homestead_items i ON i.id=c.id WHERE c.world_id=? AND c.id=?`, world, id).Scan(&land.Reserve, &land.Dimming, &lamp.At, &x, &y, &lamp.Name)
+			// A camp taken down (or its lamp set again elsewhere) leaves
+			// its hold released here until the turning, with no lamp.
+			err = tx.QueryRowContext(ctx, `SELECT c.oil,c.dimming,c.set_at,i.x,i.y,coalesce(i.name,'') FROM camps c JOIN homestead_items i ON i.id=c.id WHERE c.world_id=? AND c.id=? AND c.cx=? AND c.cy=?`, world, id, cx, cy).Scan(&land.Reserve, &land.Dimming, &lamp.At, &x, &y, &lamp.Name)
+			if errors.Is(err, sql.ErrNoRows) && released.Valid {
+				land.NextTurning = nextBuilt(0, false, true)
+				return land, nil, nil
+			}
 			if err != nil {
 				return nil, nil, err
 			}

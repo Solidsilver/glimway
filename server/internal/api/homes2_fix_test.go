@@ -175,12 +175,21 @@ func TestHomes2LostDeedIsInTheLedger(t *testing.T) {
 	if count(t, x.db, "SELECT count(*) FROM ledger WHERE account_id='"+x.account("alice")+"' AND reason='deed-lost' AND currency='homestead'") != 1 {
 		t.Fatal("no record of the lost deed itself")
 	}
-	// The chest's tool and the fitting on it are gone, and both are named.
-	if count(t, x.db, "SELECT count(*) FROM item_instances WHERE id IN (?,?)", axe, nail) != 0 {
-		t.Fatal("the chest's tool outlived the deed")
+	// The chest's tool waits at Pell's with its fitting still on it
+	// (roadmap rule 3), and the fitting is named on the ledger as it went.
+	if count(t, x.db, "SELECT count(*) FROM item_instances WHERE id=? AND location='crate' AND owner=?", axe, x.account("alice")) != 1 ||
+		count(t, x.db, "SELECT count(*) FROM item_instances WHERE id=? AND location='fitted' AND owner=?", nail, axe) != 1 {
+		t.Fatal("the chest's tool is not in the crate, fitted")
 	}
 	if count(t, x.db, "SELECT count(*) FROM ledger WHERE account_id='"+x.account("alice")+"' AND reason='deed-lost' AND currency='fitted:loose-road-nail' AND ref LIKE ?", "%"+nail) != 1 {
 		t.Fatal("the fitting's loss is not in the ledger")
+	}
+	x.conserved(x.account("alice"))
+	// Collected at Pell's, everything is back in the pack and still balances.
+	ac, a = x.again("alice")
+	x.collect(ac, a, "collect-deed", true, 200)
+	if count(t, x.db, "SELECT count(*) FROM item_instances WHERE id=? AND location='pack'", axe) != 1 {
+		t.Fatal("the axe was not collected")
 	}
 	x.conserved(x.account("alice"))
 }

@@ -35,7 +35,7 @@ func (a *Server) hearthCraft(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
-		if err := settleHomes(ctx, tx, s.WorldID, now); err != nil {
+		if err := a.settleHomes(ctx, tx, s.WorldID, now); err != nil {
 			return nil, err
 		}
 		if _, err := cottageHearth(ctx, tx, s); err != nil {
@@ -100,7 +100,7 @@ func (a *Server) deskCopy(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
-		if err := settleHomes(ctx, tx, s.WorldID, now); err != nil {
+		if err := a.settleHomes(ctx, tx, s.WorldID, now); err != nil {
 			return nil, err
 		}
 		if _, err := writingDeskPlaced(ctx, tx, s); err != nil {
@@ -196,7 +196,7 @@ func (a *Server) woodpileRead(w http.ResponseWriter, r *http.Request) error {
 	}
 	defer tx.Rollback()
 	now := a.requestTime(r.Context()).Unix()
-	if err = settleHomes(r.Context(), tx, s.WorldID, now); err != nil {
+	if err = a.settleHomes(r.Context(), tx, s.WorldID, now); err != nil {
 		return err
 	}
 	homeID, ok, err := memberOf(r.Context(), tx, s.AccountID)
@@ -223,7 +223,7 @@ func (a *Server) woodpileMutation(w http.ResponseWriter, r *http.Request) error 
 		return err
 	}
 	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
-		if err := settleHomes(ctx, tx, s.WorldID, now); err != nil {
+		if err := a.settleHomes(ctx, tx, s.WorldID, now); err != nil {
 			return nil, err
 		}
 		homeID, err := woodpilePlaced(ctx, tx, s)

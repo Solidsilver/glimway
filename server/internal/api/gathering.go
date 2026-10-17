@@ -228,6 +228,9 @@ func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req 
 	lit := false
 	if homeGateAt(s) >= 0 && area == outdoorsArea {
 		var err error
+		if err = a.settleTurning(ctx, tx, s.WorldID, now); err != nil {
+			return err
+		}
 		if home, err = ownLand(ctx, tx, s, area, now, "cannot-gather-here"); err != nil {
 			return chunkError(err)
 		}

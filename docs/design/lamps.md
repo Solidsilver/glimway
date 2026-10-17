@@ -405,6 +405,16 @@ homestead, not a guessed maker from a nullable account field
 ([home_placement.go](../../server/internal/api/home_placement.go)). Each beneficiary sees only
 entries they can collect. Public refuelling never changes these rights.
 
+As built (0.12 server review): a lost deed is a lapse too. Before the home goes, its lot packs
+into one crate (`deed:<home>`): pieces and the chest's and shelf's tools as the same instances,
+stacks with their makers, plants with their planting, the lantern's unspent oil as flasks. The
+household's share goes to the **last member to leave**; woodpile timber to whoever stacked it. Each
+entry carries a `reason` beside the keeper's `movedBy`: `""` (a lapse), `land-changed` (0.11.2
+paths refunded after 038's geography reset), `deed-lost`, `packed-up` (the keeper's own pack-up).
+Pell's opening line follows the reason. Missed turnings are judged one by one at their own
+moments (`wick_turnings`); oil poured between a deed lapsing and its processing burns as normal
+upkeep.
+
 In one transaction, move/snapshot all entries, mark placements packed, remove/refund paid ground,
 retire affected ways, release holds and record the boundary result. Only then may epoch cleanup
 run. Read authoritative stored placements/ground even when their old expiry is exactly this

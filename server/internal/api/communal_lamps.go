@@ -381,10 +381,11 @@ func liftCommunalPost(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *c
 // turnLamps judges the world's communal lamps at the turning (from
 // commonWays.Turn), before the ended wick's visits are trimmed. A lamp in a
 // chunk whose hold lapsed now turns with its land; one inside a standing
-// hold is under that claim's upkeep and stays; any other stays lit if its
-// chunk was visited through every wick since it was last judged. A kept
-// post must still stand on the new wick's land (generated land, nothing on
-// its tile), or it goes to Pell's like one that turned.
+// hold is under that claim's upkeep and stays, on the terrain it keeps;
+// any other stays lit if its chunk was visited through every wick since it
+// was last judged. Such a post must still stand on the new wick's land
+// (generated land, nothing on its tile), or it goes to Pell's like one that
+// turned.
 func (c commonWays) turnLamps(ctx context.Context, tx *sql.Tx, world string, ended, next *contract.WildsEpoch, gone map[[2]int]bool, now int64) error {
 	lamps, err := communalLamps(ctx, tx, world)
 	if err != nil {
@@ -392,13 +393,14 @@ func (c commonWays) turnLamps(ctx context.Context, tx *sql.Tx, world string, end
 	}
 	for i := range lamps {
 		l := &lamps[i]
-		keep := false
+		keep, held := false, false
 		if !gone[[2]int{l.CX, l.CY}] {
-			held, err := store.HeldEpoch(ctx, tx, world, l.CX, l.CY)
+			e, err := store.HeldEpoch(ctx, tx, world, l.CX, l.CY)
 			if err != nil {
 				return err
 			}
-			if keep = held != nil; !keep {
+			held = e != nil
+			if keep = held; !keep {
 				from := l.LitAt
 				if ended != nil && int64(ended.StartsAt) > from {
 					from = int64(ended.StartsAt)
@@ -408,7 +410,9 @@ func (c commonWays) turnLamps(ctx context.Context, tx *sql.Tx, world string, end
 				}
 			}
 		}
-		if keep && l.Kind == lampPost {
+		// Held land keeps its terrain, so a post there still stands where
+		// it stood; only unheld land meets the new wick's.
+		if keep && !held && l.Kind == lampPost {
 			m, err := c.a.Config.Chunks.Chunk(ctx, tx, world, next.Id, 0, int32(l.CX), int32(l.CY))
 			if err != nil && !errors.Is(err, sql.ErrNoRows) {
 				return err
@@ -464,4 +468,20 @@ func lampStandsAt(ctx context.Context, tx *sql.Tx, world string, cx, cy, x, y in
 	var taken bool
 	err := tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM communal_lamps WHERE world_id=? AND cx=? AND cy=? AND x=? AND y=?)", world, cx, cy, x, y).Scan(&taken)
 	return taken, err
+}
+
+// clearOfCommunalLamps refuses a camp's lamp, piece or plant over a
+// communal lamp standing in its chunk (chunk-local r): placement-overlap,
+// before anything is spent.
+func clearOfCommunalLamps(ctx context.Context, tx *sql.Tx, world string, cx, cy int, r rect) error {
+	for y := r.y; y < r.y+r.h; y++ {
+		for x := r.x; x < r.x+r.w; x++ {
+			if taken, err := lampStandsAt(ctx, tx, world, cx, cy, x, y); err != nil {
+				return err
+			} else if taken {
+				return fail(409, "placement-overlap")
+			}
+		}
+	}
+	return nil
 }

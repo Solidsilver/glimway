@@ -145,7 +145,7 @@ func (a *Server) homeMutation(w http.ResponseWriter, r *http.Request) error {
 	var avatar *presenceAvatarMsg
 	var room presenceRoom
 	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
-		if err := settleHomes(ctx, tx, s.WorldID, now); err != nil {
+		if err := a.settleHomes(ctx, tx, s.WorldID, now); err != nil {
 			return nil, err
 		}
 		op := strings.TrimPrefix(r.URL.Path, "/api/homestead/")

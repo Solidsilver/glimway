@@ -3,11 +3,15 @@ package api
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"glimway/content"
+	"glimway/server/internal/chunks"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/itemmove"
 	"glimway/server/internal/store"
+	"glimway/server/internal/wilds"
 )
 
 const day = 86400
@@ -26,11 +30,32 @@ func memberOf(ctx context.Context, tx *sql.Tx, id string) (string, bool, error) 
 	return home, err == nil, err
 }
 
-// settleHomes applies the passage of time to a world's empty homesteads:
-// past deedLostAfterDays the deed is lost, the land returns to unclaimed and
-// everything left on it (placed pieces, the shared chest, cleared ground,
-// pending invites) goes with it. Desolation itself is derived on read.
-func settleHomes(ctx context.Context, tx *sql.Tx, world string, now int64) error {
+// settleTurning judges any turning due (store/holds.go) before a lot's
+// lantern or backland is read or changed, as camp operations do (turnWick):
+// fuel poured after a turning never pays the wick before it. Without a
+// generator (or stored epochs) there is nothing to judge.
+func (a *Server) settleTurning(ctx context.Context, tx *sql.Tx, world string, now int64) error {
+	if a.Config.WildsGenerator == nil || a.Config.Epochs == nil || world == "" {
+		return nil
+	}
+	_, err := chunks.Epoch(ctx, tx, a.Config.Epochs, world, store.EpochWick, now)
+	if err != nil && !errors.Is(err, store.ErrGeneratorUnavailable) && !errors.Is(err, chunks.ErrUnavailable) && !errors.Is(err, chunks.ErrEpochEnded) && !errors.Is(err, sql.ErrNoRows) {
+		return err
+	}
+	return nil
+}
+
+// settleHomes applies the passage of time to a world's homesteads: any
+// turning due is judged first (settleTurning), then past deedLostAfterDays
+// an empty home's deed is lost and the land returns to unclaimed. Nothing
+// on it is lost (roadmap rule 3): everything placed there, its chest, shelf,
+// plants, woodpile and the lantern's unspent oil packs into a crate at
+// Pell's first (crateLostDeed), then the home and its ground (cleared
+// tiles, pending invites) go. Desolation itself is derived on read.
+func (a *Server) settleHomes(ctx context.Context, tx *sql.Tx, world string, now int64) error {
+	if err := a.settleTurning(ctx, tx, world, now); err != nil {
+		return err
+	}
 	cutoff := now - int64(content.HomeRules.Desolation.DeedLostAfterDays)*day
 	rows, err := tx.QueryContext(ctx, "SELECT id,gate FROM homesteads WHERE world_id=? AND vacant_since IS NOT NULL AND vacant_since<=? ORDER BY gate", world, cutoff)
 	if err != nil {
@@ -56,6 +81,9 @@ func settleHomes(ctx context.Context, tx *sql.Tx, world string, now int64) error
 	}
 	for _, v := range all {
 		if err = writeOffLostDeed(ctx, tx, v.id, v.gate, now); err != nil {
+			return err
+		}
+		if err = crateLostDeed(ctx, tx, world, v.id, v.gate, now); err != nil {
 			return err
 		}
 		for _, q := range []string{
@@ -456,4 +484,166 @@ func buyItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, req
 		return "", err
 	}
 	return id, currency(ctx, tx, s.AccountID, "decoration:"+def.GetId(), 1, "homestead-buy", id, now)
+}
+
+// crateLostDeed packs everything a lost deed's lot holds into one crate at
+// Pell's (roadmap rule 3; lamps.md 2.7), before the home row goes, so it
+// waits there after: what is someone's own (the timber they stacked on the
+// woodpile) to them, the household's to the last member out. Pieces (set out
+// indoors, in the yard or the backland, in the chest or on the gate shelf)
+// and the chest's tools go as the same instances; the chest's and shelf's
+// stacks keep their makers; plants go as their seed with the planting kept;
+// the lantern's unspent oil goes as flasks. A home nobody ever left (it
+// can't be vacant) packs nothing.
+func crateLostDeed(ctx context.Context, tx *sql.Tx, world, home string, gate int, now int64) error {
+	var last string
+	err := tx.QueryRowContext(ctx, "SELECT d.account_id FROM homestead_departures d JOIN players p ON p.account_id=d.account_id WHERE d.homestead_id=? ORDER BY d.left_at DESC,d.account_id LIMIT 1", home).Scan(&last)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	type entry struct {
+		account, kind, def string
+		qty                int
+		instance           any
+		state              string
+	}
+	entries := []entry{}
+	stateOf := func(v any) string {
+		b, _ := json.Marshal(v)
+		return string(b)
+	}
+	makerState := func(maker string) string {
+		if maker == "" {
+			return "{}"
+		}
+		return stateOf(map[string]string{"maker": maker})
+	}
+	// Pieces: placed (with where they stood), in the chest, on the shelf.
+	rows, err := tx.QueryContext(ctx, "SELECT id,item_def,location,scene,x,y,rotation FROM homestead_items WHERE homestead_id=? ORDER BY id", home)
+	if err != nil {
+		return err
+	}
+	for rows.Next() {
+		var id, def, location string
+		var scene sql.NullString
+		var x, y, rot sql.NullInt64
+		if err = rows.Scan(&id, &def, &location, &scene, &x, &y, &rot); err != nil {
+			rows.Close()
+			return err
+		}
+		state := "{}"
+		if scene.Valid {
+			state = stateOf(map[string]any{"scene": scene.String, "x": x.Int64, "y": y.Int64, "rotation": rot.Int64})
+		}
+		entries = append(entries, entry{last, "piece", def, 1, id, state})
+	}
+	if err = closeRows(rows); err != nil {
+		return err
+	}
+	// The chest's and shelf's tools and gear, fittings and all.
+	rows, err = tx.QueryContext(ctx, "SELECT id,item_def FROM item_instances WHERE location IN ('storage','shelf') AND owner=? ORDER BY id", home)
+	if err != nil {
+		return err
+	}
+	for rows.Next() {
+		var id, def string
+		if err = rows.Scan(&id, &def); err != nil {
+			rows.Close()
+			return err
+		}
+		entries = append(entries, entry{last, "tool", def, 1, id, "{}"})
+	}
+	if err = closeRows(rows); err != nil {
+		return err
+	}
+	// The chest's stacks and the shelf's, by maker.
+	rows, err = tx.QueryContext(ctx, `SELECT item_def,maker_id,SUM(qty) FROM (
+ SELECT item_def,maker_id,qty FROM item_stacks WHERE location='storage' AND owner=?
+ UNION ALL SELECT item_def,maker_id,qty FROM gate_shelf_slots WHERE homestead_id=? AND kind IN ('material','item'))
+ GROUP BY item_def,maker_id ORDER BY item_def,maker_id`, home, home)
+	if err != nil {
+		return err
+	}
+	for rows.Next() {
+		var def, maker string
+		var n int
+		if err = rows.Scan(&def, &maker, &n); err != nil {
+			rows.Close()
+			return err
+		}
+		if n > 0 {
+			entries = append(entries, entry{last, "stack", def, n, nil, makerState(maker)})
+		}
+	}
+	if err = closeRows(rows); err != nil {
+		return err
+	}
+	// Plants, in the yard and the backland: the seed back, the planting kept.
+	rows, err = tx.QueryContext(ctx, "SELECT id,item_def,x,y,planted_at,planted_day FROM homestead_plants WHERE homestead_id=? ORDER BY planted_at,id", home)
+	if err != nil {
+		return err
+	}
+	for rows.Next() {
+		var id, def string
+		var x, y int
+		var at, day int64
+		if err = rows.Scan(&id, &def, &x, &y, &at, &day); err != nil {
+			rows.Close()
+			return err
+		}
+		entries = append(entries, entry{last, "plant", def, 1, nil, stateOf(map[string]any{"id": id, "x": x, "y": y, "plantedAt": at, "plantedDay": day})})
+	}
+	if err = closeRows(rows); err != nil {
+		return err
+	}
+	// Each stacker's own timber on the woodpile, seasoned once it has
+	// stood a day (as collecting it would give).
+	rows, err = tx.QueryContext(ctx, `SELECT w.account_id,CASE WHEN ?-w.stacked_at>=86400 THEN 'seasoned-timber' ELSE 'timber' END,SUM(w.qty)
+ FROM woodpile_stacks w JOIN players p ON p.account_id=w.account_id WHERE w.homestead_id=? GROUP BY 1,2 ORDER BY 1,2`, now, home)
+	if err != nil {
+		return err
+	}
+	for rows.Next() {
+		var account, def string
+		var n int
+		if err = rows.Scan(&account, &def, &n); err != nil {
+			rows.Close()
+			return err
+		}
+		entries = append(entries, entry{account, "stack", def, n, nil, "{}"})
+	}
+	if err = closeRows(rows); err != nil {
+		return err
+	}
+	// The lantern's unspent oil, as whole flasks.
+	var oil int
+	if err = tx.QueryRowContext(ctx, "SELECT oil FROM lot_lanterns WHERE homestead_id=?", home).Scan(&oil); err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return err
+	}
+	rules := content.HomeRules.GetLotLantern()
+	if flasks := oil / int(max(rules.GetWicksPerOil(), 1)); flasks > 0 {
+		entries = append(entries, entry{last, "stack", rules.GetOil(), flasks, nil, "{}"})
+	}
+	if len(entries) == 0 {
+		return nil
+	}
+	S := chunkSize()
+	ox, oy := chunks.LotOrigin(gate)
+	crate, err := recoveryCrate(ctx, tx, world, fmt.Sprintf("deed:%s", home), wilds.FloorDiv(ox, S), wilds.FloorDiv(oy, S), now)
+	if err != nil {
+		return err
+	}
+	for _, e := range entries {
+		if err = addRecoveryEntryFor(ctx, tx, crate, e.account, e.kind, e.def, e.qty, e.instance, e.state, reasonDeedLost); err != nil {
+			return err
+		}
+	}
+	if _, err = tx.ExecContext(ctx, "UPDATE homestead_items SET location='crate',account_id=?,homestead_id=NULL,scene=NULL,x=NULL,y=NULL,rotation=NULL WHERE homestead_id=?", last, home); err != nil {
+		return err
+	}
+	_, err = tx.ExecContext(ctx, "UPDATE item_instances SET location='crate',owner=? WHERE location IN ('storage','shelf') AND owner=?", last, home)
+	return err
 }

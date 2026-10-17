@@ -168,13 +168,54 @@ func (c *Chunks) Release(ctx context.Context, tx *sql.Tx, world string, cx, cy i
 	return n > 0, err
 }
 
-// judgeHolds is the turning's judgement, run once as a new wick epoch is
-// made: a released hold goes; any other asks its holder kind whether it
-// keeps. A hold that goes calls its holder's Released. A kind this server
-// has no Holder for keeps, released or not: with no Released to send its
-// placed pieces home, its land never turns (roadmap rule 3), and a release
-// takes effect at the first turning a Holder for it is registered. It
-// answers the holds that went.
+// judgeTurnings is the turning's judgement (roadmap rule 4), run once as a
+// new wick epoch is made: every calendar turning since the world's cursor
+// (wick_turnings) is judged once, in order. One the server missed (it was
+// down, or nobody came) is judged at its own moment, so a store of oil
+// burns a wick at each and a crate is dated by the turning that packed it;
+// the newest, this epoch's, is judged now. A turning already judged (a new
+// generator version's epoch for the same wick) judges nothing again. It
+// answers every hold that went.
+func (c *Chunks) judgeTurnings(ctx context.Context, tx *sql.Tx, world string, e *contract.WildsEpoch, now int64) ([]Hold, error) {
+	start := int64(e.StartsAt)
+	var through sql.NullInt64
+	if err := tx.QueryRowContext(ctx, "SELECT judged_through FROM wick_turnings WHERE world_id=?", world).Scan(&through); err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, err
+	}
+	if through.Valid && through.Int64 >= start {
+		return nil, nil
+	}
+	var gone []Hold
+	if through.Valid {
+		for b := content.CalendarAt(content.CalendarRules, through.Int64).NextTurning; b < start; {
+			lapsed, err := c.judgeHolds(ctx, tx, world, b)
+			if err != nil {
+				return nil, err
+			}
+			gone = append(gone, lapsed...)
+			next := content.CalendarAt(content.CalendarRules, b).NextTurning
+			if next <= b {
+				break
+			}
+			b = next
+		}
+	}
+	lapsed, err := c.judgeHolds(ctx, tx, world, now)
+	if err != nil {
+		return nil, err
+	}
+	gone = append(gone, lapsed...)
+	_, err = tx.ExecContext(ctx, "INSERT INTO wick_turnings(world_id,judged_through) VALUES(?,?) ON CONFLICT(world_id) DO UPDATE SET judged_through=excluded.judged_through", world, start)
+	return gone, err
+}
+
+// judgeHolds is one turning's judgement, at that turning's moment now
+// (judgeTurnings): a released hold goes; any other asks its holder kind
+// whether it keeps. A hold that goes calls its holder's Released. A kind
+// this server has no Holder for keeps, released or not: with no Released
+// to send its placed pieces home, its land never turns (roadmap rule 3),
+// and a release takes effect at the first turning a Holder for it is
+// registered. It answers the holds that went.
 func (c *Chunks) judgeHolds(ctx context.Context, tx *sql.Tx, world string, now int64) ([]Hold, error) {
 	holds, err := c.Holds(ctx, tx, world)
 	if err != nil {
