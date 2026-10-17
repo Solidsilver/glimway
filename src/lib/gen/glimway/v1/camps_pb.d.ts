@@ -4,6 +4,7 @@
 
 import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
 import type { Message } from "@bufbuild/protobuf";
+import type { LampNaming } from "./lamps_pb.js";
 import type { OpHeader, Where } from "./op_pb.js";
 
 /**
@@ -173,6 +174,13 @@ export declare type CampView = Message<"glimway.v1.CampView"> & {
    * @generated from field: repeated glimway.v1.CampPlant plants = 12;
    */
   plants: CampPlant[];
+
+  /**
+   * The lamp's naming (lamps.md 2.8), unset until its Keeper names it.
+   *
+   * @generated from field: glimway.v1.LampNaming naming = 13;
+   */
+  naming?: LampNaming | undefined;
 };
 
 export declare type CampViewValid = CampView;
@@ -210,6 +218,8 @@ export declare const CampsReadSchema: GenMessage<CampsRead, {validType: CampsRea
  *   place:  set the carried piece item_id out at (x, y) with rotation (a builder).
  *   remove: pick up a piece of yours, item_id (the lamp, once nothing else stands there).
  *   plant:  plant a seed or sapling item_def at (x, y) (a builder).
+ *   name:   give camp's lamp its naming from `parts` (a Keeper who builds there).
+ * Setting a way-lamp, or naming one, takes the Keeper's hand.
  *
  * @generated from message glimway.v1.CampRequest
  */
@@ -258,6 +268,11 @@ export declare type CampRequest = Message<"glimway.v1.CampRequest"> & {
    * @generated from field: int32 rotation = 9;
    */
   rotation: number;
+
+  /**
+   * @generated from field: repeated string parts = 10;
+   */
+  parts: string[];
 };
 
 export declare type CampRequestValid = CampRequest;
@@ -269,8 +284,8 @@ export declare type CampRequestValid = CampRequest;
 export declare const CampRequestSchema: GenMessage<CampRequest, {validType: CampRequestValid}>;
 
 /**
- * The camp after the operation (none: the lamp was taken down) and the
- * pack's material balances.
+ * The camp after the operation (none: the lamp was taken down), the
+ * pack's material balances, and what a naming gave (lamp ash, once).
  *
  * @generated from message glimway.v1.CampResult
  */
@@ -284,6 +299,11 @@ export declare type CampResult = Message<"glimway.v1.CampResult"> & {
    * @generated from field: map<string, double> materials = 2;
    */
   materials: { [key: string]: number };
+
+  /**
+   * @generated from field: repeated string given = 3;
+   */
+  given: string[];
 };
 
 export declare type CampResultValid = CampResult;

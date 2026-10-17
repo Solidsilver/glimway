@@ -55,6 +55,8 @@ message Homestead {
   // Communal lamps (roadmap 0.13; lamps.md 1.3, 2.4): Common light, kept by
   // presence, never by oil.
   CommunalLamp communal_lamp = 17 [(buf.validate.field).required = true];
+  // Naming a lamp from parts (lamps.md 2.8).
+  LampNamingRules lamp_naming = 18 [(buf.validate.field).required = true];
 }
 
 // Communal lamps (lamps.md 2.5's "Communal stone relight" and "New communal
@@ -66,6 +68,33 @@ message CommunalLamp {
   string relight = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
   int32 relight_qty = 2 [(buf.validate.field).int32 = {gte: 0, lte: 12}];
   int32 reach = 3 [(buf.validate.field).int32 = {gte: 1, lte: 8}];
+}
+
+// Naming a lamp from parts (lamps.md 2.8), never free text: "You are the
+// <ordinal> lamp <relation> <landmark>. Behind you <behind>; ahead <ahead>.
+// <closing>" and the short name "<Ordinal> lamp <relation> <landmark>". A
+// landmark is one the server finds near the lamp (a place's landmark by
+// its kind, a site by its kind, within one chunk of the lamp's) or a
+// fallback, always offered; behind and ahead are a side phrase or an
+// offered landmark. A lamp's first naming gives ash_qty of `ash`, once.
+// Ids are unique within each list, and no side shares a fallback's id
+// (code rules).
+message LampNamingRules {
+  repeated NamingWord ordinals = 1 [(buf.validate.field).repeated = {min_items: 1, max_items: 40}];
+  repeated NamingWord relations = 2 [(buf.validate.field).repeated = {min_items: 1, max_items: 12}];
+  repeated NamingWord fallbacks = 3 [(buf.validate.field).repeated = {min_items: 1, max_items: 12}];
+  map<string, string> places = 4;
+  map<string, string> sites = 5;
+  repeated NamingWord sides = 6 [(buf.validate.field).repeated = {min_items: 1, max_items: 24}];
+  repeated NamingWord closings = 7 [(buf.validate.field).repeated = {min_items: 1, max_items: 12}];
+  string ash = 8 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  int32 ash_qty = 9 [(buf.validate.field).int32 = {gte: 1, lte: 5}];
+}
+
+// One part a naming may use: its id, and the words it puts in the sentence.
+message NamingWord {
+  string id = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,40}$"];
+  string words = 2 [(buf.validate.field).string = {min_len: 1, max_len: 40}];
 }
 
 // The way-lamp's camp (lamps.md 2.5): `item` is the home piece set as the

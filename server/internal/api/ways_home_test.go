@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"slices"
 	"testing"
 
 	"glimway/content"
@@ -90,21 +91,25 @@ func (x *rig) openGround(world string, tx, ty int) bool {
 
 // The two recipes are bench recipes found on their pages: unknown until the
 // page is carried, then made from turncap spawn and amber, lamp ash and
-// fiber. The chandler sells both pages until Mara's quest gives them.
+// fiber. Mara's keepers-hand quest gives both pages; nobody sells them.
 func TestWaysHomeRecipesNeedTheirPapers(t *testing.T) {
 	for _, r := range []struct{ recipe, page, output string }{{"craft-homing-turncap", "recipe-homing-turncap", "homing-turncap"}, {"craft-lamp-ash-pouch", "recipe-lamp-ash-pouch", "lamp-ash-pouch"}} {
 		v, ok := content.RecipeFor(r.recipe)
 		if !ok || v.GetPage() != r.page || v.GetOutput().GetId() != r.output || v.GetOutput().GetQty() != 1 {
 			t.Fatalf("%s: %+v", r.recipe, v)
 		}
-		sold := false
 		for _, seller := range content.ItemsRules.GetSellers() {
 			for _, g := range seller.GetGoods() {
-				sold = sold || seller.GetId() == "chandler" && g.GetItem() == r.page
+				if g.GetItem() == r.page {
+					t.Fatalf("%s sells %s", seller.GetId(), r.page)
+				}
 			}
 		}
-		if !sold {
-			t.Fatalf("nobody sells %s", r.page)
+		q, _ := content.QuestFor("keepers-hand")
+		if !slices.ContainsFunc(q.GetSteps(), func(s *content.QuestStep) bool {
+			return slices.ContainsFunc(s.GetGive(), func(g *content.QuestItem) bool { return g.GetDef() == r.page })
+		}) {
+			t.Fatalf("the Keeper's hand doesn't give %s", r.page)
 		}
 	}
 	x := newRig(t)
@@ -300,6 +305,7 @@ func TestPouchToALiftedPostIsGone(t *testing.T) {
 func TestPouchToACampLampAndPacked(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
+	x.keeper(s.AccountID) // setting a way-lamp takes the Keeper's hand
 	lamp := x.carry(s.AccountID, "way-lamp")
 	x.stack(s.AccountID, "hearth-oil", "", 1)
 	x.stack(s.AccountID, "lamp-ash-pouch", "", 2)

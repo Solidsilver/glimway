@@ -6,6 +6,7 @@ import type { BeltKind } from '../lib/belt'
 import type { HabiticaProfile } from '../lib/habitica/types'
 import type { PurseView } from '../lib/purse'
 import type { RumourParts } from '../lib/wilds/rumour'
+import type { LampNamingAsk } from '../lib/lamp-naming'
 import type { PresenceStatus } from '../lib/presence-client.ts'
 import type { HeldPayload } from './held'
 import type { ArrangeView, NamePrompt, PlacementCommand, PlacementView } from './homestead'
@@ -111,6 +112,10 @@ export const EV = {
   communalPost: 'game:communal-post',
   /** Look at a Lantern Road lamp stone: dark to relight, or lit to tend (sites -> src/game/wilds/communal-lamps.ts). */
   lampStoneLook: 'game:lamp-stone-look',
+  /** Ask the player to name a lamp from parts (game -> UI): LampNamingAsk; answered on `lampNamed`. */
+  lampNamingOpen: 'ui:lamp-naming-open',
+  /** The parts picked for a lamp's naming (null: not yet). */
+  lampNamed: 'game:lamp-named',
   /** Use a homing turncap or lamp-ash pouch: hold still, then travel (UI -> game; src/game/ways-home.ts). */
   waysHome: 'game:ways-home',
   /** Bind your lamp-ash pouch to the lamp beside you (UI -> game; src/game/ways-home.ts). */
@@ -508,6 +513,8 @@ export interface EventMap {
   [EV.campDo]: { action: 'set' | 'place' | 'plant'; itemId?: string; itemDef?: string }
   [EV.communalPost]: { itemId: string }
   [EV.lampStoneLook]: { site: string }
+  [EV.lampNamingOpen]: LampNamingAsk
+  [EV.lampNamed]: { lamp: string; kind: LampNamingAsk['kind']; parts: string[] | null }
   [EV.waysHome]: { way: WayHome }
   [EV.waysHomeBind]: void
   [EV.waysHomeBound]: { binding: WaysHomeBinding | null }

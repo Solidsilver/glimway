@@ -283,6 +283,10 @@ const (
 	ErrorCode_ERROR_CODE_LAMP_UNLIT     ErrorCode = 244
 	ErrorCode_ERROR_CODE_LAMP_GONE      ErrorCode = 245
 	ErrorCode_ERROR_CODE_NO_LANDING     ErrorCode = 246
+	// 0.13 The Keeper's hand and naming (lamps.md 2.8).
+	ErrorCode_ERROR_CODE_NEEDS_KEEPER   ErrorCode = 247
+	ErrorCode_ERROR_CODE_LAMP_NAMED     ErrorCode = 248
+	ErrorCode_ERROR_CODE_INVALID_NAMING ErrorCode = 249
 )
 
 // Enum value maps for ErrorCode.
@@ -535,6 +539,9 @@ var (
 		244: "ERROR_CODE_LAMP_UNLIT",
 		245: "ERROR_CODE_LAMP_GONE",
 		246: "ERROR_CODE_NO_LANDING",
+		247: "ERROR_CODE_NEEDS_KEEPER",
+		248: "ERROR_CODE_LAMP_NAMED",
+		249: "ERROR_CODE_INVALID_NAMING",
 	}
 	ErrorCode_value = map[string]int32{
 		"ERROR_CODE_UNSPECIFIED":               0,
@@ -784,6 +791,9 @@ var (
 		"ERROR_CODE_LAMP_UNLIT":                244,
 		"ERROR_CODE_LAMP_GONE":                 245,
 		"ERROR_CODE_NO_LANDING":                246,
+		"ERROR_CODE_NEEDS_KEEPER":              247,
+		"ERROR_CODE_LAMP_NAMED":                248,
+		"ERROR_CODE_INVALID_NAMING":            249,
 	}
 )
 
@@ -819,7 +829,7 @@ var File_glimway_v1_errors_proto protoreflect.FileDescriptor
 const file_glimway_v1_errors_proto_rawDesc = "" +
 	"\n" +
 	"\x17glimway/v1/errors.proto\x12\n" +
-	"glimway.v1*\xe8<\n" +
+	"glimway.v1*\xc2=\n" +
 	"\tErrorCode\x12\x1a\n" +
 	"\x16ERROR_CODE_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17ERROR_CODE_INVALID_JSON\x10\x01\x12\"\n" +
@@ -1068,7 +1078,10 @@ const file_glimway_v1_errors_proto_rawDesc = "" +
 	"\x16ERROR_CODE_LAMP_PACKED\x10\xf3\x01\x12\x1a\n" +
 	"\x15ERROR_CODE_LAMP_UNLIT\x10\xf4\x01\x12\x19\n" +
 	"\x14ERROR_CODE_LAMP_GONE\x10\xf5\x01\x12\x1a\n" +
-	"\x15ERROR_CODE_NO_LANDING\x10\xf6\x01B1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
+	"\x15ERROR_CODE_NO_LANDING\x10\xf6\x01\x12\x1c\n" +
+	"\x17ERROR_CODE_NEEDS_KEEPER\x10\xf7\x01\x12\x1a\n" +
+	"\x15ERROR_CODE_LAMP_NAMED\x10\xf8\x01\x12\x1e\n" +
+	"\x19ERROR_CODE_INVALID_NAMING\x10\xf9\x01B1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
 
 var (
 	file_glimway_v1_errors_proto_rawDescOnce sync.Once

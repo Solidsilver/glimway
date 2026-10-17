@@ -163,6 +163,14 @@ func (a *Server) chunkTier(ctx context.Context, tx *sql.Tx, world string, ep ope
 				return nil, nil, err
 			}
 			lamp.X, lamp.Y = int32(cx*chunkSize()+x), int32(cy*chunkSize()+y)
+			// Its Keeper's naming, once it has one (lamp_naming.go).
+			n, err := lampNaming(ctx, tx, world, id)
+			if err != nil {
+				return nil, nil, err
+			}
+			if n != nil {
+				lamp.Name, lamp.Naming, lamp.Namer = n.ShortName, n.Text, n.NamerName
+			}
 		default:
 			// Future hold kinds need their own reserve reader; don't invent a lamp.
 			lamp = nil

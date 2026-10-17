@@ -99,6 +99,8 @@ export function designedRule(id: string): PaperRule | undefined {
   const s = designedSource(id);
   if (!s) return undefined;
   if (s.kind === 'placed') return { kind: s.kind, area: s.area, tx: s.tx, ty: s.ty, ...(s.after ? { after: s.after } : {}) };
+  // A later quest's step names itself as the stage: <quest>:<step>.
+  if (s.kind === 'quest-step') return { kind: 'quest', stage: `${s.quest}:${s.step}` };
   if (s.kind === 'quest' || s.kind === 'gift') return { kind: s.kind, stage: s.stage, ...('from' in s && s.from ? { from: s.from, area: 'hearthwick' } : {}) };
   return { kind: s.kind, ...FIND_RULES[id] };
 }

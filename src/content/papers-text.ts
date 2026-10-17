@@ -221,6 +221,27 @@ export const PAPER_TEXTS: readonly PaperTextRecord[] = [
     "body": "**THE COOLEY WINDOW FUND**\n\n*Wenna's Script, Thirty-one years ago, Leaf-wick 17th (One week after the storm):*\nAllocated: One pint, hearth-grade. Ada will not shut her door. She put a lamp in the window for the twins. The Guild says we cannot spare the oil for a private grief. I told the Guild to bill my own stipend. If a mother wants to hold her front step still for her children, the Keepers of this road will not be the ones to make it drift.\n\n*Wenna's Script, Twenty years ago:*\nAldo brought two extra drops of amber from the mill's share. Orrin quietly paid for the wicks. The village is paying for the Cooley window now. Nobody speaks of it.\n\n*Mara's Script, Today:*\nAllocated: One pint, hearth-grade.\nShe is eighty-eight now. She still trims it every twilight. Finn Tolley dropped off the amber this morning, paid in full from the mill. I logged it as 'Commons Lighting' so the Hall doesn't ask questions. We leave one for Ada. We always leave one for Ada."
   },
   {
+    "id": "the-form-of-a-naming",
+    "title": "The Form of a Naming",
+    "description": "Wenna’s rule for naming a lamp from parts, copied out of the ledger by Mara.",
+    "collection": "Voices of the Drift: Found Texts of Hearthwick and the Lantern Road",
+    "meta": [
+      {
+        "label": "Author",
+        "value": "Keeper Wenna Hale, copied out by Mara Hale"
+      },
+      {
+        "label": "Date",
+        "value": "Before the Closure. The copy is new; the ink is still tacky."
+      },
+      {
+        "label": "Material",
+        "value": "Two ledger leaves in Mara's hand, from the middle pages of the Ashwatch ledger."
+      }
+    ],
+    "body": "A lamp is named so a stranger can find their way by it. Not after anyone. Not for anyone. A name nobody can read in the dark is no use.\n\nSay where it stands in the line. Say what it stands by: something real, that a walker can see from the stone. Say what is behind them and what is ahead. Then close it.\n\n*You are the first lamp past the Whitequiet. Behind you the road; ahead the old shrine. Hold fast.*\n\nThat is the first stone north of the quiet, and the first I cut. Use the same order every time, so a tired carter can say it without thinking.\n\nClosings, three only: *Keep the weave tight.* *Hold fast.* *Stay.* Nan wants a fourth. Nan may cut her own stones.\n\nCut it once. A lamp that goes dark keeps its name. Whoever lights it again reads it, and does not cut over it.\n\n*Under it, in Mara's hand:* She wrote \"Noted\" in the margin every time a lamp was named. I've started doing the same. — M.H."
+  },
+  {
     "id": "keepers-twists-recipe-card",
     "title": "Recipe Card: Keeper’s Twists",
     "description": "Hazel Penhallow’s bakery card, and the note about a boy who liked the ends burnt.",

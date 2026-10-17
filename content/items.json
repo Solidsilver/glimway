@@ -1357,22 +1357,6 @@
           "cap": 3,
           "label": "Buy a flask of hearth oil · 4 glims",
           "line": "Rendered from Wick Tree amber, the sap gone hard. One flask keeps a lot lantern burning a wick."
-        },
-        {
-          "item": "recipe-homing-turncap",
-          "qty": 1,
-          "glims": 3,
-          "cap": 1,
-          "label": "Buy the homing turncap recipe · 3 glims",
-          "line": "Turncap set in amber. It leans for home long after it's dry. Make one before you go far."
-        },
-        {
-          "item": "recipe-lamp-ash-pouch",
-          "qty": 1,
-          "glims": 3,
-          "cap": 1,
-          "label": "Buy the lamp-ash pouch recipe · 3 glims",
-          "line": "Ash from a lamp remembers where it burned. Bind the pouch at a lamp and it brings you back."
         }
       ]
     }

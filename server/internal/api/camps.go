@@ -157,6 +157,9 @@ func campView(ctx context.Context, tx *sql.Tx, c *camp, caller string) (*contrac
 	if v.Builder, err = campBuilder(ctx, tx, c, caller); err != nil {
 		return nil, err
 	}
+	if v.Naming, err = lampNaming(ctx, tx, c.World, c.ID); err != nil {
+		return nil, err
+	}
 	pieces, owners, err := campPieces(ctx, tx, c.ID)
 	if err != nil {
 		return nil, err
@@ -223,7 +226,7 @@ func (a *Server) campsRead(w http.ResponseWriter, r *http.Request) error {
 	return a.finishRead(w, r, tx, s, out)
 }
 
-// campOp is POST /api/camps: set, fill, place, remove or plant.
+// campOp is POST /api/camps: set, fill, place, remove, plant or name.
 func (a *Server) campOp(w http.ResponseWriter, r *http.Request) error {
 	req := &contract.CampRequest{}
 	if err := decodeOp(w, r, req); err != nil {
@@ -234,6 +237,7 @@ func (a *Server) campOp(w http.ResponseWriter, r *http.Request) error {
 			return nil, err
 		}
 		var c *camp
+		var given []string
 		var err error
 		switch req.Action {
 		case "set":
@@ -244,13 +248,15 @@ func (a *Server) campOp(w http.ResponseWriter, r *http.Request) error {
 			c, err = a.buildAtCamp(ctx, tx, s, req, now)
 		case "remove":
 			c, err = a.removeFromCamp(ctx, tx, s, req, now)
+		case "name":
+			c, given, err = a.nameCamp(ctx, tx, s, req, now)
 		default:
 			err = fail(400, "invalid-request")
 		}
 		if err != nil {
 			return nil, err
 		}
-		out := &contract.CampResult{}
+		out := &contract.CampResult{Given: given}
 		if c != nil {
 			if c, err = campByID(ctx, tx, s.WorldID, c.ID); err != nil {
 				return nil, err
@@ -298,9 +304,14 @@ func takeOil(ctx context.Context, tx *sql.Tx, account, ref string, now int64) er
 
 // setWayLamp sets a carried way-lamp at a tile with its first flask of oil:
 // the chunk becomes a camp, held as it stands this wick. Not on a lot's
-// backland (its lantern's), the town, the Tangle or another camp.
+// backland (its lantern's), the town, the Tangle or another camp. Setting
+// a Built way-lamp takes the Keeper's hand (lamps.md 2.8); a communal post
+// takes nothing, and camps set before stand as they are.
 func (a *Server) setWayLamp(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contract.CampRequest, now int64) (*camp, error) {
 	rules := content.HomeRules.GetWayLamp()
+	if !questHasMark(s, keeperHand) {
+		return nil, fail(409, "needs-keeper")
+	}
 	def, err := carriedPiece(ctx, tx, s.AccountID, req.ItemId)
 	if err != nil {
 		return nil, err

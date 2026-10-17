@@ -28,6 +28,8 @@ type (
 	MaterialBill    = contentv1.MaterialBill
 	HomeItem        = contentv1.HomeItem
 	HomesteadStable = contentv1.HomesteadStable
+	LampNamingRules = contentv1.LampNamingRules
+	NamingWord      = contentv1.NamingWord
 )
 
 // DecodeHomestead reads homestead JSON into the generated types, refusing
@@ -239,6 +241,26 @@ func validateHomestead(h *Homestead) error {
 	for m, n := range s.GetGrowth() {
 		if _, ok := s.GetStallCost()[m]; !ok || n < 0 {
 			return fmt.Errorf("invalid homestead: stable growth %s", m)
+		}
+	}
+	return validNaming(h.GetLampNaming())
+}
+
+// validNaming: each list of naming parts has unique ids, and no side
+// phrase shares a fallback landmark's id (behind and ahead take either).
+func validNaming(n *LampNamingRules) error {
+	for _, list := range [][]*NamingWord{n.GetOrdinals(), n.GetRelations(), n.GetFallbacks(), n.GetSides(), n.GetClosings()} {
+		seen := map[string]bool{}
+		for _, w := range list {
+			if seen[w.GetId()] {
+				return fmt.Errorf("invalid homestead: naming part %s twice", w.GetId())
+			}
+			seen[w.GetId()] = true
+		}
+	}
+	for _, s := range n.GetSides() {
+		if slices.ContainsFunc(n.GetFallbacks(), func(f *NamingWord) bool { return f.GetId() == s.GetId() }) {
+			return fmt.Errorf("invalid homestead: naming side %s is a landmark", s.GetId())
 		}
 	}
 	return nil

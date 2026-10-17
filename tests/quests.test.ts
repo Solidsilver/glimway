@@ -70,11 +70,12 @@ test('the tree: kebab-case ids, short goals, small glim grants, items that exist
       for (const g of s.give ?? []) assert.ok(known.has(g.def), `${q.id}:${s.id} gives unknown ${g.def}`);
       if (s.gate?.item) assert.ok(known.has(s.gate.item.def), `${q.id}:${s.id} takes unknown ${s.gate.item.def}`);
       // Spots, areas, `with`, `give` and the `world`/`project` refusal are A's loader's checks (src/lib/story-tables.ts).
-      assert.ok(s.where || s.do && 'sync' in s.do, `${q.id}:${s.id} has somewhere for the needle (or is done in your own day)`);
+      // A Keeper's flag step happens out in the Wilds, which have no content area: the server's keeper: mark is its place.
+      assert.ok(s.where || s.do && ('sync' in s.do || ('flag' in s.do && s.do.flag.startsWith('keeper:'))), `${q.id}:${s.id} has somewhere for the needle (or is done in your own day, or by a Keeper in the Wilds)`);
     }
     for (const ref of q.after ?? []) assert.ok(ref.includes(':') ? parseRef(ref) : questById(ref), `${q.id} after ${ref}`);
   }
-  assert.deepEqual([...ids].sort(), ['a-line-in-the-race', 'lantern-road', 'seat-by-the-lamp', 'set-to-rise', 'signpost', 'stuck-hoist', 'your-own-day']);
+  assert.deepEqual([...ids].sort(), ['a-line-in-the-race', 'keepers-hand', 'lantern-road', 'seat-by-the-lamp', 'set-to-rise', 'signpost', 'stuck-hoist', 'your-own-day']);
 });
 
 test('the lantern road keeps 0.3’s step ids and every grant row (028’s gift outcomes read them)', () => {
@@ -133,7 +134,7 @@ test('every dialogue rule names a real quest step (or a quest not started)', () 
 test('a new save sees the opening, and nothing else until it’s done', () => {
   const needs = { habitica: false };
   const status = Object.fromEntries(QUESTS.map((q) => [q.id, questStatus(q, {}, needs)]));
-  assert.deepEqual(status, { signpost: 'open', 'lantern-road': 'hidden', 'your-own-day': 'hidden', 'set-to-rise': 'hidden', 'stuck-hoist': 'hidden', 'seat-by-the-lamp': 'hidden', 'a-line-in-the-race': 'hidden' });
+  assert.deepEqual(status, { signpost: 'open', 'lantern-road': 'hidden', 'your-own-day': 'hidden', 'set-to-rise': 'hidden', 'stuck-hoist': 'hidden', 'seat-by-the-lamp': 'hidden', 'a-line-in-the-race': 'hidden', 'keepers-hand': 'hidden' });
   assert.equal(nextStep(questById('signpost')!, {})!.id, 'meet-orrin');
 });
 
@@ -171,12 +172,14 @@ test('rooms read as themselves on the HUD and the area card, not as their ids', 
   assert.equal(areaInfo('in:home:12').name, 'Cottage');
 });
 
-test('the road’s goal: the opening, then the lantern road, then wander', () => {
+test('the road’s goal: the opening, the lantern road, the Keeper’s hand, then wander', () => {
   assert.equal(roadGoal({}).short, 'See what Orrin’s grumbling about');
   assert.equal(roadQuest(DONE_OPENING)!.id, 'lantern-road');
   assert.equal(roadGoal(DONE_OPENING).short, 'Hear Mara out about the road');
   assert.equal(roadGoal({ ...DONE_OPENING, 'lantern-road': 'clue-found' }).short, 'Settle the stone warden');
-  assert.match(roadGoal({ ...DONE_OPENING, 'lantern-road': 'complete' }).short, /Wander/);
+  assert.equal(roadGoal({ ...DONE_OPENING, 'lantern-road': 'complete' }).short, 'Hear Mara out about the ledger');
+  assert.equal(roadGoal({ ...DONE_OPENING, 'lantern-road': 'complete', 'keepers-hand': 'hear-mara' }).short, 'Copy the cut past the Whitequiet');
+  assert.match(roadGoal({ ...DONE_OPENING, 'lantern-road': 'complete', 'keepers-hand': 'keep-a-lamp' }).short, /Wander/);
   assert.equal(roadStep({ quests: {} }), 'new');
   assert.equal(roadStep({ quests: { 'lantern-road': 'lantern-lit' } }), 'lantern-lit');
 });

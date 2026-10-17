@@ -34,24 +34,28 @@ message CommunalLampView {
   double lit_at = 9; bool visited = 10;
   LampNaming naming = 11;
 }
-// GET /api/communal-lamps: the world's lit communal lamps.
-message CommunalLampsRead { repeated CommunalLampView lamps = 1; }
+// GET /api/communal-lamps: the world's lit communal lamps, and cut_stone:
+// the Lantern Road stone whose cut the Keeper's-hand quest copies (lamps.md
+// 2.8), the first along the road past the Whitequiet. It is a function of
+// the world's seed, the same every wick.
+message CommunalLampsRead { repeated CommunalLampView lamps = 1; string cut_stone = 2; }
 
 // POST /api/communal-lamps: one communal-lamp operation, by action. Each
 // one that succeeds visits the lamp's chunk for this wick, even across a
-// seam from where the player stands.
+// seam from where the player stands (copy and read only look).
 //   relight: light the dark stone `lamp` (a lamp-stone site id), anyone.
 //   tend:    look after the lit lamp `lamp`, anyone (it only visits).
 //   post:    set the carried way-lamp item_id at tile (x, y) as a communal post.
 //   lift:    take your own post `lamp` back into your pack.
+//   copy:    copy the cut from the quest's stone `lamp` (the Keeper's hand).
+//   read:    read the lit lamp `lamp`'s naming.
+//   name:    give the lit lamp `lamp` its naming from `parts` (a Keeper).
 message CommunalLampRequest {
   OpHeader op = 1; Where where = 2;
   string action = 3; string lamp = 4; string item_id = 5;
   sint32 x = 6; sint32 y = 7;
+  repeated string parts = 8;
 }
-// The lamp after the operation (none: lifted) and the pack's material
-// balances.
-message CommunalLampResult { CommunalLampView lamp = 1; map<string,double> materials = 2; }
 
 // Ways home (roadmap 0.13; lamps.md 1.4). A lamp-ash pouch is bound to one
 // lamp by its stable id: a camp's way-lamp, or a communal lamp (a relit
@@ -86,3 +90,14 @@ message WaysHomeResult {
   string action = 1; WaysHomeBinding binding = 2;
   string area = 3; double x = 4; double y = 5;
 }
+// The lamp after the operation (none: lifted, or a stone's cut copied),
+// the pack's material balances, and what a naming gave (lamp ash, once).
+message CommunalLampResult { CommunalLampView lamp = 1; map<string,double> materials = 2; repeated string given = 3; }
+
+// A landmark a lamp may be named by (lamps.md 2.8): one the server found
+// near the lamp, or a fallback (the road, the Whitequiet). id is the part
+// id after "landmark:"; phrase how the naming says it ("the old shrine").
+message LampLandmark { string id = 1; string phrase = 2; }
+// GET /api/lamp-landmarks/<lamp>: the landmarks a naming of that lamp may
+// use, nearest first. The naming refuses any other.
+message LampLandmarksRead { repeated LampLandmark landmarks = 1; }

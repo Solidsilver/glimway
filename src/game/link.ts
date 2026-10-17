@@ -63,7 +63,7 @@ import type { HomeAction, HomeActionResponse, HomeOp, HomeView, ItemsOp, Commons
 import { contributeRequest, deskCopyRequest, hearthCraftRequest, homesteadRequest, itemsRequest, mailKeyedRequest, mailSendRequest, shelfRequest, storageRequest, craftRequest, type ItemsFields, type MailSendAction, type ShelfAction, type StorageMoveAction } from '../lib/api/requests.ts'
 import { EnvelopeSchema, PlayerStateSchema, PlayRequestSchema, type PlayerState } from '../lib/gen/glimway/v1/state_pb.js'
 import type { CampResult, CampsRead, RecoveryCollectResult, RecoveryRead } from '../lib/gen/glimway/v1/camps_pb.js'
-import type { CommunalLampResult, CommunalLampsRead, WaysHomeRead, WaysHomeResult } from '../lib/gen/glimway/v1/lamps_pb.js'
+import type { CommunalLampResult, CommunalLampsRead, LampLandmarksRead, WaysHomeRead, WaysHomeResult } from '../lib/gen/glimway/v1/lamps_pb.js'
 import { FallRequestSchema, MarkRequestSchema, ProfileReportSchema, QuestStepRequestSchema, SpendRequestSchema, TakePaperRequestSchema, type ProfileResult, type SettleEchoResult, type WildsClaimResult as WildsClaimProto, type WildsLanternResult as WildsLanternProto, type WildsClearResult, type WildsLayResult, type WildsLiftResult, type WildsDiscoverResult } from '../lib/gen/glimway/v1/operations_pb.js'
 import { ContributeRequestSchema, CraftRequestSchema, DeskCopyRequestSchema, HearthCraftRequestSchema, MailKeyedRequestSchema, MailSendRequestSchema, StorageMoveRequestSchema } from '../lib/gen/glimway/v1/village_pb.js'
 import { HomesteadRequestSchema, ShelfRequestSchema } from '../lib/gen/glimway/v1/homestead_pb.js'
@@ -2004,6 +2004,11 @@ export class Link {
   /** The world's lit communal lamps (GET /api/communal-lamps). */
   async communalLampsRead(): Promise<HomeRead<CommunalLampsRead>> {
     return this.read(() => this.api.run(() => this.ops.communalLamps()))
+  }
+
+  /** The landmarks a lamp may be named by (GET /api/lamp-landmarks/<lamp>). */
+  async lampLandmarksRead(lamp: string): Promise<HomeRead<LampLandmarksRead>> {
+    return this.read(() => this.api.run(() => this.ops.lampLandmarks(lamp)))
   }
 
   // ------------------------------------------------------------ ways home (lamps.md 1.4)

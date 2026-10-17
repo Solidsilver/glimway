@@ -783,6 +783,138 @@
           }
         }
       ]
+    },
+    {
+      "id": "keepers-hand",
+      "title": "A Keeper’s Hand",
+      "blurb": "Mara says the road isn’t held, not out past the Whitequiet. Wenna’s ledger knows how a lamp is kept.",
+      "line": "road",
+      "chapter": 2,
+      "after": [
+        "lantern-road"
+      ],
+      "start": {
+        "talk": "mara"
+      },
+      "steps": [
+        {
+          "id": "hear-mara",
+          "at": "hearthwick",
+          "items": [],
+          "marks": [],
+          "papers": [],
+          "glims": 0,
+          "witness": "",
+          "goal": "Hear Mara out about the ledger",
+          "objective": "Mara has the ledger open again in the square. Something about the road isn’t right.",
+          "where": {
+            "area": "hearthwick",
+            "npc": "mara"
+          },
+          "do": {
+            "talk": "mara"
+          },
+          "moment": {
+            "eyebrow": "Quest accepted",
+            "title": "A Keeper’s Hand"
+          }
+        },
+        {
+          "id": "copy-cut",
+          "at": "",
+          "items": [],
+          "marks": [],
+          "papers": [],
+          "glims": 0,
+          "witness": "",
+          "goal": "Copy the cut past the Whitequiet",
+          "objective": "Follow the Lantern Road north out of the Whitequiet. The first lamp stone beside it has words cut in its side. Copy them out.",
+          "do": {
+            "flag": "keeper:cut"
+          },
+          "note": {
+            "title": "The Cut",
+            "body": "Copied from the first lamp stone north of the Whitequiet, the letters worn shallow: ‘You are the first lamp past the Whitequiet. Behind you the road; ahead the old shrine. Hold fast.’ Under it, smaller: W.H."
+          },
+          "moment": {
+            "eyebrow": "Copied out",
+            "title": "The Cut"
+          }
+        },
+        {
+          "id": "check-ledger",
+          "at": "hearthwick",
+          "items": [],
+          "marks": [
+            "keeper:hand"
+          ],
+          "papers": [
+            "the-form-of-a-naming"
+          ],
+          "glims": 0,
+          "witness": "",
+          "goal": "Check the cut against the ledger",
+          "objective": "Take your copy of the cut back to Mara. She’ll want it beside the ledger.",
+          "where": {
+            "area": "hearthwick",
+            "npc": "mara"
+          },
+          "do": {
+            "talk": "mara"
+          },
+          "gate": {
+            "with": "mara"
+          },
+          "give": [
+            {
+              "def": "lamp-head",
+              "qty": 1
+            },
+            {
+              "def": "lamp-wick",
+              "qty": 1
+            },
+            {
+              "def": "recipe-homing-turncap",
+              "qty": 1
+            },
+            {
+              "def": "recipe-lamp-ash-pouch",
+              "qty": 1
+            }
+          ],
+          "note": {
+            "title": "Noted",
+            "body": "Mara found the same words in the middle pages of Wenna’s ledger and read them twice. ‘Noted.’ Then she wrote my name under them, as a Keeper’s hand."
+          },
+          "moment": {
+            "eyebrow": "Noted",
+            "title": "A Keeper’s Hand"
+          }
+        },
+        {
+          "id": "keep-a-lamp",
+          "at": "",
+          "items": [],
+          "marks": [],
+          "papers": [],
+          "glims": 2,
+          "witness": "",
+          "goal": "Light, tend or name a common lamp",
+          "objective": "Relight a dark road stone and give it a naming. If someone’s lit it already, tend it or read their naming. Either way counts.",
+          "do": {
+            "flag": "keeper:lamp"
+          },
+          "note": {
+            "title": "A Lamp Kept",
+            "body": "Saw to a common lamp out in the Wilds, by the form in Wenna’s ledger. Somebody walks by now and then, and it keeps."
+          },
+          "moment": {
+            "eyebrow": "One lamp kept",
+            "title": "A Keeper’s Hand"
+          }
+        }
+      ]
     }
   ]
 }

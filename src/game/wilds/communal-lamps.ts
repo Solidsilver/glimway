@@ -7,6 +7,11 @@
  * down. From the pack (EV.communalPost): set a carried way-lamp beside you
  * as a communal post.
  *
+ * The Keeper's hand (lamps.md 2.8): the quest's stone (the read's cut_stone)
+ * shows its cut, and once Mara asks, you copy it. A Keeper names a lamp
+ * from parts (EV.lampNamingOpen, answered on EV.lampNamed) or reads one
+ * someone else named; any of those, or tending, finishes the quest.
+ *
  * Read from GET /api/communal-lamps (no socket message carries them): on
  * walking into another chunk, every half minute, and after each of your own
  * lamp operations. Drawn for the chunks around the hero.
@@ -20,6 +25,8 @@ import { TERRAIN, TILE, tileFeet } from '../../lib/tile.ts'
 import { chunkOf } from '../../lib/wilds/coords.ts'
 import { loadWilds } from '../../lib/wilds/data.ts'
 import { homeErrorText } from '../../content/errors.ts'
+import { LAMP_NAMING } from '../../content/lamp-naming.ts'
+import { isKeeper } from '../../lib/lamp-naming.ts'
 import { bus, EV } from '../events.ts'
 import { openDialogue } from '../dialogue.ts'
 import { sfx } from '../sfx.ts'
@@ -58,15 +65,22 @@ export class WildsCommunalLamps {
   private reading = false
   private version = 0
   private busy = false
+  /** The Keeper's-hand quest's stone (the read's cut_stone). */
+  private cutStone = ''
 
   constructor(private scene: Phaser.Scene, private deps: CommunalLampsDeps) {
     const onPost = (d: { itemId: string }) => void this.post(d.itemId)
     const onStone = (d: { site: string }) => this.lookStone(d.site)
+    const onNamed = (d: { lamp: string; kind: string; parts: string[] | null }) => {
+      if (d.kind === 'communal' && d.parts) void this.act({ action: 'name', lamp: d.lamp, parts: d.parts }, () => bus.emit(EV.toast, { text: LAMP_NAMING.named, icon: 'lantern' }))
+    }
     bus.on(EV.communalPost, onPost)
     bus.on(EV.lampStoneLook, onStone)
+    bus.on(EV.lampNamed, onNamed)
     scene.events.once('shutdown', () => {
       bus.off(EV.communalPost, onPost)
       bus.off(EV.lampStoneLook, onStone)
+      bus.off(EV.lampNamed, onNamed)
       this.clear()
       deps.interactables.register(this, [])
     })
@@ -100,7 +114,10 @@ export class WildsCommunalLamps {
     this.reading = true
     try {
       const r = await link.communalLampsRead()
-      if (r.ok) this.adopt(r.value.lamps)
+      if (r.ok) {
+        this.cutStone = r.value.cutStone
+        this.adopt(r.value.lamps)
+      }
     } finally {
       this.reading = false
     }
@@ -138,7 +155,7 @@ export class WildsCommunalLamps {
         const body = solidBox(this.scene, at.x, at.y - TILE / 2, TILE - 6, TILE - 6)
         this.deps.solids.add(body)
         this.bodies.push(body)
-        points.push({ ...wildsPoint(`communal-lamp:${l.id}`, at, 30, () => ({ label: `Look at the ${communalLampName(l).toLowerCase()}`, verb: 'Look', claim: () => this.look(l.id) })), rank: 0 })
+        points.push({ ...wildsPoint(`communal-lamp:${l.id}`, at, 30, () => ({ label: l.naming?.shortName ? `Look at ${l.naming.shortName}` : `Look at the ${communalLampName(l).toLowerCase()}`, verb: 'Look', claim: () => this.look(l.id) })), rank: 0 })
       }
       // Its light: over the stone's soot-dark niche, or the post's lamp.
       const glow = this.scene.add.image(at.x, at.y - (l.kind === 'stone' ? 26 : 22), 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(LAMPLIGHT).setScale(0.55).setAlpha(0.8).setDepth(4001)
@@ -155,6 +172,20 @@ export class WildsCommunalLamps {
     return itemsFor(this.deps.session).view?.stacks.filter((x) => x.itemDef === def).reduce((n, x) => n + x.qty, 0) ?? 0
   }
 
+  private get keeper(): boolean {
+    return isKeeper(this.deps.session.state.flags)
+  }
+
+  /** Mara has asked for this stone's cut, and it isn't copied yet. */
+  private wantsCut(site: string): boolean {
+    return site === this.cutStone && this.deps.session.quests['keepers-hand'] === 'hear-mara'
+  }
+
+  /** The cut, on the quest's stone; nothing on any other. */
+  private cutLines(site: string): string[] {
+    return site === this.cutStone ? [...LAMP_NAMING.cutLines] : []
+  }
+
   /** A road stone: lit (tend it), or dark (light it). */
   lookStone(site: string): void {
     const lit = litStone(this.lamps, site)
@@ -163,9 +194,10 @@ export class WildsCommunalLamps {
     const ok = canRelight(this.wicksCarried())
     const choices: DialogueChoice[] = [
       { text: cost ? `Light it with ${cost}` : 'Light it', action: `communal-lamp:relight:${site}`, disabled: !ok, ...(ok ? {} : { note: 'You need a lamp wick' }) },
+      ...(this.wantsCut(site) ? [{ ...LAMP_NAMING.copy, action: `communal-lamp:copy:${site}` }] : []),
       { text: 'Leave it' }
     ]
-    openDialogue({ id: 'communal-lamp', speaker: 'Lamp stone', lines: darkStoneLines(loadWilds().words.lampStone), choices })
+    openDialogue({ id: 'communal-lamp', speaker: 'Lamp stone', lines: [...darkStoneLines(loadWilds().words.lampStone), ...this.cutLines(site)], choices })
   }
 
   /** A lit lamp: its naming or label, who lit it, the coming turning; tend it, or take your post down. */
@@ -173,17 +205,37 @@ export class WildsCommunalLamps {
     const l = this.lamps.find((x) => x.id === id)
     if (!l) return
     const choices: DialogueChoice[] = [{ text: 'Tend it', note: 'Trim the wick: your visit counts this wick', action: `communal-lamp:tend:${l.id}` }]
+    if (this.wantsCut(l.id)) choices.push({ ...LAMP_NAMING.copy, action: `communal-lamp:copy:${l.id}` })
+    if (this.keeper && !l.naming) choices.push({ ...LAMP_NAMING.name, action: `communal-lamp:name:${l.id}` })
+    if (this.keeper && l.naming) choices.push({ ...LAMP_NAMING.read, action: `communal-lamp:read:${l.id}` })
     if (canLift(l, this.me)) choices.push({ text: 'Take your lamp down', note: 'It goes back in your pack', action: `communal-lamp:lift:${l.id}` })
     choices.push({ text: 'Leave it' })
-    openDialogue({ id: 'communal-lamp', speaker: communalLampName(l), lines: communalLampLines(l, this.me), choices })
+    // A named stone shows its naming; the quest's stone shows Wenna's cut beside it.
+    openDialogue({ id: 'communal-lamp', speaker: communalLampName(l), lines: [...communalLampLines(l, this.me), ...this.cutLines(l.id)], choices })
   }
 
   /** A choice picked in a lamp's talk (WorldActions routes `communal-lamp:` here). */
   onAction(rest: string): void {
     const i = rest.indexOf(':')
     const what = rest.slice(0, i), id = rest.slice(i + 1)
-    if (!id || (what !== 'relight' && what !== 'tend' && what !== 'lift')) return
+    if (!id) return
+    if (what === 'name') return void this.beginNaming(id)
+    if (what === 'copy') return void this.act({ action: 'copy', lamp: id }, () => bus.emit(EV.toast, { text: LAMP_NAMING.copied, icon: 'bag' }))
+    if (what === 'read') return void this.act({ action: 'read', lamp: id }, () => bus.emit(EV.toast, { text: LAMP_NAMING.readDone, icon: 'lantern' }))
+    if (what !== 'relight' && what !== 'tend' && what !== 'lift') return
     void this.act({ action: what, lamp: id }, () => bus.emit(EV.toast, { text: COMMUNAL_LAMP_DONE[what], icon: 'lantern' }))
+  }
+
+  /** A Keeper's naming: the landmarks around this lamp, then the panel (answered on EV.lampNamed). */
+  private async beginNaming(id: string): Promise<void> {
+    const link = this.deps.session.link
+    if (!link) return
+    const r = await link.lampLandmarksRead(id)
+    if (!r.ok) {
+      bus.emit(EV.toast, { text: COMMUNAL_LAMP_ERRORS[r.code] ?? homeErrorText(r.code), icon: 'glim', kind: 'error' })
+      return
+    }
+    bus.emit(EV.lampNamingOpen, { lamp: id, kind: 'communal', landmarks: r.value.landmarks.map((m) => ({ id: m.id, phrase: m.phrase })) })
   }
 
   // ------------------------------------------------------------ doing
@@ -206,19 +258,19 @@ export class WildsCommunalLamps {
     await this.act({ action: 'post', itemId, x: spot.tx, y: spot.ty }, () => bus.emit(EV.toast, { text: COMMUNAL_LAMP_DONE.post, icon: 'lantern' }))
   }
 
-  private async act(fields: { action: string; lamp?: string; itemId?: string; x?: number; y?: number }, then?: () => void): Promise<void> {
+  private async act(fields: { action: string; lamp?: string; itemId?: string; x?: number; y?: number; parts?: string[] }, then?: () => void): Promise<void> {
     const link = this.deps.session.link
     if (!link || this.busy) return
     this.busy = true
     this.deps.notePosition()
     try {
-      const r = await link.communalLamp({ lamp: '', itemId: '', x: 0, y: 0, ...fields })
+      const r = await link.communalLamp({ lamp: '', itemId: '', x: 0, y: 0, parts: [], ...fields })
       if (!r.ok) {
         sfx('fizzle')
         bus.emit(EV.toast, { text: COMMUNAL_LAMP_ERRORS[r.code] ?? homeErrorText(r.code), icon: 'glim', kind: 'error' })
         return
       }
-      sfx(fields.action === 'lift' ? 'pop' : 'lantern')
+      sfx(fields.action === 'lift' || fields.action === 'copy' ? 'pop' : 'lantern')
       void itemsFor(this.deps.session).load()
       if (fields.action === 'post' || fields.action === 'lift') void homesteadsFor(this.deps.session).load()
       const l = r.result.lamp ?? null

@@ -16,6 +16,7 @@
   import { HOMESTEAD_DATA, homeItem, plantTileNear } from '../lib/homestead'
   import { backlandAtPixel, inBackland, lotOrigin, lotAtPixel } from '../lib/lots'
   import { campAtTile } from '../lib/camps'
+  import { isKeeper } from '../lib/lamp-naming'
   import { campsKnown as camps } from '../game/wilds/camps-state'
   import { ui } from './store.svelte'
   import { home } from './home.svelte'
@@ -608,11 +609,13 @@
   {#if e.kind === 'decoration'}<small class="where">{where(e)}</small>{/if}
   {#if model && e.section === 'main' && (lampSettable(e) || campSettable(e))}
     <span class="acts">
-      {#if lampSettable(e)}<button type="button" class="act primary" data-act="set-lamp" disabled={action.busy !== null} onclick={() => setAtCamp(e, 'set')}>{inventoryCopy.actions.setLamp}</button>{/if}
+      <!-- A camp's Built lamp takes the Keeper's hand; a communal one takes nothing (lamps.md 2.8). -->
+      {#if lampSettable(e)}<button type="button" class="act primary" data-act="set-lamp" disabled={action.busy !== null || !isKeeper(session.state.flags)} title={isKeeper(session.state.flags) ? undefined : inventoryCopy.keeperNote} onclick={() => setAtCamp(e, 'set')}>{inventoryCopy.actions.setLamp}</button>{/if}
       {#if lampSettable(e)}<button type="button" class="act" data-act="set-communal-lamp" disabled={action.busy !== null} onclick={() => setCommunal(e)}>{inventoryCopy.actions.setCommunal}</button>{/if}
       {#if campSettable(e)}<button type="button" class="act primary" data-act="set-out" disabled={action.busy !== null} onclick={() => setAtCamp(e, 'place')}>{inventoryCopy.actions.setOut}</button>{/if}
     </span>
   {/if}
+  {#if model && e.section === 'main' && lampSettable(e) && !isKeeper(session.state.flags)}<small class="rule">{inventoryCopy.keeperNote}</small>{/if}
   {#if e.section === 'road'}<small class="rule">{inventoryCopy.roadNote}</small>{/if}
   {#if !full && model && e.section === 'main' && e.kind !== 'decoration' && e.kind !== 'material'}
     <small class="rule pick-hint">{inventoryCopy.pickToAct}</small>

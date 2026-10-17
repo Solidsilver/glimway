@@ -184,6 +184,10 @@ export const HOME_ERRORS: Table = {
   'lamp-lit': 'Someone’s already lit it. It’s burning.',
   'not-common': 'A communal lamp goes on open common ground: not in town, the Tangle, a lot’s backland or a camp.',
   'not-your-lamp': 'That lamp’s someone else’s to take down. Leave it burning.',
+  // The Keeper's hand (roadmap 0.13).
+  'needs-keeper': 'That wants a Keeper’s hand. Mara keeps the ledger; ask her about the road.',
+  'lamp-named': 'It has its naming already. A lamp keeps the one it was given.',
+  'invalid-naming': 'That naming doesn’t hold together. Pick each part again from what’s offered.',
   resolved: 'Your last order with Silas went through after all. Check what you have before trying again.',
   pending: 'No answer yet — it may have gone through. We’ll find out when the connection is back; nothing will be charged twice.'
 }

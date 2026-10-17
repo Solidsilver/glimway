@@ -141,7 +141,10 @@ export declare type CommunalLampViewValid = CommunalLampView;
 export declare const CommunalLampViewSchema: GenMessage<CommunalLampView, {validType: CommunalLampViewValid}>;
 
 /**
- * GET /api/communal-lamps: the world's lit communal lamps.
+ * GET /api/communal-lamps: the world's lit communal lamps, and cut_stone:
+ * the Lantern Road stone whose cut the Keeper's-hand quest copies (lamps.md
+ * 2.8), the first along the road past the Whitequiet. It is a function of
+ * the world's seed, the same every wick.
  *
  * @generated from message glimway.v1.CommunalLampsRead
  */
@@ -150,6 +153,11 @@ export declare type CommunalLampsRead = Message<"glimway.v1.CommunalLampsRead"> 
    * @generated from field: repeated glimway.v1.CommunalLampView lamps = 1;
    */
   lamps: CommunalLampView[];
+
+  /**
+   * @generated from field: string cut_stone = 2;
+   */
+  cutStone: string;
 };
 
 export declare type CommunalLampsReadValid = CommunalLampsRead;
@@ -163,11 +171,14 @@ export declare const CommunalLampsReadSchema: GenMessage<CommunalLampsRead, {val
 /**
  * POST /api/communal-lamps: one communal-lamp operation, by action. Each
  * one that succeeds visits the lamp's chunk for this wick, even across a
- * seam from where the player stands.
+ * seam from where the player stands (copy and read only look).
  *   relight: light the dark stone `lamp` (a lamp-stone site id), anyone.
  *   tend:    look after the lit lamp `lamp`, anyone (it only visits).
  *   post:    set the carried way-lamp item_id at tile (x, y) as a communal post.
  *   lift:    take your own post `lamp` back into your pack.
+ *   copy:    copy the cut from the quest's stone `lamp` (the Keeper's hand).
+ *   read:    read the lit lamp `lamp`'s naming.
+ *   name:    give the lit lamp `lamp` its naming from `parts` (a Keeper).
  *
  * @generated from message glimway.v1.CommunalLampRequest
  */
@@ -206,6 +217,11 @@ export declare type CommunalLampRequest = Message<"glimway.v1.CommunalLampReques
    * @generated from field: sint32 y = 7;
    */
   y: number;
+
+  /**
+   * @generated from field: repeated string parts = 8;
+   */
+  parts: string[];
 };
 
 export declare type CommunalLampRequestValid = CommunalLampRequest;
@@ -215,32 +231,6 @@ export declare type CommunalLampRequestValid = CommunalLampRequest;
  * Use `create(CommunalLampRequestSchema)` to create a new message.
  */
 export declare const CommunalLampRequestSchema: GenMessage<CommunalLampRequest, {validType: CommunalLampRequestValid}>;
-
-/**
- * The lamp after the operation (none: lifted) and the pack's material
- * balances.
- *
- * @generated from message glimway.v1.CommunalLampResult
- */
-export declare type CommunalLampResult = Message<"glimway.v1.CommunalLampResult"> & {
-  /**
-   * @generated from field: glimway.v1.CommunalLampView lamp = 1;
-   */
-  lamp?: CommunalLampView | undefined;
-
-  /**
-   * @generated from field: map<string, double> materials = 2;
-   */
-  materials: { [key: string]: number };
-};
-
-export declare type CommunalLampResultValid = CommunalLampResult;
-
-/**
- * Describes the message glimway.v1.CommunalLampResult.
- * Use `create(CommunalLampResultSchema)` to create a new message.
- */
-export declare const CommunalLampResultSchema: GenMessage<CommunalLampResult, {validType: CommunalLampResultValid}>;
 
 /**
  * Ways home (roadmap 0.13; lamps.md 1.4). A lamp-ash pouch is bound to one
@@ -401,4 +391,83 @@ export declare type WaysHomeResultValid = WaysHomeResult;
  * Use `create(WaysHomeResultSchema)` to create a new message.
  */
 export declare const WaysHomeResultSchema: GenMessage<WaysHomeResult, {validType: WaysHomeResultValid}>;
+
+/**
+ * The lamp after the operation (none: lifted, or a stone's cut copied),
+ * the pack's material balances, and what a naming gave (lamp ash, once).
+ *
+ * @generated from message glimway.v1.CommunalLampResult
+ */
+export declare type CommunalLampResult = Message<"glimway.v1.CommunalLampResult"> & {
+  /**
+   * @generated from field: glimway.v1.CommunalLampView lamp = 1;
+   */
+  lamp?: CommunalLampView | undefined;
+
+  /**
+   * @generated from field: map<string, double> materials = 2;
+   */
+  materials: { [key: string]: number };
+
+  /**
+   * @generated from field: repeated string given = 3;
+   */
+  given: string[];
+};
+
+export declare type CommunalLampResultValid = CommunalLampResult;
+
+/**
+ * Describes the message glimway.v1.CommunalLampResult.
+ * Use `create(CommunalLampResultSchema)` to create a new message.
+ */
+export declare const CommunalLampResultSchema: GenMessage<CommunalLampResult, {validType: CommunalLampResultValid}>;
+
+/**
+ * A landmark a lamp may be named by (lamps.md 2.8): one the server found
+ * near the lamp, or a fallback (the road, the Whitequiet). id is the part
+ * id after "landmark:"; phrase how the naming says it ("the old shrine").
+ *
+ * @generated from message glimway.v1.LampLandmark
+ */
+export declare type LampLandmark = Message<"glimway.v1.LampLandmark"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string phrase = 2;
+   */
+  phrase: string;
+};
+
+export declare type LampLandmarkValid = LampLandmark;
+
+/**
+ * Describes the message glimway.v1.LampLandmark.
+ * Use `create(LampLandmarkSchema)` to create a new message.
+ */
+export declare const LampLandmarkSchema: GenMessage<LampLandmark, {validType: LampLandmarkValid}>;
+
+/**
+ * GET /api/lamp-landmarks/<lamp>: the landmarks a naming of that lamp may
+ * use, nearest first. The naming refuses any other.
+ *
+ * @generated from message glimway.v1.LampLandmarksRead
+ */
+export declare type LampLandmarksRead = Message<"glimway.v1.LampLandmarksRead"> & {
+  /**
+   * @generated from field: repeated glimway.v1.LampLandmark landmarks = 1;
+   */
+  landmarks: LampLandmark[];
+};
+
+export declare type LampLandmarksReadValid = LampLandmarksRead;
+
+/**
+ * Describes the message glimway.v1.LampLandmarksRead.
+ * Use `create(LampLandmarksReadSchema)` to create a new message.
+ */
+export declare const LampLandmarksReadSchema: GenMessage<LampLandmarksRead, {validType: LampLandmarksReadValid}>;
 

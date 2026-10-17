@@ -138,6 +138,7 @@ func (x *rig) itemAt(id string) (location string, camp *string) {
 func TestCampSetFillAndAccess(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
+	x.keeper(s.AccountID) // setting a way-lamp takes the Keeper's hand
 	bc, bs := x.member("bob", s.WorldID)
 	lamp := x.carry(s.AccountID, "way-lamp")
 	spots := x.campSpots(s.WorldID, campCX, campCY)
@@ -181,6 +182,7 @@ func TestCampSetFillAndAccess(t *testing.T) {
 	// Another camp can't share the chunk.
 	other := x.carry(bs.AccountID, "way-lamp")
 	x.stack(bs.AccountID, "hearth-oil", "", 4)
+	x.keeper(bs.AccountID)
 	if _, code := set(bc, bs, other, spots[3], spots[4], 409); code != "cannot-hold" {
 		t.Fatalf("a second camp: %s", code)
 	}
@@ -246,6 +248,7 @@ func TestCampSetFillAndAccess(t *testing.T) {
 func TestCampBurnsDimsAndLapsesIntoPellsCrate(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
+	x.keeper(s.AccountID) // setting a way-lamp takes the Keeper's hand
 	bc, bs := x.member("bob", s.WorldID)
 	spots := x.campSpots(s.WorldID, campCX, campCY)
 	at, stand := spots[0], spots[1]
@@ -355,6 +358,7 @@ func TestCampBurnsDimsAndLapsesIntoPellsCrate(t *testing.T) {
 func TestCampTopUpWhileDimmingAndTakeDown(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
+	x.keeper(s.AccountID) // setting a way-lamp takes the Keeper's hand
 	spots := x.campSpots(s.WorldID, campCX, campCY)
 	at, stand := spots[0], spots[1]
 	lamp := x.carry(s.AccountID, "way-lamp")

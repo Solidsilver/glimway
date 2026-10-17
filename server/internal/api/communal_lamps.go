@@ -148,6 +148,9 @@ func (a *Server) communalLampsRead(w http.ResponseWriter, r *http.Request) error
 		return err
 	}
 	out := &contract.CommunalLampsRead{Lamps: []*contract.CommunalLampView{}}
+	if out.CutStone, err = a.cutStone(ctx, tx, s.WorldID, now); err != nil {
+		return err
+	}
 	for i := range all {
 		v, err := communalLampView(ctx, tx, &all[i], now)
 		if err != nil {
@@ -158,7 +161,8 @@ func (a *Server) communalLampsRead(w http.ResponseWriter, r *http.Request) error
 	return a.finishRead(w, r, tx, s, out)
 }
 
-// communalLampOp is POST /api/communal-lamps: relight, tend, post or lift.
+// communalLampOp is POST /api/communal-lamps: relight, tend, post or lift;
+// copy the quest stone's cut, read a lamp, or name it (lamp_naming.go).
 func (a *Server) communalLampOp(w http.ResponseWriter, r *http.Request) error {
 	req := &contract.CommunalLampRequest{}
 	if err := decodeOp(w, r, req); err != nil {
@@ -169,6 +173,7 @@ func (a *Server) communalLampOp(w http.ResponseWriter, r *http.Request) error {
 			return nil, err
 		}
 		var l *communalLamp
+		var given []string
 		var err error
 		switch req.Action {
 		case "relight":
@@ -179,13 +184,23 @@ func (a *Server) communalLampOp(w http.ResponseWriter, r *http.Request) error {
 			l, err = a.setCommunalPost(ctx, tx, s, req, now)
 		case "lift":
 			err = liftCommunalPost(ctx, tx, s, req, now)
+		case "copy":
+			err = a.copyCut(ctx, tx, s, req, now)
+		case "read":
+			l, err = readLamp(ctx, tx, s, req)
+		case "name":
+			l, given, err = a.nameCommunalLamp(ctx, tx, s, req, now)
 		default:
 			err = fail(400, "invalid-request")
 		}
 		if err != nil {
 			return nil, err
 		}
-		out := &contract.CommunalLampResult{}
+		// A Keeper seeing to a lamp (not lifting one) is the quest's last step.
+		if l != nil {
+			keeperSaw(s)
+		}
+		out := &contract.CommunalLampResult{Given: given}
 		if l != nil {
 			if l, err = communalLampByID(ctx, tx, s.WorldID, l.ID); err != nil {
 				return nil, err

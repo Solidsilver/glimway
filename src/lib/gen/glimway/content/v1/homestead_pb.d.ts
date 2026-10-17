@@ -138,6 +138,13 @@ export declare type Homestead = Message<"glimway.content.v1.Homestead"> & {
    * @generated from field: glimway.content.v1.CommunalLamp communal_lamp = 17;
    */
   communalLamp?: CommunalLamp | undefined;
+
+  /**
+   * Naming a lamp from parts (lamps.md 2.8).
+   *
+   * @generated from field: glimway.content.v1.LampNamingRules lamp_naming = 18;
+   */
+  lampNaming?: LampNamingRules | undefined;
 };
 
 /**
@@ -268,6 +275,13 @@ export declare type HomesteadValid = Message<"glimway.content.v1.Homestead"> & {
    * @generated from field: glimway.content.v1.CommunalLamp communal_lamp = 17;
    */
   communalLamp: CommunalLampValid;
+
+  /**
+   * Naming a lamp from parts (lamps.md 2.8).
+   *
+   * @generated from field: glimway.content.v1.LampNamingRules lamp_naming = 18;
+   */
+  lampNaming: LampNamingRulesValid;
 };
 
 /**
@@ -309,6 +323,99 @@ export declare type CommunalLampValid = CommunalLamp;
  * Use `create(CommunalLampSchema)` to create a new message.
  */
 export declare const CommunalLampSchema: GenMessage<CommunalLamp, {validType: CommunalLampValid}>;
+
+/**
+ * Naming a lamp from parts (lamps.md 2.8), never free text: "You are the
+ * <ordinal> lamp <relation> <landmark>. Behind you <behind>; ahead <ahead>.
+ * <closing>" and the short name "<Ordinal> lamp <relation> <landmark>". A
+ * landmark is one the server finds near the lamp (a place's landmark by
+ * its kind, a site by its kind, within one chunk of the lamp's) or a
+ * fallback, always offered; behind and ahead are a side phrase or an
+ * offered landmark. A lamp's first naming gives ash_qty of `ash`, once.
+ * Ids are unique within each list, and no side shares a fallback's id
+ * (code rules).
+ *
+ * @generated from message glimway.content.v1.LampNamingRules
+ */
+export declare type LampNamingRules = Message<"glimway.content.v1.LampNamingRules"> & {
+  /**
+   * @generated from field: repeated glimway.content.v1.NamingWord ordinals = 1;
+   */
+  ordinals: NamingWord[];
+
+  /**
+   * @generated from field: repeated glimway.content.v1.NamingWord relations = 2;
+   */
+  relations: NamingWord[];
+
+  /**
+   * @generated from field: repeated glimway.content.v1.NamingWord fallbacks = 3;
+   */
+  fallbacks: NamingWord[];
+
+  /**
+   * @generated from field: map<string, string> places = 4;
+   */
+  places: { [key: string]: string };
+
+  /**
+   * @generated from field: map<string, string> sites = 5;
+   */
+  sites: { [key: string]: string };
+
+  /**
+   * @generated from field: repeated glimway.content.v1.NamingWord sides = 6;
+   */
+  sides: NamingWord[];
+
+  /**
+   * @generated from field: repeated glimway.content.v1.NamingWord closings = 7;
+   */
+  closings: NamingWord[];
+
+  /**
+   * @generated from field: string ash = 8;
+   */
+  ash: string;
+
+  /**
+   * @generated from field: int32 ash_qty = 9;
+   */
+  ashQty: number;
+};
+
+export declare type LampNamingRulesValid = LampNamingRules;
+
+/**
+ * Describes the message glimway.content.v1.LampNamingRules.
+ * Use `create(LampNamingRulesSchema)` to create a new message.
+ */
+export declare const LampNamingRulesSchema: GenMessage<LampNamingRules, {validType: LampNamingRulesValid}>;
+
+/**
+ * One part a naming may use: its id, and the words it puts in the sentence.
+ *
+ * @generated from message glimway.content.v1.NamingWord
+ */
+export declare type NamingWord = Message<"glimway.content.v1.NamingWord"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string words = 2;
+   */
+  words: string;
+};
+
+export declare type NamingWordValid = NamingWord;
+
+/**
+ * Describes the message glimway.content.v1.NamingWord.
+ * Use `create(NamingWordSchema)` to create a new message.
+ */
+export declare const NamingWordSchema: GenMessage<NamingWord, {validType: NamingWordValid}>;
 
 /**
  * The way-lamp's camp (lamps.md 2.5): `item` is the home piece set as the

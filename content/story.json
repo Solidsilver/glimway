@@ -41,6 +41,10 @@
       "writer": "client"
     },
     {
+      "prefix": "keeper:",
+      "writer": "server"
+    },
+    {
       "prefix": "returned:",
       "writer": "server"
     },
