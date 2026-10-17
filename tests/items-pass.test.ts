@@ -51,8 +51,8 @@ test('items-pass exposes its loader and load keys', () => {
   assert.equal(itemsArtKey('item-bench-axe-whole'), 'items-art:item-bench-axe-whole')
 })
 
-test('the manifest’s 12 source sheets and 4 crafts-pass fishing icons are delivered as transparent RGBA PNGs of the stated size', () => {
-  assert.equal(manifest.sources.length, 16)
+test('the manifest’s 13 source sheets and 4 crafts-pass fishing icons are delivered as transparent RGBA PNGs of the stated size', () => {
+  assert.equal(manifest.sources.length, 17)
   assert.equal(manifest.sources.filter((s) => s.file.startsWith('../crafts-pass/frames/')).length, 4)
   for (const s of manifest.sources) {
     const h = pngHeader(`${SOURCE_DIR}${s.file}`)
@@ -62,7 +62,7 @@ test('the manifest’s 12 source sheets and 4 crafts-pass fishing icons are deli
 })
 
 test('every frame has a measured source rect inside its sheet and a destination inside its native canvas', () => {
-  assert.equal(manifest.frames.length, 174)
+  assert.equal(manifest.frames.length, 175)
   assert.equal(frameByKey.size, manifest.frames.length, 'frame keys are unique')
   const sources = new Map(manifest.sources.map((s) => [s.key, s]))
   const rects = new Set<string>()
@@ -81,7 +81,7 @@ test('every frame has a measured source rect inside its sheet and a destination 
 
 test('inventory icons have role inventory-icon and native dimensions', () => {
   const icons = manifest.frames.filter((f) => f.role === 'inventory-icon')
-  assert.equal(icons.length, 114)
+  assert.equal(icons.length, 115)
   for (const icon of icons) {
     assert.ok(icon.key.startsWith('item-'), `${icon.key} has item- prefix`)
     assert.ok(icon.width > 0 && icon.height > 0)
@@ -172,6 +172,7 @@ test('itemIcon resolves item IDs, discrete states, and fallbacks', () => {
   assert.equal(itemIcon('bench-axe'), 'items-art:item-bench-axe-whole')
   assert.equal(itemIcon('bench-pick'), 'items-art:item-bench-pick-whole')
   assert.equal(itemIcon('watering-can'), 'items-art:item-watering-can')
+  assert.equal(itemIcon('way-lamp'), 'items-art:item-way-lamp')
 
   // Explicit state resolution
   assert.equal(itemIcon('bench-axe', 'whole'), 'items-art:item-bench-axe-whole')

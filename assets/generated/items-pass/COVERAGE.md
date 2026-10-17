@@ -78,6 +78,7 @@ Generated frames are listed by canonical item or world-sprite ID. Native dimensi
 
 ## Home goods
 
+- `way-lamp`: `item-way-lamp` (default)
 - `door-fox`: `item-door-fox` (default)
 - `window-lamp`: `item-window-lamp-lit` (lit), `item-window-lamp-unlit` (unlit)
 - `gate-shelf`: `item-gate-shelf` (default)

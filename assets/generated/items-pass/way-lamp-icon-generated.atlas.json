@@ -1,0 +1,31 @@
+{
+  "frames": {
+    "item-way-lamp": {
+      "frame": {
+        "x": 281,
+        "y": 65,
+        "w": 618,
+        "h": 1135
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 618,
+        "h": 1135
+      },
+      "sourceSize": {
+        "w": 618,
+        "h": 1135
+      }
+    }
+  },
+  "meta": {
+    "image": "way-lamp-icon-generated.png",
+    "size": {
+      "w": 1254,
+      "h": 1254
+    }
+  }
+}

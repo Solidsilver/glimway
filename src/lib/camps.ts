@@ -17,11 +17,10 @@ export function campLook(c: Pick<CampView, 'dimming'>): CampLook {
 }
 
 /**
- * The lamp's frame for a look. No way-lamp art exists yet: the lot
- * lantern's stake stands in (the Hearthwick 2 pass: lit, guttering).
+ * The way-lamp's own open-map frame for each oil state.
  */
 export function campFrame(look: CampLook): string {
-  return look === 'dimming' ? 'lantern-stake-2' : 'lantern-stake-1'
+  return look === 'dimming' ? 'way-lamp-2' : 'way-lamp-1'
 }
 
 /** The chunk a world tile lies in (24-tile chunks). */

@@ -53,7 +53,7 @@ const yardIndoors = [...yardProps, ...yardProps.filter((f) => f.key === 'kit-sid
 const crafts = JSON.parse(readFileSync(join(ROOT, 'assets/generated/crafts-pass/manifest.json'), 'utf8')) as { frames: Record<string, { file: string; canvasSize: { w: number; h: number } }> }
 const purse = JSON.parse(readFileSync(join(ROOT, 'assets/generated/purse-pass/manifest.json'), 'utf8')) as { frames: Record<string, { file: string; canvasSize: { w: number; h: number } }> }
 const glims = JSON.parse(readFileSync(join(ROOT, 'assets/generated/glims-pass/manifest.json'), 'utf8')) as { frames: Record<string, { file: string; canvasSize: { w: number; h: number } }> }
-const openMap = JSON.parse(readFileSync(join(ROOT, 'assets/generated/open-map-pass/manifest.json'), 'utf8')) as { frames: Record<string, { file: string; canvas: { w: number; h: number } }> }
+const openMap = JSON.parse(readFileSync(join(ROOT, 'assets/generated/open-map-pass/manifest.json'), 'utf8')) as { frames: Record<string, { file: string; canvas: { w: number; h: number }; footPoint?: { x: number; y: number } }> }
 const hw2 = JSON.parse(readFileSync(join(ROOT, 'assets/generated/hearthwick2-pass/manifest.json'), 'utf8')) as { frames: { key: string; file: string; canvasSize: { w: number; h: number } }[]; animations: { key: string; frames: string[] }[] }
 
 type P1 = { frames: Record<string, { source: string }>; sources: Record<string, { file: string }> }
@@ -267,7 +267,12 @@ test('the open map pass: every frame packed whole at 64 texels a tile, the ford 
   assert.deepEqual([w, h], built.openMap.size)
   assert.equal(built.openMap.density, 64)
   assert.deepEqual(Object.keys(built.openMap.frames).sort(), Object.keys(openMap.frames).sort())
-  assert.equal(Object.keys(built.openMap.frames).length, 45)
+  assert.equal(Object.keys(built.openMap.frames).length, 48)
+  for (let i = 0; i < 3; i++) {
+    const frame = openMap.frames[`way-lamp-${i}`]
+    assert.deepEqual([frame.canvas.w, frame.canvas.h], [64, 96])
+    assert.deepEqual(frame.footPoint, { x: 32, y: 96 })
+  }
   for (const [key, f] of Object.entries(openMap.frames)) {
     const r = built.openMap.frames[key]
     assert.deepEqual([r[2], r[3]], [f.canvas.w, f.canvas.h], `${key} keeps its canvas`)

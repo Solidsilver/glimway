@@ -1,0 +1,10 @@
+{
+  "generator": "Codex built-in image generation",
+  "sheets": [
+    {
+      "key": "way-lamp-icon",
+      "source": "way-lamp-icon-generated.png",
+      "prompt": "Use the generated way-lamp and the existing game lamp and stone art as references. Create one centered icon of the same hooded iron lamp on a compact cairn stone footing, steadily lit with warm amber flame. Transparent square canvas, crisp pixel clusters, earthy Wilds palette, #3a2a28 outline, no text, border, scenery, cast shadow, smoothing or antialiasing. Keep the complete lamp visible."
+    }
+  ]
+}
