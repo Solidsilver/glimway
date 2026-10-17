@@ -1,4 +1,5 @@
 import { expect, test, type Page } from './fixtures'
+import { ALL_PAPERS } from './paper-totals'
 import { goIn, openLibraryShelves, setHour } from './room-helpers'
 import { adminInvite,
   allow,
@@ -196,7 +197,7 @@ test('the shared library shelf: a connected donation lands on the world shelf an
   // The donation waits for the held upload carrying the find.
   await expect(library.getByTestId('library-message')).toContainText('is on the shelves now', { timeout: 20_000 })
   await desk.getByRole('button', { name: /The shelves/ }).click()
-  await expect(library.getByText('14 of 52')).toBeVisible()
+  await expect(library.getByText(`14 of ${ALL_PAPERS}`)).toBeVisible()
   await expect(library.getByRole('button', { name: /First donated by Tansy/ })).toBeVisible()
   await page.unroute('**/api/papers/take')
 
@@ -216,7 +217,7 @@ test('the shared library shelf: a connected donation lands on the world shelf an
   // A reload inside comes back inside the reading room.
   await waitForArea(page, 'in:village:library')
   await openLibraryShelves(page)
-  await expect(page.getByRole('dialog', { name: 'Hearthwick Library' }).getByText('14 of 52')).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Hearthwick Library' }).getByText(`14 of ${ALL_PAPERS}`)).toBeVisible()
 })
 
 test('a second tab finds the journey playing elsewhere, and either tab can take over', async ({ page, context }) => {
