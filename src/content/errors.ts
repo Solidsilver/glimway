@@ -41,6 +41,7 @@ export const ITEM_ERRORS: Table = {
   'cannot-gather-here': 'There’s nothing there to work.',
   'cannot-plant-here': 'Plant it on your own land.',
   'not-your-land': 'That’s someone else’s land. Leave it as you found it.',
+  'not-your-camp': 'This is someone else’s camp, and they say who builds here. You’re welcome to walk through and tend the lamp.',
   'land-blocked': 'There’s no open ground to plant in here.',
   'not-a-seed': 'That isn’t something you can plant.',
   'wrong-tool': 'That isn’t the tool for this.',
@@ -179,6 +180,8 @@ export const HOME_ERRORS: Table = {
   // Camps (roadmap 0.13).
   'no-camp': 'There’s no way-lamp here to set things down by.',
   'camp-not-empty': 'Everything set out here has to come up before the lamp does.',
+  'not-your-camp': 'This is someone else’s camp, and they say who builds here. You’re welcome to walk through and tend the lamp.',
+  'not-in-world': 'You can only name people who live in this world.',
   // Communal lamps (roadmap 0.13).
   'no-lamp': 'There’s no lamp there to see to.',
   'lamp-lit': 'Someone’s already lit it. It’s burning.',

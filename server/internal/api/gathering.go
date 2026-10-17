@@ -160,6 +160,11 @@ func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req 
 		if req.Target == "tangle-tree" && wilds.FootprintAt(cx, cy) != wilds.Footprint("tangle") {
 			return fail(409, "cannot-gather-here")
 		}
+		// Felling, breaking and digging change a camp's land: only those
+		// who may build there (claim_rules.go). Forage stays open to all.
+		if err := a.campBuilderAt(ctx, tx, s, cx, cy); err != nil {
+			return err
+		}
 		if !nearPiece(s, area, tx0, ty0) {
 			return fail(409, "too-far-away")
 		}

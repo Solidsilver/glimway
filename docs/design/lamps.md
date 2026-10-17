@@ -284,8 +284,23 @@ As built (0.12–0.13): the oil is `hearth-oil` at one flask a wick and three wi
 lot lanterns and way-lamps alike (content `lotLantern`, `wayLamp`). The store is the lantern or
 lamp itself; no separate placeable store exists yet. The way-lamp is a home piece crafted at the
 bench from six timber, four stone, a lamp head and a lamp wick, so the whole cost comes back
-with the lamp on recovery; setting it takes the first flask. Its setter and their household build
-at the camp; anyone fills it. The setter may take an empty lamp down, its unspent oil returned.
+with the lamp on recovery; setting it takes the first flask. Its setter keeps the camp and says
+who builds there (below); anyone fills it. The setter may take an empty lamp down, its unspent oil
+returned.
+
+Who may build (0.13, owner decision 2026-10-17; migration 045, `api/claim_rules.go`): a Built
+claim's keeper sets one rule and one list of world members. The rules are `household` (the
+default), `listed` (household plus the list), `except` (every world member but the list) and
+`everyone`. The keeper always may. Building is placing pieces, planting, naming the lamp,
+felling, breaking or digging, and clearing, laying or lifting paths in the claim's chunk; all of
+these go through `mayBuild`. Walking, foraging, adding oil and reading the naming never do, and
+nor does taking back your own pieces, whatever the rule (never item loss). Pieces stay their
+maker's: anyone else's is the keeper's to move, to its owner's crate entry at Pell's, which Pell
+tells apart from a lapse ("Moved off Alice's camp"). Rules are keyed by holder kind and id; only
+way-lamp camps use them so far. The list is kept across rule changes, and the rule ends with the
+camp. Common land has no rules. No camp harvest exists yet; when one is added, it should ask the
+same check.
+
 Communal lamps (0.13, content `communalLamp`): relighting a dark road stone burns one lamp wick,
 not refunded when it goes dark (spent like oil); a communal post is the same `way-lamp` piece set
 with no oil, crated whole to its setter if its chunk goes a wick unvisited. Both keep their stable

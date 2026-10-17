@@ -2,9 +2,10 @@
  * Camps on the open map (roadmap 0.13; docs/design/lamps.md §2.5, §2.7): a
  * way-lamp someone set in the Wilds, burning or guttering, with the pieces
  * and plants set out in its light. Look at the lamp for its oil and top it
- * up; its setter takes it down once the camp is empty. Pick up a piece of
- * yours. From the pack (EV.campDo): set a carried way-lamp down beside you,
- * or a piece or a seed at the camp you stand in.
+ * up; its setter (the keeper) takes it down once the camp is empty and says
+ * who may build there. Pick up a piece of yours; the keeper may move
+ * anyone else's off to Pell's. From the pack (EV.campDo): set a carried
+ * way-lamp down beside you, or a piece or a seed at the camp you stand in.
  *
  * Read from GET /api/camps (no socket message carries camps): on walking
  * into another chunk, every half minute, and after each of your own camp
@@ -12,7 +13,7 @@
  */
 import Phaser from 'phaser'
 import type { CampView } from '../../lib/gen/glimway/v1/camps_pb.js'
-import { CAMP_ERRORS, campAtTile, campFrame, campHasRoom, campLampName, campLines, campLook, campPieceName, campSpot, campTaken } from '../../lib/camps.ts'
+import { CAMP_ERRORS, CAMP_RULE_WORDS, CAMP_RULES, campAtTile, campFrame, campHasRoom, campLampName, campLines, campLook, campNameable, campPieceName, campRefusal, campRule, campRuleLines, campSpot, campTaken, movedOffLine, moveOffLines, personName, ruleNames, withMember, withoutMember, type CampRule } from '../../lib/camps.ts'
 import { HOMESTEAD_DATA, homeItem, rotatedFootprint } from '../../lib/homestead.ts'
 import { TILE, tileFeet } from '../../lib/tile.ts'
 import { chunkOf } from '../../lib/wilds/coords.ts'
@@ -103,6 +104,7 @@ export class WildsCamps {
       const r = await link.campsRead()
       if (!r.ok) return
       this.adopt(r.value.camps)
+      campsUi.people = r.value.people
     } finally {
       this.reading = false
     }
@@ -144,6 +146,10 @@ export class WildsCamps {
         if (p.ownerId === this.me) {
           const at = tileFeet(p.x, p.y)
           points.push(wildsPoint(`camp-piece:${p.id}`, at, 20, () => ({ label: `Pick up the ${campPieceName(p.itemDef).toLowerCase()}`, verb: 'Pick up', claim: () => void this.act({ action: 'remove', itemId: p.id }) })))
+        } else if (c.setterId === this.me) {
+          // The keeper may move someone's piece off: it waits at Pell's, still theirs.
+          const at = tileFeet(p.x, p.y)
+          points.push(wildsPoint(`camp-piece:${p.id}`, at, 20, () => ({ label: `Move ${personName(campsUi.people, p.ownerId)}’s ${campPieceName(p.itemDef).toLowerCase()} off`, verb: 'Move off', claim: () => this.askMoveOff(p.id) })))
         }
       }
       for (const p of c.plants) {
@@ -212,15 +218,67 @@ export class WildsCamps {
       choices.push({ text: 'Top it up with hearth oil', action: `camp:fill:${c.id}`, disabled: oil < 1, ...(oil < 1 ? { note: 'You need hearth oil (the chandler sells it)' } : {}) })
     }
     if (c.builder && !c.naming && isKeeper(this.deps.session.state.flags)) choices.push({ ...LAMP_NAMING.name, action: `camp:name:${c.id}` })
+    if (c.setterId === this.me) choices.push({ text: CAMP_RULE_WORDS.heading, note: CAMP_RULE_WORDS.rules[campRule(c)].pick, action: `camp:rules:${c.id}` })
     if (c.setterId === this.me && c.pieces.length === 1 && c.plants.length === 0) choices.push({ text: 'Take the lamp down', note: 'The camp goes; its oil comes back to you', action: `camp:down:${c.id}` })
     choices.push({ text: 'Leave it' })
     openDialogue({ id: 'camp', speaker: campLampName(c), lines: campLines(c, this.me), choices })
   }
 
+  /** The keeper's "Who may build here": the four rules, and the list when the rule reads it. */
+  private rules(id: string): void {
+    const c = this.camp(id)
+    if (!c || c.setterId !== this.me) return
+    const rule = campRule(c)
+    const choices: DialogueChoice[] = CAMP_RULES.map((r) =>
+      r === rule ? { text: CAMP_RULE_WORDS.rules[r].pick, note: CAMP_RULE_WORDS.now, disabled: true } : { text: CAMP_RULE_WORDS.rules[r].pick, action: `camp:rule:${c.id}:${r}` })
+    if (ruleNames(rule)) {
+      const more = campNameable(c, campsUi.people).length > 0
+      choices.push({ text: CAMP_RULE_WORDS.name, action: `camp:pick:${c.id}`, disabled: !more, ...(more ? {} : { note: CAMP_RULE_WORDS.noneToName }) })
+      for (const m of c.members) choices.push({ text: CAMP_RULE_WORDS.unname(m.name), action: `camp:unname:${c.id}:${m.accountId}` })
+    }
+    choices.push({ text: CAMP_RULE_WORDS.done, dismiss: true })
+    openDialogue({ id: 'camp-rules', speaker: CAMP_RULE_WORDS.heading, lines: campRuleLines(c), choices })
+  }
+
+  /** Whom to put on the list: the world's members not on it yet. */
+  private pickWho(id: string): void {
+    const c = this.camp(id)
+    if (!c) return
+    const choices: DialogueChoice[] = campNameable(c, campsUi.people).map((p) => ({ text: p.name, action: `camp:add:${c.id}:${p.accountId}` }))
+    choices.push({ text: 'Never mind', action: `camp:rules:${c.id}` })
+    openDialogue({ id: 'camp-rules', speaker: CAMP_RULE_WORDS.heading, lines: [CAMP_RULE_WORDS.pickWho], choices })
+  }
+
+  /** Send the rule and the list; the panel opens again on what the server kept. */
+  private setRule(id: string, rule: CampRule, members: string[]): void {
+    void this.act({ action: 'rule', camp: id, rule, members }, (c) => { if (c) this.rules(c.id) })
+  }
+
+  /** Asked before the keeper moves someone's piece off to Pell's. */
+  private askMoveOff(pieceId: string): void {
+    const c = campsUi.list.find((x) => x.pieces.some((p) => p.id === pieceId))
+    const p = c?.pieces.find((x) => x.id === pieceId)
+    if (!c || !p) return
+    const owner = personName(campsUi.people, p.ownerId)
+    openDialogue({ id: 'camp', speaker: campLampName(c), lines: moveOffLines(owner, campPieceName(p.itemDef)), choices: [{ text: 'Send it to Pell’s', action: `camp:moveoff:${pieceId}` }, { text: 'Leave it', dismiss: true }] })
+  }
+
   /** A choice picked in the lamp's talk (WorldActions routes `camp:` here). */
   onAction(rest: string): void {
-    const [what, id] = rest.split(':')
+    const [what, id, arg] = rest.split(':')
     if (!id) return
+    const c = this.camp(id)
+    if (what === 'rules') return this.rules(id)
+    if (what === 'pick') return this.pickWho(id)
+    if (what === 'rule' && c && arg && (CAMP_RULES as readonly string[]).includes(arg)) return this.setRule(id, arg as CampRule, c.members.map((m) => m.accountId))
+    if (what === 'add' && c && arg) return this.setRule(id, campRule(c), withMember(c, arg))
+    if (what === 'unname' && c && arg) return this.setRule(id, campRule(c), withoutMember(c, arg))
+    if (what === 'moveoff') {
+      const camp = campsUi.list.find((x) => x.pieces.some((p) => p.id === id))
+      const p = camp?.pieces.find((x) => x.id === id)
+      const said = p ? movedOffLine(personName(campsUi.people, p.ownerId), campPieceName(p.itemDef)) : ''
+      return void this.act({ action: 'remove', itemId: id }, () => { if (said) bus.emit(EV.toast, { text: said, icon: 'glim' }) })
+    }
     if (what === 'fill') void this.act({ action: 'fill', camp: id }, (c) => { if (c) openDialogue({ id: 'camp', speaker: campLampName(c), lines: campLines(c, this.me) }) })
     else if (what === 'name') void this.beginNaming(id)
     else if (what === 'down') void this.act({ action: 'remove', itemId: id }, () => bus.emit(EV.toast, { text: 'You take the way-lamp down. Its oil is back in your pack.', icon: 'glim' }))
@@ -260,16 +318,24 @@ export class WildsCamps {
     await this.act({ action: d.action, itemId: d.itemId ?? '', itemDef: d.itemDef ?? '', x: spot.tx, y: spot.ty }, () => bus.emit(EV.toast, { text: done, icon: 'glim' }))
   }
 
-  private async act(fields: { action: string; camp?: string; itemId?: string; itemDef?: string; x?: number; y?: number; rotation?: number; parts?: string[] }, then?: (c: CampView | null) => void): Promise<void> {
+  /** The camp an operation was about: named, holding its piece, or at its tile. */
+  private campOf(fields: { camp?: string; itemId?: string; x?: number; y?: number }): CampView | null {
+    return (fields.camp ? this.camp(fields.camp) : null)
+      ?? campsUi.list.find((c) => c.pieces.some((p) => p.id === fields.itemId))
+      ?? (fields.x !== undefined && fields.y !== undefined ? campAtTile(campsUi.list, fields.x, fields.y) : null)
+  }
+
+  private async act(fields: { action: string; camp?: string; itemId?: string; itemDef?: string; x?: number; y?: number; rotation?: number; parts?: string[]; rule?: string; members?: string[] }, then?: (c: CampView | null) => void): Promise<void> {
     const link = this.deps.session.link
     if (!link || this.busy) return
     this.busy = true
     this.deps.notePosition()
     try {
-      const r = await link.camp({ camp: '', itemId: '', itemDef: '', x: 0, y: 0, rotation: 0, parts: [], ...fields })
+      const r = await link.camp({ camp: '', itemId: '', itemDef: '', x: 0, y: 0, rotation: 0, parts: [], rule: '', members: [], ...fields })
       if (!r.ok) {
         sfx('fizzle')
-        bus.emit(EV.toast, { text: CAMP_ERRORS[r.code] ?? homeErrorText(r.code), icon: 'glim', kind: 'error' })
+        const text = r.code === 'not-your-camp' ? campRefusal(this.campOf(fields)) : CAMP_ERRORS[r.code] ?? homeErrorText(r.code)
+        bus.emit(EV.toast, { text, icon: 'glim', kind: 'error' })
         return
       }
       sfx(fields.action === 'set' || fields.action === 'fill' ? 'lantern' : 'pop')

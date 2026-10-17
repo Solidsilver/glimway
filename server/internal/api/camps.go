@@ -68,15 +68,22 @@ func campAt(ctx context.Context, tx *sql.Tx, world string, cx, cy int) (*camp, e
 	return &c, err
 }
 
-// campBuilder: the account may build at the camp: its setter, or a member
-// of the setter's household.
+// claim is the camp as a Built claim: its setter keeps it (claim_rules.go).
+func (c *camp) claim() claimKey { return claimKey{c.World, wayLampKind, c.ID} }
+
+// campBuilder: the account may build at the camp, by its keeper's rule
+// (claim_rules.go). Every build at a camp asks this.
 func campBuilder(ctx context.Context, tx *sql.Tx, c *camp, account string) (bool, error) {
-	if account == c.Setter {
-		return true, nil
+	return mayBuild(ctx, tx, c.claim(), c.Setter, account)
+}
+
+// mayBuildAtCamp is campBuilder as a refusal: not-your-camp.
+func mayBuildAtCamp(ctx context.Context, tx *sql.Tx, c *camp, account string) error {
+	ok, err := campBuilder(ctx, tx, c, account)
+	if err == nil && !ok {
+		err = fail(409, "not-your-camp")
 	}
-	var ok bool
-	err := tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM homestead_members a JOIN homestead_members b ON a.homestead_id=b.homestead_id WHERE a.account_id=? AND b.account_id=?)", account, c.Setter).Scan(&ok)
-	return ok, err
+	return err
 }
 
 // campGround is a camp's held chunk with its ground changes, as the server
@@ -160,6 +167,16 @@ func campView(ctx context.Context, tx *sql.Tx, c *camp, caller string) (*contrac
 	if v.Naming, err = lampNaming(ctx, tx, c.World, c.ID); err != nil {
 		return nil, err
 	}
+	if caller == c.Setter {
+		r, err := readClaimRule(ctx, tx, c.claim())
+		if err != nil {
+			return nil, err
+		}
+		v.Rule = r.Rule
+		if v.Members, err = campMembers(ctx, tx, c.World, r.Listed); err != nil {
+			return nil, err
+		}
+	}
 	pieces, owners, err := campPieces(ctx, tx, c.ID)
 	if err != nil {
 		return nil, err
@@ -175,6 +192,38 @@ func campView(ctx context.Context, tx *sql.Tx, c *camp, caller string) (*contrac
 		v.Plants = append(v.Plants, &contract.CampPlant{Id: p.ID, ItemDef: p.Def, X: int32(ox + p.X), Y: int32(oy + p.Y), PlantedAt: float64(p.At), PlantedDay: float64(p.Day), OwnerId: p.Owner})
 	}
 	return v, nil
+}
+
+// campMembers are the named accounts with their names, in order.
+func campMembers(ctx context.Context, tx *sql.Tx, world string, ids []string) ([]*contract.CampMember, error) {
+	out := make([]*contract.CampMember, 0, len(ids))
+	for _, id := range ids {
+		var name string
+		if err := tx.QueryRowContext(ctx, "SELECT display_name FROM players WHERE account_id=? AND world_id=?", id, world).Scan(&name); err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return nil, err
+		}
+		out = append(out, &contract.CampMember{AccountId: id, Name: capDonor(name)})
+	}
+	return out, nil
+}
+
+// worldPeople are the world's members but one, by name: whom a keeper may
+// name in a camp's rule.
+func worldPeople(ctx context.Context, tx *sql.Tx, world, but string) ([]*contract.CampMember, error) {
+	rows, err := tx.QueryContext(ctx, "SELECT account_id,display_name FROM players WHERE world_id=? AND account_id<>? ORDER BY display_name COLLATE NOCASE,account_id", world, but)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []*contract.CampMember{}
+	for rows.Next() {
+		var id, name string
+		if err = rows.Scan(&id, &name); err != nil {
+			return nil, err
+		}
+		out = append(out, &contract.CampMember{AccountId: id, Name: capDonor(name)})
+	}
+	return out, rows.Err()
 }
 
 // turnWick makes the current wick epoch if it isn't yet: past a turning,
@@ -215,18 +264,25 @@ func (a *Server) campsRead(w http.ResponseWriter, r *http.Request) error {
 	if err = closeRows(rows); err != nil {
 		return err
 	}
-	out := &contract.CampsRead{Camps: []*contract.CampView{}}
+	out := &contract.CampsRead{Camps: []*contract.CampView{}, People: []*contract.CampMember{}}
+	keeper := false
 	for i := range all {
 		v, err := campView(ctx, tx, &all[i], s.AccountID)
 		if err != nil {
 			return err
 		}
 		out.Camps = append(out.Camps, v)
+		keeper = keeper || all[i].Setter == s.AccountID
+	}
+	if keeper {
+		if out.People, err = worldPeople(ctx, tx, s.WorldID, s.AccountID); err != nil {
+			return err
+		}
 	}
 	return a.finishRead(w, r, tx, s, out)
 }
 
-// campOp is POST /api/camps: set, fill, place, remove, plant or name.
+// campOp is POST /api/camps: set, fill, place, remove, plant, name or rule.
 func (a *Server) campOp(w http.ResponseWriter, r *http.Request) error {
 	req := &contract.CampRequest{}
 	if err := decodeOp(w, r, req); err != nil {
@@ -250,6 +306,8 @@ func (a *Server) campOp(w http.ResponseWriter, r *http.Request) error {
 			c, err = a.removeFromCamp(ctx, tx, s, req, now)
 		case "name":
 			c, given, err = a.nameCamp(ctx, tx, s, req, now)
+		case "rule":
+			c, err = setCampRule(ctx, tx, s, req, now)
 		default:
 			err = fail(400, "invalid-request")
 		}
@@ -402,10 +460,8 @@ func (a *Server) buildAtCamp(ctx context.Context, tx *sql.Tx, s *store.Snapshot,
 	if c == nil {
 		return nil, fail(409, "no-camp")
 	}
-	if ok, err := campBuilder(ctx, tx, c, s.AccountID); err != nil {
+	if err = mayBuildAtCamp(ctx, tx, c, s.AccountID); err != nil {
 		return nil, err
-	} else if !ok {
-		return nil, fail(409, "not-your-land")
 	}
 	if !nearTile(s, outdoorsArea, int(req.X), int(req.Y), int(rules.GetReach())) {
 		return nil, fail(409, "too-far-away")
@@ -482,29 +538,35 @@ func (a *Server) buildAtCamp(ctx context.Context, tx *sql.Tx, s *store.Snapshot,
 }
 
 // removeFromCamp picks up a piece of the caller's from a camp, into their
-// pack. The lamp comes down only when nothing else stands there: with it
-// go the camp, its unspent oil (back to the setter) and, at the turning,
-// the hold.
+// pack, whatever the rule. The keeper may also move anyone else's
+// piece off: it goes to its owner's crate at Pell's, still theirs. The lamp
+// comes down only when nothing else stands there: with it go the camp, its
+// unspent oil (back to the setter), its rule and, at the turning, the hold.
 func (a *Server) removeFromCamp(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contract.CampRequest, now int64) (*camp, error) {
 	var campID, def, owner string
-	var x, y int
-	err := tx.QueryRowContext(ctx, "SELECT i.camp_id,i.item_def,i.account_id,i.x,i.y FROM homestead_items i JOIN camps c ON c.id=i.camp_id WHERE i.id=? AND i.location='camp' AND c.world_id=?", req.ItemId, s.WorldID).Scan(&campID, &def, &owner, &x, &y)
+	var x, y, rot int
+	err := tx.QueryRowContext(ctx, "SELECT i.camp_id,i.item_def,i.account_id,i.x,i.y,i.rotation FROM homestead_items i JOIN camps c ON c.id=i.camp_id WHERE i.id=? AND i.location='camp' AND c.world_id=?", req.ItemId, s.WorldID).Scan(&campID, &def, &owner, &x, &y, &rot)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fail(409, "not-placed")
 	}
 	if err != nil {
 		return nil, err
 	}
-	if owner != s.AccountID {
-		return nil, fail(409, "item-not-owned")
-	}
 	c, err := campByID(ctx, tx, s.WorldID, campID)
 	if err != nil {
 		return nil, err
 	}
+	// Taking your own things back isn't building: never refused by the
+	// rule. Anyone else's is the keeper's to move.
+	if owner != s.AccountID && s.AccountID != c.Setter {
+		return nil, fail(409, "item-not-owned")
+	}
 	S := chunkSize()
 	if !nearTile(s, outdoorsArea, c.CX*S+x, c.CY*S+y, int(content.HomeRules.GetWayLamp().GetReach())) {
 		return nil, fail(409, "too-far-away")
+	}
+	if owner != s.AccountID {
+		return c, crateCampPiece(ctx, tx, c, req.ItemId, def, owner, x, y, rot, now)
 	}
 	lamp := req.ItemId == c.ID
 	if lamp {
@@ -530,7 +592,7 @@ func (a *Server) removeFromCamp(ctx context.Context, tx *sql.Tx, s *store.Snapsh
 			return nil, err
 		}
 	}
-	if _, err = tx.ExecContext(ctx, "DELETE FROM camps WHERE id=?", c.ID); err != nil {
+	if err = dropCamp(ctx, tx, c); err != nil {
 		return nil, err
 	}
 	if held, ok := a.Config.Epochs.(*store.Chunks); ok {
@@ -542,16 +604,52 @@ func (a *Server) removeFromCamp(ctx context.Context, tx *sql.Tx, s *store.Snapsh
 }
 
 // campBuilderAt: in a camp's chunk only those who may build there change
-// its ground (clear, lay); elsewhere anyone may.
+// its ground (clear, lay, lift); elsewhere anyone may.
 func (a *Server) campBuilderAt(ctx context.Context, tx *sql.Tx, s *store.Snapshot, cx, cy int) error {
 	c, err := campAt(ctx, tx, s.WorldID, cx, cy)
 	if err != nil || c == nil {
 		return err
 	}
-	ok, err := campBuilder(ctx, tx, c, s.AccountID)
-	if err == nil && !ok {
-		err = fail(409, "not-your-land")
+	return mayBuildAtCamp(ctx, tx, c, s.AccountID)
+}
+
+// setCampRule is the keeper's: who may build at their camp, from anywhere.
+func setCampRule(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contract.CampRequest, now int64) (*camp, error) {
+	c, err := campByID(ctx, tx, s.WorldID, req.Camp)
+	if err != nil {
+		return nil, err
 	}
+	if c == nil {
+		return nil, fail(404, "no-camp")
+	}
+	if c.Setter != s.AccountID {
+		return nil, fail(409, "not-your-lamp")
+	}
+	return c, setClaimRule(ctx, tx, c.claim(), c.Setter, req.Rule, req.Members, now)
+}
+
+// dropCamp ends a camp: its row and its rule.
+func dropCamp(ctx context.Context, tx *sql.Tx, c *camp) error {
+	if err := dropClaimRule(ctx, tx, c.claim()); err != nil {
+		return err
+	}
+	_, err := tx.ExecContext(ctx, "DELETE FROM camps WHERE id=?", c.ID)
+	return err
+}
+
+// crateCampPiece moves someone's piece off a camp into their own entry in
+// a crate at Pell's, the same instance where it stood. Its state names the
+// keeper who moved it (movedBy), so Pell can say so.
+func crateCampPiece(ctx context.Context, tx *sql.Tx, c *camp, id, def, owner string, x, y, rot int, now int64) error {
+	crate, err := recoveryCrate(ctx, tx, c.World, "camp:"+c.ID, c.CX, c.CY, now)
+	if err != nil {
+		return err
+	}
+	state, _ := json.Marshal(map[string]any{"x": x, "y": y, "rotation": rot, "movedBy": c.Setter})
+	if err = addRecoveryEntry(ctx, tx, crate, owner, "piece", def, 1, id, string(state)); err != nil {
+		return err
+	}
+	_, err = tx.ExecContext(ctx, "UPDATE homestead_items SET location='crate',camp_id=NULL,scene=NULL,x=NULL,y=NULL,rotation=NULL WHERE id=?", id)
 	return err
 }
 
@@ -658,16 +756,12 @@ func packCamp(ctx context.Context, tx *sql.Tx, h store.Hold, now int64) error {
 		}
 	}
 	if len(entries) > 0 {
-		crate, err := store.Random()
+		crate, err := recoveryCrate(ctx, tx, h.World, "camp:"+h.HolderID, int(h.CX), int(h.CY), now)
 		if err != nil {
 			return err
 		}
-		source := "camp:" + h.HolderID
-		if _, err = tx.ExecContext(ctx, "INSERT INTO recovery_crates(id,world_id,source,cx,cy,lapsed_at) VALUES(?,?,?,?,?,?)", crate, h.World, source, h.CX, h.CY, now); err != nil {
-			return err
-		}
 		for _, e := range entries {
-			if _, err = tx.ExecContext(ctx, "INSERT INTO recovery_entries(crate_id,account_id,kind,item_def,qty,instance_id,state) VALUES(?,?,?,?,?,?,?)", crate, e.account, e.kind, e.def, e.qty, e.instance, e.state); err != nil {
+			if err = addRecoveryEntry(ctx, tx, crate, e.account, e.kind, e.def, e.qty, e.instance, e.state); err != nil {
 				return err
 			}
 		}
@@ -681,6 +775,5 @@ func packCamp(ctx context.Context, tx *sql.Tx, h store.Hold, now int64) error {
 	if _, err = tx.ExecContext(ctx, "DELETE FROM camp_plants WHERE camp_id=?", c.ID); err != nil {
 		return err
 	}
-	_, err = tx.ExecContext(ctx, "DELETE FROM camps WHERE id=?", c.ID)
-	return err
+	return dropCamp(ctx, tx, c)
 }

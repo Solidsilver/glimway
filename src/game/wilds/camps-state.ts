@@ -1,8 +1,9 @@
-import type { CampView } from '../../lib/gen/glimway/v1/camps_pb.js'
+import type { CampMember, CampView } from '../../lib/gen/glimway/v1/camps_pb.js'
 
 /**
  * The world's camps as the open map last read them (./camps.ts writes it),
  * so the pack can offer to set a lamp, a piece or a seed down at the camp
- * you stand in. Read when the pack draws; not reactive.
+ * you stand in. Read when the pack draws; not reactive. `people` are the
+ * world's members, read only by a camp's keeper, to name in its rule.
  */
-export const campsKnown: { list: CampView[]; me: string | null } = { list: [], me: null }
+export const campsKnown: { list: CampView[]; me: string | null; people: CampMember[] } = { list: [], me: null, people: [] }

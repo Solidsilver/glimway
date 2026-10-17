@@ -3,10 +3,10 @@
  * Wilds chunk holds that one chunk while it has hearth oil, as a lot lantern
  * holds its backland: a wick burns at each turning, then it dims for a wick,
  * then the camp lapses and everything there waits in a crate at Pell's. Its
- * setter (and their household) set pieces out and plant there; anyone may
+ * keeper says who builds there (their household by default); anyone may
  * top the lamp up. The server judges all of it (api/camps.go, recovery.go).
  */
-import type { CampView, RecoveryEntry } from './gen/glimway/v1/camps_pb.js'
+import type { CampMember, CampView, RecoveryEntry } from './gen/glimway/v1/camps_pb.js'
 import { HOMESTEAD_DATA } from './homestead.ts'
 import { giftPhrase, itemName } from './items.ts'
 
@@ -96,10 +96,16 @@ function listed(parts: string[]): string {
   return parts.length <= 1 ? (parts[0] ?? '') : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`
 }
 
-/** Pell's words for a crate waiting: the lapse line, then what's in it. */
-export function crateLines(entries: readonly Pick<RecoveryEntry, 'itemDef' | 'qty'>[]): string[] {
-  if (entries.length === 0) return []
-  return ['The woods turned. I have your things.', `In the crate: ${listed(entries.map(entryPhrase))}. Nothing’s missing. I counted.`]
+/**
+ * Pell's words for a crate waiting: what a lapse packed (the woods turned),
+ * then what each camp's keeper moved off their camp, by keeper.
+ */
+export function crateLines(entries: readonly (Pick<RecoveryEntry, 'itemDef' | 'qty'> & { movedBy?: string })[]): string[] {
+  const lapsed = entries.filter((e) => !e.movedBy)
+  const lines = lapsed.length ? ['The woods turned. I have your things.', `In the crate: ${listed(lapsed.map(entryPhrase))}. Nothing’s missing. I counted.`] : []
+  const keepers = [...new Set(entries.map((e) => e.movedBy).filter((k): k is string => !!k))]
+  for (const k of keepers) lines.push(`Moved off ${k}’s camp: ${listed(entries.filter((e) => e.movedBy === k).map(entryPhrase))}. I kept it safe for you.`)
+  return lines
 }
 
 /** Pell's words once the crate is collected. */
@@ -111,7 +117,97 @@ export function collectedLine(entries: readonly Pick<RecoveryEntry, 'itemDef' | 
 export const CAMP_ERRORS: Record<string, string> = {
   'cannot-hold': 'A way-lamp can’t hold this ground: it’s the town, the Tangle, a lot’s backland or someone else’s camp.',
   'too-far-away': 'Stand closer to the way-lamp.',
-  'lantern-full': 'The lamp’s full. It takes three wicks of oil at most.'
+  'lantern-full': 'The lamp’s full. It takes three wicks of oil at most.',
+  'not-in-world': 'You can only name people who live in this world.'
+}
+
+// ------------------------------------------------------------ who may build here
+
+/**
+ * Who may build at a camp (lamps.md 2.5), its keeper's to set: one rule and
+ * one list of world members. The keeper always may; anyone may walk there
+ * and add oil, whatever the rule. The server judges it (api/claim_rules.go).
+ */
+export type CampRule = 'household' | 'listed' | 'except' | 'everyone'
+
+export const CAMP_RULES: readonly CampRule[] = ['household', 'listed', 'except', 'everyone']
+
+/** The panel's words: its heading, and each rule as a choice and as a sentence. */
+export const CAMP_RULE_WORDS = {
+  heading: 'Who may build here',
+  rules: {
+    household: { pick: 'Just my household', line: 'You and your household build here.' },
+    listed: { pick: 'My household and people I name', line: 'You, your household and the people you name build here.' },
+    except: { pick: 'Everyone but people I name', line: 'Everyone in the world builds here, except the people you name.' },
+    everyone: { pick: 'Everyone in the world', line: 'Everyone in the world builds here.' }
+  } satisfies Record<CampRule, { pick: string; line: string }>,
+  now: 'As it is',
+  name: 'Name someone',
+  noneToName: 'Everyone’s on the list already',
+  unname: (name: string) => `Take ${name} off the list`,
+  named: (names: string[]) => `Named: ${listed(names)}.`,
+  noneNamed: 'No one named yet.',
+  open: 'Anyone may still walk here and add oil.',
+  pickWho: 'Who goes on the list?',
+  done: 'Done'
+} as const
+
+/** A camp's rule as its keeper reads it (household when unset). */
+export function campRule(c: Pick<CampView, 'rule'>): CampRule {
+  return (CAMP_RULES as readonly string[]).includes(c.rule) ? (c.rule as CampRule) : 'household'
+}
+
+/** Whether the rule reads the list. */
+export function ruleNames(rule: CampRule): boolean {
+  return rule === 'listed' || rule === 'except'
+}
+
+/** The panel's line: the rule in a sentence, who's named (when it counts), and what stays open to all. */
+export function campRuleLines(c: Pick<CampView, 'rule' | 'members'>): string[] {
+  const rule = campRule(c)
+  const parts: string[] = [CAMP_RULE_WORDS.rules[rule].line]
+  if (ruleNames(rule)) parts.push(c.members.length ? CAMP_RULE_WORDS.named(c.members.map((m) => m.name)) : CAMP_RULE_WORDS.noneNamed)
+  parts.push(CAMP_RULE_WORDS.open)
+  return [parts.join(' ')]
+}
+
+/** World members the keeper could add: not on the list yet, and not the keeper. */
+export function campNameable(c: Pick<CampView, 'members' | 'setterId'>, people: readonly CampMember[]): CampMember[] {
+  const named = new Set(c.members.map((m) => m.accountId))
+  return people.filter((p) => p.accountId !== c.setterId && !named.has(p.accountId))
+}
+
+/** The list with someone added, or taken off: account ids, as the rule operation sends them. */
+export function withMember(c: Pick<CampView, 'members'>, id: string): string[] {
+  const ids = c.members.map((m) => m.accountId)
+  return ids.includes(id) ? ids : [...ids, id]
+}
+
+export function withoutMember(c: Pick<CampView, 'members'>, id: string): string[] {
+  return c.members.map((m) => m.accountId).filter((m) => m !== id)
+}
+
+/** The refusal when you may not build at someone's camp: whose it is, and what you can still do. */
+export function campRefusal(c: Pick<CampView, 'setterName'> | null): string {
+  const who = c?.setterName
+  return who
+    ? `This is ${who}’s camp, and ${who} says who builds here. You’re welcome to walk through and tend the lamp.`
+    : 'This camp’s keeper says who builds here. You’re welcome to walk through and tend the lamp.'
+}
+
+/** A world member's name from the keeper's read, or "someone". */
+export function personName(people: readonly CampMember[], id: string): string {
+  return people.find((p) => p.accountId === id)?.name || 'someone'
+}
+
+/** Asked before the keeper moves someone's piece off: it goes to Pell's, still theirs. */
+export function moveOffLines(owner: string, piece: string): string[] {
+  return [`Move ${owner}’s ${piece.toLowerCase()} off your camp? Pell keeps it in a crate for ${owner}. Nothing is lost.`]
+}
+
+/** Said once the keeper has moved it. */
+export function movedOffLine(owner: string, piece: string): string {
+  return `${owner}’s ${piece.toLowerCase()} is waiting at Pell’s for ${owner}.`
 }
 
 /** A piece's name at a camp. */

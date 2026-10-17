@@ -178,5 +178,9 @@
   {
     "name": "044_ways_home.sql",
     "sha256": "96a0552af9903f834ba5c7c2468c20bef9716fc52d96fb12f3d214c6a5363791"
+  },
+  {
+    "name": "045_claim_rules.sql",
+    "sha256": "cda781eef55b72d2090bf5d08b76707a7dae9475de6f9be16da31bfd86e39e8c"
   }
 ]

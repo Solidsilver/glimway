@@ -13,6 +13,7 @@ package api
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"net/http"
 
 	"glimway/content"
@@ -20,15 +21,39 @@ import (
 	"glimway/server/internal/store"
 )
 
+// recoveryCrate is the crate for what left a place at this moment: the
+// one already made for it, or a new one.
+func recoveryCrate(ctx context.Context, tx *sql.Tx, world, source string, cx, cy int, now int64) (string, error) {
+	var id string
+	err := tx.QueryRowContext(ctx, "SELECT id FROM recovery_crates WHERE world_id=? AND source=? AND lapsed_at=?", world, source, now).Scan(&id)
+	if !errors.Is(err, sql.ErrNoRows) {
+		return id, err
+	}
+	if id, err = store.Random(); err != nil {
+		return "", err
+	}
+	_, err = tx.ExecContext(ctx, "INSERT INTO recovery_crates(id,world_id,source,cx,cy,lapsed_at) VALUES(?,?,?,?,?,?)", id, world, source, cx, cy, now)
+	return id, err
+}
+
+// addRecoveryEntry puts one beneficiary's entry in a crate: a piece (its
+// instance id), a stack or a plant (no instance).
+func addRecoveryEntry(ctx context.Context, tx *sql.Tx, crate, account, kind, def string, qty int, instance any, state string) error {
+	_, err := tx.ExecContext(ctx, "INSERT INTO recovery_entries(crate_id,account_id,kind,item_def,qty,instance_id,state) VALUES(?,?,?,?,?,?,?)", crate, account, kind, def, qty, instance, state)
+	return err
+}
+
 // recoveryEntry is an entry as the wire shows it, and the piece it holds.
 type recoveryEntry struct {
 	*contract.RecoveryEntry
 	instance *string
 }
 
-// waiting are the caller's uncollected entries in this world, oldest first.
+// waiting are the caller's uncollected entries in this world, oldest first,
+// each naming the keeper who moved it off their camp, if one did.
 func waiting(ctx context.Context, tx *sql.Tx, world, account string) ([]recoveryEntry, error) {
-	rows, err := tx.QueryContext(ctx, `SELECT e.id,e.kind,e.item_def,e.qty,c.cx,c.cy,c.lapsed_at,e.instance_id FROM recovery_entries e JOIN recovery_crates c ON c.id=e.crate_id
+	rows, err := tx.QueryContext(ctx, `SELECT e.id,e.kind,e.item_def,e.qty,c.cx,c.cy,c.lapsed_at,e.instance_id,json_extract(e.state,'$.movedBy'),COALESCE(k.display_name,'') FROM recovery_entries e JOIN recovery_crates c ON c.id=e.crate_id
+ LEFT JOIN players k ON k.account_id=json_extract(e.state,'$.movedBy')
  WHERE c.world_id=? AND e.account_id=? AND e.collected_at IS NULL ORDER BY c.lapsed_at,e.id`, world, account)
 	if err != nil {
 		return nil, err
@@ -38,10 +63,15 @@ func waiting(ctx context.Context, tx *sql.Tx, world, account string) ([]recovery
 	for rows.Next() {
 		e := recoveryEntry{RecoveryEntry: &contract.RecoveryEntry{}}
 		var at int64
-		if err = rows.Scan(&e.Id, &e.Kind, &e.ItemDef, &e.Qty, &e.Cx, &e.Cy, &at, &e.instance); err != nil {
+		var mover sql.NullString
+		var name string
+		if err = rows.Scan(&e.Id, &e.Kind, &e.ItemDef, &e.Qty, &e.Cx, &e.Cy, &at, &e.instance, &mover, &name); err != nil {
 			return nil, err
 		}
 		e.LapsedAt = float64(at)
+		if mover.Valid {
+			e.MovedBy = capDonor(name)
+		}
 		out = append(out, e)
 	}
 	return out, rows.Err()
