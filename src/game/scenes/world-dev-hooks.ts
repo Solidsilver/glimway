@@ -398,6 +398,11 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
       .filter((c): c is Phaser.GameObjects.Image => c instanceof Phaser.GameObjects.Image && c.active && c.getData(TILE_DATA) === tileKey(tx, ty))
       .map((c) => ({ frame: String(c.frame.name), fades: fading.has(c) }))
   })
+  on('__fsImagesNamed', (prefix) =>
+    s.children.list
+      .filter((c): c is Phaser.GameObjects.Image => c instanceof Phaser.GameObjects.Image && c.active && c.texture.key.startsWith(prefix))
+      .map((c) => ({ key: c.texture.key, x: c.x, y: c.y }))
+  )
   on('__fsSafety', syncSafety)
   // Seated: the seat's pose and the depths drawn at (the hero's and the
   // layered avatar's), so a playtest can check the hero sits on the seat.

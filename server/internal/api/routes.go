@@ -141,6 +141,7 @@ var routes = []routeMetadata{
 	{method: "POST", path: "/api/homestead/invite", label: "/api/homestead/invite", handler: (*Server).homeMutation},
 	{method: "POST", path: "/api/homestead/joint", label: "/api/homestead/joint", handler: (*Server).homeMutation},
 	{method: "POST", path: "/api/homestead/leave", label: "/api/homestead/leave", handler: (*Server).homeMutation},
+	{method: "POST", path: "/api/homestead/lantern", label: "/api/homestead/lantern", handler: (*Server).homeMutation},
 	{method: "POST", path: "/api/spend", label: "/api/spend", handler: (*Server).spendOp},
 	{method: "GET", path: "/api/items", label: "/api/items", handler: (*Server).itemsRead},
 	{method: "POST", path: "/api/items/use", label: "/api/items/use", handler: (*Server).itemsMutation},

@@ -1,4 +1,7 @@
 import { int, num, countMap } from './decode-values.ts';
+
+/** West lots keep their backland lot-local past the lot, at x -24..-1 (hearthwick-2.md §6). */
+const BACKLAND_MIN_X = -24;
 /**
  * The homestead routes (proto/glimway/v1/homestead.proto): the gate read,
  * the keyed lane mutations, the gate shelf and the woodpile. Responses
@@ -85,7 +88,12 @@ export interface HomeView {
   stalls: StallView[];
   /** Every member's yard pets, so visitors see them too. */
   yardPets: YardPetView[];
+  /** The lot's lantern: lit while it holds the backland; oil in wicks. */
+  lantern: LotLanternState;
 }
+
+/** A lot lantern (roadmap 0.12): lit, its oil in wicks, dimming once the oil ran out at a turning. */
+export interface LotLanternState { lit: boolean; oil: number; dimming: boolean }
 
 export interface HomeResponse extends Snapshot {
   gate: number;
@@ -94,7 +102,7 @@ export interface HomeResponse extends Snapshot {
   materials: Record<string, number>;
 }
 
-export type HomeOp = 'buy' | 'place' | 'move' | 'remove' | 'upgrade' | 'claim' | 'clear' | 'invite' | 'joint' | 'leave';
+export type HomeOp = 'buy' | 'place' | 'move' | 'remove' | 'upgrade' | 'claim' | 'clear' | 'invite' | 'joint' | 'leave' | 'lantern';
 
 /** The op-specific fields of a homestead POST (lease, rev, key and progress are added by the link). */
 export type HomeAction =
@@ -106,7 +114,8 @@ export type HomeAction =
   | { op: 'clear'; x: number; y: number }
   | { op: 'invite'; to: string }
   | { op: 'joint'; homeId: string; to: string }
-  | { op: 'leave' };
+  | { op: 'leave' }
+  | { op: 'lantern'; gate: number };
 
 export interface HomeActionResponse extends Snapshot {
   result: { home: HomeView | null; materials: Record<string, number>; itemId?: string; status?: 'joined' | 'waiting' };
@@ -205,7 +214,7 @@ function homeInstance(v: GeneratedHomeInstance): HomeInstance {
     id: v.id,
     itemDef: v.itemDef,
     scene: placed ? (v.scene as HomeInstance['scene']) : null,
-    x: placed ? int(v.x) : null,
+    x: placed ? int(v.x, BACKLAND_MIN_X) : null,
     y: placed ? int(v.y) : null,
     rotation: placed ? (v.rotation as HomeInstance['rotation']) : null,
     name: v.name ? v.name.slice(0, 80) : null,
@@ -231,7 +240,7 @@ export function projectHome(h: GeneratedHomeView): HomeView {
     plants: h.plants.map((p): HomePlantView => ({
       id: p.id,
       itemDef: p.itemDef,
-      x: int(p.x),
+      x: int(p.x, BACKLAND_MIN_X),
       y: int(p.y),
       plantedAt: p.plantedAt ?? undefined,
       plantedDay: p.plantedDay ?? undefined,
@@ -243,6 +252,7 @@ export function projectHome(h: GeneratedHomeView): HomeView {
     items: h.items.map(homeInstance),
     stalls: h.stalls.map((st): StallView => ({ stall: int(st.stall, 1), mount: st.mount, ownerId: st.ownerId, ownerName: st.ownerName.slice(0, 64), out: st.out })),
     yardPets: h.yardPets.map((y): YardPetView => ({ ownerId: y.ownerId, pet: y.pet, slot: int(y.slot, 1) })),
+    lantern: { lit: h.lantern?.lit ?? false, oil: int(h.lantern?.oil ?? 0), dimming: h.lantern?.dimming ?? false },
   };
 }
 

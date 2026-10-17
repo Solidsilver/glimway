@@ -14,7 +14,7 @@
   import { beltFor, heldSlot, KIND_WORDS, type BeltKind } from '../lib/belt'
   import { GATHERING_DATA, isPlantableSeed, PLANTS_FULL_LINE } from '../lib/gathering'
   import { plantTileNear } from '../lib/homestead'
-  import { lotOrigin, lotAtPixel } from '../lib/lots'
+  import { backlandAtPixel, inBackland, lotOrigin, lotAtPixel } from '../lib/lots'
   import { ui } from './store.svelte'
   import { home } from './home.svelte'
   import { inventory } from './inventory.svelte'
@@ -322,7 +322,13 @@
   }
 
   function myLandGate(): number | null {
-    return session.state.area === 'outdoors' ? lotAtPixel(session.state.position.x, session.state.position.y) : null
+    if (session.state.area !== 'outdoors') return null
+    const { x, y } = session.state.position
+    const lot = lotAtPixel(x, y)
+    if (lot !== null) return lot
+    // Your backland, while your lantern burns (lotLit).
+    const back = backlandAtPixel(x, y)
+    return back !== null && homes.mine?.gate === back && homes.mine.lantern.lit ? back : null
   }
 
   /** Seeds and saplings go into your own land, at your feet. */
@@ -341,7 +347,10 @@
       return
     }
     const o = gate !== null && session.state.area === 'outdoors' ? lotOrigin(gate) : { tx: 0, ty: 0 }
-    const localTile = mine ? plantTileNear(mine, { x: session.state.position.x - o.tx * 16, y: session.state.position.y - o.ty * 16 }) : null
+    const at = { x: session.state.position.x - o.tx * 16, y: session.state.position.y - o.ty * 16 }
+    // In the backland the seed goes in at your feet (the server checks the ground there).
+    const feet: [number, number] = [Math.floor(at.x / 16), Math.floor(at.y / 16)]
+    const localTile = !mine ? null : inBackland(feet[0], feet[1], mine.gate) ? feet : plantTileNear(mine, at)
     if (gate === null || !localTile || mine?.gate !== gate) {
       action.say(itemErrorText('land-blocked'), 'error')
       return

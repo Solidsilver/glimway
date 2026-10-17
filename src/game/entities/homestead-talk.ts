@@ -1,4 +1,5 @@
-import { lotAtPixel } from '../../lib/lots'
+import { lanternStake, lotAtPixel, lotOrigin } from '../../lib/lots'
+import { lanternHasRoom, lanternLines } from '../../lib/lot-lantern'
 /**
  * Homesteads, talked to: everything you can use on the Commons, at Silas's
  * Yard, on a homestead's land and in a cottage (each point with its own
@@ -276,6 +277,9 @@ export class HomesteadTalk {
     out.push({ id: 'home:toolbox', ...at(f.toolbox), label: 'Look in Silas’s toolbox', verb: 'Look', markerOffset: 16, activate: () => this.openToolbox() })
     out.push({ id: 'home:firebox', ...at(f.firebox, 2), label: 'Look at the firebox', verb: 'Look', markerOffset: 16, activate: () => this.lookInFirebox() })
     for (const slot of this.home.commons.gates) {
+      // The lot's lantern on its back line (roadmap 0.12): anyone may look and top it up.
+      const o = lotOrigin(slot.gate), stake = lanternStake(slot.gate, HOMESTEAD_DATA.lotLantern.stakeY)
+      out.push({ id: `home:lantern:${slot.gate}`, ...at({ tx: o.tx + stake.x, ty: o.ty + stake.y }, 2), label: 'Look at the lantern', verb: 'Look', markerOffset: 24, activate: () => this.readLantern(slot.gate) })
       out.push({ id: `home:sign:${slot.gate}`, ...at(slot.sign, 2), label: `Read the sign · ${lotName(slot.gate)}`, verb: 'Read', markerOffset: 16, activate: () => this.readSign(slot.gate) })
       const info = this.home.homes.gateInfo(slot.gate)
       if (info?.shelf) {
@@ -347,6 +351,30 @@ export class HomesteadTalk {
       return this.say({ speaker: 'Silas’s Firebox', lines: ['A wedge of pine offcut waits in the kindling box, charcoal all over it. Silas hasn’t burned this one. You take a careful look.'] })
     }
     this.say({ speaker: 'Silas’s Firebox', lines: ['The firebox ticks as it cools. A box of pine offcuts waits for kindling, every one of them drawn on.'] })
+  }
+
+  /** The lot lantern: how much oil it has, and a flask to pour in. */
+  private readLantern(gate: number): void {
+    const home = this.home.homes.homes.get(gate) ?? null
+    const rules = HOMESTEAD_DATA.lotLantern
+    if (!home) return this.say({ speaker: 'Lot Lantern', lines: [`An empty lantern hangs on the stake. Whoever holds the deed to ${lotName(gate)} can light it.`] })
+    const choices: DialogueChoice[] = []
+    // A member lights it; once lit, anyone may keep it burning.
+    if ((home.lantern.lit || home.member) && lanternHasRoom(home.lantern, rules.maxWicks, rules.wicksPerOil)) {
+      const oil = itemsFor(this.deps.session).view?.stacks.filter((x) => x.itemDef === rules.oil).reduce((n, x) => n + x.qty, 0) ?? 0
+      choices.push({ text: home.lantern.lit ? 'Top it up with hearth oil' : 'Fill it with hearth oil', action: `home:lantern:${gate}`, disabled: oil < 1, ...(oil < 1 ? { note: 'You need hearth oil (the chandler sells it)' } : {}) })
+    }
+    choices.push({ text: 'Leave it' })
+    this.say({ speaker: 'Lot Lantern', lines: lanternLines(home.lantern, rules.maxWicks, lotName(gate)), choices })
+  }
+
+  private async fillLantern(gate: number): Promise<void> {
+    const r = await this.home.homes.act({ op: 'lantern', gate })
+    if (!r.ok) return this.say({ speaker: 'Lot Lantern', lines: [r.text] })
+    void itemsFor(this.deps.session).load()
+    const home = await this.home.homes.fetchHome(gate)
+    sfx('settle')
+    this.say({ speaker: 'Lot Lantern', lines: lanternLines(home?.lantern, HOMESTEAD_DATA.lotLantern.maxWicks, lotName(gate)) })
   }
 
   private readSign(gate: number): void {
@@ -542,6 +570,7 @@ export class HomesteadTalk {
       bus.emit(EV.villageOpen, { panel: 'shelf', gate })
       return
     }
+    if (action.startsWith('home:lantern:')) return this.fillLantern(Number(action.slice('home:lantern:'.length)))
     if (action.startsWith('home:place-shelf:')) return this.placeGateShelf(action.slice('home:place-shelf:'.length))
     if (action.startsWith('home:claim:')) return this.claim(Number(action.slice('home:claim:'.length)))
     if (action.startsWith('home:sign:')) return this.signDeed(action.slice('home:sign:'.length))

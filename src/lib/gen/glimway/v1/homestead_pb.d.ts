@@ -52,7 +52,8 @@ export declare const HomeLandChangeSchema: GenMessage<HomeLandChange, {validType
  * grab-bag into new routes without saying why — the per-op result messages
  * in state.proto's Envelope oneof are the pattern to grow into.
  *
- * POST /api/homestead/{buy,place,remove,move,upgrade,claim,clear,invite,joint,leave}.
+ * POST /api/homestead/{buy,place,remove,move,upgrade,claim,clear,invite,joint,leave,lantern}.
+ * lantern fills the lantern of the lot named by gate.
  *
  * @generated from message glimway.v1.HomesteadRequest
  */

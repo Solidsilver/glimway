@@ -158,5 +158,9 @@
   {
     "name": "039_holds.sql",
     "sha256": "967b01dd8a672256716b582afbf49f8522cb2f5d04f6a13b4f66cfa03e103404"
+  },
+  {
+    "name": "040_lot_lanterns.sql",
+    "sha256": "32a7a7968a51733e0e7d3b4ef7861315a2b742a6ab2cc6c141931e9f3eaf536c"
   }
 ]

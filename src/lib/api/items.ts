@@ -234,7 +234,7 @@ function result(r: ItemsResult): ItemsActionResponse['result'] {
     out.plant = {
       id: r.plant.id,
       itemDef: r.plant.itemDef,
-      x: int(r.plant.x),
+      x: int(r.plant.x, -24), // a west lot's backland: lot-local x -24..-1
       y: int(r.plant.y),
       plantedAt: r.plant.plantedAt ?? undefined,
       plantedDay: r.plant.plantedDay ?? undefined,

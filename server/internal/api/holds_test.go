@@ -41,7 +41,7 @@ func TestNearReadServesHeldChunks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = x.api.Config.Chunks.(*store.Chunks).Hold(context.Background(), dbtx, s.WorldID, cx, cy, "lot-lantern", "0", x.now.Load()); err != nil {
+	if _, err = x.api.Config.Chunks.(*store.Chunks).Hold(context.Background(), dbtx, s.WorldID, cx, cy, "test-hold", "0", x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
 	if err = dbtx.Commit(); err != nil {
@@ -90,7 +90,7 @@ func (x *rig) holdChunk(world string, cx, cy int32) {
 		x.t.Fatal(err)
 	}
 	defer dbtx.Rollback()
-	if _, err = x.api.Config.Chunks.(*store.Chunks).Hold(context.Background(), dbtx, world, cx, cy, "lot-lantern", "0", x.now.Load()); err != nil {
+	if _, err = x.api.Config.Chunks.(*store.Chunks).Hold(context.Background(), dbtx, world, cx, cy, "test-hold", "0", x.now.Load()); err != nil {
 		x.t.Fatal(err)
 	}
 	if err = dbtx.Commit(); err != nil {

@@ -101,8 +101,8 @@ func rectLit(lights []land.Light, r rect) bool {
 func everythingLit(items []homeInstance) bool {
 	all := connectedLights(items, "")
 	for _, v := range items {
-		if v.Scene == nil || *v.Scene != "outdoor" {
-			continue
+		if v.Scene == nil || *v.Scene != "outdoor" || v.X != nil && (*v.X < 0 || *v.X > 23) {
+			continue // the backland's pieces stand in the lot lantern's light
 		}
 		lights := all
 		if v.ItemDef == content.HomeRules.GetLanternPosts().GetItem() {
@@ -162,7 +162,12 @@ func validatePlacement(h homeView, item homeInstance, r *contract.HomesteadReque
 	}
 	w, ht := footprint(item, int(r.Rotation.GetValue()))
 	here := rect{int(r.X.GetValue()), int(r.Y.GetValue()), w, ht}
-	if here.x < 0 || here.y < 0 || here.x > int(grid.GetWidth())-w || here.y > int(grid.GetHeight())-ht {
+	// The backland behind the lot, while the lantern holds it (lotLit).
+	back := r.Scene == "outdoor" && rectInBackland(here, h.Gate)
+	if back && h.Back == nil {
+		return fail(409, "unlit")
+	}
+	if !back && (here.x < 0 || here.y < 0 || here.x > int(grid.GetWidth())-w || here.y > int(grid.GetHeight())-ht) {
 		return fail(409, "out-of-bounds")
 	}
 	// The home site, the gate path and the doorway are kept clear.
@@ -188,6 +193,22 @@ func validatePlacement(h homeView, item homeInstance, r *contract.HomesteadReque
 		if here.overlaps(rect{p.X, p.Y, 1, 1}) { // plants are plain ints
 			return fail(409, "plant-in-the-way")
 		}
+	}
+	if back {
+		// The lantern lights the whole backland. Posts and the stable stay
+		// on the lot: a post out there would light the lot from land that
+		// can lapse, and a stable's stalls can't pack away.
+		if item.ItemDef == content.HomeRules.GetLanternPosts().GetItem() || item.ItemDef == stableItemID() {
+			return fail(409, "land-blocked")
+		}
+		for y := here.y; y < here.y+here.h; y++ {
+			for x := here.x; x < here.x+here.w; x++ {
+				if !h.Back.buildable(x, y) {
+					return fail(409, "land-blocked")
+				}
+			}
+		}
+		return nil
 	}
 	g := groundOf(h)
 	for y := here.y; y < here.y+here.h; y++ {
@@ -215,7 +236,7 @@ func placementPresence(s *store.Snapshot, h homeView, scene string) error {
 		if s.State.Area == fmt.Sprintf("in:home:%d", h.Gate) {
 			return nil
 		}
-	} else if onPrivateLot(s, h.Gate) {
+	} else if onLotGround(s, h) {
 		return nil
 	}
 	return fail(409, "not-at-own-plot")

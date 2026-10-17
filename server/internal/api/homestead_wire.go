@@ -218,6 +218,7 @@ func homeViewProto(h homeView) *contract.HomeView {
 	for _, v := range h.Stalls {
 		out.Stalls = append(out.Stalls, stallProto(v))
 	}
+	out.Lantern = lotLanternProto(h.Lantern)
 	out.YardPets = make([]*contract.YardPet, 0, len(h.YardPets))
 	for _, v := range h.YardPets {
 		out.YardPets = append(out.YardPets, yardPetProto(v))

@@ -149,7 +149,7 @@ const ROUTE_PATHS: Record<MutationOp['kind'], (r: MutationRoute) => string> = {
 function routeFromPath(path: string): MutationRoute | null {
   const m = (re: RegExp) => re.exec(path)
   let x: RegExpExecArray | null
-  if ((x = m(/^\/api\/homestead\/(buy|place|move|remove|upgrade|claim|clear|invite|joint|leave)$/))) return { kind: 'home', op: x[1] }
+  if ((x = m(/^\/api\/homestead\/(buy|place|move|remove|upgrade|claim|clear|invite|joint|leave|lantern)$/))) return { kind: 'home', op: x[1] }
   if ((x = m(/^\/api\/items\/([a-z-]+)$/))) return { kind: 'items', op: x[1] }
   if ((x = m(/^\/api\/mail\/([^/]+)\/(claim|recall)$/))) return { kind: x[2] === 'claim' ? 'mail-claim' : 'mail-recall', id: decodeURIComponent(x[1]!) }
   if ((x = m(/^\/api\/projects\/([^/]+)\/contribute$/))) return { kind: 'contribute', id: decodeURIComponent(x[1]!) }

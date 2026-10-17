@@ -31,6 +31,7 @@ export const PATH_REFUSALS: Record<string, string> = {
   'already-laid': 'There’s a path here already.',
   'cannot-lay-here': 'You can’t lay a path here.',
   'not-your-path': 'Someone else laid this. It’s theirs to lift.',
+  'not-your-land': 'A lot lantern holds this land. Only the lot’s own folk change its ground.',
   'too-far-away': 'Step a little closer.',
   'not-in-wilds': 'Paths are for the Wilds.',
   'epoch-ended': 'The drift has turned. The land is new.',
@@ -45,6 +46,8 @@ export const TURNS_CONFIRM = {
   title: 'Lay a path here?',
   yes: 'Lay it',
   no: 'Not here',
+  /** On land a lot lantern holds (roadmap 0.12): it keeps while the lantern burns. */
+  held: 'This land holds while the lantern burns. A path here stays with it, until the lantern goes dark.',
 } as const;
 
 /** "Found by <name>" and the first finder's lines (open-map.md 2.10). */

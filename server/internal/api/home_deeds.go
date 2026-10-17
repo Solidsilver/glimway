@@ -74,12 +74,18 @@ func settleHomes(ctx context.Context, tx *sql.Tx, world string, now int64) error
 			// So do the stable's stalls (030).
 			"DELETE FROM homestead_stalls WHERE homestead_id=?",
 			"DELETE FROM homestead_items WHERE homestead_id=?",
+			"DELETE FROM lot_lanterns WHERE homestead_id=?",
+			"DELETE FROM homestead_land_archive WHERE homestead_id=?",
 			"DELETE FROM homestead_members WHERE homestead_id=?",
 			"DELETE FROM homesteads WHERE id=?",
 		} {
 			if _, err = tx.ExecContext(ctx, q, v.id); err != nil {
 				return err
 			}
+		}
+		// Nobody is left to tend the lantern: its hold goes at the turning.
+		if err = releaseLantern(ctx, tx, world, v.gate, now); err != nil {
+			return err
 		}
 		if _, err = tx.ExecContext(ctx, "INSERT INTO lost_gates(world_id,gate,lost_at) VALUES(?,?,?) ON CONFLICT(world_id,gate) DO UPDATE SET lost_at=excluded.lost_at", world, v.gate, now); err != nil {
 			return err

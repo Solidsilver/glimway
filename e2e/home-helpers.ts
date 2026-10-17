@@ -29,6 +29,8 @@ export interface Home {
   postsBought: number
   nextPost: Record<string, number>
   items: Item[]
+  /** The lot lantern (roadmap 0.12). */
+  lantern?: { lit: boolean; oil: number; dimming: boolean }
 }
 export interface HomesView {
   status: string

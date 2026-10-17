@@ -170,6 +170,12 @@ export const HOME_ERRORS: Table = {
   // The stable (crafts.md 3.2).
   'stable-full': 'One stable to a homestead, and six stalls to a stable.',
   'stalls-in-use': 'Empty the stalls first, and bring home any mount that’s out.',
+  // Lot lanterns (roadmap 0.12).
+  'lantern-full': 'The lantern’s full. It takes three wicks of oil at most.',
+  'no-home': 'Nobody holds the deed to this lot. There’s no one to light it for.',
+  'cannot-hold': 'The woods behind won’t hold just now. Try again after the turning.',
+  'not-your-land': 'That’s someone else’s land. Leave it as you found it.',
+  'too-far-away': 'Stand by the lantern to fill it.',
   resolved: 'Your last order with Silas went through after all. Check what you have before trying again.',
   pending: 'No answer yet — it may have gone through. We’ll find out when the connection is back; nothing will be charged twice.'
 }
