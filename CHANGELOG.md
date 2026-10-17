@@ -18,6 +18,10 @@ the game can show the first part as "What's new":
 - The world map shows held land, common paths and dimming warnings. Open Details for the Lamps ledger: see each known light’s reserve and what happens at the turning, then pick a row to find it on the map.
 
 - Signing in, reloading and stepping outdoors no longer freeze the game for a moment as the world appears.
+
+### Technical
+
+- Add palette-matched relit lamp stones, route stones and three lamp inventory icons to the art atlases.
 - The Wilds keep their shape across the turning: the Wend runs the same course and woods and meadows stay where they are. Only the living detail (trees, forage, camps, chests, places and paths) changes each wick.
 - The Wilds turn early once, when this version arrives: the current wick's land is replaced. The Tangle keeps everything.
 - Light your lot lantern: fill the lantern on your lot's back line with hearth oil and the woods behind your lot hold still through the turning. While it burns, that land is part of your yard: set pieces out there and plant in it. Each flask burns for a wick, up to three; anyone may top up a neighbour's lantern. Run dry, it gutters for a wick, then goes dark, and the woods turn; anything you set out there comes home to your storage, and planted seeds come back to your chest.

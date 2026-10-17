@@ -29,5 +29,25 @@
     ],
     "frameRate": 2,
     "repeat": -1
+  },
+  {
+    "key": "lamp-stone-relit",
+    "frames": [
+      "lamp-stone-relit-0",
+      "lamp-stone-relit-1",
+      "lamp-stone-relit-2"
+    ],
+    "frameRate": 1.2,
+    "repeat": -1
+  },
+  {
+    "key": "route-stone-relit",
+    "frames": [
+      "route-stone-relit-0",
+      "route-stone-relit-1",
+      "route-stone-relit-2"
+    ],
+    "frameRate": 1.2,
+    "repeat": -1
   }
 ]

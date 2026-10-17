@@ -5,6 +5,12 @@
       "key": "way-lamp-icon",
       "source": "way-lamp-icon-generated.png",
       "prompt": "Use the generated way-lamp and the existing game lamp and stone art as references. Create one centered icon of the same hooded iron lamp on a compact cairn stone footing, steadily lit with warm amber flame. Transparent square canvas, crisp pixel clusters, earthy Wilds palette, #3a2a28 outline, no text, border, scenery, cast shadow, smoothing or antialiasing. Keep the complete lamp visible."
+    },
+    {
+      "key": "lamp-icons",
+      "source": "lamp-icons-generated.png",
+      "prompt": "Create three transparent pixel-art inventory icons in separate equal cells: grey ash with one amber ember; an ash-grey drawstring pouch with ash at the neck; and a leaning metal turncap set in amber. Chunky clusters readable at 16x16, warm dark outline, upper-left light, no background, text, blur, antialiasing or watermark.",
+      "method": "Built-in image_gen source sheet retained. build_manifest.py measures each cell and records source rectangles; the items atlas builder scales each crop to its 16x16 inventory canvas."
     }
   ]
 }

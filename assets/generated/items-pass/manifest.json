@@ -103,6 +103,12 @@
       "file": "way-lamp-icon-generated.png",
       "width": 1254,
       "height": 1254
+    },
+    {
+      "key": "items-lamp-icons",
+      "file": "lamp-icons-generated.png",
+      "width": 2172,
+      "height": 724
     }
   ],
   "frames": [
@@ -5482,6 +5488,99 @@
         "w": 16,
         "h": 16
       }
+    },
+    {
+      "key": "item-lamp-ash",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-lamp-icons",
+      "sheet": "lamp-icons",
+      "sourceRect": {
+        "x": 88,
+        "y": 317,
+        "w": 554,
+        "h": 307
+      },
+      "itemId": "lamp-ash",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Lamp ash",
+      "state": null,
+      "look": "A pinch of grey ash with one warm fleck still glowing",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-lamp-ash-pouch",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-lamp-icons",
+      "sheet": "lamp-icons",
+      "sourceRect": {
+        "x": 813,
+        "y": 94,
+        "w": 550,
+        "h": 552
+      },
+      "itemId": "lamp-ash-pouch",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Lamp ash pouch",
+      "state": null,
+      "look": "A small drawstring pouch in ash-grey cloth, with a little ash at the neck",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-homing-turncap",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-lamp-icons",
+      "sheet": "lamp-icons",
+      "sourceRect": {
+        "x": 1540,
+        "y": 105,
+        "w": 543,
+        "h": 503
+      },
+      "itemId": "homing-turncap",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Homing turncap",
+      "state": null,
+      "look": "A turncap set in a bead of amber, its stem leaning to one side",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
     }
   ],
   "animations": [
@@ -5894,6 +5993,9 @@
     "millers-fry": "item-millers-fry",
     "recipe-card-millers-fry": "item-recipe-card-millers-fry",
     "way-lamp": "item-way-lamp",
+    "lamp-ash": "item-lamp-ash",
+    "lamp-ash-pouch": "item-lamp-ash-pouch",
+    "homing-turncap": "item-homing-turncap",
     "timber": "commons:icon-timber",
     "woodpile": "commons:woodpile",
     "candle-hulls": "commons:candle-hull-0",

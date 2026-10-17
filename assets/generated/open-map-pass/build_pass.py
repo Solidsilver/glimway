@@ -21,6 +21,7 @@ SPLIT_OAK_SOURCE = Image.open(SRC / 'landmark-split-oak-generated.png').convert(
 STANDING_STONE_SOURCE = Image.open(SRC / 'standing-stone-round3-generated.png').convert('RGBA')
 WAY_SIGN_SOURCE = Image.open(SRC / 'way-sign-round3-generated.png').convert('RGBA')
 WAY_LAMP_SOURCE = Image.open(SRC / 'way-lamp-generated.png').convert('RGBA')
+LAMP_STONES_SOURCE = Image.open(SRC / 'lamp-stones-generated.png').convert('RGBA')
 
 # Source cuts in the generated 1402x1122 transparent prop sheet. Crops are kept
 # here so every frame can be rebuilt without depending on the generation tool.
@@ -52,6 +53,19 @@ def palette_limit(img: Image.Image, colors=32) -> Image.Image:
     rgb = img.convert('RGB').quantize(colors=colors, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE).convert('RGB')
     rgb.putalpha(alpha)
     return rgb
+
+def match_palette(img: Image.Image, palette_image: Image.Image) -> Image.Image:
+    """Map every opaque pixel to the exact colors used by the canonical dark lamp stone."""
+    palette = sorted({p[:3] for p in palette_image.convert('RGBA').getdata() if p[3]})
+    src = img.convert('RGBA'); out = Image.new('RGBA', src.size, (0,0,0,0))
+    sp, dp = src.load(), out.load()
+    for y in range(src.height):
+        for x in range(src.width):
+            r,g,b,a = sp[x,y]
+            if a:
+                color = min(palette, key=lambda q:(q[0]-r)**2+(q[1]-g)**2+(q[2]-b)**2)
+                dp[x,y] = (*color,255)
+    return out
 
 def crop_sprite(key, canvas):
     cut = PROP_CUTS[key]
@@ -267,6 +281,61 @@ for key,(col,row,foot) in {
     else:
         generated_prop(key,'landmarks-generated',LANDMARK_SOURCE,col,row,3,2,foot,20)
 
+# Extract only the flame from each generated lit source cell and place it in
+# the canonical dark stone's niche. This keeps the stone pixels, canvas, foot,
+# outline and palette identical across the animation.
+stone_palette = Image.open(OUT/'lamp-stone-dark.png').convert('RGBA')
+flame_boxes = [(520,210,650,350),(840,210,970,350),(1160,210,1290,350)]
+relit_lamps=[]
+for i,box in enumerate(flame_boxes):
+    generated=LAMP_STONES_SOURCE.crop(box).convert('RGBA')
+    mask=Image.new('L',generated.size,0); gp=generated.load(); mp=mask.load()
+    for y in range(generated.height):
+        for x in range(generated.width):
+            r,g,b,a=gp[x,y]
+            if a and ((r>155 and g>65 and r>g*1.06 and r>b*1.35) or (r>220 and g>175 and b<165)):
+                mp[x,y]=255
+    flame=generated.copy(); flame.putalpha(mask); bbox=mask.getbbox()
+    if bbox: flame=flame.crop(bbox)
+    flame=flame.resize((10,20),Image.Resampling.NEAREST)
+    flame=match_palette(flame,stone_palette)
+    im=stone_palette.copy()
+    # Keep a readable amber core at native scale, using only canonical palette
+    # colors; the generated flame mask still supplies the subtle edge variation.
+    im.alpha_composite(flame,(27,44))
+    d=ImageDraw.Draw(im)
+    amber=(191,146,77,255); gold=(195,161,99,255); pale=(228,199,135,255)
+    shapes=[[(31,63),(29,60),(29,56),(31,52),(32,48),(34,53),(35,58),(34,62)],
+            [(31,63),(29,61),(30,57),(31,53),(34,49),(34,55),(35,59),(33,62)],
+            [(31,63),(29,60),(30,56),(32,53),(34,48),(34,55),(35,59),(33,62)]]
+    d.polygon(shapes[i],fill=gold,outline=amber)
+    d.polygon([(31,60),(31,56),(32,53),(33,57),(33,60)],fill=pale)
+    im.save(OUT/f'lamp-stone-relit-{i}.png',optimize=True)
+    relit_lamps.append(im)
+    key=f'lamp-stone-relit-{i}'
+    frames[key]={'file':f'frames/{key}.png','source':'lamp-stones-generated',
+      'sourceRect':{'x':box[0],'y':box[1],'w':box[2]-box[0],'h':box[3]-box[1]},
+      'canvas':{'w':64,'h':128},'footprint':{'w':1,'h':1},
+      'footPoint':{'x':32,'y':128},'kind':'transparent-prop'}
+
+# A flat inscription panel comes from the fifth generated source image. Keep
+# its carved pseudo-writing and moss, and pair it with the exact canonical lamp.
+panel_box=(1670,105,2172,660)
+panel=fit_pixel_art(LAMP_STONES_SOURCE.crop(panel_box),(58,108),32)
+panel=match_palette(panel,stone_palette)
+route_dark=Image.new('RGBA',(128,128),(0,0,0,0))
+route_dark.alpha_composite(stone_palette,(0,0)); route_dark.alpha_composite(panel,(67,20))
+route_dark.save(OUT/'route-stone-dark.png',optimize=True)
+frames['route-stone-dark']={'file':'frames/route-stone-dark.png','source':'lamp-stones-generated',
+  'sourceRect':{'x':panel_box[0],'y':panel_box[1],'w':panel_box[2]-panel_box[0],'h':panel_box[3]-panel_box[1]},
+  'canvas':{'w':128,'h':128},'footprint':{'w':2,'h':1},'footPoint':{'x':64,'y':128},'kind':'transparent-prop'}
+for i,lamp in enumerate(relit_lamps):
+    im=Image.new('RGBA',(128,128),(0,0,0,0)); im.alpha_composite(lamp,(0,0)); im.alpha_composite(panel,(67,20))
+    key=f'route-stone-relit-{i}'; im.save(OUT/f'{key}.png',optimize=True)
+    frames[key]={'file':f'frames/{key}.png','source':'lamp-stones-generated',
+      'sourceRect':{'x':flame_boxes[i][0],'y':flame_boxes[i][1],'w':flame_boxes[i][2]-flame_boxes[i][0],'h':flame_boxes[i][3]-flame_boxes[i][1]},
+      'canvas':{'w':128,'h':128},'footprint':{'w':2,'h':1},'footPoint':{'x':64,'y':128},'kind':'transparent-prop'}
+
 # The generated three-state wayside lamp is kept on one fixed canvas. Its
 # states share a union crop before fitting, then the builder reduces it to
 # 2x2 texel clusters and the Wilds palette just like the other props.
@@ -346,6 +415,7 @@ source_files={
  'standing-stone-round3-generated':'standing-stone-round3-generated.png',
  'way-sign-round3-generated':'way-sign-round3-generated.png',
  'way-lamp-generated':'way-lamp-generated.png',
+ 'lamp-stones-generated':'lamp-stones-generated.png',
 }
 for k,file in source_files.items():
     im=Image.open(SRC/file)
@@ -354,7 +424,9 @@ for k,file in source_files.items():
 
 animations=[{'key':'ford-h-ripple','frames':[f'ford-h-{i}' for i in range(3)],'frameRate':1.5,'repeat':-1},
             {'key':'ford-v-ripple','frames':[f'ford-v-{i}' for i in range(3)],'frameRate':1.5,'repeat':-1},
-            {'key':'frontier-veil','frames':[f'frontier-veil-{i}' for i in range(4)],'frameRate':2,'repeat':-1}]
+            {'key':'frontier-veil','frames':[f'frontier-veil-{i}' for i in range(4)],'frameRate':2,'repeat':-1},
+            {'key':'lamp-stone-relit','frames':[f'lamp-stone-relit-{i}' for i in range(3)],'frameRate':1.2,'repeat':-1},
+            {'key':'route-stone-relit','frames':[f'route-stone-relit-{i}' for i in range(3)],'frameRate':1.2,'repeat':-1}]
 manifest={'version':1,'density':4,'worldTileSize':16,'frameCount':len(frames),'sources':sources,'frames':frames,'animations':animations}
 atlas={'frames':{k:{'source':v['source'],'x':v['sourceRect']['x'],'y':v['sourceRect']['y'],'w':v['sourceRect']['w'],'h':v['sourceRect']['h'],'canvas':v['canvas'],'footprint':v['footprint'],**({'footPoint':v['footPoint']} if 'footPoint' in v else {})} for k,v in frames.items()},'animations':animations}
 (ROOT/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')

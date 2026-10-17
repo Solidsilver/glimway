@@ -5,7 +5,7 @@ This pass supplies the non-code art for the 0.8 open map. It follows the Tangle'
 ## Contents
 
 - `source/`: retained generated prop, landmark, veil, ground and ford sheets, plus the round-1 map icon source and round-3 replacements.
-- `frames/`: one native-size PNG per requested frame (48 frames total).
+- `frames/`: one native-size PNG per requested frame (55 frames total).
 - `manifest.json`: full source catalog, frame canvases, source rectangles, footprints, prop foot points, and animation groups.
 - `atlas.json`: frame-to-source mapping plus canvas, footprint, and foot-point metadata.
 - `animations.json`: slow ripple loops for the horizontal/vertical fords and the frontier veil.
@@ -37,7 +37,8 @@ Every listed key is present in both JSON indexes. The numbered groups use zero-b
 | `ford-v-0..2` | 64×192 | 1×3 | Vertical crossing; slow ripple loop |
 | `path-stone-0..3`, `path-plank-h-0..1`, `path-plank-v-0..1` | 64×64 | 1×1 | Player-laid path tiles |
 | `road-paving-0..3`, `road-verge-0..1` | 64×64 | 1×1 | Lantern Road surface and edge |
-| `lamp-stone-dark` | 64×128 | 1×1 | Unlit road landmark; collision at its base |
+| `lamp-stone-dark`, `lamp-stone-relit-0..2` | 64×128 | 1×1 | Unlit and warm-amber relit road landmark states |
+| `route-stone-dark`, `route-stone-relit-0..2` | 128×128 | 2×1 | Route lamp and carved pseudo-writing panel; relit states loop slowly |
 | `way-lamp-0..2` | 64×96 | 1×1 | Dark, steady-lit and dimming camp lamp; shared foot point |
 | `frontier-veil-0..3` | 192×64 | 3×1 | Looping boundary overlay |
 | `icon-map-tab` | 32×32 | 1×1 | Journal tab icon |
