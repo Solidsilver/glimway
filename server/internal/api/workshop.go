@@ -200,6 +200,16 @@ func (a *Server) craft(w http.ResponseWriter, r *http.Request) error {
 		if !ok {
 			return nil, fail(400, "invalid-recipe")
 		}
+		// A found recipe is only known once its page is held, as at the hearth.
+		if recipe.GetPage() != "" {
+			held, err := stackTotal(ctx, tx, packOf(s.AccountID), recipe.GetPage())
+			if err != nil {
+				return nil, err
+			}
+			if held <= 0 {
+				return nil, fail(409, "recipe-unknown")
+			}
+		}
 		if req.Qty < 1 || req.Qty > 100 {
 			return nil, fail(400, "invalid-quantity")
 		}

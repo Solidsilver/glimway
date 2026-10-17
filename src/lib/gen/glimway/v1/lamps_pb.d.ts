@@ -242,3 +242,163 @@ export declare type CommunalLampResultValid = CommunalLampResult;
  */
 export declare const CommunalLampResultSchema: GenMessage<CommunalLampResult, {validType: CommunalLampResultValid}>;
 
+/**
+ * Ways home (roadmap 0.13; lamps.md 1.4). A lamp-ash pouch is bound to one
+ * lamp by its stable id: a camp's way-lamp, or a communal lamp (a relit
+ * stone or a post). Lot lanterns don't take a binding. The binding is the
+ * player's, one at a time, for every pouch they carry. state says how the
+ * lamp stands now: "lit", "unlit" (a stone gone dark), "packed" (in a crate
+ * at Pell's), "elsewhere" (another world) or "gone" (taken down, or no
+ * longer anywhere). While it's lit: kind ("stone", "post" or "camp"), its
+ * world tile (x, y), and its naming's short name ("" while unnamed).
+ *
+ * @generated from message glimway.v1.WaysHomeBinding
+ */
+export declare type WaysHomeBinding = Message<"glimway.v1.WaysHomeBinding"> & {
+  /**
+   * @generated from field: string lamp_id = 1;
+   */
+  lampId: string;
+
+  /**
+   * @generated from field: string lamp_name = 2;
+   */
+  lampName: string;
+
+  /**
+   * @generated from field: string state = 3;
+   */
+  state: string;
+
+  /**
+   * @generated from field: sint32 x = 4;
+   */
+  x: number;
+
+  /**
+   * @generated from field: sint32 y = 5;
+   */
+  y: number;
+
+  /**
+   * @generated from field: double bound_at = 6;
+   */
+  boundAt: number;
+
+  /**
+   * @generated from field: string kind = 7;
+   */
+  kind: string;
+};
+
+export declare type WaysHomeBindingValid = WaysHomeBinding;
+
+/**
+ * Describes the message glimway.v1.WaysHomeBinding.
+ * Use `create(WaysHomeBindingSchema)` to create a new message.
+ */
+export declare const WaysHomeBindingSchema: GenMessage<WaysHomeBinding, {validType: WaysHomeBindingValid}>;
+
+/**
+ * GET /api/ways-home: your pouch's binding, if any.
+ *
+ * @generated from message glimway.v1.WaysHomeRead
+ */
+export declare type WaysHomeRead = Message<"glimway.v1.WaysHomeRead"> & {
+  /**
+   * @generated from field: glimway.v1.WaysHomeBinding binding = 1;
+   */
+  binding?: WaysHomeBinding | undefined;
+};
+
+export declare type WaysHomeReadValid = WaysHomeRead;
+
+/**
+ * Describes the message glimway.v1.WaysHomeRead.
+ * Use `create(WaysHomeReadSchema)` to create a new message.
+ */
+export declare const WaysHomeReadSchema: GenMessage<WaysHomeRead, {validType: WaysHomeReadValid}>;
+
+/**
+ * POST /api/ways-home: one way-home operation, by action. Travel takes
+ * exactly one item, and only when it succeeds; any refusal keeps it. Both
+ * refuse while you're in a fight. The client holds the three-second pause.
+ *   bind:    bind your pouches to the lamp `lamp` beside you (a pouch in
+ *            the pack, the lamp within reach).
+ *   turncap: use a homing turncap: back to Hearthwick's Wilds entrance (the
+ *            anchor its content names, resolved now).
+ *   pouch:   use a lamp-ash pouch: to open ground beside its bound lamp.
+ *
+ * @generated from message glimway.v1.WaysHomeRequest
+ */
+export declare type WaysHomeRequest = Message<"glimway.v1.WaysHomeRequest"> & {
+  /**
+   * @generated from field: glimway.v1.OpHeader op = 1;
+   */
+  op?: OpHeader | undefined;
+
+  /**
+   * @generated from field: glimway.v1.Where where = 2;
+   */
+  where?: Where | undefined;
+
+  /**
+   * @generated from field: string action = 3;
+   */
+  action: string;
+
+  /**
+   * @generated from field: string lamp = 4;
+   */
+  lamp: string;
+};
+
+export declare type WaysHomeRequestValid = WaysHomeRequest;
+
+/**
+ * Describes the message glimway.v1.WaysHomeRequest.
+ * Use `create(WaysHomeRequestSchema)` to create a new message.
+ */
+export declare const WaysHomeRequestSchema: GenMessage<WaysHomeRequest, {validType: WaysHomeRequestValid}>;
+
+/**
+ * The binding after the operation, and where travel put you (the state's
+ * place says the same).
+ *
+ * @generated from message glimway.v1.WaysHomeResult
+ */
+export declare type WaysHomeResult = Message<"glimway.v1.WaysHomeResult"> & {
+  /**
+   * @generated from field: string action = 1;
+   */
+  action: string;
+
+  /**
+   * @generated from field: glimway.v1.WaysHomeBinding binding = 2;
+   */
+  binding?: WaysHomeBinding | undefined;
+
+  /**
+   * @generated from field: string area = 3;
+   */
+  area: string;
+
+  /**
+   * @generated from field: double x = 4;
+   */
+  x: number;
+
+  /**
+   * @generated from field: double y = 5;
+   */
+  y: number;
+};
+
+export declare type WaysHomeResultValid = WaysHomeResult;
+
+/**
+ * Describes the message glimway.v1.WaysHomeResult.
+ * Use `create(WaysHomeResultSchema)` to create a new message.
+ */
+export declare const WaysHomeResultSchema: GenMessage<WaysHomeResult, {validType: WaysHomeResultValid}>;
+

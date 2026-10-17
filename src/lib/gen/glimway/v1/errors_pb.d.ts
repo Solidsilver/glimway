@@ -1232,6 +1232,43 @@ export enum ErrorCode {
    * @generated from enum value: ERROR_CODE_NOT_YOUR_LAMP = 239;
    */
   NOT_YOUR_LAMP = 239,
+
+  /**
+   * 0.13 Ways home (lamps.md 1.4).
+   *
+   * @generated from enum value: ERROR_CODE_IN_A_FIGHT = 240;
+   */
+  IN_A_FIGHT = 240,
+
+  /**
+   * @generated from enum value: ERROR_CODE_POUCH_UNBOUND = 241;
+   */
+  POUCH_UNBOUND = 241,
+
+  /**
+   * @generated from enum value: ERROR_CODE_LAMP_ELSEWHERE = 242;
+   */
+  LAMP_ELSEWHERE = 242,
+
+  /**
+   * @generated from enum value: ERROR_CODE_LAMP_PACKED = 243;
+   */
+  LAMP_PACKED = 243,
+
+  /**
+   * @generated from enum value: ERROR_CODE_LAMP_UNLIT = 244;
+   */
+  LAMP_UNLIT = 244,
+
+  /**
+   * @generated from enum value: ERROR_CODE_LAMP_GONE = 245;
+   */
+  LAMP_GONE = 245,
+
+  /**
+   * @generated from enum value: ERROR_CODE_NO_LANDING = 246;
+   */
+  NO_LANDING = 246,
 }
 
 /**

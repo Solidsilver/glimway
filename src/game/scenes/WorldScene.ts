@@ -68,6 +68,7 @@ import { WildsPaths } from '../wilds/paths'
 import { WildsMarks } from '../wilds/marks'
 import { WildsCamps } from '../wilds/camps'
 import { WildsCommunalLamps } from '../wilds/communal-lamps'
+import { WaysHome } from '../ways-home'
 import { watchRumour } from '../rumour-watch'
 import { loadWilds } from '../../lib/wilds/data'
 import { displayArea, setWildsLand } from '../../content/world'
@@ -142,6 +143,8 @@ export class WorldScene extends Phaser.Scene {
   private marks: WildsMarks | null = null
   private camps: WildsCamps | null = null
   private communalLamps: WildsCommunalLamps | null = null
+  /** The turncap and the lamp-ash pouch (lamps.md 1.4): their pause, then travel. */
+  private waysHome!: WaysHome
   /** The drift's line is said once a scene build (open-map.md 2.6). */
   private driftSaid = false
   /** Which of the open map's places the HUD names now. */
@@ -607,6 +610,14 @@ export class WorldScene extends Phaser.Scene {
       () => heldNow().kind
     )
     presenceMoments(this, { session: this.session, world: this.world, enemies: this.enemies, hero: () => this.hero.sprite })
+    this.waysHome = new WaysHome(this, {
+      session: this.session,
+      hero: () => this.hero.sprite,
+      threatened: () => enemiesNearForSync(this.world.areaId, { x: this.hero.sprite.x, y: this.hero.sprite.y }, this.enemies.enemies),
+      transitioning: () => this.transitioning,
+      notePosition: () => this.notePosition(),
+      reducedMotion: this.reducedMotion
+    })
     this.goalGuide = new GoalGuide(this, {
       world: this.world,
       position: () => this.hero.sprite,
@@ -810,6 +821,7 @@ export class WorldScene extends Phaser.Scene {
     this.marks?.update()
     this.camps?.update()
     this.communalLamps?.update()
+    this.waysHome.update()
     this.checkDrift()
     this.updateDiscoveries()
     this.checkExits()

@@ -705,6 +705,7 @@ type Envelope struct {
 	//	*Envelope_Camp
 	//	*Envelope_RecoveryCollect
 	//	*Envelope_CommunalLamp
+	//	*Envelope_WaysHome
 	Result        isEnvelope_Result `protobuf_oneof:"result"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1114,6 +1115,15 @@ func (x *Envelope) GetCommunalLamp() *CommunalLampResult {
 	return nil
 }
 
+func (x *Envelope) GetWaysHome() *WaysHomeResult {
+	if x != nil {
+		if x, ok := x.Result.(*Envelope_WaysHome); ok {
+			return x.WaysHome
+		}
+	}
+	return nil
+}
+
 type isEnvelope_Result interface {
 	isEnvelope_Result()
 }
@@ -1278,6 +1288,10 @@ type Envelope_CommunalLamp struct {
 	CommunalLamp *CommunalLampResult `protobuf:"bytes,49,opt,name=communal_lamp,json=communalLamp,proto3,oneof"`
 }
 
+type Envelope_WaysHome struct {
+	WaysHome *WaysHomeResult `protobuf:"bytes,50,opt,name=ways_home,json=waysHome,proto3,oneof"`
+}
+
 func (*Envelope_Report) isEnvelope_Result() {}
 
 func (*Envelope_QuestStep) isEnvelope_Result() {}
@@ -1357,6 +1371,8 @@ func (*Envelope_Camp) isEnvelope_Result() {}
 func (*Envelope_RecoveryCollect) isEnvelope_Result() {}
 
 func (*Envelope_CommunalLamp) isEnvelope_Result() {}
+
+func (*Envelope_WaysHome) isEnvelope_Result() {}
 
 type LoginRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1798,7 +1814,7 @@ const file_glimway_v1_state_proto_rawDesc = "" +
 	"\x04code\x18\x01 \x01(\tR\x04code\"g\n" +
 	"\aRefusal\x12-\n" +
 	"\x05error\x18\x01 \x01(\v2\x17.glimway.v1.ErrorDetailR\x05error\x12-\n" +
-	"\x05state\x18\x02 \x01(\v2\x17.glimway.v1.PlayerStateR\x05state\"\xde\x13\n" +
+	"\x05state\x18\x02 \x01(\v2\x17.glimway.v1.PlayerStateR\x05state\"\x99\x14\n" +
 	"\bEnvelope\x12-\n" +
 	"\x05state\x18\x01 \x01(\v2\x17.glimway.v1.PlayerStateR\x05state\x122\n" +
 	"\x06report\x18\n" +
@@ -1859,7 +1875,8 @@ const file_glimway_v1_state_proto_rawDesc = "" +
 	"\x0ewilds_discover\x18. \x01(\v2\x1f.glimway.v1.WildsDiscoverResultH\x00R\rwildsDiscover\x12,\n" +
 	"\x04camp\x18/ \x01(\v2\x16.glimway.v1.CampResultH\x00R\x04camp\x12N\n" +
 	"\x10recovery_collect\x180 \x01(\v2!.glimway.v1.RecoveryCollectResultH\x00R\x0frecoveryCollect\x12E\n" +
-	"\rcommunal_lamp\x181 \x01(\v2\x1e.glimway.v1.CommunalLampResultH\x00R\fcommunalLampB\b\n" +
+	"\rcommunal_lamp\x181 \x01(\v2\x1e.glimway.v1.CommunalLampResultH\x00R\fcommunalLamp\x129\n" +
+	"\tways_home\x182 \x01(\v2\x1a.glimway.v1.WaysHomeResultH\x00R\bwaysHomeB\b\n" +
 	"\x06result\"k\n" +
 	"\fLoginRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x14\n" +
@@ -1965,7 +1982,8 @@ var file_glimway_v1_state_proto_goTypes = []any{
 	(*CampResult)(nil),             // 64: glimway.v1.CampResult
 	(*RecoveryCollectResult)(nil),  // 65: glimway.v1.RecoveryCollectResult
 	(*CommunalLampResult)(nil),     // 66: glimway.v1.CommunalLampResult
-	(*WorldChoice)(nil),            // 67: glimway.v1.WorldChoice
+	(*WaysHomeResult)(nil),         // 67: glimway.v1.WaysHomeResult
+	(*WorldChoice)(nil),            // 68: glimway.v1.WorldChoice
 }
 var file_glimway_v1_state_proto_depIdxs = []int32{
 	18, // 0: glimway.v1.Account.party_id:type_name -> google.protobuf.StringValue
@@ -2028,15 +2046,16 @@ var file_glimway_v1_state_proto_depIdxs = []int32{
 	64, // 57: glimway.v1.Envelope.camp:type_name -> glimway.v1.CampResult
 	65, // 58: glimway.v1.Envelope.recovery_collect:type_name -> glimway.v1.RecoveryCollectResult
 	66, // 59: glimway.v1.Envelope.communal_lamp:type_name -> glimway.v1.CommunalLampResult
-	5,  // 60: glimway.v1.SessionResponse.state:type_name -> glimway.v1.PlayerState
-	67, // 61: glimway.v1.SessionResponse.world_choice:type_name -> glimway.v1.WorldChoice
-	5,  // 62: glimway.v1.StateResponse.state:type_name -> glimway.v1.PlayerState
-	5,  // 63: glimway.v1.PlayResponse.state:type_name -> glimway.v1.PlayerState
-	64, // [64:64] is the sub-list for method output_type
-	64, // [64:64] is the sub-list for method input_type
-	64, // [64:64] is the sub-list for extension type_name
-	64, // [64:64] is the sub-list for extension extendee
-	0,  // [0:64] is the sub-list for field type_name
+	67, // 60: glimway.v1.Envelope.ways_home:type_name -> glimway.v1.WaysHomeResult
+	5,  // 61: glimway.v1.SessionResponse.state:type_name -> glimway.v1.PlayerState
+	68, // 62: glimway.v1.SessionResponse.world_choice:type_name -> glimway.v1.WorldChoice
+	5,  // 63: glimway.v1.StateResponse.state:type_name -> glimway.v1.PlayerState
+	5,  // 64: glimway.v1.PlayResponse.state:type_name -> glimway.v1.PlayerState
+	65, // [65:65] is the sub-list for method output_type
+	65, // [65:65] is the sub-list for method input_type
+	65, // [65:65] is the sub-list for extension type_name
+	65, // [65:65] is the sub-list for extension extendee
+	0,  // [0:65] is the sub-list for field type_name
 }
 
 func init() { file_glimway_v1_state_proto_init() }
@@ -2097,6 +2116,7 @@ func file_glimway_v1_state_proto_init() {
 		(*Envelope_Camp)(nil),
 		(*Envelope_RecoveryCollect)(nil),
 		(*Envelope_CommunalLamp)(nil),
+		(*Envelope_WaysHome)(nil),
 	}
 	file_glimway_v1_state_proto_msgTypes[10].OneofWrappers = []any{
 		(*SessionResponse_State)(nil),

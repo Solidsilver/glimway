@@ -1603,16 +1603,17 @@ const file_glimway_content_v1_items_proto_rawDesc = "" +
 	"\vMenderEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01B\x0f\n" +
-	"\r_mender_glims\"\xa7\x03\n" +
-	"\tUseEffect\x12|\n" +
-	"\x04type\x18\x01 \x01(\tBh\xbaHercR\n" +
+	"\r_mender_glims\"\xb4\x05\n" +
+	"\tUseEffect\x12\x97\x01\n" +
+	"\x04type\x18\x01 \x01(\tB\x82\x01\xbaH\x7fr}R\n" +
 	"restore-hpR\frestore-manaR\x0eclear-unmooredR\rease-unmooredR\fwisps-forgetR\x0erefill-lanternR\n" +
-	"light-postR\x04type\x12'\n" +
+	"light-postR\vtravel-homeR\vtravel-lampR\x04type\x12'\n" +
 	"\x06amount\x18\x02 \x01(\x05B\n" +
 	"\xbaH\a\x1a\x05\x18\xe8\a(\x00H\x00R\x06amount\x88\x01\x01\x12*\n" +
 	"\aseconds\x18\x03 \x01(\x05B\v\xbaH\b\x1a\x06\x18\x80\xa3\x05(\x00H\x01R\aseconds\x88\x01\x01\x12$\n" +
-	"\x06target\x18\x04 \x01(\tB\a\xbaH\x04r\x02\x18dH\x02R\x06target\x88\x01\x01:\x7f\xbaH|\x1az\n" +
-	"\x19use_effect.restore_amount\x12\x19restoring needs an amount\x1aB!(this.type in [\"restore-hp\", \"restore-mana\"]) || this.amount >= 1B\t\n" +
+	"\x06target\x18\x04 \x01(\tB\a\xbaH\x04r\x02\x18dH\x02R\x06target\x88\x01\x01:\xef\x02\xbaH\xeb\x02\x1az\n" +
+	"\x19use_effect.restore_amount\x12\x19restoring needs an amount\x1aB!(this.type in [\"restore-hp\", \"restore-mana\"]) || this.amount >= 1\x1a\xec\x01\n" +
+	"\x11use_effect.travel\x12Da way home names its pause, and the turncap the anchor it returns to\x1a\x90\x01!(this.type in [\"travel-home\", \"travel-lamp\"]) || (this.seconds >= 1 && this.seconds <= 10 && (this.type != \"travel-home\" || this.target != \"\"))B\t\n" +
 	"\a_amountB\n" +
 	"\n" +
 	"\b_secondsB\t\n" +

@@ -81,6 +81,7 @@ message Envelope {
     WildsDiscoverResult wilds_discover = 46;
     CampResult camp = 47; RecoveryCollectResult recovery_collect = 48;
     CommunalLampResult communal_lamp = 49;
+    WaysHomeResult ways_home = 50;
   }
 }
 message LoginRequest { string user_id = 1; string token = 2; string invite = 3; string party = 4; }

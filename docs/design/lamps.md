@@ -114,6 +114,14 @@ Recovery/reinstallation preserves lamp id and naming. Give one ash on the first 
 naming of that lamp, never again for tending or reinstallation. Walking remains free; the
 turncap is a convenience and safety fallback.
 
+**As built (0.13).** The turncap's anchor is `hearthwick:arch`, the north arch, named in its
+content use and resolved at use; it isn't spent on safe town ground. One binding per player
+covers every pouch they carry: bind at a lit camp way-lamp or communal lamp within reach, pouch
+in the pack. Lot lanterns take no binding. The landing is open ground within two tiles of the
+lamp, in its chunk, in front of it first. "In a fight" is the presence hub's: an enemy wound up
+or aimed at you, or you swung or cast into a fight room, in the last 8 s. The client holds the
+pause and lets go if you move or enemies close in; the server doesn't time it.
+
 ## 2. The build
 
 ### 2.1 What exists, and where
@@ -126,6 +134,7 @@ The first rows were added as 0.12 and 0.13 landed and describe the code as built
 | Holds | [store/holds.go](../../server/internal/store/holds.go), migration 039: `Chunks.Hold`, `Release`, `HoldAt`, `HeldEpoch(s)`; one `Holder` per kind (`Keeps`, `Released`), registered in `api.New` and judged once when the new wick epoch is made. Fixed → held → generated. |
 | Lot lanterns | [api/lot_lanterns.go](../../server/internal/api/lot_lanterns.go), migration 040: holder kind `lot-lantern`. Fuel is `hearth-oil` (the chandler sells it at 4 glims, 3 a day), a 3-wick store in the lantern, one wick burned a turning, a wick of dimming, then lapse. |
 | Camps and Pell's crate | [api/camps.go](../../server/internal/api/camps.go), [api/recovery.go](../../server/internal/api/recovery.go), migration 041: holder kind `way-lamp`, `camps`, `camp_plants`, `recovery_crates`/`recovery_entries`; `GET`/`POST /api/camps`, `GET /api/recovery`, `POST /api/recovery/collect`. |
+| Ways home | [api/ways_home.go](../../server/internal/api/ways_home.go), migration 044: `GET`/`POST /api/ways-home` (`bind`, `turncap`, `pouch`), `ways_home_bindings` (one per player). Bench recipes with pages; the chandler sells both pages until the Keeper's hand gives them. |
 
 | Existing seam | Source and consequence |
 |---|---|

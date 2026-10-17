@@ -158,6 +158,8 @@ type presenceHub struct {
 	fightLoad                sync.Mutex                        // lifecycle loading, never held by a tick
 	fightGroundLoads         map[fightLocation]fightGroundLoad // h.mu: current wake batch only
 	fightRooms               map[fights.Key]*presenceFightRoom
+	// foughtAt: when each account last fought or was fought (ways_home.go).
+	foughtAt map[string]time.Time
 	fightHandle              uint32
 	fightLocations           map[fightLocation]fightLocationEpoch
 	fightLocationOrder       map[fightLocation]uint64

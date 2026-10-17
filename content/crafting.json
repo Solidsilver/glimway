@@ -569,6 +569,38 @@
         "id": "way-lamp",
         "qty": 1
       }
+    },
+    {
+      "id": "craft-homing-turncap",
+      "name": "Homing turncap",
+      "minTier": 2,
+      "materials": {
+        "turncap-spawn": 1,
+        "amber": 2
+      },
+      "output": {
+        "kind": "item",
+        "id": "homing-turncap",
+        "qty": 1
+      },
+      "page": "recipe-homing-turncap",
+      "found": "The chandler sells its page"
+    },
+    {
+      "id": "craft-lamp-ash-pouch",
+      "name": "Lamp-ash pouch",
+      "minTier": 2,
+      "materials": {
+        "lamp-ash": 1,
+        "fiber": 2
+      },
+      "output": {
+        "kind": "item",
+        "id": "lamp-ash-pouch",
+        "qty": 1
+      },
+      "page": "recipe-lamp-ash-pouch",
+      "found": "The chandler sells its page"
     }
   ],
   "hearthRecipes": [

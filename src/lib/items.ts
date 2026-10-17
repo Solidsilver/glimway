@@ -286,6 +286,10 @@ export function effectLine(e: ItemEffect): string {
       return 'Refills a lantern';
     case 'light-post':
       return 'Lights a lantern post';
+    case 'travel-home':
+      return 'Takes you back to the north arch';
+    case 'travel-lamp':
+      return 'Takes you back to the lamp it’s bound to';
     case 'papers-glint':
       return 'Papers glint brighter';
     case 'notice-later':
