@@ -972,6 +972,132 @@ func (x *RecoveryCollectResult) GetMaterials() map[string]float64 {
 	return nil
 }
 
+// GET /api/lamp-notices: the lights the caller keeps (their camp's way-lamp,
+// their household's lot lantern) that dimmed at this wick's turning and that
+// they haven't been told of yet (lamps.md 2.5). Each dimming is told once:
+// the read records it, and one the caller is standing by is recorded
+// unsaid (they can see it there). kind: way-lamp or lot-lantern; id: the
+// camp's id or the lot's gate; name: the lamp's naming's short name, if any.
+type LampNotice struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Kind          string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
+	Id            string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Cx            int32                  `protobuf:"zigzag32,4,opt,name=cx,proto3" json:"cx,omitempty"`
+	Cy            int32                  `protobuf:"zigzag32,5,opt,name=cy,proto3" json:"cy,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LampNotice) Reset() {
+	*x = LampNotice{}
+	mi := &file_glimway_v1_camps_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LampNotice) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LampNotice) ProtoMessage() {}
+
+func (x *LampNotice) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_camps_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LampNotice.ProtoReflect.Descriptor instead.
+func (*LampNotice) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_camps_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *LampNotice) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *LampNotice) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *LampNotice) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *LampNotice) GetCx() int32 {
+	if x != nil {
+		return x.Cx
+	}
+	return 0
+}
+
+func (x *LampNotice) GetCy() int32 {
+	if x != nil {
+		return x.Cy
+	}
+	return 0
+}
+
+type LampNoticesRead struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Notices       []*LampNotice          `protobuf:"bytes,1,rep,name=notices,proto3" json:"notices,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LampNoticesRead) Reset() {
+	*x = LampNoticesRead{}
+	mi := &file_glimway_v1_camps_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LampNoticesRead) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LampNoticesRead) ProtoMessage() {}
+
+func (x *LampNoticesRead) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_camps_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LampNoticesRead.ProtoReflect.Descriptor instead.
+func (*LampNoticesRead) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_camps_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *LampNoticesRead) GetNotices() []*LampNotice {
+	if x != nil {
+		return x.Notices
+	}
+	return nil
+}
+
 var File_glimway_v1_camps_proto protoreflect.FileDescriptor
 
 const file_glimway_v1_camps_proto_rawDesc = "" +
@@ -1068,7 +1194,16 @@ const file_glimway_v1_camps_proto_rawDesc = "" +
 	"\tmaterials\x18\x02 \x03(\v20.glimway.v1.RecoveryCollectResult.MaterialsEntryR\tmaterials\x1a<\n" +
 	"\x0eMaterialsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01B1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
+	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"d\n" +
+	"\n" +
+	"LampNotice\x12\x12\n" +
+	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x0e\n" +
+	"\x02id\x18\x02 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12\x0e\n" +
+	"\x02cx\x18\x04 \x01(\x11R\x02cx\x12\x0e\n" +
+	"\x02cy\x18\x05 \x01(\x11R\x02cy\"C\n" +
+	"\x0fLampNoticesRead\x120\n" +
+	"\anotices\x18\x01 \x03(\v2\x16.glimway.v1.LampNoticeR\anoticesB1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
 
 var (
 	file_glimway_v1_camps_proto_rawDescOnce sync.Once
@@ -1082,7 +1217,7 @@ func file_glimway_v1_camps_proto_rawDescGZIP() []byte {
 	return file_glimway_v1_camps_proto_rawDescData
 }
 
-var file_glimway_v1_camps_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_glimway_v1_camps_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_glimway_v1_camps_proto_goTypes = []any{
 	(*CampPiece)(nil),              // 0: glimway.v1.CampPiece
 	(*CampPlant)(nil),              // 1: glimway.v1.CampPlant
@@ -1095,35 +1230,38 @@ var file_glimway_v1_camps_proto_goTypes = []any{
 	(*RecoveryRead)(nil),           // 8: glimway.v1.RecoveryRead
 	(*RecoveryCollectRequest)(nil), // 9: glimway.v1.RecoveryCollectRequest
 	(*RecoveryCollectResult)(nil),  // 10: glimway.v1.RecoveryCollectResult
-	nil,                            // 11: glimway.v1.CampResult.MaterialsEntry
-	nil,                            // 12: glimway.v1.RecoveryCollectResult.MaterialsEntry
-	(*LampNaming)(nil),             // 13: glimway.v1.LampNaming
-	(*OpHeader)(nil),               // 14: glimway.v1.OpHeader
-	(*Where)(nil),                  // 15: glimway.v1.Where
-	(*WearResult)(nil),             // 16: glimway.v1.WearResult
+	(*LampNotice)(nil),             // 11: glimway.v1.LampNotice
+	(*LampNoticesRead)(nil),        // 12: glimway.v1.LampNoticesRead
+	nil,                            // 13: glimway.v1.CampResult.MaterialsEntry
+	nil,                            // 14: glimway.v1.RecoveryCollectResult.MaterialsEntry
+	(*LampNaming)(nil),             // 15: glimway.v1.LampNaming
+	(*OpHeader)(nil),               // 16: glimway.v1.OpHeader
+	(*Where)(nil),                  // 17: glimway.v1.Where
+	(*WearResult)(nil),             // 18: glimway.v1.WearResult
 }
 var file_glimway_v1_camps_proto_depIdxs = []int32{
 	0,  // 0: glimway.v1.CampView.pieces:type_name -> glimway.v1.CampPiece
 	1,  // 1: glimway.v1.CampView.plants:type_name -> glimway.v1.CampPlant
-	13, // 2: glimway.v1.CampView.naming:type_name -> glimway.v1.LampNaming
+	15, // 2: glimway.v1.CampView.naming:type_name -> glimway.v1.LampNaming
 	2,  // 3: glimway.v1.CampView.members:type_name -> glimway.v1.CampMember
 	3,  // 4: glimway.v1.CampsRead.camps:type_name -> glimway.v1.CampView
 	2,  // 5: glimway.v1.CampsRead.people:type_name -> glimway.v1.CampMember
-	14, // 6: glimway.v1.CampRequest.op:type_name -> glimway.v1.OpHeader
-	15, // 7: glimway.v1.CampRequest.where:type_name -> glimway.v1.Where
+	16, // 6: glimway.v1.CampRequest.op:type_name -> glimway.v1.OpHeader
+	17, // 7: glimway.v1.CampRequest.where:type_name -> glimway.v1.Where
 	3,  // 8: glimway.v1.CampResult.camp:type_name -> glimway.v1.CampView
-	11, // 9: glimway.v1.CampResult.materials:type_name -> glimway.v1.CampResult.MaterialsEntry
-	16, // 10: glimway.v1.CampResult.wear:type_name -> glimway.v1.WearResult
+	13, // 9: glimway.v1.CampResult.materials:type_name -> glimway.v1.CampResult.MaterialsEntry
+	18, // 10: glimway.v1.CampResult.wear:type_name -> glimway.v1.WearResult
 	7,  // 11: glimway.v1.RecoveryRead.entries:type_name -> glimway.v1.RecoveryEntry
-	14, // 12: glimway.v1.RecoveryCollectRequest.op:type_name -> glimway.v1.OpHeader
-	15, // 13: glimway.v1.RecoveryCollectRequest.where:type_name -> glimway.v1.Where
+	16, // 12: glimway.v1.RecoveryCollectRequest.op:type_name -> glimway.v1.OpHeader
+	17, // 13: glimway.v1.RecoveryCollectRequest.where:type_name -> glimway.v1.Where
 	7,  // 14: glimway.v1.RecoveryCollectResult.collected:type_name -> glimway.v1.RecoveryEntry
-	12, // 15: glimway.v1.RecoveryCollectResult.materials:type_name -> glimway.v1.RecoveryCollectResult.MaterialsEntry
-	16, // [16:16] is the sub-list for method output_type
-	16, // [16:16] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	14, // 15: glimway.v1.RecoveryCollectResult.materials:type_name -> glimway.v1.RecoveryCollectResult.MaterialsEntry
+	11, // 16: glimway.v1.LampNoticesRead.notices:type_name -> glimway.v1.LampNotice
+	17, // [17:17] is the sub-list for method output_type
+	17, // [17:17] is the sub-list for method input_type
+	17, // [17:17] is the sub-list for extension type_name
+	17, // [17:17] is the sub-list for extension extendee
+	0,  // [0:17] is the sub-list for field type_name
 }
 
 func init() { file_glimway_v1_camps_proto_init() }
@@ -1140,7 +1278,7 @@ func file_glimway_v1_camps_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_glimway_v1_camps_proto_rawDesc), len(file_glimway_v1_camps_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   13,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

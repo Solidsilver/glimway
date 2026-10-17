@@ -12,7 +12,7 @@ import { type CompanionsRequest, type MountHomeRequest, type MountOutRequest, ty
 import { WardrobeReadSchema, type WardrobeCheckRequest, type WardrobeRead, type WardrobeRequest } from '../gen/glimway/v1/wardrobe_pb.js';
 import { FishingWatersSchema, type FishCastRequest, type FishSettleRequest, type FishCancelRequest, type FishingWaters } from '../gen/glimway/v1/fishing_pb.js';
 import { PurseReadSchema, type PurseRead, type PurseTopUpRequest } from '../gen/glimway/v1/purse_pb.js';
-import { CampsReadSchema, RecoveryReadSchema, type CampRequest, type CampsRead, type RecoveryCollectRequest, type RecoveryRead } from '../gen/glimway/v1/camps_pb.js';
+import { CampsReadSchema, LampNoticesReadSchema, RecoveryReadSchema, type CampRequest, type CampsRead, type LampNoticesRead, type RecoveryCollectRequest, type RecoveryRead } from '../gen/glimway/v1/camps_pb.js';
 import { CommunalLampsReadSchema, LampLandmarksReadSchema, WaysHomeReadSchema, type CommunalLampRequest, type CommunalLampsRead, type LampLandmarksRead, type WaysHomeRead, type WaysHomeRequest } from '../gen/glimway/v1/lamps_pb.js';
 import { type ReportRequest, type QuestStepRequest, type MarkRequest, type TakePaperRequest, type SettleEchoRequest, type FallRequest, type ProfileReport, type SpendRequest, type WildsClaimRequest, type WildsLanternRequest, type WildsClearRequest, type WildsLayRequest, type WildsLiftRequest, type WildsDiscoverRequest } from '../gen/glimway/v1/operations_pb.js';
 
@@ -52,6 +52,8 @@ export interface OperationsApi {
   /** Pell's recovery crate (lamps.md 2.7): what waits, and collecting it. */
   recovery(): Promise<RecoveryRead>;
   recoveryCollect(request: RecoveryCollectRequest): Promise<Envelope>;
+  /** The lights you keep that started dimming this wick, each told once (lamps.md 2.5). */
+  lampNotices(): Promise<LampNoticesRead>;
   /** Communal lamps (lamps.md 1.3, 2.4): relight, tend, post, lift; and the world's lit ones. */
   communalLamp(request: CommunalLampRequest): Promise<Envelope>;
   communalLamps(): Promise<CommunalLampsRead>;
@@ -138,6 +140,7 @@ export function createOperationsApi(send: Transport): OperationsApi {
     async camps() { return decodeMixed(await send('GET', '/api/camps'), (r) => decodeWire(CampsReadSchema, r)).result; },
     async recovery() { return decodeMixed(await send('GET', '/api/recovery'), (r) => decodeWire(RecoveryReadSchema, r)).result; },
     async recoveryCollect(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['recovery-collect'], req)); },
+    async lampNotices() { return decodeMixed(await send('GET', '/api/lamp-notices'), (r) => decodeWire(LampNoticesReadSchema, r)).result; },
     async communalLamp(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['communal-lamp'], req)); },
     async communalLamps() { return decodeMixed(await send('GET', '/api/communal-lamps'), (r) => decodeWire(CommunalLampsReadSchema, r)).result; },
     async lampLandmarks(lamp) { return decodeMixed(await send('GET', `/api/lamp-landmarks/${encodeURIComponent(lamp)}`), (r) => decodeWire(LampLandmarksReadSchema, r)).result; },

@@ -60,8 +60,9 @@ import { paintTable } from './ground-table.ts'
 import { chunkOrigin } from './terrain.ts'
 import { fnv1a32 } from '../../lib/hash.ts'
 import { TILE } from '../../lib/tile.ts'
-import { chunkTerrain, insideNamedFrontier, loadWildsChunk, NEAR_MAX_AGE_MS, placeKey, refreshNear, wildsEpoch, wildsFrontier, wildsView } from './store.ts'
+import { chunkTerrain, insideNamedFrontier, loadWildsChunk, NEAR_MAX_AGE_MS, placeKey, refreshLand, refreshNear, wildsEpoch, wildsFrontier, wildsView } from './store.ts'
 import { markSeen, markWalked } from './walked.ts'
+import { LandHere } from './land-here.ts'
 import { perfSpan, perfTime, perfWithout } from '../perf.ts'
 import { addAll, destroyAll, looseImage } from '../area/bulk.ts'
 
@@ -179,6 +180,10 @@ export class WildsWindow {
   private gone = false
   /** This window's identity (a playtest sees it never changes while walking: no scene restart). */
   private readonly id = Math.random().toString(36).slice(2, 10)
+  /** The HUD's land chip: the occupied chunk's status, told on change. */
+  private readonly landHere = new LandHere((cx, cy) => {
+    if (!fixedPlaceOf(cx, cy)) void refreshLand(this.deps.session, cx, cy)
+  })
 
   constructor(private deps: WindowDeps) {
     onSceneEnd(deps.scene, () => this.destroy())
@@ -244,6 +249,7 @@ export class WildsWindow {
     if (crossed(this.plan?.center ?? null, at)) this.recentre(at.cx, at.cy)
     else this.dropBehind()
     const view = wildsView()
+    this.landHere.update(at.cx, at.cy, view)
     if (view && view.version !== this.lastVersion) {
       this.lastVersion = view.version
       this.refreshChanged()
@@ -844,6 +850,7 @@ export class WildsWindow {
   private destroy(): void {
     if (this.gone) return
     this.gone = true
+    this.landHere.clear()
     bus.off(EV.fixedReady, this.onFixedReady)
     this.release()
     for (const c of this.attached.values()) c.destroy()

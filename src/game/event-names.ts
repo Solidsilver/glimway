@@ -7,6 +7,7 @@ import type { HabiticaProfile } from '../lib/habitica/types'
 import type { PurseView } from '../lib/purse'
 import type { RumourParts } from '../lib/wilds/rumour'
 import type { LampNamingAsk } from '../lib/lamp-naming'
+import type { LandChip } from '../lib/wilds/land-chip.ts'
 import type { PresenceStatus } from '../lib/presence-client.ts'
 import type { HeldPayload } from './held'
 import type { ArrangeView, NamePrompt, PlacementCommand, PlacementView } from './homestead'
@@ -143,6 +144,8 @@ export const EV = {
   clearUnmoored: 'game:clear-unmoored',
   /** The hero became unmoored or steady again: { active } (src/game/entities/unmoored.ts). */
   unmoored: 'ui:unmoored',
+  /** The land underfoot changed in the HUD's words: { chip } (null: no chip here; src/game/wilds/land-here.ts). */
+  landHere: 'ui:land-here',
 
   // items (src/game/items.ts)
   /** The carried items changed: { what? }. */
@@ -527,6 +530,7 @@ export interface EventMap {
   [EV.dialogueClosed]: DialogueClosedPayload
   [EV.clearUnmoored]: { instant: boolean }
   [EV.unmoored]: { active: boolean }
+  [EV.landHere]: { chip: LandChip | null }
   [EV.itemsChanged]: { what?: string } | undefined
   [EV.villageChanged]: { what?: string } | undefined
   [EV.villageOpen]: VillageOpenPayload

@@ -133,6 +133,7 @@ var routes = []routeMetadata{
 	{method: "GET", path: "/api/camps", label: "/api/camps", handler: (*Server).campsRead},
 	{method: "POST", path: "/api/camps", label: "/api/camps", handler: (*Server).campOp},
 	{method: "GET", path: "/api/recovery", label: "/api/recovery", handler: (*Server).recoveryRead},
+	{method: "GET", path: "/api/lamp-notices", label: "/api/lamp-notices", handler: (*Server).lampNoticesRead},
 	{method: "POST", path: "/api/recovery/collect", label: "/api/recovery/collect", handler: (*Server).recoveryCollect},
 	{method: "GET", path: "/api/communal-lamps", label: "/api/communal-lamps", handler: (*Server).communalLampsRead},
 	{method: "POST", path: "/api/communal-lamps", label: "/api/communal-lamps", handler: (*Server).communalLampOp},

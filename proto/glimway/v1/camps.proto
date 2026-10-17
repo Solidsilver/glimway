@@ -83,3 +83,12 @@ message RecoveryRead { repeated RecoveryEntry entries = 1; }
 // to the carried home pieces), in Pell's office.
 message RecoveryCollectRequest { OpHeader op = 1; Where where = 2; }
 message RecoveryCollectResult { repeated RecoveryEntry collected = 1; map<string,double> materials = 2; }
+
+// GET /api/lamp-notices: the lights the caller keeps (their camp's way-lamp,
+// their household's lot lantern) that dimmed at this wick's turning and that
+// they haven't been told of yet (lamps.md 2.5). Each dimming is told once:
+// the read records it, and one the caller is standing by is recorded
+// unsaid (they can see it there). kind: way-lamp or lot-lantern; id: the
+// camp's id or the lot's gate; name: the lamp's naming's short name, if any.
+message LampNotice { string kind = 1; string id = 2; string name = 3; sint32 cx = 4; sint32 cy = 5; }
+message LampNoticesRead { repeated LampNotice notices = 1; }

@@ -41,6 +41,7 @@ import { homesteadsFor } from '../homestead.ts'
 import { groundAt, solidAt } from './ground-view.ts'
 import { wildsPoint } from './sites.ts'
 import { TERRAIN } from '../../lib/tile.ts'
+import { refreshLand } from './store.ts'
 
 export interface CampsDeps {
   session: Session
@@ -379,6 +380,9 @@ export class WildsCamps {
       void itemsFor(this.deps.session).load()
       void homesteadsFor(this.deps.session).load()
       const c = r.result.camp ?? null
+      // Setting, filling or packing changes the land underfoot (the HUD's land chip).
+      const changed = c ?? (fields.action === 'pack' ? this.campOf(fields) : null)
+      if (changed && (fields.action === 'set' || fields.action === 'fill' || fields.action === 'pack')) void refreshLand(this.deps.session, changed.cx, changed.cy)
       const list = campsUi.list.filter((x) => x.id !== c?.id && !(fields.action === 'remove' && fields.itemId === x.id) && !(fields.action === 'pack' && fields.camp === x.id))
       this.adopt(c ? [...list, c] : list)
       then?.(c, r.result)

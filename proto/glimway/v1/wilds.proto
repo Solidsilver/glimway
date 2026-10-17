@@ -276,6 +276,11 @@ message ChunkLandStatus {
   WildsEpoch epoch = 9;
   // Known Common paths, so a map read outside the near window keeps their line.
   GroundChanges ground = 10;
+  // A Built claim's keeper, as the reader sees it (the in-world chip):
+  // keeper is a camp's setter's display name (empty for a lot lantern);
+  // yours: the reader set this camp, or lives on this lantern's lot.
+  string keeper = 11;
+  bool yours = 12;
 }
 message MapLamp {
   string id = 1;

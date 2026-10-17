@@ -62,7 +62,7 @@ import { ReportPump } from '../lib/api/report-pump.ts'
 import type { HomeAction, HomeActionResponse, HomeOp, HomeView, ItemsOp, CommonsResponse, Snapshot } from '../lib/api/types.ts'
 import { contributeRequest, deskCopyRequest, hearthCraftRequest, homesteadRequest, itemsRequest, mailKeyedRequest, mailSendRequest, shelfRequest, storageRequest, craftRequest, type ItemsFields, type MailSendAction, type ShelfAction, type StorageMoveAction } from '../lib/api/requests.ts'
 import { EnvelopeSchema, PlayerStateSchema, PlayRequestSchema, type PlayerState } from '../lib/gen/glimway/v1/state_pb.js'
-import type { CampResult, CampsRead, RecoveryCollectResult, RecoveryRead } from '../lib/gen/glimway/v1/camps_pb.js'
+import type { CampResult, CampsRead, LampNoticesRead, RecoveryCollectResult, RecoveryRead } from '../lib/gen/glimway/v1/camps_pb.js'
 import type { CommunalLampResult, CommunalLampsRead, LampLandmarksRead, WaysHomeRead, WaysHomeResult } from '../lib/gen/glimway/v1/lamps_pb.js'
 import { FallRequestSchema, MarkRequestSchema, ProfileReportSchema, QuestStepRequestSchema, SpendRequestSchema, TakePaperRequestSchema, type ProfileResult, type SettleEchoResult, type WildsClaimResult as WildsClaimProto, type WildsLanternResult as WildsLanternProto, type WildsClearResult, type WildsLayResult, type WildsLiftResult, type WildsDiscoverResult } from '../lib/gen/glimway/v1/operations_pb.js'
 import { ContributeRequestSchema, CraftRequestSchema, DeskCopyRequestSchema, HearthCraftRequestSchema, MailKeyedRequestSchema, MailSendRequestSchema, StorageMoveRequestSchema } from '../lib/gen/glimway/v1/village_pb.js'
@@ -1985,6 +1985,11 @@ export class Link {
   /** What waits for you in Pell's crates (GET /api/recovery). */
   async recoveryRead(): Promise<HomeRead<RecoveryRead>> {
     return this.read(() => this.api.run(() => this.ops.recovery()))
+  }
+
+  /** The lights you keep that started dimming this wick and you haven't been told of (GET /api/lamp-notices; the read records them). */
+  async lampNotices(): Promise<HomeRead<LampNoticesRead>> {
+    return this.read(() => this.api.run(() => this.ops.lampNotices()))
   }
 
   /** Take everything waiting at Pell's into the pack, at his desk. */

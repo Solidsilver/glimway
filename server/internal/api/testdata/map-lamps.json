@@ -13,10 +13,12 @@
         "dimming": false,
         "epoch": null,
         "ground": null,
+        "keeper": "",
         "nextTurning": "lamps-turn",
         "reserve": 0,
         "tier": "common",
-        "visited": false
+        "visited": false,
+        "yours": false
       }
     ],
     "lamps": [
@@ -36,10 +38,12 @@
           "dimming": false,
           "epoch": null,
           "ground": null,
+          "keeper": "",
           "nextTurning": "lamps-turn",
           "reserve": 0,
           "tier": "common",
-          "visited": false
+          "visited": false,
+          "yours": false
         },
         "mageLit": false,
         "name": "",
@@ -65,10 +69,12 @@
         "dimming": false,
         "epoch": null,
         "ground": null,
+        "keeper": "",
         "nextTurning": "lamps-carry",
         "reserve": 0,
         "tier": "common",
-        "visited": true
+        "visited": true,
+        "yours": false
       }
     ],
     "lamps": [
@@ -88,10 +94,12 @@
           "dimming": false,
           "epoch": null,
           "ground": null,
+          "keeper": "",
           "nextTurning": "lamps-carry",
           "reserve": 0,
           "tier": "common",
-          "visited": true
+          "visited": true,
+          "yours": false
         },
         "mageLit": false,
         "name": "",

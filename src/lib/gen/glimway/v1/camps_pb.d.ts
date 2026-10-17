@@ -527,3 +527,66 @@ export declare type RecoveryCollectResultValid = RecoveryCollectResult;
  */
 export declare const RecoveryCollectResultSchema: GenMessage<RecoveryCollectResult, {validType: RecoveryCollectResultValid}>;
 
+/**
+ * GET /api/lamp-notices: the lights the caller keeps (their camp's way-lamp,
+ * their household's lot lantern) that dimmed at this wick's turning and that
+ * they haven't been told of yet (lamps.md 2.5). Each dimming is told once:
+ * the read records it, and one the caller is standing by is recorded
+ * unsaid (they can see it there). kind: way-lamp or lot-lantern; id: the
+ * camp's id or the lot's gate; name: the lamp's naming's short name, if any.
+ *
+ * @generated from message glimway.v1.LampNotice
+ */
+export declare type LampNotice = Message<"glimway.v1.LampNotice"> & {
+  /**
+   * @generated from field: string kind = 1;
+   */
+  kind: string;
+
+  /**
+   * @generated from field: string id = 2;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string name = 3;
+   */
+  name: string;
+
+  /**
+   * @generated from field: sint32 cx = 4;
+   */
+  cx: number;
+
+  /**
+   * @generated from field: sint32 cy = 5;
+   */
+  cy: number;
+};
+
+export declare type LampNoticeValid = LampNotice;
+
+/**
+ * Describes the message glimway.v1.LampNotice.
+ * Use `create(LampNoticeSchema)` to create a new message.
+ */
+export declare const LampNoticeSchema: GenMessage<LampNotice, {validType: LampNoticeValid}>;
+
+/**
+ * @generated from message glimway.v1.LampNoticesRead
+ */
+export declare type LampNoticesRead = Message<"glimway.v1.LampNoticesRead"> & {
+  /**
+   * @generated from field: repeated glimway.v1.LampNotice notices = 1;
+   */
+  notices: LampNotice[];
+};
+
+export declare type LampNoticesReadValid = LampNoticesRead;
+
+/**
+ * Describes the message glimway.v1.LampNoticesRead.
+ * Use `create(LampNoticesReadSchema)` to create a new message.
+ */
+export declare const LampNoticesReadSchema: GenMessage<LampNoticesRead, {validType: LampNoticesReadValid}>;
+

@@ -77,7 +77,7 @@ func (a *Server) mapStatus(ctx context.Context, tx *sql.Tx, s store.Snapshot, ep
 			continue
 		}
 		seen[[2]int{cx, cy}] = true
-		land, marks, err := a.chunkLand(ctx, tx, s.WorldID, ep, cx, cy, now)
+		land, marks, err := a.chunkLand(ctx, tx, s.WorldID, s.AccountID, ep, cx, cy, now)
 		if err != nil {
 			return nil, err
 		}
@@ -107,7 +107,7 @@ func (a *Server) mapStatus(ctx context.Context, tx *sql.Tx, s store.Snapshot, ep
 	}
 	for _, gate := range gates {
 		cx, cy := chunks.BacklandChunk(gate)
-		_, marks, err := a.chunkLand(ctx, tx, s.WorldID, ep, cx, cy, now)
+		_, marks, err := a.chunkLand(ctx, tx, s.WorldID, s.AccountID, ep, cx, cy, now)
 		if err != nil {
 			return nil, err
 		}
@@ -122,7 +122,7 @@ func (a *Server) mapStatus(ctx context.Context, tx *sql.Tx, s store.Snapshot, ep
 	return out, nil
 }
 
-func (a *Server) chunkTier(ctx context.Context, tx *sql.Tx, world string, ep openEpochs, cx, cy int, now int64) (*contract.ChunkLandStatus, *contract.MapLamp, error) {
+func (a *Server) chunkTier(ctx context.Context, tx *sql.Tx, world, me string, ep openEpochs, cx, cy int, now int64) (*contract.ChunkLandStatus, *contract.MapLamp, error) {
 	land := &contract.ChunkLandStatus{Chunk: chunkKeyProto(cx, cy), Tier: "wild", NextTurning: "detail-turns"}
 	if location.SourceOf(cx, cy).Kind == location.SourceFixed {
 		land.Tier, land.NextTurning = "permanent", "permanent"
@@ -153,6 +153,11 @@ func (a *Server) chunkTier(ctx context.Context, tx *sql.Tx, world string, ep ope
 			if err != nil && !errors.Is(err, sql.ErrNoRows) {
 				return nil, nil, err
 			}
+			// Yours when you live on the lot; a lot's keeper goes unnamed.
+			err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM homesteads h JOIN homestead_members m ON m.homestead_id=h.id WHERE h.world_id=? AND h.gate=? AND m.account_id=?)`, world, gate, me).Scan(&land.Yours)
+			if err != nil {
+				return nil, nil, err
+			}
 			ox, oy := chunks.LotOrigin(gate)
 			x, y := chunks.LanternStake(gate)
 			lamp.X, lamp.Y = int32(ox+x), int32(oy+y)
@@ -160,7 +165,8 @@ func (a *Server) chunkTier(ctx context.Context, tx *sql.Tx, world string, ep ope
 			var x, y int
 			// A camp taken down (or its lamp set again elsewhere) leaves
 			// its hold released here until the turning, with no lamp.
-			err = tx.QueryRowContext(ctx, `SELECT c.oil,c.dimming,c.set_at,i.x,i.y,coalesce(i.name,'') FROM camps c JOIN homestead_items i ON i.id=c.id WHERE c.world_id=? AND c.id=? AND c.cx=? AND c.cy=?`, world, id, cx, cy).Scan(&land.Reserve, &land.Dimming, &lamp.At, &x, &y, &lamp.Name)
+			var setter string
+			err = tx.QueryRowContext(ctx, `SELECT c.oil,c.dimming,c.set_at,i.x,i.y,coalesce(i.name,''),c.setter,coalesce(p.display_name,'') FROM camps c JOIN homestead_items i ON i.id=c.id LEFT JOIN players p ON p.account_id=c.setter WHERE c.world_id=? AND c.id=? AND c.cx=? AND c.cy=?`, world, id, cx, cy).Scan(&land.Reserve, &land.Dimming, &lamp.At, &x, &y, &lamp.Name, &setter, &land.Keeper)
 			if errors.Is(err, sql.ErrNoRows) && released.Valid {
 				land.NextTurning = nextBuilt(0, false, true)
 				return land, nil, nil
@@ -168,6 +174,7 @@ func (a *Server) chunkTier(ctx context.Context, tx *sql.Tx, world string, ep ope
 			if err != nil {
 				return nil, nil, err
 			}
+			land.Keeper, land.Yours = capDonor(land.Keeper), setter == me
 			lamp.X, lamp.Y = int32(cx*chunkSize()+x), int32(cy*chunkSize()+y)
 			// Its Keeper's naming, once it has one (lamp_naming.go).
 			n, err := lampNaming(ctx, tx, world, id)
@@ -212,8 +219,8 @@ func (a *Server) chunkTier(ctx context.Context, tx *sql.Tx, world string, ep ope
 // common-lamp marks under the neutral label until a Keeper names one. A
 // chunk whose only Common work is lamps is Common by them; a held chunk's
 // lamps share its Built status.
-func (a *Server) chunkLand(ctx context.Context, tx *sql.Tx, world string, ep openEpochs, cx, cy int, now int64) (*contract.ChunkLandStatus, []*contract.MapLamp, error) {
-	land, claim, err := a.chunkTier(ctx, tx, world, ep, cx, cy, now)
+func (a *Server) chunkLand(ctx context.Context, tx *sql.Tx, world, me string, ep openEpochs, cx, cy int, now int64) (*contract.ChunkLandStatus, []*contract.MapLamp, error) {
+	land, claim, err := a.chunkTier(ctx, tx, world, me, ep, cx, cy, now)
 	if err != nil {
 		return nil, nil, err
 	}

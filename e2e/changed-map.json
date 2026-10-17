@@ -22,7 +22,11 @@
   "rules": [
     {
       "paths": ["server/internal/api/map_tiers*.go", "src/content/map-lamps.ts", "src/lib/wilds/map-lamps.ts"],
-      "specs": ["map-tiers.spec.ts"]
+      "specs": ["map-tiers.spec.ts", "land-chip.spec.ts"]
+    },
+    {
+      "paths": ["server/internal/api/lamp_notices*.go", "src/content/land-chip.ts", "src/lib/wilds/land-chip.ts", "src/game/wilds/land-here.ts", "src/ui/Hud.svelte"],
+      "specs": ["land-chip.spec.ts"]
     },
     {
       "paths": ["server/internal/api/ways_home*.go", "src/game/ways-home.ts", "src/lib/ways-home.ts"],
