@@ -20,6 +20,7 @@
  * the view from src/lib/wilds/map-view.ts. `makeImage` turns pixels into
  * something drawImage takes (a canvas in the browser; anything in tests).
  */
+import type { ChunkLandStatus } from '../lib/gen/glimway/v1/wilds_pb.js'
 import { loadWilds } from '../lib/wilds/data.ts'
 import {
   GLIMPSE_ALPHA,
@@ -109,6 +110,7 @@ export interface MapDrawStats {
 export class MapRenderer {
   private input: MapInput | null = null
   private scope = ''
+  private land = new Map<string, ChunkLandStatus>()
   /** Walked chunks inside the frontier, by key. */
   private byKey = new Map<string, MapChunk & { rev: string }>()
   /** The revision each chunk's cached raster was made from. */
@@ -168,6 +170,8 @@ export class MapRenderer {
         this.rasters.delete(key)
       }
     for (const key of [...this.summaries.keys()]) if (this.byKey.get(key)?.rev !== this.summaries.get(key)!.rev) this.summaries.delete(key)
+    this.land.clear()
+    for (const s of input.land ?? []) if (s.chunk && this.byKey.has(s.chunk.cx + ',' + s.chunk.cy)) this.land.set(s.chunk.cx + ',' + s.chunk.cy, s)
     this.marks = mapMarks(input)
     this.wayBuckets.clear()
     this.placeBuckets.clear()
@@ -206,7 +210,7 @@ export class MapRenderer {
   }
 
   /** Draw the view into a canvas of backingSize(vp, dpr). */
-  draw(ctx: MapCtx, view: MapView, vp: MapViewport, dpr: number): MapDrawStats {
+  draw(ctx: MapCtx, view: MapView, vp: MapViewport, dpr: number, lamps = true): MapDrawStats {
     const { w: W, h: H, r } = backingSize(vp, dpr)
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     ctx.globalAlpha = 1
@@ -310,6 +314,46 @@ export class MapRenderer {
           ctx.fillRect(x0, y0, Math.max(1, X((c.cx + 1) * S) - x0), Math.max(1, Y((c.cy + 1) * S) - y0))
           drawn++
         }
+      }
+    }
+
+    // Tier extents use precisely the terrain transform, and only drawn chunks.
+    // Common has an outline only; the surrounding woodland is never held.
+    if (lamps && (this.land.size > 0 || (input.lamps?.length ?? 0) > 0)) {
+      for (const c of this.walkedIn(vc.minCx,vc.minCy,vc.maxCx,vc.maxCy)) {
+        const s = this.land.get(c.cx + ',' + c.cy)
+        if (!s || !['built','common'].includes(s.tier)) continue
+        const x = X(c.cx*S), y = Y(c.cy*S), w = X((c.cx+1)*S)-x, h = Y((c.cy+1)*S)-y
+        if (w < 2 || h < 2) continue
+        ctx.lineWidth = r
+        ctx.strokeStyle = s.tier === 'built' ? '#9d6325' : '#84734e'
+        ctx.setLineDash(s.tier === 'common' ? [3*r,4*r] : [])
+        if (s.tier === 'built') {
+          ctx.fillStyle = 'rgba(229,171,72,0.22)'
+          ctx.fillRect(x,y,w,h)
+          // Double boundary distinguishes Built without relying on colour.
+          if (w > 12*r) ctx.strokeRect(x+3*r,y+3*r,w-6*r,h-6*r)
+        }
+        ctx.strokeRect(x+r/2,y+r/2,w-r,h-r)
+        ctx.setLineDash([])
+        if (s.dimming && s.tier === 'built') {
+          ctx.beginPath()
+          const step = Math.max(12*r,w/24)
+          for (let d = step; d < w+h; d += step) {
+            ctx.moveTo(x+Math.max(0,d-h),y+Math.min(h,d))
+            ctx.lineTo(x+Math.min(w,d),y+Math.max(0,d-w))
+          }
+          ctx.stroke()
+        }
+      }
+      // Lamp symbols share the same transform. Marks never add terrain.
+      for (const l of input.lamps ?? []) {
+        if (l.x < vis.minTx || l.x > vis.maxTx || l.y < vis.minTy || l.y > vis.maxTy) continue
+        if (!this.byKey.has(Math.floor(l.x/S) + ',' + Math.floor(l.y/S))) continue
+        const x=X(l.x+0.5),y=Y(l.y+0.5),u=3*r
+        ctx.fillStyle = '#fff3c2'; ctx.strokeStyle = '#70451d'; ctx.lineWidth=r
+        ctx.fillRect(x-u,y-u,2*u,2*u); ctx.strokeRect(x-u,y-u,2*u,2*u)
+        ctx.fillStyle = '#70451d'; ctx.fillRect(x-r/2,y+u,r,4*r)
       }
     }
 

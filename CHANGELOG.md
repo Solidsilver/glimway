@@ -15,6 +15,8 @@ the game can show the first part as "What's new":
 
 ### For players
 
+- The world map shows held land, common paths and dimming warnings. Open Details for the Lamps ledger: see each known light’s reserve and what happens at the turning, then pick a row to find it on the map.
+
 - Signing in, reloading and stepping outdoors no longer freeze the game for a moment as the world appears.
 - The Wilds keep their shape across the turning: the Wend runs the same course and woods and meadows stay where they are. Only the living detail (trees, forage, camps, chests, places and paths) changes each wick.
 - The Wilds turn early once, when this version arrives: the current wick's land is replaced. The Tangle keeps everything.
@@ -25,6 +27,8 @@ the game can show the first part as "What's new":
 - Paths you lay in the Wilds are common ways now: if anyone walks through that bit of land during the wick, the path is still there after the turning, even though the trees around it change. Land nobody visits turns, and its stone or timber waits for whoever laid it in a crate at Pell's office. Paths behind a lot lantern that goes dark go to Pell's the same way.
 
 ### Technical
+
+- Explicit land status in `wilds.proto`, separate from chunk source: Wild/Common/Built, permanent town and still ground, Common visits, oil reserve and next-turning prediction. Read-only `POST /api/wilds/map` takes device-explored chunk keys in batches of 256; near reads include only the occupied chunk’s status. Neither read credits presence. Known lamps and one’s own lot stake feed the map’s Lamps layer and Details ledger; pinned epochs and Common overlays keep distant known chunks accurate. Tier drawing uses existing terrain transforms and explored clipping. Naming and communal-lamp fields are ready for their lanes. No migration or judging changes.
 
 - Added `lantern-stake-2` as a generated 64×96 Hearthwick 2 frame, packed at 64 texels per tile; it is registered as a texture only and is not used by lot layouts.
 - Arrival has no long frame: boot builds its art a slice a frame (8 ms budget; the heavy passes yield a texture at a time, `Steps` in `src/game/art-pass.ts`), each frame's texture is uploaded once instead of twice, and the packed atlases boot only copies out of are staged as decoded images instead of GPU textures (`loadStaged`). Portraits and UI icons are drawn once per game during boot, and the open map no longer paints an empty area tileset. Desktop (GPU), longest arrival frame: sign-in ~480–680 → ~80–85 ms, reload ~560–660 → ~85–105 ms, door-out ~110–120 → ~60 ms; at a 4× CPU throttle, ~2.4–2.7 s → ~0.3 s. No change in what's drawn.

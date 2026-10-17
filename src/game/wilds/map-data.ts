@@ -15,7 +15,7 @@ import { roomFor } from '../../lib/rooms.ts'
 import { homeDoorstep } from '../../lib/lots.ts'
 import { MAP_LABELS } from '../../content/open-map.ts'
 import { loadWilds } from '../../lib/wilds/data.ts'
-import type { GroundChange } from '../../lib/gen/glimway/v1/wilds_pb.js'
+import type { WildsMapStatus, GroundChange } from '../../lib/gen/glimway/v1/wilds_pb.js'
 import type { MapChunk, MapInput, MapPlace } from '../../lib/wilds/map-model.ts'
 import type { Session } from '../session.ts'
 import { cachedTerrain, loadChunk } from './chunks.ts'
@@ -69,6 +69,10 @@ export interface MapLoad {
  */
 interface ScopeCache {
   scope: string
+  status?: WildsMapStatus
+  statusAt?: number
+  statusVersion?: number
+  known?: string
   built: Map<string, { terrain: ChunkTerrain; changes: readonly GroundChange[]; chunk: MapChunk }>
   chunks: Map<string, MapChunk>
   located: Map<string, { id: string; kind: string; tx: number; ty: number }>
@@ -130,6 +134,34 @@ export async function loadMap(session: Session, opts: { read?: boolean } = {}): 
   const ended = endsAt !== null && gameNow() >= endsAt
   const wick = wickEpoch.id
   const keys = mapChunkKeys(ended ? [] : walkedChunks(wick))
+  // Status reads are bounded and coalesced just like map terrain reads. The
+  // server sees only explored keys; a lamp mark never adds terrain to keys.
+  const signature = [...keys].sort().join(';')
+  let statusFailed = false
+  if (!ended && link.online && (cache.known !== signature || cache.statusVersion !== view.version || Date.now() - (cache.statusAt ?? 0) >= MAP_READ_EVERY_MS)) {
+    try {
+      const batches: WildsMapStatus[] = []
+      for (let i = 0; i < Math.max(1, keys.length); i += 256) {
+        const answer = await link.api.operations.mapStatus(keys.slice(i,i+256).map(parseChunkKey))
+        if (!live() || answer.wick !== wick) return { ...none(null), scope, superseded: true }
+        batches.push(answer)
+      }
+      const lamps = new Map(batches.flatMap((b) => b.lamps).map((l) => [l.id,l]))
+      cache.status = { ...batches[0]!, chunks: batches.flatMap((b) => b.chunks), lamps: [...lamps.values()] }
+      cache.statusAt = Date.now()
+      cache.statusVersion = view.version
+      cache.known = signature
+    } catch { statusFailed = true }
+  }
+  // The map read also names pinned terrain beyond the near window.
+  const mapGround = new Map<string, readonly GroundChange[]>()
+  for (const s of cache.status?.chunks ?? []) {
+    if (s.chunk) {
+      held.delete(chunkKey(s.chunk.cx,s.chunk.cy))
+      if (s.ground) mapGround.set(chunkKey(s.chunk.cx,s.chunk.cy),s.ground.changes)
+    }
+    if (s.chunk && s.epoch) held.set(chunkKey(s.chunk.cx,s.chunk.cy), { id: s.epoch.id, kind: 'wick', worldSeed: s.epoch.worldSeed, generatorVersion: s.epoch.generatorVersion, season: s.epoch.season, endsAt: s.epoch.endsAt ?? null })
+  }
   const chunks: MapChunk[] = []
   let failed = 0
   let superseded = false
@@ -152,7 +184,7 @@ export async function loadMap(session: Session, opts: { read?: boolean } = {}): 
     }
     // The store may have moved on while the chunk came: its ground changes would be another epoch's.
     if (!live()) return void (superseded = true)
-    const changes = groundChanges(cx, cy)
+    const changes = mapGround.get(key) ?? groundChanges(cx, cy)
     const id = `${epoch.id}:${key}`
     let b = cache.built.get(id)
     if (!b || b.terrain !== terrain || b.changes !== changes) {
@@ -198,11 +230,11 @@ export async function loadMap(session: Session, opts: { read?: boolean } = {}): 
   const st = session.state
   const hero = mapHeroTile(st.area, st.position)
   return {
-    input: { frontier, chunks, fixed, glimpse, ways, places: [...places.values()], hero, words: { you: MAP_LABELS.you, gate: MAP_LABELS.gate } },
+    input: { land: ended ? [] : cache.status?.chunks ?? [...view.land.values()], lamps: ended ? [] : cache.status?.lamps ?? [], frontier, chunks, fixed, glimpse, ways, places: [...places.values()], hero, words: { you: MAP_LABELS.you, gate: MAP_LABELS.gate } },
     scope,
     missing: null,
     offline: !link.online,
-    partial: failed > 0,
+    partial: failed > 0 || statusFailed,
     ended,
     endsAt
   }

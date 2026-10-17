@@ -114,6 +114,61 @@
     }
   },
   {
+    "name": "glimway.v1.ChunkLandStatus",
+    "case": "empty",
+    "json": {
+      "chunk": null,
+      "tier": "",
+      "visited": false,
+      "claimId": "",
+      "dimming": false,
+      "reserve": 0,
+      "cost": 0,
+      "nextTurning": "",
+      "epoch": null,
+      "ground": null
+    }
+  },
+  {
+    "name": "glimway.v1.ChunkLandStatus",
+    "case": "populated",
+    "json": {
+      "chunk": {
+        "realm": "fixture",
+        "layer": 1,
+        "cx": 1,
+        "cy": 1
+      },
+      "tier": "fixture",
+      "visited": true,
+      "claimId": "fixture",
+      "dimming": true,
+      "reserve": 1,
+      "cost": 1,
+      "nextTurning": "fixture",
+      "epoch": {
+        "id": "fixture",
+        "worldSeed": "fixture",
+        "generatorVersion": 1,
+        "season": "fixture",
+        "startsAt": 1,
+        "endsAt": 1,
+        "kind": "fixture"
+      },
+      "ground": {
+        "changes": [
+          {
+            "tx": 1,
+            "ty": 1,
+            "change": "fixture",
+            "by": "fixture",
+            "at": 1
+          }
+        ]
+      }
+    }
+  },
+  {
     "name": "glimway.v1.CommittedOperation",
     "case": "empty",
     "json": {
@@ -6163,6 +6218,72 @@
     }
   },
   {
+    "name": "glimway.v1.MapLamp",
+    "case": "empty",
+    "json": {
+      "id": "",
+      "kind": "",
+      "x": 0,
+      "y": 0,
+      "at": 0,
+      "name": "",
+      "naming": "",
+      "namer": "",
+      "land": null,
+      "mageLit": false
+    }
+  },
+  {
+    "name": "glimway.v1.MapLamp",
+    "case": "populated",
+    "json": {
+      "id": "fixture",
+      "kind": "fixture",
+      "x": 1,
+      "y": 1,
+      "at": 1,
+      "name": "fixture",
+      "naming": "fixture",
+      "namer": "fixture",
+      "land": {
+        "chunk": {
+          "realm": "fixture",
+          "layer": 1,
+          "cx": 1,
+          "cy": 1
+        },
+        "tier": "fixture",
+        "visited": true,
+        "claimId": "fixture",
+        "dimming": true,
+        "reserve": 1,
+        "cost": 1,
+        "nextTurning": "fixture",
+        "epoch": {
+          "id": "fixture",
+          "worldSeed": "fixture",
+          "generatorVersion": 1,
+          "season": "fixture",
+          "startsAt": 1,
+          "endsAt": 1,
+          "kind": "fixture"
+        },
+        "ground": {
+          "changes": [
+            {
+              "tx": 1,
+              "ty": 1,
+              "change": "fixture",
+              "by": "fixture",
+              "at": 1
+            }
+          ]
+        }
+      },
+      "mageLit": true
+    }
+  },
+  {
     "name": "glimway.v1.MarkRequest",
     "case": "empty",
     "json": {
@@ -9743,6 +9864,128 @@
     }
   },
   {
+    "name": "glimway.v1.WildsMapRequest",
+    "case": "empty",
+    "json": {
+      "explored": []
+    }
+  },
+  {
+    "name": "glimway.v1.WildsMapRequest",
+    "case": "populated",
+    "json": {
+      "explored": [
+        {
+          "realm": "fixture",
+          "layer": 1,
+          "cx": 1,
+          "cy": 1
+        }
+      ]
+    }
+  },
+  {
+    "name": "glimway.v1.WildsMapStatus",
+    "case": "empty",
+    "json": {
+      "wick": "",
+      "chunks": [],
+      "lamps": []
+    }
+  },
+  {
+    "name": "glimway.v1.WildsMapStatus",
+    "case": "populated",
+    "json": {
+      "wick": "fixture",
+      "chunks": [
+        {
+          "chunk": {
+            "realm": "fixture",
+            "layer": 1,
+            "cx": 1,
+            "cy": 1
+          },
+          "tier": "fixture",
+          "visited": true,
+          "claimId": "fixture",
+          "dimming": true,
+          "reserve": 1,
+          "cost": 1,
+          "nextTurning": "fixture",
+          "epoch": {
+            "id": "fixture",
+            "worldSeed": "fixture",
+            "generatorVersion": 1,
+            "season": "fixture",
+            "startsAt": 1,
+            "endsAt": 1,
+            "kind": "fixture"
+          },
+          "ground": {
+            "changes": [
+              {
+                "tx": 1,
+                "ty": 1,
+                "change": "fixture",
+                "by": "fixture",
+                "at": 1
+              }
+            ]
+          }
+        }
+      ],
+      "lamps": [
+        {
+          "id": "fixture",
+          "kind": "fixture",
+          "x": 1,
+          "y": 1,
+          "at": 1,
+          "name": "fixture",
+          "naming": "fixture",
+          "namer": "fixture",
+          "land": {
+            "chunk": {
+              "realm": "fixture",
+              "layer": 1,
+              "cx": 1,
+              "cy": 1
+            },
+            "tier": "fixture",
+            "visited": true,
+            "claimId": "fixture",
+            "dimming": true,
+            "reserve": 1,
+            "cost": 1,
+            "nextTurning": "fixture",
+            "epoch": {
+              "id": "fixture",
+              "worldSeed": "fixture",
+              "generatorVersion": 1,
+              "season": "fixture",
+              "startsAt": 1,
+              "endsAt": 1,
+              "kind": "fixture"
+            },
+            "ground": {
+              "changes": [
+                {
+                  "tx": 1,
+                  "ty": 1,
+                  "change": "fixture",
+                  "by": "fixture",
+                  "at": 1
+                }
+              ]
+            }
+          },
+          "mageLit": true
+        }
+      ]
+    }
+  },
+  {
     "name": "glimway.v1.WildsMaterial",
     "case": "empty",
     "json": {
@@ -9777,7 +10020,8 @@
       "glimpse": [],
       "ways": [],
       "chunks": [],
-      "held": []
+      "held": [],
+      "land": null
     }
   },
   {
@@ -9949,7 +10193,95 @@
           "endsAt": 1,
           "kind": "fixture"
         }
-      ]
+      ],
+      "land": {
+        "wick": "fixture",
+        "chunks": [
+          {
+            "chunk": {
+              "realm": "fixture",
+              "layer": 1,
+              "cx": 1,
+              "cy": 1
+            },
+            "tier": "fixture",
+            "visited": true,
+            "claimId": "fixture",
+            "dimming": true,
+            "reserve": 1,
+            "cost": 1,
+            "nextTurning": "fixture",
+            "epoch": {
+              "id": "fixture",
+              "worldSeed": "fixture",
+              "generatorVersion": 1,
+              "season": "fixture",
+              "startsAt": 1,
+              "endsAt": 1,
+              "kind": "fixture"
+            },
+            "ground": {
+              "changes": [
+                {
+                  "tx": 1,
+                  "ty": 1,
+                  "change": "fixture",
+                  "by": "fixture",
+                  "at": 1
+                }
+              ]
+            }
+          }
+        ],
+        "lamps": [
+          {
+            "id": "fixture",
+            "kind": "fixture",
+            "x": 1,
+            "y": 1,
+            "at": 1,
+            "name": "fixture",
+            "naming": "fixture",
+            "namer": "fixture",
+            "land": {
+              "chunk": {
+                "realm": "fixture",
+                "layer": 1,
+                "cx": 1,
+                "cy": 1
+              },
+              "tier": "fixture",
+              "visited": true,
+              "claimId": "fixture",
+              "dimming": true,
+              "reserve": 1,
+              "cost": 1,
+              "nextTurning": "fixture",
+              "epoch": {
+                "id": "fixture",
+                "worldSeed": "fixture",
+                "generatorVersion": 1,
+                "season": "fixture",
+                "startsAt": 1,
+                "endsAt": 1,
+                "kind": "fixture"
+              },
+              "ground": {
+                "changes": [
+                  {
+                    "tx": 1,
+                    "ty": 1,
+                    "change": "fixture",
+                    "by": "fixture",
+                    "at": 1
+                  }
+                ]
+              }
+            },
+            "mageLit": true
+          }
+        ]
+      }
     }
   },
   {
@@ -10590,7 +10922,8 @@
           "epoch": "wick-epoch"
         }
       ],
-      "held": []
+      "held": [],
+      "land": null
     }
   },
   {

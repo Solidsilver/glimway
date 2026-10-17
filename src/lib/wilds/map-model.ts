@@ -55,6 +55,9 @@ export interface MapWay {
 }
 
 export interface MapInput {
+  /** Explicit server status, independent of source and terrain epoch. */
+  land?: readonly import('../gen/glimway/v1/wilds_pb.js').ChunkLandStatus[];
+  lamps?: readonly import('../gen/glimway/v1/wilds_pb.js').MapLamp[];
   frontier: { minCx: number; minCy: number; maxCx: number; maxCy: number };
   chunks: readonly MapChunk[];
   /** The fixed footprints' chunks (the Commons): always drawn, whatever the wick. */
