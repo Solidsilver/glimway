@@ -15,7 +15,6 @@ the game can show the first part as "What's new":
 
 ### For players
 
-- Lot lantern art now includes a dimming state for the upcoming oil warning.
 - Signing in, reloading and stepping outdoors no longer freeze the game for a moment as the world appears.
 - The Wilds keep their shape across the turning: the Wend runs the same course and woods and meadows stay where they are. Only the living detail (trees, forage, camps, chests, places and paths) changes each wick.
 - The Wilds turn early once, when this version arrives: the current wick's land is replaced. The Tangle keeps everything.
