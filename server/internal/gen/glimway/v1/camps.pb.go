@@ -199,9 +199,64 @@ func (x *CampPlant) GetOwnerId() string {
 	return ""
 }
 
-// A camp: its chunk, its lamp (id, tile), who set it, its oil in wicks and
-// whether it dims (out of oil at the last turning: it lapses at the next
-// unless filled). builder: the caller may build here.
+// A world member, by account and name: someone a camp's keeper may name.
+type CampMember struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AccountId     string                 `protobuf:"bytes,1,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CampMember) Reset() {
+	*x = CampMember{}
+	mi := &file_glimway_v1_camps_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CampMember) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CampMember) ProtoMessage() {}
+
+func (x *CampMember) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_camps_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CampMember.ProtoReflect.Descriptor instead.
+func (*CampMember) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_camps_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *CampMember) GetAccountId() string {
+	if x != nil {
+		return x.AccountId
+	}
+	return ""
+}
+
+func (x *CampMember) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+// A camp: its chunk, its lamp (id, tile), who set it (its keeper), its oil
+// in wicks and whether it dims (out of oil at the last turning: it lapses
+// at the next unless filled). builder: the caller may build here. Only the
+// keeper reads who may build: rule (household, listed, except or everyone)
+// and the members it names.
 type CampView struct {
 	state      protoimpl.MessageState `protogen:"open.v1"`
 	Id         string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -217,14 +272,16 @@ type CampView struct {
 	Pieces     []*CampPiece           `protobuf:"bytes,11,rep,name=pieces,proto3" json:"pieces,omitempty"`
 	Plants     []*CampPlant           `protobuf:"bytes,12,rep,name=plants,proto3" json:"plants,omitempty"`
 	// The lamp's naming (lamps.md 2.8), unset until its Keeper names it.
-	Naming        *LampNaming `protobuf:"bytes,13,opt,name=naming,proto3" json:"naming,omitempty"`
+	Naming        *LampNaming   `protobuf:"bytes,13,opt,name=naming,proto3" json:"naming,omitempty"`
+	Rule          string        `protobuf:"bytes,14,opt,name=rule,proto3" json:"rule,omitempty"`
+	Members       []*CampMember `protobuf:"bytes,15,rep,name=members,proto3" json:"members,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CampView) Reset() {
 	*x = CampView{}
-	mi := &file_glimway_v1_camps_proto_msgTypes[2]
+	mi := &file_glimway_v1_camps_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -236,7 +293,7 @@ func (x *CampView) String() string {
 func (*CampView) ProtoMessage() {}
 
 func (x *CampView) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_camps_proto_msgTypes[2]
+	mi := &file_glimway_v1_camps_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -249,7 +306,7 @@ func (x *CampView) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CampView.ProtoReflect.Descriptor instead.
 func (*CampView) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_camps_proto_rawDescGZIP(), []int{2}
+	return file_glimway_v1_camps_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *CampView) GetId() string {
@@ -343,17 +400,33 @@ func (x *CampView) GetNaming() *LampNaming {
 	return nil
 }
 
-// GET /api/camps: the world's camps.
+func (x *CampView) GetRule() string {
+	if x != nil {
+		return x.Rule
+	}
+	return ""
+}
+
+func (x *CampView) GetMembers() []*CampMember {
+	if x != nil {
+		return x.Members
+	}
+	return nil
+}
+
+// GET /api/camps: the world's camps and, for a camp's keeper, the world's
+// members to name in its rule.
 type CampsRead struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Camps         []*CampView            `protobuf:"bytes,1,rep,name=camps,proto3" json:"camps,omitempty"`
+	People        []*CampMember          `protobuf:"bytes,2,rep,name=people,proto3" json:"people,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CampsRead) Reset() {
 	*x = CampsRead{}
-	mi := &file_glimway_v1_camps_proto_msgTypes[3]
+	mi := &file_glimway_v1_camps_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -365,7 +438,7 @@ func (x *CampsRead) String() string {
 func (*CampsRead) ProtoMessage() {}
 
 func (x *CampsRead) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_camps_proto_msgTypes[3]
+	mi := &file_glimway_v1_camps_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -378,7 +451,7 @@ func (x *CampsRead) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CampsRead.ProtoReflect.Descriptor instead.
 func (*CampsRead) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_camps_proto_rawDescGZIP(), []int{3}
+	return file_glimway_v1_camps_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *CampsRead) GetCamps() []*CampView {
@@ -388,16 +461,26 @@ func (x *CampsRead) GetCamps() []*CampView {
 	return nil
 }
 
+func (x *CampsRead) GetPeople() []*CampMember {
+	if x != nil {
+		return x.People
+	}
+	return nil
+}
+
 // POST /api/camps: one camp operation, by action.
 //
 //	set:    set the carried way-lamp item_id at tile (x, y), with a first flask of oil.
 //	fill:   pour a flask of oil into camp's lamp (anyone).
 //	place:  set the carried piece item_id out at (x, y) with rotation (a builder).
-//	remove: pick up a piece of yours, item_id (the lamp, once nothing else stands there).
+//	remove: pick up a piece of yours, item_id (the lamp, once nothing else stands there);
+//	        the keeper may move anyone's piece to its owner's crate at Pell's.
 //	plant:  plant a seed or sapling item_def at (x, y) (a builder).
 //	name:   give camp's lamp its naming from `parts` (a Keeper who builds there).
 //
 // Setting a way-lamp, or naming one, takes the Keeper's hand.
+//
+//	rule:   the keeper sets who may build at camp: rule and the members it names.
 type CampRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Op            *OpHeader              `protobuf:"bytes,1,opt,name=op,proto3" json:"op,omitempty"`
@@ -410,13 +493,15 @@ type CampRequest struct {
 	Y             int32                  `protobuf:"zigzag32,8,opt,name=y,proto3" json:"y,omitempty"`
 	Rotation      int32                  `protobuf:"varint,9,opt,name=rotation,proto3" json:"rotation,omitempty"`
 	Parts         []string               `protobuf:"bytes,10,rep,name=parts,proto3" json:"parts,omitempty"`
+	Rule          string                 `protobuf:"bytes,11,opt,name=rule,proto3" json:"rule,omitempty"`
+	Members       []string               `protobuf:"bytes,12,rep,name=members,proto3" json:"members,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CampRequest) Reset() {
 	*x = CampRequest{}
-	mi := &file_glimway_v1_camps_proto_msgTypes[4]
+	mi := &file_glimway_v1_camps_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -428,7 +513,7 @@ func (x *CampRequest) String() string {
 func (*CampRequest) ProtoMessage() {}
 
 func (x *CampRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_camps_proto_msgTypes[4]
+	mi := &file_glimway_v1_camps_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -441,7 +526,7 @@ func (x *CampRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CampRequest.ProtoReflect.Descriptor instead.
 func (*CampRequest) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_camps_proto_rawDescGZIP(), []int{4}
+	return file_glimway_v1_camps_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *CampRequest) GetOp() *OpHeader {
@@ -514,6 +599,20 @@ func (x *CampRequest) GetParts() []string {
 	return nil
 }
 
+func (x *CampRequest) GetRule() string {
+	if x != nil {
+		return x.Rule
+	}
+	return ""
+}
+
+func (x *CampRequest) GetMembers() []string {
+	if x != nil {
+		return x.Members
+	}
+	return nil
+}
+
 // The camp after the operation (none: the lamp was taken down), the
 // pack's material balances, and what a naming gave (lamp ash, once).
 type CampResult struct {
@@ -527,7 +626,7 @@ type CampResult struct {
 
 func (x *CampResult) Reset() {
 	*x = CampResult{}
-	mi := &file_glimway_v1_camps_proto_msgTypes[5]
+	mi := &file_glimway_v1_camps_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -539,7 +638,7 @@ func (x *CampResult) String() string {
 func (*CampResult) ProtoMessage() {}
 
 func (x *CampResult) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_camps_proto_msgTypes[5]
+	mi := &file_glimway_v1_camps_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -552,7 +651,7 @@ func (x *CampResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CampResult.ProtoReflect.Descriptor instead.
 func (*CampResult) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_camps_proto_rawDescGZIP(), []int{5}
+	return file_glimway_v1_camps_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *CampResult) GetCamp() *CampView {
@@ -581,6 +680,8 @@ func (x *CampResult) GetGiven() []string {
 // lapsed_at.
 // The id is int32: the HTTP JSON carries numbers, and protojson writes a
 // 64-bit integer as a string, which the client refuses.
+// moved_by: the camp keeper's name when they moved the piece off their camp
+// (empty for what a lapse packed).
 type RecoveryEntry struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -590,13 +691,14 @@ type RecoveryEntry struct {
 	Cx            int32                  `protobuf:"zigzag32,5,opt,name=cx,proto3" json:"cx,omitempty"`
 	Cy            int32                  `protobuf:"zigzag32,6,opt,name=cy,proto3" json:"cy,omitempty"`
 	LapsedAt      float64                `protobuf:"fixed64,7,opt,name=lapsed_at,json=lapsedAt,proto3" json:"lapsed_at,omitempty"`
+	MovedBy       string                 `protobuf:"bytes,8,opt,name=moved_by,json=movedBy,proto3" json:"moved_by,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *RecoveryEntry) Reset() {
 	*x = RecoveryEntry{}
-	mi := &file_glimway_v1_camps_proto_msgTypes[6]
+	mi := &file_glimway_v1_camps_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -608,7 +710,7 @@ func (x *RecoveryEntry) String() string {
 func (*RecoveryEntry) ProtoMessage() {}
 
 func (x *RecoveryEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_camps_proto_msgTypes[6]
+	mi := &file_glimway_v1_camps_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -621,7 +723,7 @@ func (x *RecoveryEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RecoveryEntry.ProtoReflect.Descriptor instead.
 func (*RecoveryEntry) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_camps_proto_rawDescGZIP(), []int{6}
+	return file_glimway_v1_camps_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *RecoveryEntry) GetId() int32 {
@@ -673,6 +775,13 @@ func (x *RecoveryEntry) GetLapsedAt() float64 {
 	return 0
 }
 
+func (x *RecoveryEntry) GetMovedBy() string {
+	if x != nil {
+		return x.MovedBy
+	}
+	return ""
+}
+
 // GET /api/recovery: what waits for the caller at Pell's, in this world.
 type RecoveryRead struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -683,7 +792,7 @@ type RecoveryRead struct {
 
 func (x *RecoveryRead) Reset() {
 	*x = RecoveryRead{}
-	mi := &file_glimway_v1_camps_proto_msgTypes[7]
+	mi := &file_glimway_v1_camps_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -695,7 +804,7 @@ func (x *RecoveryRead) String() string {
 func (*RecoveryRead) ProtoMessage() {}
 
 func (x *RecoveryRead) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_camps_proto_msgTypes[7]
+	mi := &file_glimway_v1_camps_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -708,7 +817,7 @@ func (x *RecoveryRead) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RecoveryRead.ProtoReflect.Descriptor instead.
 func (*RecoveryRead) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_camps_proto_rawDescGZIP(), []int{7}
+	return file_glimway_v1_camps_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *RecoveryRead) GetEntries() []*RecoveryEntry {
@@ -730,7 +839,7 @@ type RecoveryCollectRequest struct {
 
 func (x *RecoveryCollectRequest) Reset() {
 	*x = RecoveryCollectRequest{}
-	mi := &file_glimway_v1_camps_proto_msgTypes[8]
+	mi := &file_glimway_v1_camps_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -742,7 +851,7 @@ func (x *RecoveryCollectRequest) String() string {
 func (*RecoveryCollectRequest) ProtoMessage() {}
 
 func (x *RecoveryCollectRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_camps_proto_msgTypes[8]
+	mi := &file_glimway_v1_camps_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -755,7 +864,7 @@ func (x *RecoveryCollectRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RecoveryCollectRequest.ProtoReflect.Descriptor instead.
 func (*RecoveryCollectRequest) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_camps_proto_rawDescGZIP(), []int{8}
+	return file_glimway_v1_camps_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *RecoveryCollectRequest) GetOp() *OpHeader {
@@ -782,7 +891,7 @@ type RecoveryCollectResult struct {
 
 func (x *RecoveryCollectResult) Reset() {
 	*x = RecoveryCollectResult{}
-	mi := &file_glimway_v1_camps_proto_msgTypes[9]
+	mi := &file_glimway_v1_camps_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -794,7 +903,7 @@ func (x *RecoveryCollectResult) String() string {
 func (*RecoveryCollectResult) ProtoMessage() {}
 
 func (x *RecoveryCollectResult) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_camps_proto_msgTypes[9]
+	mi := &file_glimway_v1_camps_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -807,7 +916,7 @@ func (x *RecoveryCollectResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RecoveryCollectResult.ProtoReflect.Descriptor instead.
 func (*RecoveryCollectResult) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_camps_proto_rawDescGZIP(), []int{9}
+	return file_glimway_v1_camps_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *RecoveryCollectResult) GetCollected() []*RecoveryEntry {
@@ -846,7 +955,12 @@ const file_glimway_v1_camps_proto_rawDesc = "" +
 	"planted_at\x18\x05 \x01(\x01R\tplantedAt\x12\x1f\n" +
 	"\vplanted_day\x18\x06 \x01(\x01R\n" +
 	"plantedDay\x12\x19\n" +
-	"\bowner_id\x18\a \x01(\tR\aownerId\"\xe8\x02\n" +
+	"\bowner_id\x18\a \x01(\tR\aownerId\"?\n" +
+	"\n" +
+	"CampMember\x12\x1d\n" +
+	"\n" +
+	"account_id\x18\x01 \x01(\tR\taccountId\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\"\xae\x03\n" +
 	"\bCampView\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x0e\n" +
 	"\x02cx\x18\x02 \x01(\x11R\x02cx\x12\x0e\n" +
@@ -862,9 +976,12 @@ const file_glimway_v1_camps_proto_rawDesc = "" +
 	" \x01(\bR\abuilder\x12-\n" +
 	"\x06pieces\x18\v \x03(\v2\x15.glimway.v1.CampPieceR\x06pieces\x12-\n" +
 	"\x06plants\x18\f \x03(\v2\x15.glimway.v1.CampPlantR\x06plants\x12.\n" +
-	"\x06naming\x18\r \x01(\v2\x16.glimway.v1.LampNamingR\x06naming\"7\n" +
+	"\x06naming\x18\r \x01(\v2\x16.glimway.v1.LampNamingR\x06naming\x12\x12\n" +
+	"\x04rule\x18\x0e \x01(\tR\x04rule\x120\n" +
+	"\amembers\x18\x0f \x03(\v2\x16.glimway.v1.CampMemberR\amembers\"g\n" +
 	"\tCampsRead\x12*\n" +
-	"\x05camps\x18\x01 \x03(\v2\x14.glimway.v1.CampViewR\x05camps\"\x8a\x02\n" +
+	"\x05camps\x18\x01 \x03(\v2\x14.glimway.v1.CampViewR\x05camps\x12.\n" +
+	"\x06people\x18\x02 \x03(\v2\x16.glimway.v1.CampMemberR\x06people\"\xb8\x02\n" +
 	"\vCampRequest\x12$\n" +
 	"\x02op\x18\x01 \x01(\v2\x14.glimway.v1.OpHeaderR\x02op\x12'\n" +
 	"\x05where\x18\x02 \x01(\v2\x11.glimway.v1.WhereR\x05where\x12\x16\n" +
@@ -876,7 +993,9 @@ const file_glimway_v1_camps_proto_rawDesc = "" +
 	"\x01y\x18\b \x01(\x11R\x01y\x12\x1a\n" +
 	"\brotation\x18\t \x01(\x05R\brotation\x12\x14\n" +
 	"\x05parts\x18\n" +
-	" \x03(\tR\x05parts\"\xcf\x01\n" +
+	" \x03(\tR\x05parts\x12\x12\n" +
+	"\x04rule\x18\v \x01(\tR\x04rule\x12\x18\n" +
+	"\amembers\x18\f \x03(\tR\amembers\"\xcf\x01\n" +
 	"\n" +
 	"CampResult\x12(\n" +
 	"\x04camp\x18\x01 \x01(\v2\x14.glimway.v1.CampViewR\x04camp\x12C\n" +
@@ -884,7 +1003,7 @@ const file_glimway_v1_camps_proto_rawDesc = "" +
 	"\x05given\x18\x03 \x03(\tR\x05given\x1a<\n" +
 	"\x0eMaterialsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"\x9d\x01\n" +
+	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"\xb8\x01\n" +
 	"\rRecoveryEntry\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x19\n" +
@@ -892,7 +1011,8 @@ const file_glimway_v1_camps_proto_rawDesc = "" +
 	"\x03qty\x18\x04 \x01(\x05R\x03qty\x12\x0e\n" +
 	"\x02cx\x18\x05 \x01(\x11R\x02cx\x12\x0e\n" +
 	"\x02cy\x18\x06 \x01(\x11R\x02cy\x12\x1b\n" +
-	"\tlapsed_at\x18\a \x01(\x01R\blapsedAt\"C\n" +
+	"\tlapsed_at\x18\a \x01(\x01R\blapsedAt\x12\x19\n" +
+	"\bmoved_by\x18\b \x01(\tR\amovedBy\"C\n" +
 	"\fRecoveryRead\x123\n" +
 	"\aentries\x18\x01 \x03(\v2\x19.glimway.v1.RecoveryEntryR\aentries\"g\n" +
 	"\x16RecoveryCollectRequest\x12$\n" +
@@ -917,43 +1037,46 @@ func file_glimway_v1_camps_proto_rawDescGZIP() []byte {
 	return file_glimway_v1_camps_proto_rawDescData
 }
 
-var file_glimway_v1_camps_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_glimway_v1_camps_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_glimway_v1_camps_proto_goTypes = []any{
 	(*CampPiece)(nil),              // 0: glimway.v1.CampPiece
 	(*CampPlant)(nil),              // 1: glimway.v1.CampPlant
-	(*CampView)(nil),               // 2: glimway.v1.CampView
-	(*CampsRead)(nil),              // 3: glimway.v1.CampsRead
-	(*CampRequest)(nil),            // 4: glimway.v1.CampRequest
-	(*CampResult)(nil),             // 5: glimway.v1.CampResult
-	(*RecoveryEntry)(nil),          // 6: glimway.v1.RecoveryEntry
-	(*RecoveryRead)(nil),           // 7: glimway.v1.RecoveryRead
-	(*RecoveryCollectRequest)(nil), // 8: glimway.v1.RecoveryCollectRequest
-	(*RecoveryCollectResult)(nil),  // 9: glimway.v1.RecoveryCollectResult
-	nil,                            // 10: glimway.v1.CampResult.MaterialsEntry
-	nil,                            // 11: glimway.v1.RecoveryCollectResult.MaterialsEntry
-	(*LampNaming)(nil),             // 12: glimway.v1.LampNaming
-	(*OpHeader)(nil),               // 13: glimway.v1.OpHeader
-	(*Where)(nil),                  // 14: glimway.v1.Where
+	(*CampMember)(nil),             // 2: glimway.v1.CampMember
+	(*CampView)(nil),               // 3: glimway.v1.CampView
+	(*CampsRead)(nil),              // 4: glimway.v1.CampsRead
+	(*CampRequest)(nil),            // 5: glimway.v1.CampRequest
+	(*CampResult)(nil),             // 6: glimway.v1.CampResult
+	(*RecoveryEntry)(nil),          // 7: glimway.v1.RecoveryEntry
+	(*RecoveryRead)(nil),           // 8: glimway.v1.RecoveryRead
+	(*RecoveryCollectRequest)(nil), // 9: glimway.v1.RecoveryCollectRequest
+	(*RecoveryCollectResult)(nil),  // 10: glimway.v1.RecoveryCollectResult
+	nil,                            // 11: glimway.v1.CampResult.MaterialsEntry
+	nil,                            // 12: glimway.v1.RecoveryCollectResult.MaterialsEntry
+	(*LampNaming)(nil),             // 13: glimway.v1.LampNaming
+	(*OpHeader)(nil),               // 14: glimway.v1.OpHeader
+	(*Where)(nil),                  // 15: glimway.v1.Where
 }
 var file_glimway_v1_camps_proto_depIdxs = []int32{
 	0,  // 0: glimway.v1.CampView.pieces:type_name -> glimway.v1.CampPiece
 	1,  // 1: glimway.v1.CampView.plants:type_name -> glimway.v1.CampPlant
-	12, // 2: glimway.v1.CampView.naming:type_name -> glimway.v1.LampNaming
-	2,  // 3: glimway.v1.CampsRead.camps:type_name -> glimway.v1.CampView
-	13, // 4: glimway.v1.CampRequest.op:type_name -> glimway.v1.OpHeader
-	14, // 5: glimway.v1.CampRequest.where:type_name -> glimway.v1.Where
-	2,  // 6: glimway.v1.CampResult.camp:type_name -> glimway.v1.CampView
-	10, // 7: glimway.v1.CampResult.materials:type_name -> glimway.v1.CampResult.MaterialsEntry
-	6,  // 8: glimway.v1.RecoveryRead.entries:type_name -> glimway.v1.RecoveryEntry
-	13, // 9: glimway.v1.RecoveryCollectRequest.op:type_name -> glimway.v1.OpHeader
-	14, // 10: glimway.v1.RecoveryCollectRequest.where:type_name -> glimway.v1.Where
-	6,  // 11: glimway.v1.RecoveryCollectResult.collected:type_name -> glimway.v1.RecoveryEntry
-	11, // 12: glimway.v1.RecoveryCollectResult.materials:type_name -> glimway.v1.RecoveryCollectResult.MaterialsEntry
-	13, // [13:13] is the sub-list for method output_type
-	13, // [13:13] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	13, // 2: glimway.v1.CampView.naming:type_name -> glimway.v1.LampNaming
+	2,  // 3: glimway.v1.CampView.members:type_name -> glimway.v1.CampMember
+	3,  // 4: glimway.v1.CampsRead.camps:type_name -> glimway.v1.CampView
+	2,  // 5: glimway.v1.CampsRead.people:type_name -> glimway.v1.CampMember
+	14, // 6: glimway.v1.CampRequest.op:type_name -> glimway.v1.OpHeader
+	15, // 7: glimway.v1.CampRequest.where:type_name -> glimway.v1.Where
+	3,  // 8: glimway.v1.CampResult.camp:type_name -> glimway.v1.CampView
+	11, // 9: glimway.v1.CampResult.materials:type_name -> glimway.v1.CampResult.MaterialsEntry
+	7,  // 10: glimway.v1.RecoveryRead.entries:type_name -> glimway.v1.RecoveryEntry
+	14, // 11: glimway.v1.RecoveryCollectRequest.op:type_name -> glimway.v1.OpHeader
+	15, // 12: glimway.v1.RecoveryCollectRequest.where:type_name -> glimway.v1.Where
+	7,  // 13: glimway.v1.RecoveryCollectResult.collected:type_name -> glimway.v1.RecoveryEntry
+	12, // 14: glimway.v1.RecoveryCollectResult.materials:type_name -> glimway.v1.RecoveryCollectResult.MaterialsEntry
+	15, // [15:15] is the sub-list for method output_type
+	15, // [15:15] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_glimway_v1_camps_proto_init() }
@@ -969,7 +1092,7 @@ func file_glimway_v1_camps_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_glimway_v1_camps_proto_rawDesc), len(file_glimway_v1_camps_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   12,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

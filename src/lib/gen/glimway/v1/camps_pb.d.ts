@@ -108,9 +108,36 @@ export declare type CampPlantValid = CampPlant;
 export declare const CampPlantSchema: GenMessage<CampPlant, {validType: CampPlantValid}>;
 
 /**
- * A camp: its chunk, its lamp (id, tile), who set it, its oil in wicks and
- * whether it dims (out of oil at the last turning: it lapses at the next
- * unless filled). builder: the caller may build here.
+ * A world member, by account and name: someone a camp's keeper may name.
+ *
+ * @generated from message glimway.v1.CampMember
+ */
+export declare type CampMember = Message<"glimway.v1.CampMember"> & {
+  /**
+   * @generated from field: string account_id = 1;
+   */
+  accountId: string;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name: string;
+};
+
+export declare type CampMemberValid = CampMember;
+
+/**
+ * Describes the message glimway.v1.CampMember.
+ * Use `create(CampMemberSchema)` to create a new message.
+ */
+export declare const CampMemberSchema: GenMessage<CampMember, {validType: CampMemberValid}>;
+
+/**
+ * A camp: its chunk, its lamp (id, tile), who set it (its keeper), its oil
+ * in wicks and whether it dims (out of oil at the last turning: it lapses
+ * at the next unless filled). builder: the caller may build here. Only the
+ * keeper reads who may build: rule (household, listed, except or everyone)
+ * and the members it names.
  *
  * @generated from message glimway.v1.CampView
  */
@@ -181,6 +208,16 @@ export declare type CampView = Message<"glimway.v1.CampView"> & {
    * @generated from field: glimway.v1.LampNaming naming = 13;
    */
   naming?: LampNaming | undefined;
+
+  /**
+   * @generated from field: string rule = 14;
+   */
+  rule: string;
+
+  /**
+   * @generated from field: repeated glimway.v1.CampMember members = 15;
+   */
+  members: CampMember[];
 };
 
 export declare type CampViewValid = CampView;
@@ -192,7 +229,8 @@ export declare type CampViewValid = CampView;
 export declare const CampViewSchema: GenMessage<CampView, {validType: CampViewValid}>;
 
 /**
- * GET /api/camps: the world's camps.
+ * GET /api/camps: the world's camps and, for a camp's keeper, the world's
+ * members to name in its rule.
  *
  * @generated from message glimway.v1.CampsRead
  */
@@ -201,6 +239,11 @@ export declare type CampsRead = Message<"glimway.v1.CampsRead"> & {
    * @generated from field: repeated glimway.v1.CampView camps = 1;
    */
   camps: CampView[];
+
+  /**
+   * @generated from field: repeated glimway.v1.CampMember people = 2;
+   */
+  people: CampMember[];
 };
 
 export declare type CampsReadValid = CampsRead;
@@ -216,10 +259,12 @@ export declare const CampsReadSchema: GenMessage<CampsRead, {validType: CampsRea
  *   set:    set the carried way-lamp item_id at tile (x, y), with a first flask of oil.
  *   fill:   pour a flask of oil into camp's lamp (anyone).
  *   place:  set the carried piece item_id out at (x, y) with rotation (a builder).
- *   remove: pick up a piece of yours, item_id (the lamp, once nothing else stands there).
+ *   remove: pick up a piece of yours, item_id (the lamp, once nothing else stands there);
+ *           the keeper may move anyone's piece to its owner's crate at Pell's.
  *   plant:  plant a seed or sapling item_def at (x, y) (a builder).
  *   name:   give camp's lamp its naming from `parts` (a Keeper who builds there).
  * Setting a way-lamp, or naming one, takes the Keeper's hand.
+ *   rule:   the keeper sets who may build at camp: rule and the members it names.
  *
  * @generated from message glimway.v1.CampRequest
  */
@@ -273,6 +318,16 @@ export declare type CampRequest = Message<"glimway.v1.CampRequest"> & {
    * @generated from field: repeated string parts = 10;
    */
   parts: string[];
+
+  /**
+   * @generated from field: string rule = 11;
+   */
+  rule: string;
+
+  /**
+   * @generated from field: repeated string members = 12;
+   */
+  members: string[];
 };
 
 export declare type CampRequestValid = CampRequest;
@@ -320,6 +375,8 @@ export declare const CampResultSchema: GenMessage<CampResult, {validType: CampRe
  * lapsed_at.
  * The id is int32: the HTTP JSON carries numbers, and protojson writes a
  * 64-bit integer as a string, which the client refuses.
+ * moved_by: the camp keeper's name when they moved the piece off their camp
+ * (empty for what a lapse packed).
  *
  * @generated from message glimway.v1.RecoveryEntry
  */
@@ -358,6 +415,11 @@ export declare type RecoveryEntry = Message<"glimway.v1.RecoveryEntry"> & {
    * @generated from field: double lapsed_at = 7;
    */
   lapsedAt: number;
+
+  /**
+   * @generated from field: string moved_by = 8;
+   */
+  movedBy: string;
 };
 
 export declare type RecoveryEntryValid = RecoveryEntry;

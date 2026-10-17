@@ -10,7 +10,7 @@ import { file_glimway_v1_lamps } from "./lamps_pb.js";
  * Describes the file glimway/v1/camps.proto.
  */
 export const file_glimway_v1_camps = /*@__PURE__*/
-  fileDesc("ChZnbGltd2F5L3YxL2NhbXBzLnByb3RvEgpnbGltd2F5LnYxImMKCUNhbXBQaWVjZRIKCgJpZBgBIAEoCRIQCghpdGVtX2RlZhgCIAEoCRIJCgF4GAMgASgREgkKAXkYBCABKBESEAoIcm90YXRpb24YBSABKAUSEAoIb3duZXJfaWQYBiABKAkiegoJQ2FtcFBsYW50EgoKAmlkGAEgASgJEhAKCGl0ZW1fZGVmGAIgASgJEgkKAXgYAyABKBESCQoBeRgEIAEoERISCgpwbGFudGVkX2F0GAUgASgBEhMKC3BsYW50ZWRfZGF5GAYgASgBEhAKCG93bmVyX2lkGAcgASgJIpECCghDYW1wVmlldxIKCgJpZBgBIAEoCRIKCgJjeBgCIAEoERIKCgJjeRgDIAEoERIJCgF4GAQgASgREgkKAXkYBSABKBESEQoJc2V0dGVyX2lkGAYgASgJEhMKC3NldHRlcl9uYW1lGAcgASgJEgsKA29pbBgIIAEoBRIPCgdkaW1taW5nGAkgASgIEg8KB2J1aWxkZXIYCiABKAgSJQoGcGllY2VzGAsgAygLMhUuZ2xpbXdheS52MS5DYW1wUGllY2USJQoGcGxhbnRzGAwgAygLMhUuZ2xpbXdheS52MS5DYW1wUGxhbnQSJgoGbmFtaW5nGA0gASgLMhYuZ2xpbXdheS52MS5MYW1wTmFtaW5nIjAKCUNhbXBzUmVhZBIjCgVjYW1wcxgBIAMoCzIULmdsaW13YXkudjEuQ2FtcFZpZXciyQEKC0NhbXBSZXF1ZXN0EiAKAm9wGAEgASgLMhQuZ2xpbXdheS52MS5PcEhlYWRlchIgCgV3aGVyZRgCIAEoCzIRLmdsaW13YXkudjEuV2hlcmUSDgoGYWN0aW9uGAMgASgJEgwKBGNhbXAYBCABKAkSDwoHaXRlbV9pZBgFIAEoCRIQCghpdGVtX2RlZhgGIAEoCRIJCgF4GAcgASgREgkKAXkYCCABKBESEAoIcm90YXRpb24YCSABKAUSDQoFcGFydHMYCiADKAkiqwEKCkNhbXBSZXN1bHQSIgoEY2FtcBgBIAEoCzIULmdsaW13YXkudjEuQ2FtcFZpZXcSOAoJbWF0ZXJpYWxzGAIgAygLMiUuZ2xpbXdheS52MS5DYW1wUmVzdWx0Lk1hdGVyaWFsc0VudHJ5Eg0KBWdpdmVuGAMgAygJGjAKDk1hdGVyaWFsc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoAToCOAEicwoNUmVjb3ZlcnlFbnRyeRIKCgJpZBgBIAEoBRIMCgRraW5kGAIgASgJEhAKCGl0ZW1fZGVmGAMgASgJEgsKA3F0eRgEIAEoBRIKCgJjeBgFIAEoERIKCgJjeRgGIAEoERIRCglsYXBzZWRfYXQYByABKAEiOgoMUmVjb3ZlcnlSZWFkEioKB2VudHJpZXMYASADKAsyGS5nbGltd2F5LnYxLlJlY292ZXJ5RW50cnkiXAoWUmVjb3ZlcnlDb2xsZWN0UmVxdWVzdBIgCgJvcBgBIAEoCzIULmdsaW13YXkudjEuT3BIZWFkZXISIAoFd2hlcmUYAiABKAsyES5nbGltd2F5LnYxLldoZXJlIrwBChVSZWNvdmVyeUNvbGxlY3RSZXN1bHQSLAoJY29sbGVjdGVkGAEgAygLMhkuZ2xpbXdheS52MS5SZWNvdmVyeUVudHJ5EkMKCW1hdGVyaWFscxgCIAMoCzIwLmdsaW13YXkudjEuUmVjb3ZlcnlDb2xsZWN0UmVzdWx0Lk1hdGVyaWFsc0VudHJ5GjAKDk1hdGVyaWFsc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoAToCOAFCMVovZ2xpbXdheS9zZXJ2ZXIvaW50ZXJuYWwvZ2VuL2dsaW13YXkvdjE7Y29udHJhY3RiBnByb3RvMw", [file_glimway_v1_op, file_glimway_v1_lamps]);
+  fileDesc("ChZnbGltd2F5L3YxL2NhbXBzLnByb3RvEgpnbGltd2F5LnYxImMKCUNhbXBQaWVjZRIKCgJpZBgBIAEoCRIQCghpdGVtX2RlZhgCIAEoCRIJCgF4GAMgASgREgkKAXkYBCABKBESEAoIcm90YXRpb24YBSABKAUSEAoIb3duZXJfaWQYBiABKAkiegoJQ2FtcFBsYW50EgoKAmlkGAEgASgJEhAKCGl0ZW1fZGVmGAIgASgJEgkKAXgYAyABKBESCQoBeRgEIAEoERISCgpwbGFudGVkX2F0GAUgASgBEhMKC3BsYW50ZWRfZGF5GAYgASgBEhAKCG93bmVyX2lkGAcgASgJIi4KCkNhbXBNZW1iZXISEgoKYWNjb3VudF9pZBgBIAEoCRIMCgRuYW1lGAIgASgJIsgCCghDYW1wVmlldxIKCgJpZBgBIAEoCRIKCgJjeBgCIAEoERIKCgJjeRgDIAEoERIJCgF4GAQgASgREgkKAXkYBSABKBESEQoJc2V0dGVyX2lkGAYgASgJEhMKC3NldHRlcl9uYW1lGAcgASgJEgsKA29pbBgIIAEoBRIPCgdkaW1taW5nGAkgASgIEg8KB2J1aWxkZXIYCiABKAgSJQoGcGllY2VzGAsgAygLMhUuZ2xpbXdheS52MS5DYW1wUGllY2USJQoGcGxhbnRzGAwgAygLMhUuZ2xpbXdheS52MS5DYW1wUGxhbnQSJgoGbmFtaW5nGA0gASgLMhYuZ2xpbXdheS52MS5MYW1wTmFtaW5nEgwKBHJ1bGUYDiABKAkSJwoHbWVtYmVycxgPIAMoCzIWLmdsaW13YXkudjEuQ2FtcE1lbWJlciJYCglDYW1wc1JlYWQSIwoFY2FtcHMYASADKAsyFC5nbGltd2F5LnYxLkNhbXBWaWV3EiYKBnBlb3BsZRgCIAMoCzIWLmdsaW13YXkudjEuQ2FtcE1lbWJlciLoAQoLQ2FtcFJlcXVlc3QSIAoCb3AYASABKAsyFC5nbGltd2F5LnYxLk9wSGVhZGVyEiAKBXdoZXJlGAIgASgLMhEuZ2xpbXdheS52MS5XaGVyZRIOCgZhY3Rpb24YAyABKAkSDAoEY2FtcBgEIAEoCRIPCgdpdGVtX2lkGAUgASgJEhAKCGl0ZW1fZGVmGAYgASgJEgkKAXgYByABKBESCQoBeRgIIAEoERIQCghyb3RhdGlvbhgJIAEoBRINCgVwYXJ0cxgKIAMoCRIMCgRydWxlGAsgASgJEg8KB21lbWJlcnMYDCADKAkiqwEKCkNhbXBSZXN1bHQSIgoEY2FtcBgBIAEoCzIULmdsaW13YXkudjEuQ2FtcFZpZXcSOAoJbWF0ZXJpYWxzGAIgAygLMiUuZ2xpbXdheS52MS5DYW1wUmVzdWx0Lk1hdGVyaWFsc0VudHJ5Eg0KBWdpdmVuGAMgAygJGjAKDk1hdGVyaWFsc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoAToCOAEihQEKDVJlY292ZXJ5RW50cnkSCgoCaWQYASABKAUSDAoEa2luZBgCIAEoCRIQCghpdGVtX2RlZhgDIAEoCRILCgNxdHkYBCABKAUSCgoCY3gYBSABKBESCgoCY3kYBiABKBESEQoJbGFwc2VkX2F0GAcgASgBEhAKCG1vdmVkX2J5GAggASgJIjoKDFJlY292ZXJ5UmVhZBIqCgdlbnRyaWVzGAEgAygLMhkuZ2xpbXdheS52MS5SZWNvdmVyeUVudHJ5IlwKFlJlY292ZXJ5Q29sbGVjdFJlcXVlc3QSIAoCb3AYASABKAsyFC5nbGltd2F5LnYxLk9wSGVhZGVyEiAKBXdoZXJlGAIgASgLMhEuZ2xpbXdheS52MS5XaGVyZSK8AQoVUmVjb3ZlcnlDb2xsZWN0UmVzdWx0EiwKCWNvbGxlY3RlZBgBIAMoCzIZLmdsaW13YXkudjEuUmVjb3ZlcnlFbnRyeRJDCgltYXRlcmlhbHMYAiADKAsyMC5nbGltd2F5LnYxLlJlY292ZXJ5Q29sbGVjdFJlc3VsdC5NYXRlcmlhbHNFbnRyeRowCg5NYXRlcmlhbHNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAE6AjgBQjFaL2dsaW13YXkvc2VydmVyL2ludGVybmFsL2dlbi9nbGltd2F5L3YxO2NvbnRyYWN0YgZwcm90bzM", [file_glimway_v1_op, file_glimway_v1_lamps]);
 
 /**
  * Describes the message glimway.v1.CampPiece.
@@ -27,58 +27,65 @@ export const CampPlantSchema = /*@__PURE__*/
   messageDesc(file_glimway_v1_camps, 1);
 
 /**
+ * Describes the message glimway.v1.CampMember.
+ * Use `create(CampMemberSchema)` to create a new message.
+ */
+export const CampMemberSchema = /*@__PURE__*/
+  messageDesc(file_glimway_v1_camps, 2);
+
+/**
  * Describes the message glimway.v1.CampView.
  * Use `create(CampViewSchema)` to create a new message.
  */
 export const CampViewSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_camps, 2);
+  messageDesc(file_glimway_v1_camps, 3);
 
 /**
  * Describes the message glimway.v1.CampsRead.
  * Use `create(CampsReadSchema)` to create a new message.
  */
 export const CampsReadSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_camps, 3);
+  messageDesc(file_glimway_v1_camps, 4);
 
 /**
  * Describes the message glimway.v1.CampRequest.
  * Use `create(CampRequestSchema)` to create a new message.
  */
 export const CampRequestSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_camps, 4);
+  messageDesc(file_glimway_v1_camps, 5);
 
 /**
  * Describes the message glimway.v1.CampResult.
  * Use `create(CampResultSchema)` to create a new message.
  */
 export const CampResultSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_camps, 5);
+  messageDesc(file_glimway_v1_camps, 6);
 
 /**
  * Describes the message glimway.v1.RecoveryEntry.
  * Use `create(RecoveryEntrySchema)` to create a new message.
  */
 export const RecoveryEntrySchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_camps, 6);
+  messageDesc(file_glimway_v1_camps, 7);
 
 /**
  * Describes the message glimway.v1.RecoveryRead.
  * Use `create(RecoveryReadSchema)` to create a new message.
  */
 export const RecoveryReadSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_camps, 7);
+  messageDesc(file_glimway_v1_camps, 8);
 
 /**
  * Describes the message glimway.v1.RecoveryCollectRequest.
  * Use `create(RecoveryCollectRequestSchema)` to create a new message.
  */
 export const RecoveryCollectRequestSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_camps, 8);
+  messageDesc(file_glimway_v1_camps, 9);
 
 /**
  * Describes the message glimway.v1.RecoveryCollectResult.
  * Use `create(RecoveryCollectResultSchema)` to create a new message.
  */
 export const RecoveryCollectResultSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_camps, 9);
+  messageDesc(file_glimway_v1_camps, 10);
 

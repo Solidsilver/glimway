@@ -356,6 +356,9 @@ func (a *Server) wildsLift(w http.ResponseWriter, r *http.Request) error {
 		if c == nil || chunks.LayKind(c.Change) == nil || c.By != s.AccountID {
 			return nil, fail(409, "not-your-path")
 		}
+		if err = a.campBuilderAt(ctx, tx, s, p.cx, p.cy); err != nil {
+			return nil, err
+		}
 		lay := chunks.LayKind(c.Change)
 		ref := fmt.Sprintf("%s:%d:%d", p.epoch.Id, p.x, p.y)
 		if err = itemChange(ctx, tx, s, lay.GetMaterial(), int(lay.GetCost()), "wilds-lift", ref, now); err != nil {

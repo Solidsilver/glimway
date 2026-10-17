@@ -266,4 +266,7 @@ enum ErrorCode {
   ERROR_CODE_NEEDS_KEEPER = 247;
   ERROR_CODE_LAMP_NAMED = 248;
   ERROR_CODE_INVALID_NAMING = 249;
+  // 0.13 Who may build at a camp (lamps.md 2.5).
+  ERROR_CODE_NOT_YOUR_CAMP = 250;
+  ERROR_CODE_NOT_IN_WORLD = 251;
 }

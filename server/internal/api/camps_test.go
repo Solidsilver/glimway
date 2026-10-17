@@ -203,11 +203,11 @@ func TestCampSetFillAndAccess(t *testing.T) {
 		t.Fatalf("bob's read: %+v", cs)
 	}
 	stool := x.carry(bs.AccountID, "wooden-stool")
-	if _, code := x.campOp(bc, bs, &contract.CampRequest{Action: "place", ItemId: stool, X: int32(spots[2][0]), Y: int32(spots[2][1])}, stand[0], stand[1], 409); code != "not-your-land" {
+	if _, code := x.campOp(bc, bs, &contract.CampRequest{Action: "place", ItemId: stool, X: int32(spots[2][0]), Y: int32(spots[2][1])}, stand[0], stand[1], 409); code != "not-your-camp" {
 		t.Fatalf("bob placed: %s", code)
 	}
 	x.give(bs.AccountID, "stone", 2)
-	if _, code := x.pathOp(bc, bs, "lay", "bob-lay", spots[2][0], spots[2][1], spots[2][0], spots[2][1], "stone", 409); code != "not-your-land" {
+	if _, code := x.pathOp(bc, bs, "lay", "bob-lay", spots[2][0], spots[2][1], spots[2][0], spots[2][1], "stone", 409); code != "not-your-camp" {
 		t.Fatalf("bob laid at the camp: %s", code)
 	}
 	// Alice builds: a piece, a plant; not on each other, not beyond the chunk.
@@ -228,7 +228,7 @@ func TestCampSetFillAndAccess(t *testing.T) {
 	if len(v.Camp.Pieces) != 2 || len(v.Camp.Plants) != 1 || v.Camp.Plants[0].OwnerId != s.AccountID {
 		t.Fatalf("built: %+v", v.Camp)
 	}
-	// Only a piece's owner picks it up; the lamp stays while others stand.
+	// Only a piece's owner (or the camp's keeper) picks it up; the lamp stays while others stand.
 	if _, code := x.campOp(bc, bs, &contract.CampRequest{Action: "remove", ItemId: mine}, stand[0], stand[1], 409); code != "item-not-owned" {
 		t.Fatalf("bob took the stool: %s", code)
 	}

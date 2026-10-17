@@ -1286,6 +1286,18 @@ export enum ErrorCode {
    * @generated from enum value: ERROR_CODE_INVALID_NAMING = 249;
    */
   INVALID_NAMING = 249,
+
+  /**
+   * 0.13 Who may build at a camp (lamps.md 2.5).
+   *
+   * @generated from enum value: ERROR_CODE_NOT_YOUR_CAMP = 250;
+   */
+  NOT_YOUR_CAMP = 250,
+
+  /**
+   * @generated from enum value: ERROR_CODE_NOT_IN_WORLD = 251;
+   */
+  NOT_IN_WORLD = 251,
 }
 
 /**

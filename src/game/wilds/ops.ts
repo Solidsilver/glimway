@@ -18,6 +18,8 @@
  */
 import { FINDS, PATH_DONE, PATH_REFUSALS, WAY_NEWS } from '../../content/open-map.ts'
 import { firstFindText, placeName, refusalText } from '../../lib/wilds/paths.ts'
+import { campRefusal } from '../../lib/camps.ts'
+import { campsKnown } from './camps-state.ts'
 import type { WildsClearResult, WildsDiscoverResult, WildsLayResult, WildsLiftResult } from '../../lib/gen/glimway/v1/operations_pb.js'
 import type { WildsWay } from '../../lib/gen/glimway/v1/wilds_pb.js'
 import { bus, EV } from '../events.ts'
@@ -149,7 +151,9 @@ function refused(op: WildsOp, code: string, world: string): void {
     if (op.place) retryLater(op.place, code === 'busy' ? 500 : code === 'too-far-away' || code === 'offline' ? 4000 : 60_000)
     return
   }
-  say(refusalText(code, { action: op.action, material: op.material, extra: PATH_REFUSALS }))
+  // At a camp you may not build at: whose camp it is, and that you can still walk and tend (camps.ts).
+  const camp = code === 'not-your-camp' ? campsKnown.list.find((c) => c.cx === op.cx && c.cy === op.cy) ?? null : null
+  say(code === 'not-your-camp' ? campRefusal(camp) : refusalText(code, { action: op.action, material: op.material, extra: PATH_REFUSALS }))
   if (!NOT_DISPROVING.has(code) && current(op, world)) requestRead()
 }
 
