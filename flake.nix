@@ -22,6 +22,9 @@
 
       nixosModules.default = import ./deploy/nixos/glimway.nix;
       nixosModules.glimway = self.nixosModules.default;
+      # A staging instance (services.glimway-dev) that can run beside the live
+      # one on the same host, from a second input such as the dev branch.
+      nixosModules.dev = import ./deploy/nixos/glimway-dev.nix;
 
       devShells = forAllSystems (system:
         let pkgs = import nixpkgs { inherit system; }; in {

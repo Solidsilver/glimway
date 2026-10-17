@@ -2,19 +2,32 @@
 { pkgs, nixpkgs }:
 let
   inherit (nixpkgs) lib;
-  evaluate = settings: (lib.nixosSystem {
+  # Both instance modules, as a host importing the live and the dev input has.
+  evaluateBoth = services: (lib.nixosSystem {
     system = "x86_64-linux";
     modules = [
       ../deploy/nixos/glimway.nix
+      ../deploy/nixos/glimway-dev.nix
       {
         system.stateVersion = "26.05";
         boot.loader.grub.enable = false;
         fileSystems."/" = { device = "/dev/disk/by-label/root"; fsType = "ext4"; };
-        services.glimway = settings;
+        inherit services;
       }
     ];
   }).config;
+  evaluate = settings: evaluateBoth { glimway = settings; };
   defaults = evaluate { enable = true; };
+  # The host's shape: its own Caddy sites, so neither instance enables Caddy.
+  liveSettings = { enable = true; publicOrigin = "https://fsnap.example.org"; };
+  devSettings = { enable = true; publicOrigin = "https://glim-dev.example.org"; };
+  live = evaluate liveSettings;
+  dev = evaluateBoth { glimway-dev = devSettings; };
+  both = evaluateBoth { glimway = liveSettings; glimway-dev = devSettings; };
+  proxied = evaluateBoth {
+    glimway = liveSettings // { reverseProxy.enable = true; };
+    glimway-dev = devSettings // { reverseProxy.enable = true; };
+  };
   legacy = evaluate {
     enable = true;
     stateDirectory = "legacy-game";
@@ -58,7 +71,27 @@ let
   env = cfg: cfg.systemd.services.glimway-server.environment;
   service = cfg: cfg.systemd.services.glimway-server.serviceConfig;
   assertionsPass = cfg: lib.all (a: a.assertion) cfg.assertions;
-  configs = [ defaults legacy custom scheduled disabled ];
+  configs = [ defaults legacy custom scheduled disabled live dev both proxied ];
+  # What an enabled instance adds to a host with none: its units, accounts,
+  # tmpfiles paths, commands on PATH and Caddy sites. Sorted for comparing.
+  sorted = lib.sort lib.lessThan;
+  added = names: cfg: sorted (lib.subtractLists (names disabled) (names cfg));
+  tmpfilesPath = rule: lib.elemAt (lib.filter (x: x != "") (lib.splitString " " rule)) 1;
+  owned = cfg: {
+    units = added (c: lib.attrNames c.systemd.units) cfg;
+    users = added (c: lib.attrNames c.users.users) cfg;
+    groups = added (c: lib.attrNames c.users.groups) cfg;
+    tmpfiles = added (c: map tmpfilesPath c.systemd.tmpfiles.rules) cfg;
+    commands = added (c: map (p: p.meta.mainProgram or (lib.getName p)) c.environment.systemPackages) cfg;
+    sites = added (c: lib.attrNames c.services.caddy.virtualHosts) cfg;
+  };
+  kinds = lib.attrNames (owned live);
+  shareNothing = lib.all (k: lib.intersectLists (owned live).${k} (owned dev).${k} == [ ]) kinds;
+  # Together they own exactly what each owns alone, with the same unit text.
+  addUp = lib.all (k: (owned both).${k} == sorted ((owned live).${k} ++ (owned dev).${k})) kinds;
+  sameUnits = alone: lib.all (u: both.systemd.units.${u}.text == alone.systemd.units.${u}.text) (owned alone).units;
+  devEnv = dev.systemd.services.glimway-dev-server.environment;
+  devService = dev.systemd.services.glimway-dev-server.serviceConfig;
   backupScript = (scheduled.systemd.services.glimway-server-backup.serviceConfig.ExecStart).text;
   # Line order: back up, verify (keeping a failure out of retention), then prune.
   before = a: b: lib.length (lib.splitString a backupScript) == 2
@@ -101,6 +134,22 @@ assert before "\"$snapshot.unverified\"" "exit 1";
 assert before "exit 1" "-mtime +7 -delete";
 assert !(disabled.systemd.services ? glimway-server);
 assert !(disabled.systemd.services ? glimway);
+assert shareNothing && addUp && sameUnits live && sameUnits dev;
+assert (owned live).units == [ "glimway-server-backup.service" "glimway-server-backup.timer" "glimway-server.service" "glimway.service" ];
+assert (owned dev).units == [ "glimway-dev-server-backup.service" "glimway-dev-server-backup.timer" "glimway-dev-server.service" "glimway-dev.service" ];
+assert (owned dev).users == [ "glimway-dev-server" ] && (owned dev).groups == [ "glimway-dev-server" ];
+assert (owned live).commands == [ "glimway-server" ] && (owned dev).commands == [ "glimway-dev-server" ];
+assert lib.all (lib.hasPrefix "/var/lib/glimway-dev-server") (owned dev).tmpfiles;
+assert (env live).GLIMWAY_LISTEN == "127.0.0.1:8090" && devEnv.GLIMWAY_LISTEN == "127.0.0.1:8091";
+assert devEnv.GLIMWAY_DB == "/var/lib/glimway-dev-server/glimway.sqlite";
+assert devEnv.GLIMWAY_SPRITE_CACHE == "/var/lib/glimway-dev-server/habitica-sprites";
+assert devService.StateDirectory == "glimway-dev-server" && devService.User == "glimway-dev-server";
+assert lib.hasInfix "glimway-dev-backup" dev.systemd.services.glimway-dev-server-backup.serviceConfig.ExecStart;
+assert lib.hasInfix ''"127.0.0.1:4174"'' dev.systemd.services.glimway-dev.serviceConfig.ExecStart;
+assert lib.attrNames proxied.services.caddy.virtualHosts == [ "https://fsnap.example.org" "https://glim-dev.example.org" ];
+assert lib.hasInfix "reverse_proxy 127.0.0.1:8091" proxied.services.caddy.virtualHosts."https://glim-dev.example.org".extraConfig;
+assert lib.hasInfix "reverse_proxy 127.0.0.1:4174" proxied.services.caddy.virtualHosts."https://glim-dev.example.org".extraConfig;
+assert lib.hasInfix "reverse_proxy 127.0.0.1:8090" proxied.services.caddy.virtualHosts."https://fsnap.example.org".extraConfig;
 pkgs.runCommand "glimway-nixos-module-evaluation" {
   # Force systemd unit generation as well as module options (no Linux build).
   report = builtins.unsafeDiscardStringContext (builtins.toJSON {
@@ -110,6 +159,9 @@ pkgs.runCommand "glimway-nixos-module-evaluation" {
     backupUnit = scheduled.systemd.units."glimway-server-backup.service".text;
     backupTimer = scheduled.systemd.units."glimway-server-backup.timer".text;
     webUnit = defaults.systemd.units."glimway.service".text;
+    devUnit = both.systemd.units."glimway-dev-server.service".text;
+    devWebUnit = both.systemd.units."glimway-dev.service".text;
+    devBackupUnit = both.systemd.units."glimway-dev-server-backup.service".text;
   });
   passAsFile = [ "report" ];
 } ''

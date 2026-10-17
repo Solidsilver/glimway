@@ -83,7 +83,7 @@ and kernel/device restrictions with explicit writable data directories.
 ### Options
 
 Every option below is under `services.glimway`. The source and descriptions are
-in [deploy/nixos/glimway.nix](../deploy/nixos/glimway.nix).
+in [deploy/nixos/instance.nix](../deploy/nixos/instance.nix).
 
 | Option | Default / purpose |
 |---|---|
@@ -207,10 +207,142 @@ The dev shell provides Go, Node, SQLite, `cwebp`/`dwebp` and Git LFS. The web
 package uses a fixed npm dependency cache and offline `npm ci` plus
 `npm run build`; committed runtime art is used without an atlas build.
 Linux module checks evaluate defaults, preserved paths, overrides, disabled
-backups, timers and proxy settings even when run on Darwin.
+backups, timers and proxy settings even when run on Darwin, and the live and
+dev instances side by side, sharing no unit, account, path, port or command.
 
 Detailed party/world behavior and earlier migration notes are preserved in
 [server-behavior.md](server-behavior.md).
+
+## Dev Glimway (staging)
+
+The dev Glimway is a second instance on the same host as the live game. It
+runs the `dev` branch with its own, initially empty world, so playtests happen
+there before a release reaches the live server. On anaximander it is
+`https://glim-dev.solidsilver.dev`, beside the live `https://fsnap.solidsilver.dev`.
+
+The flake's `nixosModules.dev` defines `services.glimway-dev`, with the same
+options as `services.glimway` and different names, so the two never share
+anything:
+
+| | Live (`nixosModules.default`) | Dev (`nixosModules.dev`) |
+|---|---|---|
+| Options | `services.glimway` | `services.glimway-dev` |
+| Units | `glimway-server`, `glimway`, `glimway-server-backup` (+ timer) | `glimway-dev-server`, `glimway-dev`, `glimway-dev-server-backup` (+ timer) |
+| User, group, state | `glimway-server`, `/var/lib/glimway-server` | `glimway-dev-server`, `/var/lib/glimway-dev-server` |
+| Ports | 8090 (backend), 4173 (static) | 8091 (backend), 4174 (static) |
+| Admin command | `glimway-server` | `glimway-dev-server` |
+
+Each instance's default `package` and `webPackage` are built from the flake
+input that supplied its module, so the dev instance runs the dev branch while
+the live one stays on its pinned release. The dev module puts its binary on
+PATH only as `glimway-dev-server`, so `glimway-server` on the host is always the
+live binary. Both modules live in
+[deploy/nixos/instance.nix](../deploy/nixos/instance.nix).
+
+### Host configuration
+
+Add a second input that tracks `dev`, beside the pinned live one:
+
+```nix
+inputs = {
+  glimway.url = "github:Solidsilver/glimway/v0.11.2";   # live, unchanged
+  glimway-dev.url = "github:Solidsilver/glimway/dev";   # staging
+};
+```
+
+Add `glimway-dev` to the `outputs` arguments and import its module next to
+the live one:
+
+```nix
+modules = [
+  glimway.nixosModules.default
+  glimway-dev.nixosModules.dev
+  # …
+];
+```
+
+Then enable it:
+
+```nix
+services.glimway-dev = {
+  enable = true;
+  publicOrigin = "https://glim-dev.solidsilver.dev";
+  reverseProxy.enable = false; # the host's own Caddy site, below
+};
+```
+
+The host's Caddy site mirrors the live one, on the dev ports:
+
+```nix
+services.caddy.virtualHosts."glim-dev.solidsilver.dev".extraConfig = ''
+  handle /api/* {
+    encode zstd gzip
+    reverse_proxy 127.0.0.1:8091
+  }
+  handle /ws {
+    reverse_proxy 127.0.0.1:8091
+  }
+  handle {
+    encode zstd gzip
+    reverse_proxy 127.0.0.1:4174
+  }
+'';
+```
+
+With `reverseProxy.enable = true` the module adds the same site itself instead.
+
+### DNS
+
+Point `glim-dev.solidsilver.dev` at the host before switching, the same way as
+`fsnap.solidsilver.dev`: a DNS-only `CNAME glim-dev → solidsilver.dev` in the
+Cloudflare zone. Caddy obtains the certificate on first request once the name
+resolves.
+
+### Updating it
+
+The dev instance doesn't follow `dev` by itself. To deploy the latest `dev`:
+
+```sh
+cd /etc/nixos
+nix flake update glimway-dev
+nh os switch
+```
+
+This only moves the `glimway-dev` input; the live input stays pinned. Check
+`curl -fsS https://glim-dev.solidsilver.dev/api/health`.
+
+### Letting people in
+
+The fresh world has no players and no party worlds, so make an invite (or
+allowlist someone) with the dev command and the dev database:
+
+```sh
+DB=/var/lib/glimway-dev-server/glimway.sqlite
+sudo -u glimway-dev-server glimway-dev-server -db "$DB" invite
+sudo -u glimway-dev-server glimway-dev-server -db "$DB" allowlist add HABITICA_USER_ID
+```
+
+Anyone playing there signs in with their real Habitica account, exactly as on
+live: the same read-only login proof, nothing written to Habitica. Their dev
+progress is separate from their live progress and may be wiped at any time.
+
+### Resetting its world
+
+To start the dev world from empty again, stop the dev units, move the
+database and its sidecars aside, and start them again:
+
+```sh
+sudo systemctl stop glimway-dev-server glimway-dev glimway-dev-server-backup.timer
+sudo sh -c 'cd /var/lib/glimway-dev-server && old="old-$(date -u +%Y-%m-%dT%H-%M-%S)" &&
+  mkdir "$old" && for f in glimway.sqlite glimway.sqlite-wal glimway.sqlite-shm; do
+    [ ! -e "$f" ] || mv "$f" "$old/"; done'
+sudo systemctl start glimway-dev-server glimway-dev glimway-dev-server-backup.timer
+```
+
+The server creates a new database on start. The state directory is mode 0700,
+hence the root shell. Delete the `old-*` directory once you no longer want the
+previous world; `backups/` keeps its snapshots until they age out. Never run
+this against `/var/lib/glimway-server`, which is the live game.
 
 ## Admission and backups
 
