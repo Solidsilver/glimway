@@ -232,9 +232,10 @@ test('walk from the gate through the Tangle into the Whitequiet and on, with no 
   expect(saved.area).toBe('outdoors')
   expect(Math.abs(saved.x - before.x), 'local save x matches the settled hero').toBeLessThanOrEqual(17)
   expect(Math.abs(saved.y - before.y), 'local save y matches the settled hero').toBeLessThanOrEqual(17)
+  // Reload rebuilds the enemy system: parked from its first frame, so a camp's
+  // room that chased the parked hero can't knock him off the spot first.
+  await parkCreatures(page, { keep: true })
   await reenter(page, 'outdoors')
-  // Reload rebuilds the enemy system: keep this walking/save test quiet too.
-  await parkCreatures(page)
   await waitForWilds(page)
   const after = await steady(page, () => player(page), { frames: 4, seconds: 20, message: 'hero position after re-entering the open map' })
   expect(Math.abs(after.x - before.x)).toBeLessThanOrEqual(17)

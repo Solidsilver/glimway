@@ -157,6 +157,7 @@ export class HomesteadLayer {
     // Read-only view of homesteads for playtests; `fresh()` awaits a fresh read of the lane and your home.
     expose('__fsHomes', Object.assign(() => ({
       status: this.homes.status,
+      reading: this.homes.reading,
       claimed: this.homes.claimed,
       myGate: this.homes.myGate,
       gateCount: this.homes.gateCount,

@@ -13,6 +13,14 @@ the game can show the first part as "What's new":
 
 ## [Unreleased]
 
+### Technical
+
+- Flaky tests fixed at their cause:
+  - **Reload-in-place checks** in `wilds.spec.ts` and the `open-map.spec.ts` walk. Parked creatures were parked on screen only: the server's camp rooms kept chasing the hero, and after a reload one touch knocked him ~20 px. `parkCreatures(page, { keep: true })` (dev hook `__fsDevParkCreatures(true)`) now parks every later scene of the tab from its first frame.
+  - **"Findings 4 and 6"** in `review-fixes.spec.ts` counts gate redraws from a baseline taken after the scene's start-up rebuilds and reads have settled, using two new read-only hooks: `__fsHomes().reading` and `__fsVillage().mailStatus`.
+  - **Go API tests:** the fake Habitica and sprite upstreams ignore requests that didn't come from the server's clients. A loopback port sweep's bare `GET /` failed whichever test held that port with "invalid upstream request".
+  - **Plants:** a seeded test covers the two-plants-on-one-tile overlap fixed in 19b55416.
+
 ## [0.11.2] - 2026-10-16
 
 ### For players

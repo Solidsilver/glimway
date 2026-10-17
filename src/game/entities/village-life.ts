@@ -220,6 +220,7 @@ export class VillageLayer {
       source: this.village.calendarSource,
       worldFlags: this.village.worldFlags,
       projectsStatus: this.village.projectsStatus,
+      mailStatus: this.village.mailStatus,
       loadProjects: () => this.village.loadProjects()
     }), scene)
     this.village.ensureCalendar()

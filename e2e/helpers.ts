@@ -338,9 +338,15 @@ export async function pressOn(page: Page, id: string, tile?: { tx: number; ty: n
   await page.keyboard.press('e')
 }
 
-/** Set the area's creatures aside (frozen, off the map). Creatures of chunks attached later come back: park again after a move. */
-export async function parkCreatures(page: Page): Promise<void> {
-  await page.evaluate(() => window.__fsDevParkCreatures?.())
+/**
+ * Set the area's creatures aside (frozen, off the map). Creatures of chunks
+ * attached later come back: park again after a move. `keep`: every later
+ * scene of this tab starts parked, a reload included (a server camp's room
+ * still chases the parked hero, so its enemies can stand on him the moment
+ * the scene is built again).
+ */
+export async function parkCreatures(page: Page, opts: { keep?: boolean } = {}): Promise<void> {
+  await page.evaluate((keep) => window.__fsDevParkCreatures?.(keep), opts.keep ?? false)
 }
 
 /** The frame state now (null before the world is up). */

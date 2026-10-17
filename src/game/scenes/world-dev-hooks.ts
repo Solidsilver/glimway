@@ -269,8 +269,8 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
   on('__fsDevDodge', (dx, dy) => s['hero'].tryDodge(new Phaser.Math.Vector2(dx, dy)))
   // One swing of the hero's weapon, wherever they stand (the off hand tucks away).
   on('__fsDevAttack', () => s['hero'].tryAttack())
-  // Set the area's creatures aside (frozen, off the map) for a quiet chunk.
-  on('__fsDevParkCreatures', () => s['enemies'].parkAll())
+  // Set the area's creatures aside (frozen, off the map) for a quiet chunk; `keep`: in every later scene too, a reload included.
+  on('__fsDevParkCreatures', (keep?: boolean) => s['enemies'].parkAll(keep))
   on('__fsDevStrike', (n: number, type?: EnemyType) => {
     for (const e of [...s['enemies'].enemies]) if (!e.dead && (!type || e.type === type)) s['enemies'].damageEnemy(e, n, s['hero'].sprite.x)
   })

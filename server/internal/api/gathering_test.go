@@ -1,8 +1,11 @@
 package api
 
 import (
+	"cmp"
 	"fmt"
 	"google.golang.org/protobuf/proto"
+	"maps"
+	"math/rand/v2"
 	"net/http"
 	"slices"
 	"testing"
@@ -687,5 +690,45 @@ func TestPlantsNeverShareATile(t *testing.T) {
 	}
 	if got[1].X != r[0] || got[1].Y != r[1] {
 		t.Fatalf("boxed in: the newer plant left the tile it was set on for %d,%d", got[1].X, got[1].Y)
+	}
+}
+
+// TestPlantingNeverStacksIsCappedAndBlocksPlacement draws its plant IDs at
+// random, so it meets only a few of the walks a land can hold (dev CI
+// 38807033640 drew a boxed-in one). This plays the same planting many times
+// with fixed seeds: plants go in day by day, each only where none stands
+// that day (often beside or on an older one's start), and no read ever
+// shows two on one tile.
+func TestPlantsNeverShareATileAcrossManyWalks(t *testing.T) {
+	h := homeView{Gate: 0, LandSeed: 1234, Items: []homeInstance{}}
+	open := plantGround(h)
+	tiles := slices.SortedFunc(maps.Keys(open), func(a, b [2]int) int { return cmp.Or(a[1]-b[1], a[0]-b[0]) })
+	const day0 = int64(20483)
+	for trial := range 400 {
+		rng := rand.New(rand.NewPCG(uint64(trial), 0))
+		var raw []homePlantView
+		for day := day0; day < day0+20; day++ {
+			now := day*86400 + 3600
+			for k := rng.IntN(4); k > 0; k-- {
+				var tl [2]int
+				if len(raw) > 0 && rng.IntN(2) == 0 {
+					q := raw[rng.IntN(len(raw))]
+					tl = [2]int{q.X + rng.IntN(3) - 1, q.Y + rng.IntN(3) - 1}
+				} else {
+					tl = tiles[rng.IntN(len(tiles))]
+				}
+				if !open[tl] || slices.ContainsFunc(plantsOf(h, raw, now), func(p homePlantView) bool { return p.X == tl[0] && p.Y == tl[1] }) {
+					continue
+				}
+				raw = append(raw, homePlantView{ID: fmt.Sprintf("%d-%d-%d", trial, day, k), ItemDef: "wild-thyme", X: tl[0], Y: tl[1], PlantedAt: now, PlantedDay: day})
+				seen := map[[2]int]bool{}
+				for _, p := range plantsOf(h, raw, now) {
+					if seen[[2]int{p.X, p.Y}] {
+						t.Fatalf("seed %d, day %d: two plants on %d,%d", trial, day-day0, p.X, p.Y)
+					}
+					seen[[2]int{p.X, p.Y}] = true
+				}
+			}
+		}
 	}
 }

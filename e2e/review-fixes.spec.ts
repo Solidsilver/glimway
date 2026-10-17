@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
 import { calendarOnServer, linkRev, linkStatus, moveServerClock, serverState } from './connected'
-import { frames, expectToast } from './helpers'
+import { frames, expectToast, steady, windowWhole, SERVER_ANSWER_MS } from './helpers'
 import { claimDeed, earnGlims, freshPlayer, fund, go, homes, myHome, onMyLand, seeTheYard, silasSays, yardBuild } from './home-helpers'
 
 /**
@@ -113,6 +113,17 @@ test('findings 4 and 6: materials show on a fresh read; purchases redraw one plo
   // Back on the lane (the deed was bought in Pell's office): the panel opens where you stand.
   await go(page, 'outdoors', 34, 35)
   await expect.poll(async () => (await homes(page)).status).toBe('ready')
+  // The baseline after the scene's own start, not during it: a lot chunk is
+  // built again when its homestead layer refreshes (its gate drawn again),
+  // and the lane, home and mail reads still landing ask for more. Sampled at
+  // once, a late burst of these counted against the purchases under load.
+  await windowWhole(page)
+  await expect.poll(async () => ({
+    reading: (await homes(page)).reading,
+    mail: await page.evaluate(() => (window as unknown as { __fsVillage: () => { mailStatus: string } }).__fsVillage().mailStatus)
+  }), { timeout: SERVER_ANSWER_MS, message: 'the reads of the scene start landed' }).toEqual({ reading: 0, mail: 'ready' })
+  // Then the rebuilds they asked for: one chunk a frame, built over a few.
+  await steady(page, async () => (await stats(page)).gateDraws, { frames: 10, seconds: 20, message: 'gate draws after the scene start' })
   const loaded = await stats(page)
   // The lane's gates drawn once at start, plus the claimed gate: never N² rebuilds.
   expect(loaded.gateDraws).toBeLessThanOrEqual(12)

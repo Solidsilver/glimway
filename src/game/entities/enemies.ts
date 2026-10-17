@@ -38,6 +38,9 @@ import type { CombatField } from '../../lib/combat-moves'
 import { ENEMY_TUNING, KNOCK, contactThreat, hitOutcome, knockFrom, knockInterrupts, touchOutcome, type EnemyPhase, type EnemyState } from './fight-rules'
 import { ownCollider } from './collider-lifetime'
 
+/** Dev only (sessionStorage): this tab parks its creatures in every scene (parkAll with `keep`). */
+const DEV_PARKED_KEY = 'fs-dev-parked'
+
 /** An enemy on this screen: its state, the sprite that draws it (a local enemy's body too), and its owner's working. */
 export interface Enemy extends EnemyState {
   sprite: Phaser.Physics.Arcade.Sprite
@@ -168,6 +171,8 @@ export class EnemySystem {
     }
     this.hpBars = scene.add.graphics().setDepth(5000)
     if (world.areaId === 'outdoors') this.server = new ServerEnemies(this)
+    // Dev: a playtest that parked for good (across a reload) starts every scene parked.
+    if (import.meta.env?.DEV && sessionStorage.getItem(DEV_PARKED_KEY)) this.parkAll()
   }
 
   get enemies(): Enemy[] {
@@ -197,8 +202,12 @@ export class EnemySystem {
    * them back. Server camps' enemies, now and as their rows arrive, are
    * parked on this screen only (./server-enemies.ts): drawn and touched off
    * the map while their room goes on; their camps stay standing, unfallen.
+   * The room still chases the hero, so its enemies can stand on him when a
+   * scene is built again: `keep` parks every later scene of this tab, from
+   * its first frame (a reload included).
    */
-  parkAll(): number {
+  parkAll(keep = false): number {
+    if (keep) sessionStorage.setItem(DEV_PARKED_KEY, '1')
     this.parkedAll = true
     let n = 0
     for (const e of this._enemies) {

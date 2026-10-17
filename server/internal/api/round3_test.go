@@ -161,7 +161,7 @@ func proofRequest(x *rig, id, token, remote string) (int, string, string) {
 	return w.Code, v.Error.Code, w.Header().Get("Retry-After")
 }
 func proofUpstream(x *rig, handler func(http.ResponseWriter, *http.Request)) *httptest.Server {
-	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { x.calls.Add(1); handler(w, r) }))
+	up := httptest.NewServer(fromHabiticaClient(func(w http.ResponseWriter, r *http.Request) { x.calls.Add(1); handler(w, r) }))
 	x.api.Habitica = habitica.New(up.URL, "tag")
 	return up
 }

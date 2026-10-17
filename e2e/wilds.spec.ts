@@ -171,6 +171,9 @@ test('connected: harvest, clear a camp, chest, POI, reload in place, the fallen 
   // The hero was set down without a scene change: this tab saves the spot, then the world has it.
   await page.evaluate(() => (window as unknown as { __fsDevSaveSoon: () => void }).__fsDevSaveSoon())
   await expect.poll(() => page.evaluate(() => (window as unknown as { __fsDevSaved: () => { pending: boolean } }).__fsDevSaved().pending)).toBe(false)
+  // Parked from the reload's first frame: the camps' rooms chased the parked
+  // hero, and one touch would knock him ~20 px before the check.
+  await parkCreatures(page, { keep: true })
   await reenter(page, 'outdoors')
   await waitForWilds(page)
   const reloaded = await wilds(page)
