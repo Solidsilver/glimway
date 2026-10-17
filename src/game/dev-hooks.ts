@@ -116,6 +116,8 @@ export interface FsHooks {
    * and whether it is a fading canopy.
    */
   __fsArtAt: (tx: number, ty: number) => { frame: string; fades: boolean }[]
+  /** Live images whose texture key starts with a prefix, where they stand in world px (the lot lantern's stake). */
+  __fsImagesNamed: (prefix: string) => { key: string; x: number; y: number }[]
   /** The sync-safety snapshot the UI's sync gate reads (sync-safety.ts). */
   __fsSafety: () => SyncSafety | null
   /** The seat, and the depths the hero and the layered avatar are drawn at. */

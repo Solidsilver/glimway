@@ -1,6 +1,9 @@
 import type { HomeView } from '../../lib/api/types.ts'
 import { lotOrigin, lotLayout, insideLot } from '../../lib/lots.ts'
 import { lotAt, plotEpoch, plotIdentity, PLOT_REVISION } from '../../lib/lots.ts'
+import { HOMESTEAD_DATA } from '../../lib/homestead.ts'
+import { lanternFrame, lanternLook } from '../../lib/lot-lantern.ts'
+import { hw2Art } from '../hearthwick2-art.ts'
 /**
  * Fixed ground on the open map (docs/design/location-seam.md 1.2, 4, lane
  * S5): an authored layout's chunks (the Commons', content/layouts, sliced by
@@ -461,10 +464,13 @@ export function applyLotHome(gate: number, home: HomeView | null): void {
   for (let y = 0; y < 24; y++) for (let x = 0; x < 24; x++) fp.solid[o.ty - fp.ty + y]![o.tx - fp.tx + x] = base.solid[o.ty - base.ty + y]![o.tx - base.tx + x]!
   const cleared = new Set((home?.cleared ?? []).map(([x,y]) => `${x},${y}`))
   const stumps = new Set((home?.stumps ?? []).map(([x,y]) => `${x},${y}`))
+  const stake = `lot:${gate}:stake:${HOMESTEAD_DATA.lotLantern.stakeY}`
   const objects = (base.objects.get(key) ?? []).flatMap((object) => {
     const tile = `${object.tx-o.tx},${object.ty-o.ty}`
     if (object.id.startsWith('land:') && cleared.has(tile)) return []
     if ((object.target === 'tree' || object.target === 'iron-oak') && stumps.has(tile)) return [{ ...object, target: 'stump', label: 'Dig the stump', frame: 'stump-0' }]
+    // The lot's lantern: dark, lit or guttering (lot-lantern.ts).
+    if (object.id === stake) return [{ ...object, variant: hw2Art(lanternFrame(lanternLook(home?.lantern))) }]
     return [object]
   })
   for (const [x,y] of home?.cleared ?? []) if (insideLot(o.tx+x,o.ty+y,gate) && base.objects.get(key)?.some((p) => p.id === `land:${x},${y}`)) fp.solid[o.ty-fp.ty+y]![o.tx-fp.tx+x] = false

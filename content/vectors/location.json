@@ -1403,6 +1403,15 @@
       ]
     },
     {
+      "source": "items.sellers.chandler",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        27,
+        35
+      ]
+    },
+    {
       "source": "papers.papers.pip-copybook-warden-corrections.rule",
       "kind": "stand",
       "area": "hearthwick",

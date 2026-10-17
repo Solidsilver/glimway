@@ -589,5 +589,11 @@
       "timber": 4,
       "stone": 2
     }
+  },
+  "lotLantern": {
+    "oil": "hearth-oil",
+    "maxWicks": 3,
+    "wicksPerOil": 1,
+    "stakeY": 12
   }
 }

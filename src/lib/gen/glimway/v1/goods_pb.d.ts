@@ -762,6 +762,11 @@ export declare type HomeView = Message<"glimway.v1.HomeView"> & {
    * @generated from field: repeated glimway.v1.YardPet yard_pets = 19;
    */
   yardPets: YardPet[];
+
+  /**
+   * @generated from field: glimway.v1.LotLanternView lantern = 20;
+   */
+  lantern?: LotLanternView | undefined;
 };
 
 export declare type HomeViewValid = HomeView;
@@ -771,4 +776,36 @@ export declare type HomeViewValid = HomeView;
  * Use `create(HomeViewSchema)` to create a new message.
  */
 export declare const HomeViewSchema: GenMessage<HomeView, {validType: HomeViewValid}>;
+
+/**
+ * A lot's lantern (roadmap 0.12): lit while it holds the backland chunk
+ * behind the lot; oil is the wicks left in its store; dimming, out of oil
+ * with one wick of warning before it goes dark at the next turning.
+ *
+ * @generated from message glimway.v1.LotLanternView
+ */
+export declare type LotLanternView = Message<"glimway.v1.LotLanternView"> & {
+  /**
+   * @generated from field: bool lit = 1;
+   */
+  lit: boolean;
+
+  /**
+   * @generated from field: int32 oil = 2;
+   */
+  oil: number;
+
+  /**
+   * @generated from field: bool dimming = 3;
+   */
+  dimming: boolean;
+};
+
+export declare type LotLanternViewValid = LotLanternView;
+
+/**
+ * Describes the message glimway.v1.LotLanternView.
+ * Use `create(LotLanternViewSchema)` to create a new message.
+ */
+export declare const LotLanternViewSchema: GenMessage<LotLanternView, {validType: LotLanternViewValid}>;
 

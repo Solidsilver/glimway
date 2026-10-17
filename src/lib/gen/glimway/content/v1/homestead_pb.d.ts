@@ -114,6 +114,14 @@ export declare type Homestead = Message<"glimway.content.v1.Homestead"> & {
    * @generated from field: glimway.content.v1.HomesteadStable stable = 14;
    */
   stable?: HomesteadStable | undefined;
+
+  /**
+   * The lot lantern on each lot's back line (hearthwick-2.md 6): lit, it
+   * holds the backland chunk behind the lot across turnings.
+   *
+   * @generated from field: glimway.content.v1.LotLantern lot_lantern = 15;
+   */
+  lotLantern?: LotLantern | undefined;
 };
 
 /**
@@ -220,6 +228,14 @@ export declare type HomesteadValid = Message<"glimway.content.v1.Homestead"> & {
    * @generated from field: glimway.content.v1.HomesteadStable stable = 14;
    */
   stable: HomesteadStableValid;
+
+  /**
+   * The lot lantern on each lot's back line (hearthwick-2.md 6): lit, it
+   * holds the backland chunk behind the lot across turnings.
+   *
+   * @generated from field: glimway.content.v1.LotLantern lot_lantern = 15;
+   */
+  lotLantern: LotLanternValid;
 };
 
 /**
@@ -227,6 +243,44 @@ export declare type HomesteadValid = Message<"glimway.content.v1.Homestead"> & {
  * Use `create(HomesteadSchema)` to create a new message.
  */
 export declare const HomesteadSchema: GenMessage<Homestead, {validType: HomesteadValid}>;
+
+/**
+ * The lot lantern's oil (roadmap 0.12): one `oil` item adds wicks_per_oil
+ * wicks, up to max_wicks; one wick burns at each turning, then it dims
+ * for a wick before it goes dark. stake_y is the lot-local row of the
+ * lantern-line stake that carries it.
+ *
+ * @generated from message glimway.content.v1.LotLantern
+ */
+export declare type LotLantern = Message<"glimway.content.v1.LotLantern"> & {
+  /**
+   * @generated from field: string oil = 1;
+   */
+  oil: string;
+
+  /**
+   * @generated from field: int32 max_wicks = 2;
+   */
+  maxWicks: number;
+
+  /**
+   * @generated from field: int32 wicks_per_oil = 3;
+   */
+  wicksPerOil: number;
+
+  /**
+   * @generated from field: int32 stake_y = 4;
+   */
+  stakeY: number;
+};
+
+export declare type LotLanternValid = LotLantern;
+
+/**
+ * Describes the message glimway.content.v1.LotLantern.
+ * Use `create(LotLanternSchema)` to create a new message.
+ */
+export declare const LotLanternSchema: GenMessage<LotLantern, {validType: LotLanternValid}>;
 
 /**
  * The stable's growth rules (docs/design/crafts.md 3.1, 3.2, 6.3). The

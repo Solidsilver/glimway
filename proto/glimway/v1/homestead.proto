@@ -24,7 +24,8 @@ message HomeLandChange { repeated int32 tile = 1; bool stump = 2; bool cleared =
 // grab-bag into new routes without saying why — the per-op result messages
 // in state.proto's Envelope oneof are the pattern to grow into.
 //
-// POST /api/homestead/{buy,place,remove,move,upgrade,claim,clear,invite,joint,leave}.
+// POST /api/homestead/{buy,place,remove,move,upgrade,claim,clear,invite,joint,leave,lantern}.
+// lantern fills the lantern of the lot named by gate.
 message HomesteadRequest {
   OpHeader op = 1; Where where = 2;
   string item_def = 3; string item_id = 4; google.protobuf.Int32Value tier = 5;

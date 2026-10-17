@@ -22,6 +22,45 @@ func InsideLot(x, y, gate int) bool {
 	return x >= 1 && x <= 22 && y >= 2 && y <= 21 || x == front && y >= 11 && y <= 12
 }
 
+// Backland (hearthwick-2.md 6): the generated chunk behind each lot, held
+// while the lot's lantern burns. West lots look onto cx -3, east onto cx 3.
+func BacklandAt(cx, cy int) int {
+	switch cx {
+	case -3:
+		return LotAt(-2, cy)
+	case 3:
+		return LotAt(2, cy)
+	}
+	return -1
+}
+func BacklandChunk(gate int) (int, int) {
+	x, y := LotOrigin(gate)
+	if gate%2 == 1 {
+		return x/24 + 1, y / 24
+	}
+	return x/24 - 1, y / 24
+}
+
+// InBackland: a lot-local tile in the backland, stored past the lot (west
+// x -24..-1, east x 24..47).
+func InBackland(x, y, gate int) bool {
+	x0 := -24
+	if gate%2 == 1 {
+		x0 = 24
+	}
+	return x >= x0 && x < x0+24 && y >= 0 && y < 24
+}
+
+// LanternStake is the lot-local tile of the stake that carries the lot's
+// lantern, on the back line.
+func LanternStake(gate int) (int, int) {
+	x := 0
+	if gate%2 == 1 {
+		x = 23
+	}
+	return x, int(content.HomeRules.GetLotLantern().GetStakeY())
+}
+
 // Lot origins and epoch identity keep immutable land separate from home overlays.
 func LotAt(cx, cy int) int {
 	if (cx != -2 && cx != 2) || cy < 1 || cy > 4 {

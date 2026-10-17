@@ -232,13 +232,13 @@ export class VillageLayer {
 
   // ------------------------------------------------------------ interactions
 
-  /** The madder stall on Carting Day: what the dyers' scrap baskets hold. */
-  private visitStall(): void {
-    const stall = sellerFor('madder-stall')
+  /** A seller at a fixed spot (the madder stall on Carting Day, the chandler): what they sell. */
+  private visitStall(id = 'madder-stall'): void {
+    const stall = sellerFor(id)
     if (!stall) return
     const connected = !!this.deps.session.link
     openDialogue({
-      id: 'village:stall',
+      id: `village:${id === 'madder-stall' ? 'stall' : id}`,
       speaker: stall.npc,
       lines: stall.goods.map((g) => g.line),
       choices: connected
@@ -284,6 +284,12 @@ export class VillageLayer {
       const stall = sellerFor('madder-stall')!
       const at = contentPosition(stall.area, stall.tx, stall.ty)
       list.push({ id: 'village:stall', x: tileMid(at.tx), y: tileBottom(at.ty) + 2, label: stall.goods[0]?.label ?? 'Visit the madder stall', verb: 'Buy', marker: notice, markerOffset: 32, activate: () => this.visitStall() })
+    }
+    // The chandler sells hearth oil for the lot lanterns, any day.
+    const chandler = w.open ? sellerFor('chandler') : null
+    if (chandler?.area !== undefined && chandler.tx !== undefined && chandler.ty !== undefined) {
+      const at = contentPosition(chandler.area, chandler.tx, chandler.ty)
+      list.push({ id: 'village:chandler', x: tileMid(at.tx), y: tileBottom(at.ty) + 2, label: 'Visit the chandler', verb: 'Buy', markerOffset: 32, activate: () => this.visitStall('chandler') })
     }
     // Only when it changed: replacing the list rebuilds its markers.
     const here = list.filter((i) => this.scope.has(Math.floor(i.x / TILE), Math.floor((i.y - 8) / TILE)))

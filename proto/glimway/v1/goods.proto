@@ -106,4 +106,9 @@ message HomeView {
   HomeGrid outdoor = 15; HomeGrid indoor = 16;
   repeated HomeInstance items = 17;
   repeated Stall stalls = 18; repeated YardPet yard_pets = 19;
+  LotLanternView lantern = 20;
 }
+// A lot's lantern (roadmap 0.12): lit while it holds the backland chunk
+// behind the lot; oil is the wicks left in its store; dimming, out of oil
+// with one wick of warning before it goes dark at the next turning.
+message LotLanternView { bool lit = 1; int32 oil = 2; bool dimming = 3; }

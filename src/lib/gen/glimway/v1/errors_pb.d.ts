@@ -1181,6 +1181,23 @@ export enum ErrorCode {
    * @generated from enum value: ERROR_CODE_BEYOND_FRONTIER = 230;
    */
   BEYOND_FRONTIER = 230,
+
+  /**
+   * 0.12 Lot lanterns (hearthwick-2.md 6).
+   *
+   * @generated from enum value: ERROR_CODE_LANTERN_FULL = 231;
+   */
+  LANTERN_FULL = 231,
+
+  /**
+   * @generated from enum value: ERROR_CODE_NO_HOME = 232;
+   */
+  NO_HOME = 232,
+
+  /**
+   * @generated from enum value: ERROR_CODE_CANNOT_HOLD = 233;
+   */
+  CANNOT_HOLD = 233,
 }
 
 /**

@@ -26,3 +26,21 @@ export function lotService(gate: number, kind: 'mailbox' | 'sign' | 'shelf'): { 
 }
 
 export function lotName(gate: number): string { return `${gate % 2 ? 'East' : 'West'} Row ${Math.floor(gate / 2) + 1}` }
+
+/**
+ * The backland (hearthwick-2.md §6): the generated chunk behind each lot,
+ * held while the lot's lantern burns. West lots look onto cx -3, east onto
+ * cx 3. Its tiles are stored lot-local past the lot: west x -24..-1, east
+ * x 24..47 (the server's chunks.BacklandAt / InBackland).
+ */
+export function backlandAt(cx: number, cy: number): number | null { return cx === -3 ? lotAt(-2, cy) : cx === 3 ? lotAt(2, cy) : null }
+export function backlandChunk(gate: number): { cx: number; cy: number } { const o = lotOrigin(gate); return { cx: o.tx / 24 + (gate % 2 ? 1 : -1), cy: o.ty / 24 } }
+export function inBackland(x: number, y: number, gate: number): boolean { const x0 = gate % 2 ? 24 : -24; return x >= x0 && x < x0 + 24 && y >= 0 && y < 24 }
+export function backlandAtPixel(x: number, y: number): number | null { return backlandAt(Math.floor(x / 16 / 24), Math.floor(y / 16 / 24)) }
+/** The lot-local tile of the stake carrying the lot's lantern (its back line, `stakeY` down). */
+export function lanternStake(gate: number, stakeY: number): { x: number; y: number } { return { x: gate % 2 ? 23 : 0, y: stakeY } }
+/** Lot-local service bounds: inside the fence, or in the backland while the lantern is lit (`lotLit`). */
+export function lotLit(x: number, y: number, gate: number, lit: boolean): boolean {
+  const o = lotOrigin(gate)
+  return insideLot(o.tx + x, o.ty + y, gate) || lit && inBackland(x, y, gate)
+}

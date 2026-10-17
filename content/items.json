@@ -1282,6 +1282,24 @@
           "line": "Offcuts from the yard. I'll not sell you the good beams, you'll want to fell those yourself."
         }
       ]
+    },
+    {
+      "id": "chandler",
+      "npc": "The chandler",
+      "area": "hearthwick",
+      "tx": 27,
+      "ty": 35,
+      "radiusTiles": 4,
+      "goods": [
+        {
+          "item": "hearth-oil",
+          "qty": 1,
+          "glims": 4,
+          "cap": 3,
+          "label": "Buy a flask of hearth oil · 4 glims",
+          "line": "Rendered from Wick Tree amber, the sap gone hard. One flask keeps a lot lantern burning a wick."
+        }
+      ]
     }
   ]
 }

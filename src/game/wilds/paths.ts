@@ -21,6 +21,7 @@ import { PATH_LABELS, PATH_REFUSALS, TURNS_CONFIRM } from '../../content/open-ma
 import { TILE, tileBottom, tileKey, tileMid } from '../../lib/tile.ts'
 import { loadWilds } from '../../lib/wilds/data.ts'
 import { chunkOf, epochKindAt, localOf } from '../../lib/wilds/coords.ts'
+import { chunkKey } from './coords.ts'
 import { checkClear, checkLay, checkLift, inReach, isLaid, layKinds, refusalText, turnsInText } from '../../lib/wilds/paths.ts'
 import type { GroundChange } from '../../lib/gen/glimway/v1/wilds_pb.js'
 import { hideContextButtons, showContextButton } from '../context-buttons.ts'
@@ -291,7 +292,7 @@ export class WildsPaths {
       openDialogue({
         id: 'wilds-path-confirm',
         speaker: TURNS_CONFIRM.title,
-        lines: [turnsInText(endsAt, gameNow())],
+        lines: [wildsView()?.held.has(chunkKey(cx, cy)) ? TURNS_CONFIRM.held : turnsInText(endsAt, gameNow())],
         choices: [
           { text: TURNS_CONFIRM.yes, action: `path:lay:${kind}:${tx}:${ty}` },
           { text: TURNS_CONFIRM.no, dismiss: true },

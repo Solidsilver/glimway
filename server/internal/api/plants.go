@@ -4,10 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"glimway/content"
+	"glimway/server/internal/chunks"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/land"
 	"glimway/server/internal/store"
 	"glimway/server/internal/wilds"
+	"slices"
 )
 
 // plantGround: the tiles a plant can stand on (or wander onto): open
@@ -73,6 +75,12 @@ func plantsOf(h homeView, raw []homePlantView, now int64) []homePlantView {
 	out := make([]homePlantView, 0, len(raw))
 	for _, p := range raw {
 		x, y := p.X, p.Y
+		// The backland's plants stand in the lot lantern's light.
+		if chunks.InBackland(x, y, h.Gate) {
+			p.Lit = h.Lantern.Lit
+			out = append(out, p)
+			continue
+		}
 		for d := max(p.PlantedDay+1, today-plantWanderDays+1); d <= today; d++ {
 			if land.Lit(lights, x, y) {
 				break
@@ -153,7 +161,21 @@ func (a *Server) plant(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *
 	}
 	x, y = localHomeTile(s, x, y)
 	// A home tends so many plants, then the ground is full.
-	if len(h.Plants) >= int(content.GatheringRules.GetPlantsPerHome()) || !plantGround(*h)[[2]int{x, y}] {
+	if len(h.Plants) >= int(content.GatheringRules.GetPlantsPerHome()) {
+		return fail(409, "land-blocked")
+	}
+	if chunks.InBackland(x, y, h.Gate) {
+		back, err := a.backlandOf(ctx, tx, s.WorldID, h.Gate, now)
+		if err != nil {
+			return err
+		}
+		if back == nil || !back.buildable(x, y) || slices.ContainsFunc(placedItems(*h), func(v homeInstance) bool {
+			r, ok := placedRect(v)
+			return ok && *v.Scene == "outdoor" && r.overlaps(rect{x, y, 1, 1})
+		}) {
+			return fail(409, "land-blocked")
+		}
+	} else if !plantGround(*h)[[2]int{x, y}] {
 		return fail(409, "land-blocked")
 	}
 	for _, p := range h.Plants {
@@ -172,6 +194,6 @@ func (a *Server) plant(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *
 	if _, err = tx.ExecContext(ctx, "INSERT INTO homestead_plants VALUES(?,?,?,?,?,?,?)", id, h.ID, req.ItemDef, x, y, now, day); err != nil {
 		return err
 	}
-	out.Plant = &contract.HomePlant{Id: id, ItemDef: req.ItemDef, X: int32(x), Y: int32(y), PlantedAt: float64(now), PlantedDay: float64(day), Lit: land.Lit(connectedLights(placedItems(*h), ""), x, y)}
+	out.Plant = &contract.HomePlant{Id: id, ItemDef: req.ItemDef, X: int32(x), Y: int32(y), PlantedAt: float64(now), PlantedDay: float64(day), Lit: chunks.InBackland(x, y, h.Gate) || land.Lit(connectedLights(placedItems(*h), ""), x, y)}
 	return nil
 }

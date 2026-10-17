@@ -298,7 +298,12 @@
               "pet": "fixture",
               "slot": 1
             }
-          ]
+          ],
+          "lantern": {
+            "lit": true,
+            "oil": 1,
+            "dimming": true
+          }
         }
       ]
     }
@@ -510,7 +515,12 @@
             "pet": "fixture",
             "slot": 1
           }
-        ]
+        ],
+        "lantern": {
+          "lit": true,
+          "oil": 1,
+          "dimming": true
+        }
       },
       "inventory": {
         "materials": {
@@ -852,7 +862,12 @@
             "pet": "fixture",
             "slot": 1
           }
-        ]
+        ],
+        "lantern": {
+          "lit": true,
+          "oil": 1,
+          "dimming": true
+        }
       },
       "inventory": {
         "materials": {
@@ -5389,7 +5404,12 @@
             "pet": "fixture",
             "slot": 1
           }
-        ]
+        ],
+        "lantern": {
+          "lit": true,
+          "oil": 1,
+          "dimming": true
+        }
       },
       "inventory": {
         "materials": {
@@ -10866,7 +10886,12 @@
             "pet": "fixture",
             "slot": 1
           }
-        ]
+        ],
+        "lantern": {
+          "lit": true,
+          "oil": 1,
+          "dimming": true
+        }
       },
       "inventory": {
         "materials": {

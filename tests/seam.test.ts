@@ -1148,6 +1148,7 @@ test('six claimed lots build in slices, refresh and detach without retaining hom
     id: `home-${gate}`, worldId: 'guest', gate, tier: gate % 2 ? 2 : 0, landSeed: gate,
     member: gate === 0, desolate: false, members: [{ id: `owner-${gate}`, displayName: 'Owner' }],
     cleared: [], stumps: [], plants: [], yardPets: [{ pet: 'Cat-Base', ownerId: `owner-${gate}`, slot: 1 }], stalls: [],
+    lantern: { lit: false, oil: 0, dimming: false },
     items: [
       { id: `stool-${gate}`, itemDef: 'wooden-stool', scene: 'outdoor', x: 9, y: 11, rotation: 0 },
       { id: `stable-${gate}`, itemDef: 'stable', scene: 'outdoor', x: 14, y: 11, rotation: 0, stalls: 1 }
@@ -1333,6 +1334,7 @@ test('real window chunks slice three lot facades, defer Arrange refresh and clea
     id: `home-${gate}`, worldId: 'guest', gate, tier: gate % 2 ? 2 : 0, landSeed: gate,
     member: gate === 0, desolate: false, members: [{ id: `owner-${gate}`, displayName: 'Owner' }],
     cleared: [], stumps: [], plants: [], yardPets: [{ pet: 'Cat-Base', ownerId: `owner-${gate}`, slot: 1 }], stalls: [],
+    lantern: { lit: false, oil: 0, dimming: false },
     items: [
       { id: `stool-${gate}`, itemDef: 'wooden-stool', scene: 'outdoor', x: 9, y: 11, rotation: 0 },
       { id: `stable-${gate}`, itemDef: 'stable', scene: 'outdoor', x: 14, y: 11, rotation: 0, stalls: 1 }

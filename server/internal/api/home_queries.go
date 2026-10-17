@@ -100,6 +100,9 @@ func loadHome(ctx context.Context, tx *sql.Tx, id, caller string, now int64) (ho
 	if h.Items, err = scanInstances(rows, h.Items); err != nil {
 		return h, err
 	}
+	if h.Lantern, err = lanternOf(ctx, tx, id, h.WorldID, h.Gate); err != nil {
+		return h, err
+	}
 	plants, err := homePlants(ctx, tx, id)
 	if err != nil {
 		return h, err
