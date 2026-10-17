@@ -42,6 +42,7 @@ Every listed key is present in both JSON indexes. The numbered groups use zero-b
 | `way-lamp-0..2` | 64×96 | 1×1 | Dark, steady-lit and dimming camp lamp; shared foot point |
 | `frontier-veil-0..3` | 192×64 | 3×1 | Looping boundary overlay |
 | `icon-map-tab` | 32×32 | 1×1 | Journal tab icon |
+| `map-lamp-lit`, `map-lamp-dimming` | 64×64 (16×16 in the pack) | 1×1 | Lamps-layer marks, no post or footing |
 
 Each frame records a bottom-centre `footPoint`. For props it marks the base anchor; collision should use the base footprint, not the full image bounds. Ground tiles and the UI icon carry a conventional bottom-centre point for complete metadata, though they are painted by tile origin or as UI.
 
@@ -57,4 +58,4 @@ The meadow oak canopy, split landmark oak, and outcrop foliage contain many smal
 
 ## Build notes
 
-The source prop atlas returned two flower patches; `meadow-flowers-2` remains a mirrored muted recolor of the first patch. `meadow-outcrop-1`, `meadow-stone-0`, `meadow-oak`, and `bank-stones-1..2` discard disconnected neighboring fragments at their crop edges. Round 3 replaces the standing stone and sign with isolated full-height portrait sources. The ford is rebuilt from a clean water texture and three generated flat stones; the builder masks to one stone per tile, then shifts water beneath the fixed stones for the ripple loop. The map icon remains the round-1 code-drawn icon. Way-lamp frames are fit against a shared silhouette crop, reduced to 2×2 texel clusters, palette-limited, and kept at 64×96 so the three states swap at one foot point; only the lamp light changes.
+The source prop atlas returned two flower patches; `meadow-flowers-2` remains a mirrored muted recolor of the first patch. `meadow-outcrop-1`, `meadow-stone-0`, `meadow-oak`, and `bank-stones-1..2` discard disconnected neighboring fragments at their crop edges. Round 3 replaces the standing stone and sign with isolated full-height portrait sources. The ford is rebuilt from a clean water texture and three generated flat stones; the builder masks to one stone per tile, then shifts water beneath the fixed stones for the ripple loop. The map tab icon remains the round-1 source. The new map lamp heads are separate transparent 64×64 icons. The relit-stone loop uses three generated flame-only crops composited over the unchanged canonical dark stone. See `prompts-lamps.json` for their prompts.

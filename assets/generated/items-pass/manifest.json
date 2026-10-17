@@ -115,6 +115,13 @@
       "file": "wick-sap-bench-trowel-generated.png",
       "width": 2172,
       "height": 724
+    },
+    {
+      "key": "carried-plant-art-only",
+      "file": "carried-plant-art-only-source-v2.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA"
     }
   ],
   "frames": [

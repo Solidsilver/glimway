@@ -2,7 +2,7 @@
   "version": 1,
   "density": 4,
   "worldTileSize": 16,
-  "frameCount": 55,
+  "frameCount": 57,
   "sources": [
     {
       "key": "meadow-props",
@@ -99,6 +99,22 @@
       "height": 724,
       "mode": "RGBA",
       "sha256": "07f135b74bde660436f414315b679182d16405f8c9e6f52ce28da1d8e5313ce6"
+    },
+    {
+      "key": "lamp-stone-flames-generated",
+      "file": "source/lamp-stone-flames-generated.png",
+      "width": 2172,
+      "height": 724,
+      "mode": "RGBA",
+      "sha256": "52b303e2f5505d2c72027b7699061b35ee1d7b0e1ba3c08d7d71d89a46d2b1ac"
+    },
+    {
+      "key": "map-lamp-icons-generated",
+      "file": "source/map-lamp-icons-generated.png",
+      "width": 1774,
+      "height": 887,
+      "mode": "RGBA",
+      "sha256": "7c7245c44af44de999689429f25bb0cf8905277e61132a302080b6df3154d78f"
     }
   ],
   "frames": {
@@ -564,12 +580,12 @@
     },
     "lamp-stone-relit-0": {
       "file": "frames/lamp-stone-relit-0.png",
-      "source": "lamp-stones-generated",
+      "source": "lamp-stone-flames-generated",
       "sourceRect": {
-        "x": 520,
-        "y": 210,
-        "w": 130,
-        "h": 140
+        "x": 0,
+        "y": 0,
+        "w": 724,
+        "h": 724
       },
       "canvas": {
         "w": 64,
@@ -587,12 +603,12 @@
     },
     "lamp-stone-relit-1": {
       "file": "frames/lamp-stone-relit-1.png",
-      "source": "lamp-stones-generated",
+      "source": "lamp-stone-flames-generated",
       "sourceRect": {
-        "x": 840,
-        "y": 210,
-        "w": 130,
-        "h": 140
+        "x": 724,
+        "y": 0,
+        "w": 724,
+        "h": 724
       },
       "canvas": {
         "w": 64,
@@ -610,12 +626,12 @@
     },
     "lamp-stone-relit-2": {
       "file": "frames/lamp-stone-relit-2.png",
-      "source": "lamp-stones-generated",
+      "source": "lamp-stone-flames-generated",
       "sourceRect": {
-        "x": 1160,
-        "y": 210,
-        "w": 130,
-        "h": 140
+        "x": 1448,
+        "y": 0,
+        "w": 724,
+        "h": 724
       },
       "canvas": {
         "w": 64,
@@ -656,12 +672,12 @@
     },
     "route-stone-relit-0": {
       "file": "frames/route-stone-relit-0.png",
-      "source": "lamp-stones-generated",
+      "source": "lamp-stone-flames-generated",
       "sourceRect": {
-        "x": 520,
-        "y": 210,
-        "w": 130,
-        "h": 140
+        "x": 0,
+        "y": 0,
+        "w": 724,
+        "h": 724
       },
       "canvas": {
         "w": 128,
@@ -679,12 +695,12 @@
     },
     "route-stone-relit-1": {
       "file": "frames/route-stone-relit-1.png",
-      "source": "lamp-stones-generated",
+      "source": "lamp-stone-flames-generated",
       "sourceRect": {
-        "x": 840,
-        "y": 210,
-        "w": 130,
-        "h": 140
+        "x": 724,
+        "y": 0,
+        "w": 724,
+        "h": 724
       },
       "canvas": {
         "w": 128,
@@ -702,12 +718,12 @@
     },
     "route-stone-relit-2": {
       "file": "frames/route-stone-relit-2.png",
-      "source": "lamp-stones-generated",
+      "source": "lamp-stone-flames-generated",
       "sourceRect": {
-        "x": 1160,
-        "y": 210,
-        "w": 130,
-        "h": 140
+        "x": 1448,
+        "y": 0,
+        "w": 724,
+        "h": 724
       },
       "canvas": {
         "w": 128,
@@ -1384,6 +1400,52 @@
       "footPoint": {
         "x": 16,
         "y": 32
+      },
+      "kind": "ui-icon"
+    },
+    "map-lamp-lit": {
+      "file": "frames/map-lamp-lit.png",
+      "source": "map-lamp-icons-generated",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 887,
+        "h": 887
+      },
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "kind": "ui-icon"
+    },
+    "map-lamp-dimming": {
+      "file": "frames/map-lamp-dimming.png",
+      "source": "map-lamp-icons-generated",
+      "sourceRect": {
+        "x": 887,
+        "y": 0,
+        "w": 887,
+        "h": 887
+      },
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
       },
       "kind": "ui-icon"
     }
