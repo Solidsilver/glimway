@@ -3690,5 +3690,21 @@
         "state": null
       }
     ]
+  },
+  {
+    "id": "lamp-icons",
+    "file": "lamp-icons-generated.png",
+    "columns": 3,
+    "rows": 1,
+    "frames": [
+      {"key":"item-lamp-ash","width":16,"height":16,"origin":[0.5,1],"fit":"cell","role":"inventory-icon"},
+      {"key":"item-lamp-ash-pouch","width":16,"height":16,"origin":[0.5,1],"fit":"cell","role":"inventory-icon"},
+      {"key":"item-homing-turncap","width":16,"height":16,"origin":[0.5,1],"fit":"cell","role":"inventory-icon"}
+    ],
+    "frameNotes": [
+      {"itemId":"lamp-ash","category":"Supplies","priority":"P1","name":"Lamp ash","state":null,"look":"A pinch of grey ash with one warm fleck still glowing"},
+      {"itemId":"lamp-ash-pouch","category":"Supplies","priority":"P1","name":"Lamp ash pouch","state":null,"look":"A small drawstring pouch in ash-grey cloth, with a little ash at the neck"},
+      {"itemId":"homing-turncap","category":"Supplies","priority":"P1","name":"Homing turncap","state":null,"look":"A turncap set in a bead of amber, its stem leaning to one side"}
+    ]
   }
 ]

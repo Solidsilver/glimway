@@ -2,7 +2,7 @@
   "version": 1,
   "density": 4,
   "worldTileSize": 16,
-  "frameCount": 48,
+  "frameCount": 55,
   "sources": [
     {
       "key": "meadow-props",
@@ -91,6 +91,14 @@
       "height": 724,
       "mode": "RGBA",
       "sha256": "c242243bf515943e506eab42f2b36ed98bb2a947c0d1e51d1d710a5ea55049a4"
+    },
+    {
+      "key": "lamp-stones-generated",
+      "file": "source/lamp-stones-generated.png",
+      "width": 2172,
+      "height": 724,
+      "mode": "RGBA",
+      "sha256": "07f135b74bde660436f414315b679182d16405f8c9e6f52ce28da1d8e5313ce6"
     }
   ],
   "frames": {
@@ -550,6 +558,167 @@
       },
       "footPoint": {
         "x": 32,
+        "y": 128
+      },
+      "kind": "transparent-prop"
+    },
+    "lamp-stone-relit-0": {
+      "file": "frames/lamp-stone-relit-0.png",
+      "source": "lamp-stones-generated",
+      "sourceRect": {
+        "x": 520,
+        "y": 210,
+        "w": 130,
+        "h": 140
+      },
+      "canvas": {
+        "w": 64,
+        "h": 128
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "kind": "transparent-prop"
+    },
+    "lamp-stone-relit-1": {
+      "file": "frames/lamp-stone-relit-1.png",
+      "source": "lamp-stones-generated",
+      "sourceRect": {
+        "x": 840,
+        "y": 210,
+        "w": 130,
+        "h": 140
+      },
+      "canvas": {
+        "w": 64,
+        "h": 128
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "kind": "transparent-prop"
+    },
+    "lamp-stone-relit-2": {
+      "file": "frames/lamp-stone-relit-2.png",
+      "source": "lamp-stones-generated",
+      "sourceRect": {
+        "x": 1160,
+        "y": 210,
+        "w": 130,
+        "h": 140
+      },
+      "canvas": {
+        "w": 64,
+        "h": 128
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "kind": "transparent-prop"
+    },
+    "route-stone-dark": {
+      "file": "frames/route-stone-dark.png",
+      "source": "lamp-stones-generated",
+      "sourceRect": {
+        "x": 1670,
+        "y": 105,
+        "w": 502,
+        "h": 555
+      },
+      "canvas": {
+        "w": 128,
+        "h": 128
+      },
+      "footprint": {
+        "w": 2,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      },
+      "kind": "transparent-prop"
+    },
+    "route-stone-relit-0": {
+      "file": "frames/route-stone-relit-0.png",
+      "source": "lamp-stones-generated",
+      "sourceRect": {
+        "x": 520,
+        "y": 210,
+        "w": 130,
+        "h": 140
+      },
+      "canvas": {
+        "w": 128,
+        "h": 128
+      },
+      "footprint": {
+        "w": 2,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      },
+      "kind": "transparent-prop"
+    },
+    "route-stone-relit-1": {
+      "file": "frames/route-stone-relit-1.png",
+      "source": "lamp-stones-generated",
+      "sourceRect": {
+        "x": 840,
+        "y": 210,
+        "w": 130,
+        "h": 140
+      },
+      "canvas": {
+        "w": 128,
+        "h": 128
+      },
+      "footprint": {
+        "w": 2,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      },
+      "kind": "transparent-prop"
+    },
+    "route-stone-relit-2": {
+      "file": "frames/route-stone-relit-2.png",
+      "source": "lamp-stones-generated",
+      "sourceRect": {
+        "x": 1160,
+        "y": 210,
+        "w": 130,
+        "h": 140
+      },
+      "canvas": {
+        "w": 128,
+        "h": 128
+      },
+      "footprint": {
+        "w": 2,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 64,
         "y": 128
       },
       "kind": "transparent-prop"
@@ -1249,6 +1418,26 @@
         "frontier-veil-3"
       ],
       "frameRate": 2,
+      "repeat": -1
+    },
+    {
+      "key": "lamp-stone-relit",
+      "frames": [
+        "lamp-stone-relit-0",
+        "lamp-stone-relit-1",
+        "lamp-stone-relit-2"
+      ],
+      "frameRate": 1.2,
+      "repeat": -1
+    },
+    {
+      "key": "route-stone-relit",
+      "frames": [
+        "route-stone-relit-0",
+        "route-stone-relit-1",
+        "route-stone-relit-2"
+      ],
+      "frameRate": 1.2,
       "repeat": -1
     }
   ]

@@ -1,0 +1,71 @@
+{
+  "frames": {
+    "item-lamp-ash": {
+      "frame": {
+        "x": 88,
+        "y": 317,
+        "w": 554,
+        "h": 307
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 554,
+        "h": 307
+      },
+      "sourceSize": {
+        "w": 554,
+        "h": 307
+      }
+    },
+    "item-lamp-ash-pouch": {
+      "frame": {
+        "x": 813,
+        "y": 94,
+        "w": 550,
+        "h": 552
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 550,
+        "h": 552
+      },
+      "sourceSize": {
+        "w": 550,
+        "h": 552
+      }
+    },
+    "item-homing-turncap": {
+      "frame": {
+        "x": 1540,
+        "y": 105,
+        "w": 543,
+        "h": 503
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 543,
+        "h": 503
+      },
+      "sourceSize": {
+        "w": 543,
+        "h": 503
+      }
+    }
+  },
+  "meta": {
+    "image": "lamp-icons-generated.png",
+    "size": {
+      "w": 2172,
+      "h": 724
+    }
+  }
+}

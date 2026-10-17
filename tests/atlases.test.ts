@@ -267,7 +267,7 @@ test('the open map pass: every frame packed whole at 64 texels a tile, the ford 
   assert.deepEqual([w, h], built.openMap.size)
   assert.equal(built.openMap.density, 64)
   assert.deepEqual(Object.keys(built.openMap.frames).sort(), Object.keys(openMap.frames).sort())
-  assert.equal(Object.keys(built.openMap.frames).length, 48)
+  assert.equal(Object.keys(built.openMap.frames).length, 55)
   for (let i = 0; i < 3; i++) {
     const frame = openMap.frames[`way-lamp-${i}`]
     assert.deepEqual([frame.canvas.w, frame.canvas.h], [64, 96])

@@ -380,6 +380,139 @@
         "y": 128
       }
     },
+    "lamp-stone-relit-0": {
+      "source": "lamp-stones-generated",
+      "x": 520,
+      "y": 210,
+      "w": 130,
+      "h": 140,
+      "canvas": {
+        "w": 64,
+        "h": 128
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "lamp-stone-relit-1": {
+      "source": "lamp-stones-generated",
+      "x": 840,
+      "y": 210,
+      "w": 130,
+      "h": 140,
+      "canvas": {
+        "w": 64,
+        "h": 128
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "lamp-stone-relit-2": {
+      "source": "lamp-stones-generated",
+      "x": 1160,
+      "y": 210,
+      "w": 130,
+      "h": 140,
+      "canvas": {
+        "w": 64,
+        "h": 128
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "route-stone-dark": {
+      "source": "lamp-stones-generated",
+      "x": 1670,
+      "y": 105,
+      "w": 502,
+      "h": 555,
+      "canvas": {
+        "w": 128,
+        "h": 128
+      },
+      "footprint": {
+        "w": 2,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      }
+    },
+    "route-stone-relit-0": {
+      "source": "lamp-stones-generated",
+      "x": 520,
+      "y": 210,
+      "w": 130,
+      "h": 140,
+      "canvas": {
+        "w": 128,
+        "h": 128
+      },
+      "footprint": {
+        "w": 2,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      }
+    },
+    "route-stone-relit-1": {
+      "source": "lamp-stones-generated",
+      "x": 840,
+      "y": 210,
+      "w": 130,
+      "h": 140,
+      "canvas": {
+        "w": 128,
+        "h": 128
+      },
+      "footprint": {
+        "w": 2,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      }
+    },
+    "route-stone-relit-2": {
+      "source": "lamp-stones-generated",
+      "x": 1160,
+      "y": 210,
+      "w": 130,
+      "h": 140,
+      "canvas": {
+        "w": 128,
+        "h": 128
+      },
+      "footprint": {
+        "w": 2,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      }
+    },
     "way-lamp-0": {
       "source": "way-lamp-generated",
       "x": 6,
@@ -943,6 +1076,26 @@
         "frontier-veil-3"
       ],
       "frameRate": 2,
+      "repeat": -1
+    },
+    {
+      "key": "lamp-stone-relit",
+      "frames": [
+        "lamp-stone-relit-0",
+        "lamp-stone-relit-1",
+        "lamp-stone-relit-2"
+      ],
+      "frameRate": 1.2,
+      "repeat": -1
+    },
+    {
+      "key": "route-stone-relit",
+      "frames": [
+        "route-stone-relit-0",
+        "route-stone-relit-1",
+        "route-stone-relit-2"
+      ],
+      "frameRate": 1.2,
       "repeat": -1
     }
   ]
