@@ -74,7 +74,7 @@ export const VEIL = omArt('frontier-veil-0')
 /** The interface's icons from the pass (ui.artIcons, src/ui/ArtIcon.svelte), by key: the HUD's world-map button (`map-tab`, its old name). */
 export function openMapIconUrls(scene: Phaser.Scene): Record<string, string> {
   const out: Record<string, string> = {}
-  for (const [key, frame] of Object.entries({ 'map-tab': 'icon-map-tab' })) {
+  for (const [key, frame] of Object.entries({ 'map-tab': 'icon-map-tab', 'map-lamp-lit': 'map-lamp-lit', 'map-lamp-dimming': 'map-lamp-dimming' })) {
     const src = artSource(scene, omArt(frame))
     if (!src) continue
     try {

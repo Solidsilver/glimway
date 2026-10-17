@@ -51,8 +51,8 @@ test('items-pass exposes its loader and load keys', () => {
   assert.equal(itemsArtKey('item-bench-axe-whole'), 'items-art:item-bench-axe-whole')
 })
 
-test('the manifest’s 15 generated source sheets and 4 crafts-pass fishing icons are delivered as transparent RGBA PNGs of the stated size', () => {
-  assert.equal(manifest.sources.length, 19)
+test('the manifest’s 16 generated source sheets and 4 crafts-pass fishing icons are delivered as transparent RGBA PNGs of the stated size', () => {
+  assert.equal(manifest.sources.length, 20)
   assert.equal(manifest.sources.filter((s) => s.file.startsWith('../crafts-pass/frames/')).length, 4)
   for (const s of manifest.sources) {
     const h = pngHeader(`${SOURCE_DIR}${s.file}`)

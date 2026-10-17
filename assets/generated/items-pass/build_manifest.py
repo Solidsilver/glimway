@@ -127,6 +127,22 @@ def main():
         seq=[f['key'] for f in variants if f.get('state') is not None]
         if len(seq)>1 and not base.startswith('mill-wheel') and base!='mill-froth':
             state_groups.append(dict(key=base+'-states',frames=seq,selection='select by gameplay state; never auto-loop'))
+    # The lifted-whole plant has no gameplay item on this branch, so preserve
+    # a native 16x16 art-only candidate without adding an item alias.
+    plant_path=ROOT/'carried-plant-art-only-source-v2.png'
+    plant=Image.open(plant_path).convert('RGBA')
+    plant_box=plant.getchannel('A').point(lambda a:255 if a>=128 else 0).getbbox()
+    if plant_box:
+        plant=plant.crop(plant_box)
+    scale=min(14/plant.width,14/plant.height)
+    plant=plant.resize((max(1,round(plant.width*scale)),max(1,round(plant.height*scale))),Image.Resampling.NEAREST)
+    plant_frame=Image.new('RGBA',(16,16),(0,0,0,0))
+    plant_frame.alpha_composite(plant,((16-plant.width)//2,16-plant.height))
+    plant_output=ROOT/'frames'/'art-only'/'carried-plant-16.png'
+    plant_output.parent.mkdir(parents=True,exist_ok=True)
+    plant_frame.save(plant_output,optimize=True)
+    plant_image=Image.open(plant_path)
+    sources.append(dict(key='carried-plant-art-only',file=plant_path.name,width=plant_image.width,height=plant_image.height,mode=plant_image.mode))
     manifest=dict(version=1,baseUrl='/assets/fingersnap/items-pass/',sources=sources,frames=frames,animations=animations,stateGroups=state_groups,aliases=aliases,
                   notes=['All source rectangles are measured; no fixed source cell dimensions are assumed.','Use the manifest exact native canvas dimensions.','Inventory wear and world condition frames are discrete gameplay states, not looping animations.','Existing Commons frames are referenced with the commons: alias prefix.','Physics, interaction footprints, scene wiring, and world adjacency remain runtime decisions.','Fishing (0.5 crafts, lane G): the willow rod, mill roach, Miller’s fry and recipe-card icons are the crafts pass’s normalized frames (../crafts-pass/frames), copied 1:1 at the art density, so the item lookups find them here. The fishing effects (float, rings, splash, the held rod) are drawn from the crafts pack (cr-art:).'])
     (ROOT/'manifest.json').write_text(json.dumps(manifest,indent=2,ensure_ascii=False)+'\n')

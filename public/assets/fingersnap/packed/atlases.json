@@ -282,6 +282,7 @@
   "assets/generated/items-pass/../crafts-pass/frames/millers-fry.png": "039dbf692513aaea705fd637897b2d2a601f4de9df571f14936deaf07f2a4337",
   "assets/generated/items-pass/../crafts-pass/frames/recipe-card-millers-fry.png": "b5e49c722c21183ec59c62f8ce47aebc4ea26d70db35a649c3a6f3e1498f8ed2",
   "assets/generated/items-pass/../crafts-pass/frames/rod-icon.png": "6d04a2e2b724dbbd07926f3584afcd90ad2ce945408b5140c5e4475437ae85dc",
+  "assets/generated/items-pass/carried-plant-art-only-source-v2.png": "33bcae02be1a28e92ae985d13af7385630aa7016a1904bd2dbab9b541edfd0d2",
   "assets/generated/items-pass/fingersnap-home-goods-1.png": "d3bf47a19dc07ab83f3b0001d0f8f5178a8eee53119a536989a55613fe696129",
   "assets/generated/items-pass/fingersnap-keepsakes-1.png": "34199b24b48eae7a076199ea021cecb5489055a70bfbef1d06f7bb0440d4dd9f",
   "assets/generated/items-pass/fingersnap-papers-1.png": "596d3f7d937e538a4b0bdea0960a11b8cf07d3f509bd1fac9b793e507ac076ad",
@@ -295,7 +296,7 @@
   "assets/generated/items-pass/fingersnap-world-sprites-2.png": "933c0182123b768b484f0eb92869dbccefdb8f72f547c1656f94d786628d3153",
   "assets/generated/items-pass/fingersnap-world-sprites-3.png": "fd9d8847d1d0bf172b66fc0157febeb9b08c94021ad0ec607514fcb094b53a98",
   "assets/generated/items-pass/lamp-icons-generated.png": "6b5ead16463c88799ce174d368a0c2ee8e1daa28029d291785ef102f65316024",
-  "assets/generated/items-pass/manifest.json": "0c1876f0a80f7a6a697a4fad0aef7238d90ffd474013b5b2235a2218241edfc8",
+  "assets/generated/items-pass/manifest.json": "fb183e9dd81e5d0315a34667027aa2dec8f210647475cfd2964f34ac18128d4d",
   "assets/generated/items-pass/way-lamp-icon-generated.png": "b0a7ff3c54fecfc34223f9429fc1bbf86bdeac4d0bd5b9d4bb0353b19d136171",
   "assets/generated/items-pass/wick-sap-bench-trowel-generated.png": "5d1f5e8f1cc1c3bd1a9c6eb0ca0d736d308fe64e0d42b8093bb8aacaccd3a5ac",
   "assets/generated/open-map-pass/animations.json": "ec9805b6577bee8cf8736ccaf296ae191517d674f2c6f73da1ac6ecc60dd9dc4",
@@ -314,11 +315,13 @@
   "assets/generated/open-map-pass/frames/frontier-veil-3.png": "8cea7279114173b5135c3cb84a6aff37cfd6241404542171781e2f22a2a24809",
   "assets/generated/open-map-pass/frames/icon-map-tab.png": "ef85a16766c390fc1798c4017f438ad9b5f391c155e2195276752d7e01219c5b",
   "assets/generated/open-map-pass/frames/lamp-stone-dark.png": "168150357b3610e7212a18280994259b9c03262a57a58aa652c2877cc533e484",
-  "assets/generated/open-map-pass/frames/lamp-stone-relit-0.png": "fe234e36a17deeef821da7f0ac5610a2338f9dd61eb617c80131d63c8a641ca7",
-  "assets/generated/open-map-pass/frames/lamp-stone-relit-1.png": "aae04373dbb75e81cf30640116db53e9cddbccff0b5a4006c534a8185945a248",
-  "assets/generated/open-map-pass/frames/lamp-stone-relit-2.png": "a02785329fe3699c809b141749e7200b75f3627290d6b002f719af6b004495e0",
+  "assets/generated/open-map-pass/frames/lamp-stone-relit-0.png": "24f272de548f730c077f7c72104e9098a63a26ff9ddb16fd432968374ff049e8",
+  "assets/generated/open-map-pass/frames/lamp-stone-relit-1.png": "6c7eec769f34c5a2210793971e7e6c98a77970d3146b63b0f76cf0c3195937cf",
+  "assets/generated/open-map-pass/frames/lamp-stone-relit-2.png": "5d1af8432745b376741a1b02163abb36e43e667e4698b54e53264c88f1a402e6",
   "assets/generated/open-map-pass/frames/landmark-split-oak.png": "6c489a9361f9fe050e26636f3a805867c2936ed0012e6dcd818234ae67e2b0de",
   "assets/generated/open-map-pass/frames/landmark-standing-stone.png": "f2f6c1996eb6c89d3dae2212cafa71240f178c6490bd9d1816c59b1986682a82",
+  "assets/generated/open-map-pass/frames/map-lamp-dimming.png": "bae8a115ca67276033e426485616c582e1327a54200a55793a6828f1dde1a996",
+  "assets/generated/open-map-pass/frames/map-lamp-lit.png": "d0dbda6e1ebead411e5c768edbbc6aea8c91e506646249e9336a509c8236e2e5",
   "assets/generated/open-map-pass/frames/meadow-flowers-0.png": "a75cb8104f8301c1713368ae1c1692c1667045964926e56d4efd0af9d409e332",
   "assets/generated/open-map-pass/frames/meadow-flowers-1.png": "2dca2398fe7cfc437f4a16e5a9078c7a05ce542a3bb35fa0d0bae6dc9119d59e",
   "assets/generated/open-map-pass/frames/meadow-flowers-2.png": "c5ec245aacc67d201eb28950022b10a7a1db25a86b3defa9983825e923242b38",
@@ -345,16 +348,16 @@
   "assets/generated/open-map-pass/frames/road-verge-0.png": "d1b85379cd86c2bbc84a54b6543ceea7ac20521bddda452609ccca399333a697",
   "assets/generated/open-map-pass/frames/road-verge-1.png": "9dac78646bbdc53392f4ad92f6675558472a4649cb1059002a2cd1bbf8cbc0a5",
   "assets/generated/open-map-pass/frames/route-stone-dark.png": "f04e7c0f88f1ab59d8c9d9d58c521650f6cf5974d80a941fce88d2dcbd5d5fbd",
-  "assets/generated/open-map-pass/frames/route-stone-relit-0.png": "a7b6db7a99df0231e8972050f0f64e6024033135e3b5580dfcf9d9d8742666f8",
-  "assets/generated/open-map-pass/frames/route-stone-relit-1.png": "8cd7fc6004d87dd2550696725d886109f33891107db36c45d7b0f0d8cdf2180d",
-  "assets/generated/open-map-pass/frames/route-stone-relit-2.png": "725adb8f5b148159d8c9bc8be08c2c115bae1cdbf6f1933dc7bcf736b08e5856",
+  "assets/generated/open-map-pass/frames/route-stone-relit-0.png": "b5594f6a4e6bbedd763d4885930d727ab9d6e787d73c7169f1845f4ff927f674",
+  "assets/generated/open-map-pass/frames/route-stone-relit-1.png": "6a5e1caedc0160cfb6b2f907f10eb3da72f80e1b8947b1d2d7d8554d759f36f7",
+  "assets/generated/open-map-pass/frames/route-stone-relit-2.png": "940125874fcc94b44b95407663a4ebee892291207e68012fa92ad3077ea2e66b",
   "assets/generated/open-map-pass/frames/rumour-find-closed.png": "f39492c71c1514b2eec24b37c3c28d754a1c01ba1b2e0240d9c1c1198c2bd0a1",
   "assets/generated/open-map-pass/frames/rumour-find-open.png": "9e6c61e7cddf6f25b215b899737860906a33fa44a74987a52acc5753b9ac0da1",
   "assets/generated/open-map-pass/frames/way-lamp-0.png": "8ff5d985616e7354eaa01deac7d0f1f135f646a80ea17d8ee8305e4916a3ac14",
   "assets/generated/open-map-pass/frames/way-lamp-1.png": "92e454e84bdb1b468be8e17d87ab80162f5652c37c79c2c28d3f3c9b6d5668de",
   "assets/generated/open-map-pass/frames/way-lamp-2.png": "9b78424ca39f6c7b53b1181c2ffd0cc19cfe4e383e26f4e050c9ec60ea0fb551",
   "assets/generated/open-map-pass/frames/way-sign.png": "83cde3dacf5ad1e41cfbd17ef92456e499ab8a7e8c056f493d2b8ce45ac33472",
-  "assets/generated/open-map-pass/manifest.json": "41ac2583923ffda09a2361f0946fe5e9a2a1a74160400eebe140cd5cf876a488",
+  "assets/generated/open-map-pass/manifest.json": "d7526bfb73a05d59fcfeb6c793343196a70dfc55ba743fde2a5e4d5ba8e6dbad",
   "assets/generated/playtest1-pass/{atlas,animations}.json: frames in use": "3ae857132e0b15574345aa1bcac2cfc552a05535690dabed4d2066a3028718e3",
   "assets/generated/playtest1-pass/bridge/fingersnap-brackenwood-bridge.png": "4954285a1b3bc8367b7796767099a8bd56ec8d23038d9bb7baadb5db67ab33ca",
   "assets/generated/playtest1-pass/ground/fingersnap-ground-base.png": "e91ddfb5259364952ef30c49dde945c08792f3f6245611a686c054d34be6c4ec",
@@ -407,7 +410,7 @@
   "hearthwick2.webp": "3447b45149fbf73ca91ccfa7a07b280a0d193d813c73ac045ee336d0ec8c3ebc",
   "indoors.webp": "f8a34227b29a345347126c09304e318a9c2bdb0e6269b3e360c1593e542ab1d2",
   "items.webp": "86ede3662f1cea5fe0c6a5bacea5e42d742d338ee5ab12832f3bed9439cabdba",
-  "open-map.webp": "ea50639d62ba9baa07346e24c7ee672d638bb9a27ec9841216e96337d2e59322",
+  "open-map.webp": "57bbe1728544f41038ea7b40a0b669f100ed6860dbc90fea91fe3d74bcb753ad",
   "people.webp": "bc06b2da02a1d7c07397ed9e239337d946d7639d3d1c381a71aed29860a4f782",
   "purse.webp": "cffd867b431c323653d66485b7a26c70621f785a544673bb0a75bee57a3a9c78",
   "runtime.webp": "a0e1d4ec27403d5891da88339b7b4161ca29b8a10aef79b2d7b6bc9fc2d70044",
@@ -4602,43 +4605,43 @@
  "openMap": {
   "image": "open-map.webp",
   "size": [
-   827,
+   834,
    864
   ],
   "density": 64,
   "frames": {
    "meadow-grass-0": [
-    576,
-    672,
-    64,
-    64
-   ],
-   "meadow-grass-1": [
-    640,
-    672,
-    64,
-    64
-   ],
-   "meadow-grass-2": [
     704,
     672,
     64,
     64
    ],
+   "meadow-grass-1": [
+    768,
+    672,
+    64,
+    64
+   ],
+   "meadow-grass-2": [
+    0,
+    736,
+    64,
+    64
+   ],
    "meadow-flowers-0": [
-    384,
+    512,
     672,
     64,
     64
    ],
    "meadow-flowers-1": [
-    448,
+    576,
     672,
     64,
     64
    ],
    "meadow-flowers-2": [
-    512,
+    640,
     672,
     64,
     64
@@ -4662,13 +4665,13 @@
     256
    ],
    "meadow-stone-0": [
-    0,
+    64,
     736,
     64,
     64
    ],
    "meadow-stone-1": [
-    64,
+    128,
     736,
     64,
     64
@@ -4716,7 +4719,7 @@
     64
    ],
    "way-sign": [
-    128,
+    64,
     480,
     64,
     128
@@ -4734,13 +4737,13 @@
     128
    ],
    "lamp-stone-relit-1": [
-    0,
-    480,
+    768,
+    320,
     64,
     128
    ],
    "lamp-stone-relit-2": [
-    64,
+    0,
     480,
     64,
     128
@@ -4770,79 +4773,79 @@
     128
    ],
    "way-lamp-0": [
-    192,
+    128,
     480,
     64,
     96
    ],
    "way-lamp-1": [
-    256,
+    192,
     480,
     64,
     96
    ],
    "way-lamp-2": [
-    320,
+    256,
     480,
     64,
     96
    ],
    "path-stone-0": [
-    384,
-    736,
-    64,
-    64
-   ],
-   "path-stone-1": [
     448,
     736,
     64,
     64
    ],
-   "path-stone-2": [
+   "path-stone-1": [
     512,
     736,
     64,
     64
    ],
-   "path-stone-3": [
+   "path-stone-2": [
     576,
     736,
     64,
     64
    ],
-   "path-plank-h-0": [
-    128,
-    736,
-    64,
-    64
-   ],
-   "path-plank-h-1": [
-    192,
-    736,
-    64,
-    64
-   ],
-   "path-plank-v-0": [
-    256,
-    736,
-    64,
-    64
-   ],
-   "path-plank-v-1": [
-    320,
-    736,
-    64,
-    64
-   ],
-   "road-paving-0": [
+   "path-stone-3": [
     640,
     736,
     64,
     64
    ],
-   "road-paving-1": [
+   "path-plank-h-0": [
+    192,
+    736,
+    64,
+    64
+   ],
+   "path-plank-h-1": [
+    256,
+    736,
+    64,
+    64
+   ],
+   "path-plank-v-0": [
+    320,
+    736,
+    64,
+    64
+   ],
+   "path-plank-v-1": [
+    384,
+    736,
+    64,
+    64
+   ],
+   "road-paving-0": [
     704,
+    736,
+    64,
+    64
+   ],
+   "road-paving-1": [
+    768,
     736,
     64,
     64
@@ -4872,13 +4875,13 @@
     64
    ],
    "ford-h-0": [
-    384,
+    320,
     480,
     192,
     64
    ],
    "ford-h-1": [
-    576,
+    512,
     480,
     192,
     64
@@ -4936,6 +4939,18 @@
     800,
     32,
     32
+   ],
+   "map-lamp-lit": [
+    448,
+    672,
+    64,
+    64
+   ],
+   "map-lamp-dimming": [
+    384,
+    672,
+    64,
+    64
    ]
   }
  },
