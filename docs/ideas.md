@@ -139,7 +139,8 @@ rather than rewritten.
 - **Versioning** (agreed): semver 0.x, tags, `CHANGELOG.md`, the version in the Menu, and a
   "new version, reload" prompt.
 - **Client error reporting and basic server metrics** (agreed).
-- **Automated database backups** on the home server (agreed).
+- **Automated database backups** on the home server (shipped in 0.1.0: the NixOS timer; 0.12
+  adds a restore check, `verify-backup`).
 - **Scaling** (later): notes in [scaling.md](scaling.md). Measure before acting.
 - **A binary wire format (protobuf) for presence** (later): see [scaling.md](scaling.md).
 - **Lossy WebP for the people atlas** (later): it would roughly halve its 0.7 MB, but the owner wants
