@@ -28,6 +28,30 @@
       "specs": ["lot-lantern.spec.ts"]
     },
     {
+      "paths": [
+        "src/lib/belt.ts",
+        "src/lib/trowel.ts",
+        "src/lib/lots.ts",
+        "src/lib/lot-lantern.ts",
+        "src/lib/homestead*.ts",
+        "src/game/homestead.ts",
+        "src/game/lot-*.ts",
+        "src/game/wilds/lot-chunk.ts",
+        "src/game/entities/homestead*.ts",
+        "server/internal/api/homestead*.go",
+        "server/internal/api/home_*.go",
+        "server/internal/api/lot_*.go",
+        "server/internal/api/plants.go",
+        "server/internal/api/camp_teardown.go",
+        "server/internal/land/**"
+      ],
+      "specs": ["lot-lantern.spec.ts"]
+    },
+    {
+      "paths": ["src/lib/camps.ts", "src/lib/trowel.ts", "src/game/wilds/camps*.ts", "server/internal/api/camps.go", "server/internal/api/camp_teardown.go"],
+      "specs": ["camps.spec.ts"]
+    },
+    {
       "paths": ["src/game/entities/interactables.ts", "src/game/wilds/fixed-life.ts", "src/game/wilds/fixed-scope.ts", "src/game/entities/homesteads.ts", "src/game/entities/homestead-talk.ts", "src/game/entities/npcs.ts", "src/game/entities/world-talk.ts", "src/game/entities/repairs.ts", "src/game/entities/item-pickups.ts", "src/game/entities/papers.ts", "src/game/entities/village-life.ts", "src/game/entities/touches.ts"],
       "specs": ["seam.spec.ts", "residents.spec.ts", "homestead.spec.ts", "yard.spec.ts", "village.spec.ts", "open-map.spec.ts"]
     },

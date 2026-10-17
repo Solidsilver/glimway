@@ -16,6 +16,34 @@ const stakesAt = (page: Page, x: number, y: number) =>
   page.evaluate(([px, py]) => (window as unknown as { __fsImagesNamed: (p: string) => { key: string; x: number; y: number }[] }).__fsImagesNamed('hw2:lantern-stake-')
     .filter((i) => Math.abs(i.x - px) < 16 && Math.abs(i.y - py) < 24).map((i) => i.key), [x, y] as const)
 
+/**
+ * The open backland tile (two or more columns past the back line) nearest
+ * `from` for the 1×1 piece being placed, found by tapping each in turn as a
+ * pointer would; the piece goes back to `from` after. Else how many tiles
+ * had each problem ('stuck': the tap didn't move the piece).
+ */
+const openBackland = (page: Page, gate: number, from: { x: number; y: number }) =>
+  page.evaluate(([gate, fx, fy]) => {
+    const w = window as unknown as { __fsDevTapTile: (x: number, y: number) => void; __fsHomes: () => { placement: { problem: string | null; spot: { x: number; y: number } | null } | null } }
+    const tiles: { x: number; y: number }[] = []
+    for (let y = 0; y < 24; y++) for (let i = 2; i < 24; i++) tiles.push({ x: gate % 2 ? 23 + i : -i, y })
+    tiles.sort((a, b) => Math.abs(a.x - fx) + Math.abs(a.y - fy) - (Math.abs(b.x - fx) + Math.abs(b.y - fy)))
+    const problems: Record<string, number> = {}
+    let found: { x: number; y: number } | null = null
+    for (const t of tiles) {
+      w.__fsDevTapTile(t.x, t.y)
+      const p = w.__fsHomes().placement
+      const why = p?.spot?.x !== t.x || p.spot.y !== t.y ? 'stuck' : p.problem
+      if (why === null) {
+        found = t
+        break
+      }
+      problems[why] = (problems[why] ?? 0) + 1
+    }
+    w.__fsDevTapTile(fx, fy)
+    return found ?? { problems }
+  }, [gate, from.x, from.y] as const)
+
 test('fill the lot lantern, set a stool out in the backland, see the lantern lit', async ({ page }) => {
   test.setTimeout(240_000)
   const id = await freshPlayer(page, 'Wick')
@@ -47,23 +75,39 @@ test('fill the lot lantern, set a stool out in the backland, see the lantern lit
   await shot(page, 'lot-lantern-lit')
 
   // Arrange from inside the fence: carry the stool out past the back line.
+  // The grid only reaches into the backland once this screen has the lantern lit.
   await goLot(page, gate, gate % 2 ? 21 : 2, stake.y)
+  await expect.poll(async () => (await homes(page)).here?.lantern?.lit ?? null).toBe(true)
   await page.getByTestId('arrange').click()
   const tray = page.getByTestId('placement-tray')
   await tray.locator('[data-piece="wooden-stool"]').first().click()
   await expect.poll(async () => (await homes(page)).placement?.spot ?? null).not.toBeNull()
-  const out = gate % 2 ? 'ArrowRight' : 'ArrowLeft'
   const placement = async () => (await homes(page)).placement!
-  const deep = (x: number) => (gate % 2 ? x - 23 : -x) >= 2
-  for (let step = 0; step < 40; step++) {
-    const p = await placement()
-    if (inBackland(p.spot!.x, p.spot!.y, gate) && deep(p.spot!.x) && p.problem === null) break
-    const before = JSON.stringify(p.spot)
-    // Out past the line first; then down the backland until the ground is open.
-    await page.keyboard.press(!deep(p.spot!.x) ? out : step % 6 === 5 ? out : 'ArrowDown')
-    await expect.poll(async () => JSON.stringify((await placement()).spot)).not.toBe(before)
+  const start = (await placement()).spot!
+  // The backland is Wilds ground from the world's own (random) seed: where
+  // it's open differs every run. Find the open tile at least two columns
+  // out nearest the stool by trying each (a tap moves the piece; the tray
+  // judges the spot at once), then put the stool back where it started.
+  let target = start
+  // Polled: the backland's chunk may still be loading. A miss says what each tile's problem was.
+  await expect.poll(async () => {
+    const r = await openBackland(page, gate, start)
+    if ('x' in r) target = r
+    return r
+  }, { timeout: 15_000 }).toHaveProperty('x')
+  expect((await placement()).spot).toMatchObject({ x: start.x, y: start.y })
+  // Then carry it there on the keys: out past the line, then along it.
+  const press = async (key: string, n: number) => {
+    for (let i = 0; i < n; i++) {
+      const before = JSON.stringify((await placement()).spot)
+      await page.keyboard.press(key)
+      await expect.poll(async () => JSON.stringify((await placement()).spot)).not.toBe(before)
+    }
   }
+  await press(target.x < start.x ? 'ArrowLeft' : 'ArrowRight', Math.abs(target.x - start.x))
+  await press(target.y < start.y ? 'ArrowUp' : 'ArrowDown', Math.abs(target.y - start.y))
   const spot = (await placement()).spot!
+  expect(spot).toMatchObject(target)
   expect(inBackland(spot.x, spot.y, gate)).toBe(true)
   expect((await placement()).problem).toBeNull()
   await page.keyboard.press('e')

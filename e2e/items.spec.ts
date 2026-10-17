@@ -173,6 +173,8 @@ test('things lying in the world can be picked up, once', { tag: '@smoke' }, asyn
   // The bucket in the bracken is a worn tool.
   await go(page, 'woodland', 12, 19)
   await expect(page.locator('.prompt')).toContainText('Pick up the dropped bucket')
+  // The warp into the woodland fades in; the prompt shows before input is live, and an E then is dropped.
+  await waitForLive(page)
   await page.keyboard.press('e')
   await expect.poll(async () => (await items(page))!.instances.find((i) => i.itemDef === 'stave-bucket')?.state).toBe('worn')
   // It stays picked up after a reload.
