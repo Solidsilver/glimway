@@ -94,7 +94,12 @@ func (a *Server) maintainState(ctx context.Context, tx *sql.Tx, s store.Snapshot
 			return false, err
 		}
 	}
-	return version != 0 || before != after, nil
+	// A turning may have shrunk the reach around where they stand.
+	moved, err := a.settleReach(ctx, tx, s, now.Unix())
+	if err != nil {
+		return false, err
+	}
+	return version != 0 || before != after || moved, nil
 }
 
 // maintainAndProjectState owns response-time maintenance on success, refusal,

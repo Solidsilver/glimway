@@ -20,16 +20,18 @@ import (
 )
 
 // validPresenceRoom: an area, or a Wilds chunk's room "outdoors:<cx>:<cy>"
-// (signed, inside the frontier; open-map.md 2.4).
-func validPresenceRoom(area string) bool {
+// (signed, inside the world's frontier; open-map.md 2.4, lamps.md 2.2).
+func validPresenceRoom(world, area string) bool {
 	if validArea(area) {
 		return area != outdoorsArea
 	}
-	_, _, ok := wildsRoomChunk(area)
-	return ok
+	x, y, ok := wildsRoomChunk(area)
+	return ok && location.OnGrid(world, x, y)
 }
 
-// wildsRoomChunk is the chunk a Wilds room names.
+// wildsRoomChunk is the chunk a Wilds room names. Joining checks it is on
+// the world's grid (validPresenceRoom); a held chunk's slack can leave it at
+// the turning, and the room still names a Wilds chunk.
 func wildsRoomChunk(room string) (cx, cy int, ok bool) {
 	parts := strings.Split(room, ":")
 	if len(parts) != 3 || parts[0] != outdoorsArea || len(room) > 64 {
@@ -40,7 +42,7 @@ func wildsRoomChunk(room string) (cx, cy int, ok bool) {
 		return 0, 0, false
 	}
 	y, err := strconv.Atoi(parts[2])
-	if err != nil || strconv.Itoa(y) != parts[2] || !location.OnGrid("", x, y) {
+	if err != nil || strconv.Itoa(y) != parts[2] {
 		return 0, 0, false
 	}
 	return x, y, true
@@ -300,7 +302,7 @@ func (a *Server) presenceReader(p *presencePeer) {
 			// Still standing there: a new wick's visit too (lamps.md 2.4).
 			visit = true
 		case *contract.PresenceMessage_Join:
-			if !validPresenceRoom(event.Join.Area) {
+			if !validPresenceRoom(p.identity.World, event.Join.Area) {
 				p.stop(websocket.StatusPolicyViolation, "invalid-room")
 				h.mu.Unlock()
 				return

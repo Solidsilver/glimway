@@ -63,7 +63,7 @@ func (a *Server) report(w http.ResponseWriter, r *http.Request) error {
 	if req.Seq < 1 || req.Basis > float64(s.Version) {
 		return refuse("invalid-revision")
 	}
-	if req.Place == nil || !validArea(req.Place.Area) || !finiteWhere(req.Place) || !wildsWhereInside(req.Place) {
+	if req.Place == nil || !validArea(req.Place.Area) || !finiteWhere(req.Place) || !wildsWhereInside(s.WorldID, req.Place) {
 		return refuse("invalid-position")
 	}
 	out := &contract.ReportResult{Client: client, Generation: generation, Seq: req.Seq, Basis: basis, PlaceIgnored: true, AbilityCasts: map[string]float64{}}

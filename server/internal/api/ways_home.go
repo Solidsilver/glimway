@@ -238,59 +238,78 @@ var landingOffsets = func() [][2]int {
 	return out
 }()
 
-// landBeside is open ground beside a lit lamp, inside its chunk: walkable
-// land with nothing standing on it (no site, creature, mark, lamp or camp
-// piece). ok is false when there is none.
-func (a *Server) landBeside(ctx context.Context, tx *sql.Tx, world string, l boundLamp, now int64) (lx, ly int, ok bool, err error) {
-	if !location.OnGrid("", l.CX, l.CY) {
-		return 0, 0, false, nil
-	}
+// openGround is a chunk's ground to land on: walkable land with nothing
+// standing on it (no site, creature, mark, lamp or camp piece). A held
+// chunk is read as its hold keeps it.
+type openGround struct {
+	world  string
+	cx, cy int
+	g      *backland
+	taken  []rect
+}
+
+func (a *Server) openGroundIn(ctx context.Context, tx *sql.Tx, world string, cx, cy int, camp *camp, now int64) (*openGround, error) {
 	// A camp's chunk (or a stone's inside a standing hold) is its held land.
-	g, err := a.campGround(ctx, tx, world, l.CX, l.CY, now)
+	g, err := a.campGround(ctx, tx, world, cx, cy, now)
 	if err != nil {
-		return 0, 0, false, err
+		return nil, err
 	}
 	if g == nil {
-		land, err := a.wickChunk(ctx, tx, world, l.CX, l.CY, now)
+		land, err := a.wickChunk(ctx, tx, world, cx, cy, now)
 		if err != nil {
-			return 0, 0, false, err
+			return nil, err
 		}
 		g = &backland{eff: *land}
 	}
-	taken := []rect{}
-	camp := l.Camp
+	o := &openGround{world: world, cx: cx, cy: cy, g: g}
 	if camp == nil {
-		if camp, err = campAt(ctx, tx, world, l.CX, l.CY); err != nil {
-			return 0, 0, false, err
+		if camp, err = campAt(ctx, tx, world, cx, cy); err != nil {
+			return nil, err
 		}
 	}
 	if camp != nil {
 		pieces, _, err := campPieces(ctx, tx, camp.ID)
 		if err != nil {
-			return 0, 0, false, err
+			return nil, err
 		}
 		for _, v := range pieces {
 			if r, ok := placedRect(v); ok {
-				taken = append(taken, r)
+				o.taken = append(o.taken, r)
 			}
 		}
 	}
+	return o, nil
+}
+
+// open: the chunk-local tile is free to land on.
+func (o *openGround) open(ctx context.Context, tx *sql.Tx, x, y int) (bool, error) {
 	S := chunkSize()
-	for _, o := range landingOffsets {
-		x, y := l.X+o[0], l.Y+o[1]
-		if x < 0 || y < 0 || x >= S || y >= S || !g.buildable(x, y) {
-			continue
+	if x < 0 || y < 0 || x >= S || y >= S || !o.g.buildable(x, y) {
+		return false, nil
+	}
+	here := rect{x, y, 1, 1}
+	if slices.ContainsFunc(o.taken, here.overlaps) {
+		return false, nil
+	}
+	lamp, err := lampStandsAt(ctx, tx, o.world, o.cx, o.cy, x, y)
+	return !lamp, err
+}
+
+// landBeside is open ground beside a lit lamp, inside its chunk. ok is false
+// when there is none.
+func (a *Server) landBeside(ctx context.Context, tx *sql.Tx, world string, l boundLamp, now int64) (lx, ly int, ok bool, err error) {
+	if !location.OnGrid(world, l.CX, l.CY) {
+		return 0, 0, false, nil
+	}
+	o, err := a.openGroundIn(ctx, tx, world, l.CX, l.CY, l.Camp, now)
+	if err != nil {
+		return 0, 0, false, err
+	}
+	for _, d := range landingOffsets {
+		x, y := l.X+d[0], l.Y+d[1]
+		if ok, err := o.open(ctx, tx, x, y); err != nil || ok {
+			return x, y, ok, err
 		}
-		here := rect{x, y, 1, 1}
-		if slices.ContainsFunc(taken, here.overlaps) {
-			continue
-		}
-		if lamp, err := lampStandsAt(ctx, tx, world, l.CX, l.CY, x, y); err != nil {
-			return 0, 0, false, err
-		} else if lamp {
-			continue
-		}
-		return x, y, true, nil
 	}
 	return 0, 0, false, nil
 }

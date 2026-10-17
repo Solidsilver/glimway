@@ -118,6 +118,9 @@ func (c *Chunks) Holds(ctx context.Context, tx *sql.Tx, world string) ([]Hold, e
 // back a release); for another holder it is ErrHeld.
 func (c *Chunks) Hold(ctx context.Context, tx *sql.Tx, world string, cx, cy int32, kind, id string, now int64) (Hold, error) {
 	x, y := int(cx), int(cy)
+	if err := confirmReach(ctx, tx, world); err != nil {
+		return Hold{}, err
+	}
 	if kind == "" || location.SourceOf(x, y).Kind != location.SourceGenerated || wilds.EpochKindAt(x, y) != EpochWick || wilds.FootprintAt(x, y) != nil || !frontier.Inside(world, x, y) {
 		return Hold{}, ErrNotHoldable
 	}
@@ -152,8 +155,11 @@ func (c *Chunks) Hold(ctx context.Context, tx *sql.Tx, world string, cx, cy int3
 		return Hold{}, err
 	}
 	h := Hold{World: world, CX: cx, CY: cy, Epoch: e.Id, HolderKind: kind, HolderID: id, Since: now}
-	_, err = tx.ExecContext(ctx, "INSERT INTO holds(world_id,realm,layer,cx,cy,epoch_id,holder_kind,holder_id,since) VALUES(?,?,0,?,?,?,?,?,?)", world, realm, cx, cy, e.Id, kind, id, now)
-	return h, err
+	if _, err = tx.ExecContext(ctx, "INSERT INTO holds(world_id,realm,layer,cx,cy,epoch_id,holder_kind,holder_id,since) VALUES(?,?,0,?,?,?,?,?,?)", world, realm, cx, cy, e.Id, kind, id, now); err != nil {
+		return Hold{}, err
+	}
+	// The new hold pushes the frontier out now (reach.go).
+	return h, syncReach(ctx, tx, world)
 }
 
 // Release lets a hold go: its chunk stays as it is until the next turning,
@@ -241,6 +247,12 @@ func (c *Chunks) judgeHolds(ctx context.Context, tx *sql.Tx, world string, now i
 		}
 		gone = append(gone, h)
 		if err = holder.Released(ctx, tx, h, now); err != nil {
+			return nil, err
+		}
+	}
+	// What went takes its reach with it (reach.go).
+	if len(gone) > 0 {
+		if err = syncReach(ctx, tx, world); err != nil {
 			return nil, err
 		}
 	}

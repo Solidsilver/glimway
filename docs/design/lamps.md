@@ -198,6 +198,40 @@ If reach shrinks around a player, resolve a safe reachable arrival before accept
 [frontier/frontier.go](../../server/internal/frontier/frontier.go) already bounds the starting
 world; no frontier-band lane remains.
 
+**As built (0.13, frontier reach).** A world's reach is the static frontier plus every chunk within
+`frontier.heldSlack` (content, 3) of any row in `holds`, Chebyshev, never past `southLimit`. Every
+hold counts: camps and lot backland alike (backland lies inside the static frontier anyway), Held,
+Dimming or released this wick, since a released hold keeps its chunk until the turning. Communal
+lamps hold nothing, so they grant no reach. A camp set in the slack pushes reach on, so a group can
+chain camps outward; one past the slack is refused (`beyond-frontier` for where you stand,
+`cannot-hold` from `Chunks.Hold`). Reach grows the moment a camp is set and shrinks only at a
+turning, when holds go.
+
+- **One answer everywhere.** `frontier.Inside(world, cx, cy)` and `frontier.Rect(world)` are the one
+  test. The chunk maker, the near read (with its glimpse past the slack), `map_tiers`, presence
+  rooms and positions, reports and keyed `where`s, paths, gathering, Common ways, entity ids and
+  ways-home landings all call it with the real world; nothing passes `""` any more. The near read
+  sends the held keys (`WildsFrontier.held`). The client's `insideFrontier` takes them
+  (`setHeldReach`), so the map's edge, the window, chunk loading and the hero's bounds agree. A
+  camp set re-reads the near window at once.
+- **Cached per world.** `package frontier` keeps each world's slack set and bounds, worked out once
+  from its held keys when they change. Checks are a map lookup and never scan holds.
+  `store/reach.go` keeps it in step: `Hold` and the turning's `judgeHolds` reset the world's keys
+  from their transaction. If that transaction rolls back, the next read of the wick (`Current`)
+  reads them again. The store has one connection, so a different transaction means the first has
+  ended. Opening the store loads every world's keys.
+- **Safe arrival.** `maintainState`, which runs on every answer, refusal, replay and sign-in, calls
+  `settleReach`. A saved Wilds place whose chunk has left reach moves to the nearest open tile (the
+  way-lamp landing's rule: walkable land, no site, creature, mark, lamp or camp piece) in a
+  generated chunk in reach. The search covers up to `2·slack+2` chunks out and reads at most eight
+  candidate chunks. With none, the player goes to the turncap's anchor (`hearthwick:arch`). The
+  move takes a new version with the place set at it, so the client follows: a live report from the
+  lapsed slack is refused `invalid-position` with the moved state, and a reload starts there. Packs
+  are never touched. The landing is the nearest open ground, not proven walkable back to town.
+- **Islands.** Every live hold grants slack, so if a middle camp of a chain lapses, an outer camp
+  keeps its own reach as an island the walk from town no longer reaches. The pouch still lands
+  there, and its keeper can still pack up. (Open question for the owner, §7.)
+
 ### 2.3 One judgment at the turning
 
 Use half-open wicks `[start, nextTurning)`. Proposed records: a world turning cursor and an
@@ -542,7 +576,7 @@ These are Q1–11 in their old order. No unanswered proposal carries over.
 | Old question | Answer or retirement |
 |---|---|
 | Q1 · Release scope | Roadmap: 0.12 holds/lot lanterns; 0.13 Common ways, Built camps, Keeper and map. Broad magic/story are not prerequisites. |
-| Q2 · Frontier band | Retired: the open map exists. Extend reach with live Built holds, not the old finite band. |
+| Q2 · Frontier band | **Answered, built in 0.13 (§2.2 as built):** the old finite band is retired. Reach is the static frontier plus a three-chunk slack around every live hold. Camps chain outward, reach shrinks at the turning, and anyone left outside lands on open ground in reach. |
 | Q3 · First lamp and coverage | First hold is one lot backland in 0.12. Quest stone is Common on the northbound Lantern Road in 0.13; retire `(3,1)`, east-column permanence and automatic 3×3 coverage. |
 | Q4 · Cost without clay | Stone footing and proposed flat parts (§2.5). Clay waits for 0.16; retire distance escalation for this slice. |
 | Q5 · Naming | Parts only, server-validated landmarks, short names from those parts (§2.8). No free text. |
@@ -661,8 +695,11 @@ waits. Run changed checks per lane and required merge checks once at integration
 ## 7. Questions for the owner
 
 No blocking rules questions remain. One supply choice deserves an owner playtest; the build can
-use this proposal with numbers kept in content.
+use this proposal with numbers kept in content. Two frontier-reach choices (0.13) are built with a
+default and wait for the owner's call.
 
 | Question | Proposed answer |
 |---|---|
 | How generous is the tree/chandler's initial oil supply? | **Answered 2026-10-17, built (§2.5):** one free tap of Wick Tree sap per player per calendar wick, refined free by the chandler into one flask of hearth oil (one backland's wick). No carry-over. Extra oil stays at 4 glims, 3 a day. Numbers are in content (`homestead.wickSap`) for the playtest. |
+| When a middle camp in a chain lapses, should the outer camp keep its own reach as an island, or lose reach not joined to the static frontier? | **Built: it keeps its island (§2.2 as built).** A paid-up camp never drops out of reach because of someone else's lapse; the pouch and pack-up still reach it. The alternative counts only slack joined to the static frontier. It keeps reach walkable from town, but a funded camp could fall outside reach, and its players would be moved off it. |
+| Should the stranded-player landing prove a walk back to town? | **Built: nearest open ground in reach**, the turncap's anchor if none is near. A pocket of open ground boxed in by woods is possible; the turncap remains the fallback. |

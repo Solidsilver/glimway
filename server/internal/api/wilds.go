@@ -397,7 +397,7 @@ func (a *Server) wildsClaim(w http.ResponseWriter, r *http.Request) error {
 		if strings.HasPrefix(req.EntityId, "rumour:") {
 			return a.openRumour(ctx, tx, s, e, req, now)
 		}
-		cx, cy, ok := story.EntityChunk(req.EntityId)
+		cx, cy, ok := story.EntityChunk(s.WorldID, req.EntityId)
 		if !ok || wilds.EpochKindAt(cx, cy) != e.Kind {
 			return nil, fail(404, "entity-not-found")
 		}

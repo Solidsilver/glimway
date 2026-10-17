@@ -166,7 +166,7 @@ func (r Rules) Eligible(ctx context.Context, tx *sql.Tx, s store.Snapshot, in po
 	// (holds): good for the claimed entity's facts only, since sites and
 	// Echoes are footprints', which are never held.
 	held := false
-	if cx, cy, ok := EntityChunk(in.Entity); epoch == nil && ok {
+	if cx, cy, ok := EntityChunk(s.WorldID, in.Entity); epoch == nil && ok {
 		e, err := store.HeldEpoch(ctx, tx, s.WorldID, cx, cy)
 		if err != nil {
 			return false, err
@@ -245,7 +245,7 @@ func (r Rules) Eligible(ctx context.Context, tx *sql.Tx, s store.Snapshot, in po
 	if in.Entity == "" || q.GetPoi() == "" && q.Tier == 0 {
 		return false, nil
 	}
-	cx, cy, ok := EntityChunk(in.Entity)
+	cx, cy, ok := EntityChunk(s.WorldID, in.Entity)
 	if !ok || wilds.EpochKindAt(cx, cy) != epoch.Kind || q.East && !east(cx, cy) {
 		return false, nil
 	}
@@ -271,15 +271,15 @@ func (r Rules) Eligible(ctx context.Context, tx *sql.Tx, s store.Snapshot, in po
 }
 
 // EntityChunk is the chunk an entity id names ("<kind>:<cx>:<cy>:<i>",
-// signed), inside the frontier.
-func EntityChunk(id string) (cx, cy int, ok bool) {
+// signed), inside the world's frontier.
+func EntityChunk(world, id string) (cx, cy int, ok bool) {
 	parts := strings.Split(id, ":")
 	if len(parts) != 4 || len(id) > 128 {
 		return 0, 0, false
 	}
 	x, e1 := strconv.Atoi(parts[1])
 	y, e2 := strconv.Atoi(parts[2])
-	if e1 != nil || e2 != nil || strconv.Itoa(x) != parts[1] || strconv.Itoa(y) != parts[2] || !frontier.Inside("", x, y) {
+	if e1 != nil || e2 != nil || strconv.Itoa(x) != parts[1] || strconv.Itoa(y) != parts[2] || !frontier.Inside(world, x, y) {
 		return 0, 0, false
 	}
 	return x, y, true
