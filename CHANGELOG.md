@@ -19,8 +19,11 @@ the game can show the first part as "What's new":
 
 - Signing in, reloading and stepping outdoors no longer freeze the game for a moment as the world appears.
 
+- Once a wick, tap the Wick Tree in Hearthwick for a jar of its sap. The chandler refines it into hearth oil for free: enough to keep a lot lantern burning a wick. You don't need a lantern to tap. A missed wick's sap doesn't wait for you, and more oil is still for sale at the chandler.
+
 ### Technical
 
+- The Wick Tree's weekly sap (lamps.md §2.5): `POST /api/items/tap` and `POST /api/items/refine` (`api/wick_sap.go`). A tap gives one `wick-sap` once per calendar wick, checked by an `outcomes` row `wick-sap:<WickStart>`; no migration. A second tap that wick is refused with the new error code `already-tapped` (250), and a replay answers from the keyed op. Refining at the chandler turns one sap into one `hearth-oil` for no glims. New content block `homestead.wickSap` (`WickSap` in `homestead.proto`) and new `ItemsResult` fields `tapped`, `firstTap` and `refined`. The chandler's reach check is now `atSeller`, which buying shares. `hearth-oil`'s text now says it's refined sap; the amber and tallow recipe stays, since amber is sap gone hard.
 - Add palette-matched relit lamp stones, route stones and three lamp inventory icons to the art atlases.
 - The Wilds keep their shape across the turning: the Wend runs the same course and woods and meadows stay where they are. Only the living detail (trees, forage, camps, chests, places and paths) changes each wick.
 - The Wilds turn early once, when this version arrives: the current wick's land is replaced. The Tangle keeps everything.

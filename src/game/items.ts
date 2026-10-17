@@ -217,6 +217,14 @@ export class Items {
     const price = sellerFor(seller)?.goods.find((g) => g.item === good)?.glims ?? 0
     return this.run('buy', { seller, good }, -price)
   }
+  /** Tap the Wick Tree for this wick's sap (the server keeps it to one a wick). */
+  tapSap() {
+    return this.run('tap', {})
+  }
+  /** The chandler refines a jar of sap into hearth oil, free. */
+  refineSap() {
+    return this.run('refine', {})
+  }
 
   // ------------------------------------------------------------ reads
 

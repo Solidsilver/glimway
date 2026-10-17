@@ -680,5 +680,16 @@
     ],
     "ash": "lamp-ash",
     "ashQty": 1
+  },
+  "wickSap": {
+    "item": "wick-sap",
+    "qty": 1,
+    "area": "hearthwick",
+    "tx": 34,
+    "ty": 37,
+    "reach": 3,
+    "refiner": "chandler",
+    "oil": "hearth-oil",
+    "oilQty": 1
   }
 }

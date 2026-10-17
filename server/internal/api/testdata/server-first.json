@@ -14466,7 +14466,10 @@
         "heirloom": "",
         "adaOilCount": 0,
         "bought": null,
-        "glimsGiven": 0
+        "glimsGiven": 0,
+        "tapped": null,
+        "firstTap": false,
+        "refined": null
       }
     }
   }

@@ -73,6 +73,7 @@ export const ITEM_ERRORS: Table = {
   'invalid-region': 'The woods have shifted under you. Step back a moment.',
   'not-in-season': 'Not now — that belongs to another season. Come back when it turns.',
   'sold-out': 'That’s all they had today. Come back tomorrow.',
+  'already-tapped': 'You’ve had the Wick Tree’s sap this wick. It gives again at the turning.',
   'invalid-seller': 'There’s nothing like that to buy here.',
   'invalid-good': 'There’s nothing like that to buy here.',
   'condition-unmet': 'You aren’t ready for that yet.',

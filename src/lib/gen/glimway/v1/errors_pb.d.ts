@@ -1286,6 +1286,13 @@ export enum ErrorCode {
    * @generated from enum value: ERROR_CODE_INVALID_NAMING = 249;
    */
   INVALID_NAMING = 249,
+
+  /**
+   * 0.13 The Wick Tree's weekly sap (lamps.md 2.5).
+   *
+   * @generated from enum value: ERROR_CODE_ALREADY_TAPPED = 250;
+   */
+  ALREADY_TAPPED = 250,
 }
 
 /**

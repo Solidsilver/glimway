@@ -287,6 +287,8 @@ const (
 	ErrorCode_ERROR_CODE_NEEDS_KEEPER   ErrorCode = 247
 	ErrorCode_ERROR_CODE_LAMP_NAMED     ErrorCode = 248
 	ErrorCode_ERROR_CODE_INVALID_NAMING ErrorCode = 249
+	// 0.13 The Wick Tree's weekly sap (lamps.md 2.5).
+	ErrorCode_ERROR_CODE_ALREADY_TAPPED ErrorCode = 250
 )
 
 // Enum value maps for ErrorCode.
@@ -542,6 +544,7 @@ var (
 		247: "ERROR_CODE_NEEDS_KEEPER",
 		248: "ERROR_CODE_LAMP_NAMED",
 		249: "ERROR_CODE_INVALID_NAMING",
+		250: "ERROR_CODE_ALREADY_TAPPED",
 	}
 	ErrorCode_value = map[string]int32{
 		"ERROR_CODE_UNSPECIFIED":               0,
@@ -794,6 +797,7 @@ var (
 		"ERROR_CODE_NEEDS_KEEPER":              247,
 		"ERROR_CODE_LAMP_NAMED":                248,
 		"ERROR_CODE_INVALID_NAMING":            249,
+		"ERROR_CODE_ALREADY_TAPPED":            250,
 	}
 )
 
@@ -829,7 +833,7 @@ var File_glimway_v1_errors_proto protoreflect.FileDescriptor
 const file_glimway_v1_errors_proto_rawDesc = "" +
 	"\n" +
 	"\x17glimway/v1/errors.proto\x12\n" +
-	"glimway.v1*\xc2=\n" +
+	"glimway.v1*\xe2=\n" +
 	"\tErrorCode\x12\x1a\n" +
 	"\x16ERROR_CODE_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17ERROR_CODE_INVALID_JSON\x10\x01\x12\"\n" +
@@ -1081,7 +1085,8 @@ const file_glimway_v1_errors_proto_rawDesc = "" +
 	"\x15ERROR_CODE_NO_LANDING\x10\xf6\x01\x12\x1c\n" +
 	"\x17ERROR_CODE_NEEDS_KEEPER\x10\xf7\x01\x12\x1a\n" +
 	"\x15ERROR_CODE_LAMP_NAMED\x10\xf8\x01\x12\x1e\n" +
-	"\x19ERROR_CODE_INVALID_NAMING\x10\xf9\x01B1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
+	"\x19ERROR_CODE_INVALID_NAMING\x10\xf9\x01\x12\x1e\n" +
+	"\x19ERROR_CODE_ALREADY_TAPPED\x10\xfa\x01B1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
 
 var (
 	file_glimway_v1_errors_proto_rawDescOnce sync.Once

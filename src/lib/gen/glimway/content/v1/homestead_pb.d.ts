@@ -145,6 +145,13 @@ export declare type Homestead = Message<"glimway.content.v1.Homestead"> & {
    * @generated from field: glimway.content.v1.LampNamingRules lamp_naming = 18;
    */
   lampNaming?: LampNamingRules | undefined;
+
+  /**
+   * The Wick Tree's weekly sap and the chandler's refining (lamps.md 2.5).
+   *
+   * @generated from field: glimway.content.v1.WickSap wick_sap = 19;
+   */
+  wickSap?: WickSap | undefined;
 };
 
 /**
@@ -282,6 +289,13 @@ export declare type HomesteadValid = Message<"glimway.content.v1.Homestead"> & {
    * @generated from field: glimway.content.v1.LampNamingRules lamp_naming = 18;
    */
   lampNaming: LampNamingRulesValid;
+
+  /**
+   * The Wick Tree's weekly sap and the chandler's refining (lamps.md 2.5).
+   *
+   * @generated from field: glimway.content.v1.WickSap wick_sap = 19;
+   */
+  wickSap: WickSapValid;
 };
 
 /**
@@ -289,6 +303,69 @@ export declare type HomesteadValid = Message<"glimway.content.v1.Homestead"> & {
  * Use `create(HomesteadSchema)` to create a new message.
  */
 export declare const HomesteadSchema: GenMessage<Homestead, {validType: HomesteadValid}>;
+
+/**
+ * The Wick Tree's weekly sap (lamps.md 2.5): once a calendar wick, anyone
+ * standing within reach tiles of the tree's spot (area, tx, ty) taps qty
+ * of `item`; at `refiner` (a seller) one of it refines, free, into
+ * oil_qty of `oil`. Code checks that the item, the oil and the seller exist.
+ *
+ * @generated from message glimway.content.v1.WickSap
+ */
+export declare type WickSap = Message<"glimway.content.v1.WickSap"> & {
+  /**
+   * @generated from field: string item = 1;
+   */
+  item: string;
+
+  /**
+   * @generated from field: int32 qty = 2;
+   */
+  qty: number;
+
+  /**
+   * @generated from field: string area = 3;
+   */
+  area: string;
+
+  /**
+   * @generated from field: int32 tx = 4;
+   */
+  tx: number;
+
+  /**
+   * @generated from field: int32 ty = 5;
+   */
+  ty: number;
+
+  /**
+   * @generated from field: int32 reach = 6;
+   */
+  reach: number;
+
+  /**
+   * @generated from field: string refiner = 7;
+   */
+  refiner: string;
+
+  /**
+   * @generated from field: string oil = 8;
+   */
+  oil: string;
+
+  /**
+   * @generated from field: int32 oil_qty = 9;
+   */
+  oilQty: number;
+};
+
+export declare type WickSapValid = WickSap;
+
+/**
+ * Describes the message glimway.content.v1.WickSap.
+ * Use `create(WickSapSchema)` to create a new message.
+ */
+export declare const WickSapSchema: GenMessage<WickSap, {validType: WickSapValid}>;
 
 /**
  * Communal lamps (lamps.md 2.5's "Communal stone relight" and "New communal

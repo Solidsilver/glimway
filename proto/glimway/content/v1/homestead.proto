@@ -57,6 +57,24 @@ message Homestead {
   CommunalLamp communal_lamp = 17 [(buf.validate.field).required = true];
   // Naming a lamp from parts (lamps.md 2.8).
   LampNamingRules lamp_naming = 18 [(buf.validate.field).required = true];
+  // The Wick Tree's weekly sap and the chandler's refining (lamps.md 2.5).
+  WickSap wick_sap = 19 [(buf.validate.field).required = true];
+}
+
+// The Wick Tree's weekly sap (lamps.md 2.5): once a calendar wick, anyone
+// standing within reach tiles of the tree's spot (area, tx, ty) taps qty
+// of `item`; at `refiner` (a seller) one of it refines, free, into
+// oil_qty of `oil`. Code checks that the item, the oil and the seller exist.
+message WickSap {
+  string item = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  int32 qty = 2 [(buf.validate.field).int32 = {gte: 1, lte: 12}];
+  string area = 3 [(buf.validate.field).string = {in: ["hearthwick"]}];
+  int32 tx = 4 [(buf.validate.field).int32 = {gte: 0, lte: 1048576}];
+  int32 ty = 5 [(buf.validate.field).int32 = {gte: 0, lte: 1048576}];
+  int32 reach = 6 [(buf.validate.field).int32 = {gte: 1, lte: 8}];
+  string refiner = 7 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  string oil = 8 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  int32 oil_qty = 9 [(buf.validate.field).int32 = {gte: 1, lte: 12}];
 }
 
 // Communal lamps (lamps.md 2.5's "Communal stone relight" and "New communal

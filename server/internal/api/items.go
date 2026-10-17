@@ -63,6 +63,10 @@ func (a *Server) itemsMutation(w http.ResponseWriter, r *http.Request) error {
 			err = a.giveAdaOil(ctx, tx, s, &req, now, out)
 		case "buy":
 			err = a.marketBuy(ctx, tx, s, &req, now, out)
+		case "tap":
+			err = a.tapWickSap(ctx, tx, s, now, out)
+		case "refine":
+			err = a.refineWickSap(ctx, tx, s, now, out)
 		default:
 			err = fail(404, "not-found")
 		}

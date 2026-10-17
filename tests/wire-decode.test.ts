@@ -70,6 +70,9 @@ const itemsResult = {
   adaOilCount: 0,
   glimsGiven: 0,
   bought: null,
+  tapped: null,
+  firstTap: false,
+  refined: null,
 };
 const workshopView = { home: null, inventory: { materials: {}, items: {}, decorations: {}, instances: [] }, storage: null, personal: { materials: {}, items: {}, decorations: {}, instances: [] }, shared: 'not-a-member' };
 const mailView = {

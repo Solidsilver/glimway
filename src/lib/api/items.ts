@@ -96,7 +96,7 @@ interface WearResult {
   condition: number;
   instance: InstanceView | null;
 }
-export type ItemsOp = 'use' | 'repair' | 'fit' | 'unfit' | 'give' | 'pocket' | 'offhand' | 'pickup' | 'return' | 'gather' | 'plant' | 'heirloom' | 'ada-oil' | 'buy';
+export type ItemsOp = 'use' | 'repair' | 'fit' | 'unfit' | 'give' | 'pocket' | 'offhand' | 'pickup' | 'return' | 'gather' | 'plant' | 'heirloom' | 'ada-oil' | 'buy' | 'tap' | 'refine';
 export interface ItemsActionResponse extends Snapshot {
   result: {
     items: ItemsView;
@@ -118,6 +118,11 @@ export interface ItemsActionResponse extends Snapshot {
     glimsGiven?: number;
     /** What a seller just handed over (/api/items/buy), and what it cost in glims. */
     bought?: { seller: string; itemDef: string; qty: number; glims: number };
+    /** tap: the Wick Tree's sap for this wick (lamps.md 2.5); firstTap on a player's first ever. */
+    tapped?: { itemDef: string; qty: number };
+    firstTap?: boolean;
+    /** refine: the oil the chandler made from sap, free. */
+    refined?: { itemDef: string; qty: number };
   };
 }
 
@@ -229,6 +234,9 @@ function result(r: ItemsResult): ItemsActionResponse['result'] {
   if (r.adaOilCount) out.adaOilCount = int(r.adaOilCount);
   if (r.glimsGiven) out.glimsGiven = int(r.glimsGiven);
   if (r.bought) out.bought = { seller: r.bought.seller, itemDef: r.bought.itemDef, qty: int(r.bought.qty), glims: int(r.bought.glims) };
+  if (r.tapped) out.tapped = { itemDef: r.tapped.itemDef, qty: int(r.tapped.qty) };
+  if (r.firstTap) out.firstTap = true;
+  if (r.refined) out.refined = { itemDef: r.refined.itemDef, qty: int(r.refined.qty) };
   if (r.gathered?.length) out.gathered = r.gathered.map((g) => ({ itemDef: g.itemDef, qty: int(g.qty) }));
   if (r.plant) {
     out.plant = {

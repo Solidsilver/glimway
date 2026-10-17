@@ -886,7 +886,14 @@
           "type": "light-post"
         }
       ],
-      "blurb": "Lights lantern posts and window lamps once each; a gift for Ada's window."
+      "blurb": "Wick Tree sap, refined by the chandler. Keeps a lot lantern or way-lamp burning a wick, lights lantern posts and window lamps, and Ada would be glad of some for her window."
+    },
+    {
+      "id": "wick-sap",
+      "name": "Wick Tree sap",
+      "tab": "supplies",
+      "kind": "material",
+      "blurb": "A stoppered jar of the Wick Tree's sap, one wick's tapping. The chandler refines it into hearth oil, free."
     },
     {
       "id": "homing-turncap",
@@ -1120,7 +1127,7 @@
       "tab": "papers",
       "kind": "paper",
       "marked": true,
-      "blurb": "A ruled ledger receipt leaf from Ada Cooley's window fund. Amber and tallow."
+      "blurb": "A ruled ledger receipt leaf from Ada Cooley's window fund. Amber is Wick Tree sap gone hard; with tallow it renders down to hearth oil at home."
     },
     {
       "id": "recipe-page-wax-seal",
@@ -1356,7 +1363,7 @@
           "glims": 4,
           "cap": 3,
           "label": "Buy a flask of hearth oil · 4 glims",
-          "line": "Rendered from Wick Tree amber, the sap gone hard. One flask keeps a lot lantern burning a wick."
+          "line": "Wick Tree sap, refined here. One flask keeps a lot lantern burning a wick. Bring me your sap and I'll refine it for nothing."
         }
       ]
     }

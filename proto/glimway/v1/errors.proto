@@ -266,4 +266,6 @@ enum ErrorCode {
   ERROR_CODE_NEEDS_KEEPER = 247;
   ERROR_CODE_LAMP_NAMED = 248;
   ERROR_CODE_INVALID_NAMING = 249;
+  // 0.13 The Wick Tree's weekly sap (lamps.md 2.5).
+  ERROR_CODE_ALREADY_TAPPED = 250;
 }

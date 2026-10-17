@@ -208,14 +208,16 @@ func (x *Bought) GetGlims() int32 {
 	return 0
 }
 
-// One request message for all fourteen item mutations, mirroring the
+// One request message for all sixteen item mutations, mirroring the
 // retired hand-written itemRequest: every op's fields are optional and empty
 // means unset (the op name comes from the URL path). Deliberate; don't copy
 // the grab-bag into new routes without saying why — the per-op result
 // messages in state.proto's Envelope oneof are the pattern to grow into.
 //
 // POST /api/items/{use,repair,fit,unfit,give,pocket,offhand,pickup,return,
-// heirloom,ada-oil,gather,plant,buy}. Tile is [x, y] (a home land tile), a
+// heirloom,ada-oil,gather,plant,buy,tap,refine}; tap and refine (the Wick
+// Tree's sap, lamps.md 2.5) joined buy here as one more pack change at a
+// spot, with no fields of their own. Tile is [x, y] (a home land tile), a
 // repeated-int32 pair on purpose: the gather stump proof matches stored
 // payloads with json_extract(payload_json,'$.tile[0]') (gathering.go), which
 // a {"x":…,"y":…} object would break, and the client's request building is
@@ -438,7 +440,13 @@ type ItemsResult struct {
 	AdaOilCount int32                   `protobuf:"varint,14,opt,name=ada_oil_count,json=adaOilCount,proto3" json:"ada_oil_count,omitempty"`
 	Bought      *Bought                 `protobuf:"bytes,15,opt,name=bought,proto3" json:"bought,omitempty"`
 	// give: the glims handed over (3.4).
-	GlimsGiven    int32 `protobuf:"varint,17,opt,name=glims_given,json=glimsGiven,proto3" json:"glims_given,omitempty"`
+	GlimsGiven int32 `protobuf:"varint,17,opt,name=glims_given,json=glimsGiven,proto3" json:"glims_given,omitempty"`
+	// tap: the Wick Tree's sap for this wick; first_tap on a player's first
+	// ever (lamps.md 2.5).
+	Tapped   *Stack `protobuf:"bytes,18,opt,name=tapped,proto3" json:"tapped,omitempty"`
+	FirstTap bool   `protobuf:"varint,19,opt,name=first_tap,json=firstTap,proto3" json:"first_tap,omitempty"`
+	// refine: the oil the chandler made from sap, free.
+	Refined       *Stack `protobuf:"bytes,20,opt,name=refined,proto3" json:"refined,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -585,6 +593,27 @@ func (x *ItemsResult) GetGlimsGiven() int32 {
 	return 0
 }
 
+func (x *ItemsResult) GetTapped() *Stack {
+	if x != nil {
+		return x.Tapped
+	}
+	return nil
+}
+
+func (x *ItemsResult) GetFirstTap() bool {
+	if x != nil {
+		return x.FirstTap
+	}
+	return false
+}
+
+func (x *ItemsResult) GetRefined() *Stack {
+	if x != nil {
+		return x.Refined
+	}
+	return nil
+}
+
 // GET /api/items.
 type ItemsRead struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -675,7 +704,7 @@ const file_glimway_v1_items_proto_rawDesc = "" +
 	"\x06region\x18\x11 \x01(\tR\x06region\x12\x16\n" +
 	"\x06seller\x18\x12 \x01(\tR\x06seller\x12\x12\n" +
 	"\x04good\x18\x13 \x01(\tR\x04good\x12\x14\n" +
-	"\x05glims\x18\x16 \x01(\x05R\x05glimsJ\x04\b\x14\x10\x15J\x04\b\x15\x10\x16R\x03payR\x04gold\"\xe8\x04\n" +
+	"\x05glims\x18\x16 \x01(\x05R\x05glimsJ\x04\b\x14\x10\x15J\x04\b\x15\x10\x16R\x03payR\x04gold\"\xdd\x05\n" +
 	"\vItemsResult\x12+\n" +
 	"\x05items\x18\x01 \x01(\v2\x15.glimway.v1.ItemsViewR\x05items\x12*\n" +
 	"\x04wear\x18\x02 \x01(\v2\x16.glimway.v1.WearResultR\x04wear\x12\x12\n" +
@@ -694,7 +723,10 @@ const file_glimway_v1_items_proto_rawDesc = "" +
 	"\rada_oil_count\x18\x0e \x01(\x05R\vadaOilCount\x12*\n" +
 	"\x06bought\x18\x0f \x01(\v2\x12.glimway.v1.BoughtR\x06bought\x12\x1f\n" +
 	"\vglims_given\x18\x11 \x01(\x05R\n" +
-	"glimsGivenJ\x04\b\x10\x10\x11R\n" +
+	"glimsGiven\x12)\n" +
+	"\x06tapped\x18\x12 \x01(\v2\x11.glimway.v1.StackR\x06tapped\x12\x1b\n" +
+	"\tfirst_tap\x18\x13 \x01(\bR\bfirstTap\x12+\n" +
+	"\arefined\x18\x14 \x01(\v2\x11.glimway.v1.StackR\arefinedJ\x04\b\x10\x10\x11R\n" +
 	"gold_given\"8\n" +
 	"\tItemsRead\x12+\n" +
 	"\x05items\x18\x01 \x01(\v2\x15.glimway.v1.ItemsViewR\x05itemsB1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
@@ -742,12 +774,14 @@ var file_glimway_v1_items_proto_depIdxs = []int32{
 	13, // 10: glimway.v1.ItemsResult.land:type_name -> glimway.v1.HomeLandChange
 	8,  // 11: glimway.v1.ItemsResult.paper:type_name -> google.protobuf.StringValue
 	1,  // 12: glimway.v1.ItemsResult.bought:type_name -> glimway.v1.Bought
-	10, // 13: glimway.v1.ItemsRead.items:type_name -> glimway.v1.ItemsView
-	14, // [14:14] is the sub-list for method output_type
-	14, // [14:14] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	11, // 13: glimway.v1.ItemsResult.tapped:type_name -> glimway.v1.Stack
+	11, // 14: glimway.v1.ItemsResult.refined:type_name -> glimway.v1.Stack
+	10, // 15: glimway.v1.ItemsRead.items:type_name -> glimway.v1.ItemsView
+	16, // [16:16] is the sub-list for method output_type
+	16, // [16:16] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_glimway_v1_items_proto_init() }

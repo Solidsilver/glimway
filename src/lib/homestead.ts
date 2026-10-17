@@ -71,6 +71,8 @@ export interface LampNamingRules {
   places: Record<string, string>; sites: Record<string, string>; ash: string; ashQty: number;
 }
 export interface NamingWord { id: string; words: string }
+/** The Wick Tree's weekly sap (lamps.md 2.5): qty of `item` a wick from within `reach` tiles of the tree's spot; `refiner` (a seller) makes oilQty of `oil` from one, free. */
+export interface WickSapRules { item: string; qty: number; area: string; tx: number; ty: number; reach: number; refiner: string; oil: string; oilQty: number }
 export interface HomesteadData {
   tiers: HomeTier[];
   indoor: HomeGrid;
@@ -92,6 +94,7 @@ export interface HomesteadData {
   wayLamp: WayLampRules;
   communalLamp: CommunalLampRules;
   lampNaming: LampNamingRules;
+  wickSap: WickSapRules;
 }
 
 /** Throws on anything content/homestead.go would refuse. */
