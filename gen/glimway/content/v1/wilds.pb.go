@@ -1696,11 +1696,14 @@ func (x *WildsTier) GetNodeYieldBonus() int32 {
 
 // The 0.8 frontier (decision 3, design 2.1): chunks within Chebyshev
 // distance `reach` of a footprint, and no further south than `south_limit`.
-// It is enforced at run time, never generated (design 2.2).
+// It is enforced at run time, never generated (design 2.2). Held land
+// pushes it out (lamps.md 2.2): every chunk within Chebyshev distance
+// `held_slack` of a held chunk is inside too, still no further south.
 type WildsFrontier struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Reach         int32                  `protobuf:"varint,1,opt,name=reach,proto3" json:"reach,omitempty"`
 	SouthLimit    *int32                 `protobuf:"zigzag32,2,opt,name=south_limit,json=southLimit,proto3,oneof" json:"south_limit,omitempty"`
+	HeldSlack     int32                  `protobuf:"varint,3,opt,name=held_slack,json=heldSlack,proto3" json:"held_slack,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1745,6 +1748,13 @@ func (x *WildsFrontier) GetReach() int32 {
 func (x *WildsFrontier) GetSouthLimit() int32 {
 	if x != nil && x.SouthLimit != nil {
 		return *x.SouthLimit
+	}
+	return 0
+}
+
+func (x *WildsFrontier) GetHeldSlack() int32 {
+	if x != nil {
+		return x.HeldSlack
 	}
 	return 0
 }
@@ -3038,11 +3048,13 @@ const file_glimway_content_v1_wilds_proto_rawDesc = "" +
 	"\x10node_yield_bonus\x18\x05 \x01(\x05B\f\xbaH\t\xc8\x01\x01\x1a\x04\x18\n" +
 	"(\x00H\x00R\x0enodeYieldBonus\x88\x01\x01:]\xbaHZ\x1aX\n" +
 	"\x10tier.chest_range\x12\"chestMax must be at least chestMin\x1a this.chest_max >= this.chest_minB\x13\n" +
-	"\x11_node_yield_bonus\"n\n" +
+	"\x11_node_yield_bonus\"\x98\x01\n" +
 	"\rWildsFrontier\x12\x1f\n" +
 	"\x05reach\x18\x01 \x01(\x05B\t\xbaH\x06\x1a\x04\x18@(\x00R\x05reach\x12,\n" +
 	"\vsouth_limit\x18\x02 \x01(\x11B\x06\xbaH\x03\xc8\x01\x01H\x00R\n" +
-	"southLimit\x88\x01\x01B\x0e\n" +
+	"southLimit\x88\x01\x01\x12(\n" +
+	"\n" +
+	"held_slack\x18\x03 \x01(\x05B\t\xbaH\x06\x1a\x04\x18\x10(\x00R\theldSlackB\x0e\n" +
 	"\f_south_limit\"t\n" +
 	"\x0eWildsClearTool\x12/\n" +
 	"\x05decor\x18\x01 \x01(\tB\x19\xbaH\x16r\x142\x12^[a-z0-9-]{1,100}$R\x05decor\x121\n" +

@@ -1,4 +1,4 @@
-import { insideFrontier } from '../../lib/wilds/coords.ts';
+import { insideFrontier, setHeldReach } from '../../lib/wilds/coords.ts';
 /**
  * The Wilds store: the client's picture of the open map, keyed by chunk
  * (docs/design/open-map.md 2.4, 2.5), shared by the scene and the panels.
@@ -244,6 +244,7 @@ export function wickEnded(): boolean {
  */
 export function resetWilds(opts: { quiet?: boolean } = {}): void {
   view = null;
+  setHeldReach([]);
   viewLink = null;
   generation += 1;
   fetchedAt.clear();
@@ -380,6 +381,8 @@ export function applyNear(res: WildsNearResult, since: number = markNow(), link:
   const r = res.frontier!.rect!;
   if (!newer(frontierSeq)) {
     v.frontier = { minCx: r.minCx, minCy: r.minCy, maxCx: r.maxCx, maxCy: r.maxCy };
+    // Held chunks push it out (lamps.md 2.2): the map, the window and the paths read them through insideFrontier.
+    setHeldReach(res.frontier!.held);
     frontierSeq = since;
   }
   const c = res.center!;

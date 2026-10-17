@@ -339,10 +339,13 @@ message WildsTier {
 
 // The 0.8 frontier (decision 3, design 2.1): chunks within Chebyshev
 // distance `reach` of a footprint, and no further south than `south_limit`.
-// It is enforced at run time, never generated (design 2.2).
+// It is enforced at run time, never generated (design 2.2). Held land
+// pushes it out (lamps.md 2.2): every chunk within Chebyshev distance
+// `held_slack` of a held chunk is inside too, still no further south.
 message WildsFrontier {
   int32 reach = 1 [(buf.validate.field).int32 = {gte: 0, lte: 64}];
   optional sint32 south_limit = 2 [(buf.validate.field).required = true];
+  int32 held_slack = 3 [(buf.validate.field).int32 = {gte: 0, lte: 16}];
 }
 
 // Which decor a tool clears (by its item action, items.json `actions`).

@@ -79,24 +79,63 @@ export function cellPlaceId(x: number, y: number): string {
   return `place:${x}:${y}`;
 }
 
-/**
- * The 0.8 frontier (decision 3): within frontier.reach chunks of a
- * footprint and no further south than frontier.southLimit. The server
- * enforces it; the client treats chunks outside it as solid.
- */
-export function insideFrontier(cx: number, cy: number, fixed: Places['fixed'] = PLACES.fixed): boolean {
-  const f = loadWilds().frontier;
-  return cy <= f.southLimit && nearestFootprint(cx, cy, fixed) <= f.reach;
+/** A held chunk (lamps.md 2.2): it pushes the frontier out by frontier.heldSlack chunks. */
+export interface HeldKey {
+  cx: number;
+  cy: number;
 }
 
-/** Bounding rectangle of the reach union; membership uses insideFrontier. */
-export function frontierRect(): { minCx: number; minCy: number; maxCx: number; maxCy: number } {
-  const w = loadWilds(), reach = w.frontier.reach;
+/** The world's held chunks as the near read last named them (store.ts sets them). */
+let held: readonly HeldKey[] = [];
+
+/** Set the world's held chunks (the near read's frontier.held; [] on leaving a world). */
+export function setHeldReach(keys: readonly HeldKey[]): void {
+  held = keys.map((k) => ({ cx: k.cx, cy: k.cy }));
+}
+
+/** The world's held chunks as last set. */
+export function heldReach(): readonly HeldKey[] {
+  return held;
+}
+
+/** Within frontier.heldSlack chunks of a held chunk, and no further south than frontier.southLimit. */
+export function inHeldSlack(cx: number, cy: number, keys: readonly HeldKey[] = held): boolean {
+  const f = loadWilds().frontier;
+  return cy <= f.southLimit && keys.some((k) => Math.max(Math.abs(k.cx - cx), Math.abs(k.cy - cy)) <= f.heldSlack);
+}
+
+/**
+ * The frontier (decision 3; lamps.md 2.2): within frontier.reach chunks of a
+ * footprint and no further south than frontier.southLimit, or in a held
+ * chunk's slack. The server enforces it (server/internal/frontier); the
+ * client treats chunks outside it as solid.
+ */
+export function insideFrontier(cx: number, cy: number, fixed: Places['fixed'] = PLACES.fixed, keys: readonly HeldKey[] = held): boolean {
+  const f = loadWilds().frontier;
+  return (cy <= f.southLimit && nearestFootprint(cx, cy, fixed) <= f.reach) || inHeldSlack(cx, cy, keys);
+}
+
+/** Bounding rectangle of the reach union, held slack included; membership uses insideFrontier. */
+export function frontierRect(keys: readonly HeldKey[] = held): { minCx: number; minCy: number; maxCx: number; maxCy: number } {
+  const w = loadWilds(), reach = w.frontier.reach, slack = w.frontier.heldSlack, south = w.frontier.southLimit;
   const places = [...w.places, ...PLACES.fixed];
-  return {
+  const r = {
     minCx: Math.min(...places.map(p => p.cx - reach)),
     minCy: Math.min(...places.map(p => p.cy - reach)),
     maxCx: Math.max(...places.map(p => p.cx + p.width - 1 + reach)),
-    maxCy: Math.min(w.frontier.southLimit, Math.max(...places.map(p => p.cy + p.height - 1 + reach))),
+    maxCy: Math.min(south, Math.max(...places.map(p => p.cy + p.height - 1 + reach))),
   };
+  // Only slack the static frontier doesn't already hold widens it, as on the server.
+  for (const k of keys) {
+    for (let cy = k.cy - slack; cy <= Math.min(k.cy + slack, south); cy++) {
+      for (let cx = k.cx - slack; cx <= k.cx + slack; cx++) {
+        if (cy <= south && nearestFootprint(cx, cy) <= reach) continue;
+        r.minCx = Math.min(r.minCx, cx);
+        r.minCy = Math.min(r.minCy, cy);
+        r.maxCx = Math.max(r.maxCx, cx);
+        r.maxCy = Math.max(r.maxCy, cy);
+      }
+    }
+  }
+  return r;
 }

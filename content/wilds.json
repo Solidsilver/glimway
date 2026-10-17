@@ -1003,7 +1003,8 @@
   ],
   "frontier": {
     "reach": 3,
-    "southLimit": 7
+    "southLimit": 7,
+    "heldSlack": 3
   },
   "paths": {
     "clearTools": [

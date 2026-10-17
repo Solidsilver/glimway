@@ -29,6 +29,29 @@ export function communalLampName(l: Pick<CommunalLampView, 'naming'>): string {
  */
 export const COMMUNAL_POST_FRAME = 'way-lamp-1'
 
+/**
+ * A Lantern Road stone's open-map art (assets/generated/open-map-pass/):
+ * its frame, and its slow wick loop while lit (the pass's animations.json).
+ * The Keeper's-hand quest stone (the read's cut_stone) is the route stone,
+ * the same lamp stone with Wenna's cut panel beside it. Relit frames match
+ * the dark ones texel for texel outside the niche, so either is drawn over
+ * the dark stone the chunk already shows.
+ */
+export interface RoadStoneArt {
+  frame: string
+  loop: string | null
+  route: boolean
+}
+
+export function roadStoneArt(site: string, cutStone: string, lit: boolean): RoadStoneArt {
+  const route = site !== '' && site === cutStone
+  const base = route ? 'route-stone' : 'lamp-stone'
+  return lit ? { frame: `${base}-relit-0`, loop: `${base}-relit`, route } : { frame: `${base}-dark`, loop: null, route }
+}
+
+/** Where the lamp stands across a route stone's 2×1 canvas: the stone fills its left half, the cut panel its right. */
+export const ROUTE_STONE_ORIGIN_X = 0.25
+
 /** The lit lamp standing for a road stone's site, if it's lit. */
 export function litStone(lamps: readonly CommunalLampView[], site: string): CommunalLampView | null {
   return lamps.find((l) => l.kind === 'stone' && l.id === site) ?? null

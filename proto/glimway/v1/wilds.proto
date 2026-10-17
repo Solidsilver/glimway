@@ -153,9 +153,11 @@ message WildsRegionResult {
   repeated WildsDiscovery discoveries = 4; repeated WildsLantern lanterns = 5;
   map<string,double> materials = 6; repeated EchoAssignment echoes = 7;
 }
-// The frontier the server enforces (open-map.md 2.6): in 0.8 a rectangle
-// (contract 8); 0.9's lamps add held chunks beside it.
-message WildsFrontier { WildsChunkRect rect = 1; }
+// The frontier the server enforces (open-map.md 2.6; lamps.md 2.2): the
+// content's reach around the footprints, and every chunk within the
+// content's held_slack of a held chunk (held: the world's held keys, by cy
+// then cx), no further south than south_limit. rect bounds the union.
+message WildsFrontier { WildsChunkRect rect = 1; repeated WildsChunkKey held = 2; }
 
 // One player-made change to one tile (section 3). tx and ty are local to
 // the chunk the changes are stored under. change is "cleared", "stone" or

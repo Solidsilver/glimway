@@ -78,12 +78,12 @@ func TestTogetherAcrossOutdoorChunkEdges(t *testing.T) {
 
 func TestFixedPresenceRoomsOnGrid(t *testing.T) {
 	for _, room := range []string{"outdoors:-1:1", "outdoors:0:1", "outdoors:1:2"} {
-		if !validPresenceRoom(room) {
+		if !validPresenceRoom("", room) {
 			t.Fatal("fixed room refused", room)
 		}
 	}
 	for _, room := range []string{"outdoors:6:4", "outdoors:6:1", "outdoors:01:1", "outdoors", "wilds:0:0"} {
-		if validPresenceRoom(room) {
+		if validPresenceRoom("", room) {
 			t.Fatal("off-grid or malformed room admitted", room)
 		}
 	}

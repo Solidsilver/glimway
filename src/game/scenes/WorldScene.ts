@@ -63,7 +63,7 @@ import { contentPosition } from '../../lib/location'
 import { holdOnSafe, stopAtEdge } from '../safe-barrier'
 import { prepareWilds } from '../wilds/store'
 import { WildsWindow } from '../wilds/window'
-import { waitingFixedAt } from '../wilds/wilds-world'
+import { followFrontier, waitingFixedAt } from '../wilds/wilds-world'
 import { WildsPaths } from '../wilds/paths'
 import { WildsMarks } from '../wilds/marks'
 import { WildsCamps } from '../wilds/camps'
@@ -822,6 +822,7 @@ export class WorldScene extends Phaser.Scene {
     this.camps?.update()
     this.communalLamps?.update()
     this.waysHome.update()
+    this.followFrontier()
     this.checkDrift()
     this.updateDiscoveries()
     this.checkExits()
@@ -1007,6 +1008,17 @@ export class WorldScene extends Phaser.Scene {
     // One pose at a time: a line in the water, else the saddle.
     const pose = fishingPose() ?? (this.avatar.riding ? 'riding' : null)
     feed.position({ x: this.hero.sprite.x, y: this.hero.sprite.y, facing: this.hero.facing, moving, ...(pose ? { pose } : {}) })
+  }
+
+  /**
+   * Held land moves the frontier (lamps.md 2.2): when a near read names a
+   * new one, the hero's bounds and the camera's follow it.
+   */
+  private followFrontier(): void {
+    const open = this.world.open
+    if (!open || !followFrontier(open)) return
+    this.physics.world.setBounds(open.bounds.x, open.bounds.y, open.bounds.w, open.bounds.h)
+    this.camera.reframe()
   }
 
   /**

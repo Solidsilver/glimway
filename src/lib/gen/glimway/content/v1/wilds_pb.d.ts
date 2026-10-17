@@ -1515,7 +1515,9 @@ export declare const WildsTierSchema: GenMessage<WildsTier, {validType: WildsTie
 /**
  * The 0.8 frontier (decision 3, design 2.1): chunks within Chebyshev
  * distance `reach` of a footprint, and no further south than `south_limit`.
- * It is enforced at run time, never generated (design 2.2).
+ * It is enforced at run time, never generated (design 2.2). Held land
+ * pushes it out (lamps.md 2.2): every chunk within Chebyshev distance
+ * `held_slack` of a held chunk is inside too, still no further south.
  *
  * @generated from message glimway.content.v1.WildsFrontier
  */
@@ -1529,12 +1531,19 @@ export declare type WildsFrontier = Message<"glimway.content.v1.WildsFrontier"> 
    * @generated from field: optional sint32 south_limit = 2;
    */
   southLimit?: number | undefined;
+
+  /**
+   * @generated from field: int32 held_slack = 3;
+   */
+  heldSlack: number;
 };
 
 /**
  * The 0.8 frontier (decision 3, design 2.1): chunks within Chebyshev
  * distance `reach` of a footprint, and no further south than `south_limit`.
- * It is enforced at run time, never generated (design 2.2).
+ * It is enforced at run time, never generated (design 2.2). Held land
+ * pushes it out (lamps.md 2.2): every chunk within Chebyshev distance
+ * `held_slack` of a held chunk is inside too, still no further south.
  *
  * @generated from message glimway.content.v1.WildsFrontier
  */
@@ -1548,6 +1557,11 @@ export declare type WildsFrontierValid = Message<"glimway.content.v1.WildsFronti
    * @generated from field: optional sint32 south_limit = 2;
    */
   southLimit: number;
+
+  /**
+   * @generated from field: int32 held_slack = 3;
+   */
+  heldSlack: number;
 };
 
 /**

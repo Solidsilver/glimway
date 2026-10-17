@@ -108,6 +108,11 @@ export class WorldCamera {
     this.layEdgeFade(!this.indoors && !this.world.open && (left || right || top || bottom) ? 1 : 0)
   }
 
+  /** Re-frame now: the map's bounds moved (the frontier, WorldScene.followFrontier). */
+  reframe(): void {
+    this.frameCamera()
+  }
+
   /** Re-frame when the insets, the ratio, the zoom or the size changed (cheap: one string compare a frame). */
   keepFramed(): void {
     const cam = this.scene.cameras.main
