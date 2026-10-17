@@ -68,3 +68,24 @@ test('the map and the world agree: a common-lamp mark reads as the neutral label
   assert.match(turningLabel(create(ChunkLandStatusSchema, { tier: 'common', nextTurning: 'lamps-carry' })), /stay lit/);
   assert.match(turningLabel(create(ChunkLandStatusSchema, { tier: 'common', nextTurning: 'lamps-turn' })), /dark unless someone visits/);
 });
+
+test('road stones resolve the open-map pass frames by state, and the quest stone is the route stone', async () => {
+  const { roadStoneArt, ROUTE_STONE_ORIGIN_X } = await import('../src/lib/communal-lamps.ts');
+  const { readFileSync } = await import('node:fs');
+  const atlas = JSON.parse(readFileSync('assets/generated/open-map-pass/atlas.json', 'utf8')) as { frames: Record<string, { canvas: { w: number } }> };
+  const loops = JSON.parse(readFileSync('assets/generated/open-map-pass/animations.json', 'utf8')) as { key: string; frames: string[] }[];
+  const site = 'lamp-stone:2:-1', cut = 'lamp-stone:0:-3';
+  assert.deepEqual(roadStoneArt(site, cut, false), { frame: 'lamp-stone-dark', loop: null, route: false });
+  assert.deepEqual(roadStoneArt(site, cut, true), { frame: 'lamp-stone-relit-0', loop: 'lamp-stone-relit', route: false });
+  assert.deepEqual(roadStoneArt(cut, cut, false), { frame: 'route-stone-dark', loop: null, route: true });
+  assert.deepEqual(roadStoneArt(cut, cut, true), { frame: 'route-stone-relit-0', loop: 'route-stone-relit', route: true });
+  // No quest stone read yet: never a route stone.
+  assert.equal(roadStoneArt('', '', false).route, false);
+  for (const [s, c, lit] of [[site, cut, false], [site, cut, true], [cut, cut, false], [cut, cut, true]] as const) {
+    const a = roadStoneArt(s, c, lit);
+    assert.ok(atlas.frames[a.frame], `${a.frame} is delivered`);
+    if (a.loop) assert.deepEqual(loops.find((l) => l.key === a.loop)?.frames, [0, 1, 2].map((i) => a.frame.replace(/-0$/, `-${i}`)));
+  }
+  // The route stone's lamp fills the left half of its 2-tile canvas, the stone's own canvas.
+  assert.equal(atlas.frames['route-stone-dark']!.canvas.w * ROUTE_STONE_ORIGIN_X * 2, atlas.frames['lamp-stone-dark']!.canvas.w);
+});

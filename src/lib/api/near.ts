@@ -23,7 +23,10 @@ export function validateNear(out: WildsNearResult, cx: number, cy: number): Wild
   if (!c || c.realm !== w.realm || c.layer !== 0 || c.cx !== cx || c.cy !== cy || out.radius !== NEAR_RADIUS) throw new Error('invalid near window');
   const f = out.frontier?.rect;
   if (!f || f.minCx > f.maxCx || f.minCy > f.maxCy) throw new Error('invalid frontier');
-  const inFrontier = (k: { cx: number; cy: number }) => k.cx >= f.minCx && k.cx <= f.maxCx && k.cy >= f.minCy && k.cy <= f.maxCy && insideFrontier(k.cx, k.cy);
+  // Held chunks push the frontier out (lamps.md 2.2): this answer's own, not the last read's.
+  const reach = out.frontier!.held;
+  if (!reach.every((k) => k.realm === w.realm && k.layer === 0 && Number.isSafeInteger(k.cx) && Number.isSafeInteger(k.cy))) throw new Error('invalid frontier');
+  const inFrontier = (k: { cx: number; cy: number }) => k.cx >= f.minCx && k.cx <= f.maxCx && k.cy >= f.minCy && k.cy <= f.maxCy && insideFrontier(k.cx, k.cy, undefined, reach);
   // A centre on the grid: inside the frontier, or on a fixed footprint (the Commons: location-seam.md 1.4).
   if (!inFrontier(c) && !onGrid(c.cx, c.cy)) throw new Error('invalid near window');
   const keyed = (k: WildsChunkKey | undefined): k is WildsChunkKey => !!k && k.realm === w.realm && k.layer === 0;

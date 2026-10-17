@@ -2265,11 +2265,14 @@ func (x *WildsRegionResult) GetEchoes() []*EchoAssignment {
 	return nil
 }
 
-// The frontier the server enforces (open-map.md 2.6): in 0.8 a rectangle
-// (contract 8); 0.9's lamps add held chunks beside it.
+// The frontier the server enforces (open-map.md 2.6; lamps.md 2.2): the
+// content's reach around the footprints, and every chunk within the
+// content's held_slack of a held chunk (held: the world's held keys, by cy
+// then cx), no further south than south_limit. rect bounds the union.
 type WildsFrontier struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Rect          *WildsChunkRect        `protobuf:"bytes,1,opt,name=rect,proto3" json:"rect,omitempty"`
+	Held          []*WildsChunkKey       `protobuf:"bytes,2,rep,name=held,proto3" json:"held,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2307,6 +2310,13 @@ func (*WildsFrontier) Descriptor() ([]byte, []int) {
 func (x *WildsFrontier) GetRect() *WildsChunkRect {
 	if x != nil {
 		return x.Rect
+	}
+	return nil
+}
+
+func (x *WildsFrontier) GetHeld() []*WildsChunkKey {
+	if x != nil {
+		return x.Held
 	}
 	return nil
 }
@@ -3832,9 +3842,10 @@ const file_glimway_v1_wilds_proto_rawDesc = "" +
 	"\x06echoes\x18\a \x03(\v2\x1a.glimway.v1.EchoAssignmentR\x06echoes\x1a<\n" +
 	"\x0eMaterialsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01:\x02\x18\x01\"?\n" +
+	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01:\x02\x18\x01\"n\n" +
 	"\rWildsFrontier\x12.\n" +
-	"\x04rect\x18\x01 \x01(\v2\x1a.glimway.v1.WildsChunkRectR\x04rect\"f\n" +
+	"\x04rect\x18\x01 \x01(\v2\x1a.glimway.v1.WildsChunkRectR\x04rect\x12-\n" +
+	"\x04held\x18\x02 \x03(\v2\x19.glimway.v1.WildsChunkKeyR\x04held\"f\n" +
 	"\fGroundChange\x12\x0e\n" +
 	"\x02tx\x18\x01 \x01(\rR\x02tx\x12\x0e\n" +
 	"\x02ty\x18\x02 \x01(\rR\x02ty\x12\x16\n" +
@@ -4055,44 +4066,45 @@ var file_glimway_v1_wilds_proto_depIdxs = []int32{
 	41, // 26: glimway.v1.WildsRegionResult.materials:type_name -> glimway.v1.WildsRegionResult.MaterialsEntry
 	22, // 27: glimway.v1.WildsRegionResult.echoes:type_name -> glimway.v1.EchoAssignment
 	15, // 28: glimway.v1.WildsFrontier.rect:type_name -> glimway.v1.WildsChunkRect
-	25, // 29: glimway.v1.GroundChanges.changes:type_name -> glimway.v1.GroundChange
-	14, // 30: glimway.v1.ChunkGroundChanges.chunk:type_name -> glimway.v1.WildsChunkKey
-	26, // 31: glimway.v1.ChunkGroundChanges.changes:type_name -> glimway.v1.GroundChanges
-	14, // 32: glimway.v1.WildsGlimpse.chunk:type_name -> glimway.v1.WildsChunkKey
-	29, // 33: glimway.v1.WildsWay.path:type_name -> glimway.v1.WorldTile
-	29, // 34: glimway.v1.WildsWay.sign_a:type_name -> glimway.v1.WorldTile
-	29, // 35: glimway.v1.WildsWay.sign_b:type_name -> glimway.v1.WorldTile
-	17, // 36: glimway.v1.WildsNearResult.still:type_name -> glimway.v1.WildsEpoch
-	17, // 37: glimway.v1.WildsNearResult.wick:type_name -> glimway.v1.WildsEpoch
-	24, // 38: glimway.v1.WildsNearResult.frontier:type_name -> glimway.v1.WildsFrontier
-	14, // 39: glimway.v1.WildsNearResult.center:type_name -> glimway.v1.WildsChunkKey
-	18, // 40: glimway.v1.WildsNearResult.entities:type_name -> glimway.v1.WildsEntityState
-	19, // 41: glimway.v1.WildsNearResult.personal_claims:type_name -> glimway.v1.WildsPersonalClaim
-	20, // 42: glimway.v1.WildsNearResult.discoveries:type_name -> glimway.v1.WildsDiscovery
-	21, // 43: glimway.v1.WildsNearResult.lanterns:type_name -> glimway.v1.WildsLantern
-	22, // 44: glimway.v1.WildsNearResult.echoes:type_name -> glimway.v1.EchoAssignment
-	27, // 45: glimway.v1.WildsNearResult.ground:type_name -> glimway.v1.ChunkGroundChanges
-	42, // 46: glimway.v1.WildsNearResult.materials:type_name -> glimway.v1.WildsNearResult.MaterialsEntry
-	28, // 47: glimway.v1.WildsNearResult.glimpse:type_name -> glimway.v1.WildsGlimpse
-	30, // 48: glimway.v1.WildsNearResult.ways:type_name -> glimway.v1.WildsWay
-	32, // 49: glimway.v1.WildsNearResult.chunks:type_name -> glimway.v1.NearChunk
-	17, // 50: glimway.v1.WildsNearResult.held:type_name -> glimway.v1.WildsEpoch
-	38, // 51: glimway.v1.WildsNearResult.land:type_name -> glimway.v1.WildsMapStatus
-	14, // 52: glimway.v1.NearChunk.chunk:type_name -> glimway.v1.WildsChunkKey
-	34, // 53: glimway.v1.WildsLoot.materials:type_name -> glimway.v1.WildsMaterial
-	44, // 54: glimway.v1.WildsLoot.trinket:type_name -> google.protobuf.StringValue
-	14, // 55: glimway.v1.WildsMapRequest.explored:type_name -> glimway.v1.WildsChunkKey
-	39, // 56: glimway.v1.WildsMapStatus.chunks:type_name -> glimway.v1.ChunkLandStatus
-	40, // 57: glimway.v1.WildsMapStatus.lamps:type_name -> glimway.v1.MapLamp
-	14, // 58: glimway.v1.ChunkLandStatus.chunk:type_name -> glimway.v1.WildsChunkKey
-	17, // 59: glimway.v1.ChunkLandStatus.epoch:type_name -> glimway.v1.WildsEpoch
-	26, // 60: glimway.v1.ChunkLandStatus.ground:type_name -> glimway.v1.GroundChanges
-	39, // 61: glimway.v1.MapLamp.land:type_name -> glimway.v1.ChunkLandStatus
-	62, // [62:62] is the sub-list for method output_type
-	62, // [62:62] is the sub-list for method input_type
-	62, // [62:62] is the sub-list for extension type_name
-	62, // [62:62] is the sub-list for extension extendee
-	0,  // [0:62] is the sub-list for field type_name
+	14, // 29: glimway.v1.WildsFrontier.held:type_name -> glimway.v1.WildsChunkKey
+	25, // 30: glimway.v1.GroundChanges.changes:type_name -> glimway.v1.GroundChange
+	14, // 31: glimway.v1.ChunkGroundChanges.chunk:type_name -> glimway.v1.WildsChunkKey
+	26, // 32: glimway.v1.ChunkGroundChanges.changes:type_name -> glimway.v1.GroundChanges
+	14, // 33: glimway.v1.WildsGlimpse.chunk:type_name -> glimway.v1.WildsChunkKey
+	29, // 34: glimway.v1.WildsWay.path:type_name -> glimway.v1.WorldTile
+	29, // 35: glimway.v1.WildsWay.sign_a:type_name -> glimway.v1.WorldTile
+	29, // 36: glimway.v1.WildsWay.sign_b:type_name -> glimway.v1.WorldTile
+	17, // 37: glimway.v1.WildsNearResult.still:type_name -> glimway.v1.WildsEpoch
+	17, // 38: glimway.v1.WildsNearResult.wick:type_name -> glimway.v1.WildsEpoch
+	24, // 39: glimway.v1.WildsNearResult.frontier:type_name -> glimway.v1.WildsFrontier
+	14, // 40: glimway.v1.WildsNearResult.center:type_name -> glimway.v1.WildsChunkKey
+	18, // 41: glimway.v1.WildsNearResult.entities:type_name -> glimway.v1.WildsEntityState
+	19, // 42: glimway.v1.WildsNearResult.personal_claims:type_name -> glimway.v1.WildsPersonalClaim
+	20, // 43: glimway.v1.WildsNearResult.discoveries:type_name -> glimway.v1.WildsDiscovery
+	21, // 44: glimway.v1.WildsNearResult.lanterns:type_name -> glimway.v1.WildsLantern
+	22, // 45: glimway.v1.WildsNearResult.echoes:type_name -> glimway.v1.EchoAssignment
+	27, // 46: glimway.v1.WildsNearResult.ground:type_name -> glimway.v1.ChunkGroundChanges
+	42, // 47: glimway.v1.WildsNearResult.materials:type_name -> glimway.v1.WildsNearResult.MaterialsEntry
+	28, // 48: glimway.v1.WildsNearResult.glimpse:type_name -> glimway.v1.WildsGlimpse
+	30, // 49: glimway.v1.WildsNearResult.ways:type_name -> glimway.v1.WildsWay
+	32, // 50: glimway.v1.WildsNearResult.chunks:type_name -> glimway.v1.NearChunk
+	17, // 51: glimway.v1.WildsNearResult.held:type_name -> glimway.v1.WildsEpoch
+	38, // 52: glimway.v1.WildsNearResult.land:type_name -> glimway.v1.WildsMapStatus
+	14, // 53: glimway.v1.NearChunk.chunk:type_name -> glimway.v1.WildsChunkKey
+	34, // 54: glimway.v1.WildsLoot.materials:type_name -> glimway.v1.WildsMaterial
+	44, // 55: glimway.v1.WildsLoot.trinket:type_name -> google.protobuf.StringValue
+	14, // 56: glimway.v1.WildsMapRequest.explored:type_name -> glimway.v1.WildsChunkKey
+	39, // 57: glimway.v1.WildsMapStatus.chunks:type_name -> glimway.v1.ChunkLandStatus
+	40, // 58: glimway.v1.WildsMapStatus.lamps:type_name -> glimway.v1.MapLamp
+	14, // 59: glimway.v1.ChunkLandStatus.chunk:type_name -> glimway.v1.WildsChunkKey
+	17, // 60: glimway.v1.ChunkLandStatus.epoch:type_name -> glimway.v1.WildsEpoch
+	26, // 61: glimway.v1.ChunkLandStatus.ground:type_name -> glimway.v1.GroundChanges
+	39, // 62: glimway.v1.MapLamp.land:type_name -> glimway.v1.ChunkLandStatus
+	63, // [63:63] is the sub-list for method output_type
+	63, // [63:63] is the sub-list for method input_type
+	63, // [63:63] is the sub-list for extension type_name
+	63, // [63:63] is the sub-list for extension extendee
+	0,  // [0:63] is the sub-list for field type_name
 }
 
 func init() { file_glimway_v1_wilds_proto_init() }

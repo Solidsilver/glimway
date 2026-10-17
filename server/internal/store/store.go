@@ -57,6 +57,9 @@ func Open(path string) (*Store, error) {
 	if err = migrate(db); err != nil {
 		return fail(err)
 	}
+	if err = loadReach(context.Background(), db); err != nil {
+		return fail(err)
+	}
 	return &Store{db}, nil
 }
 
