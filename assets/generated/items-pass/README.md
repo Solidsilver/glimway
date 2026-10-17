@@ -19,3 +19,5 @@ For previously covered Commons art, the `commons:` alias uses a `commons-art:` r
 The wheel is authored as four frames per condition. The running waterwheel uses `mill-wheel`, and the repaired smooth wheel uses `mill-wheel-mended`. The native 32×32 images include the mounting context shown in the art, so the runtime agent should position the wheel beside the east wall with its lower edge at water level.
 
 The way-lamp inventory icon is the generated `item-way-lamp` frame (16×16) and resolves from the `way-lamp` item id. Its source image and prompt are retained in this pass. The Wick Tree sap jar and bench trowel icons are also generated source art retained with their prompts; the trowel's whole and worn states are separate 16×16 frames.
+
+`carried-plant-art-only-source-v2.png` is a 16×16 candidate icon of a whole lifted plant with its root ball. The crate-picker lane has no carried whole-plant item on this branch, so the builder lists its source for rebuild and hash tracking and writes `frames/art-only/carried-plant-16.png`. It has no runtime frame or item alias.

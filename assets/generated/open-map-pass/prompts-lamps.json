@@ -1,0 +1,16 @@
+{
+  "generator": "Codex built-in image_gen",
+  "sheets": [
+    {
+      "key": "map-lamp-icons-generated",
+      "source": "source/map-lamp-icons-generated.png",
+      "prompt": "Transparent pixel-art source sheet for Glimway map lamps: exactly two front-facing compact lamp-head icons, left lit and right dimming, equal horizontal cells. Squat iron caps and glass, warm amber flame; dimming has the same silhouette, a low smaller flame, mostly dark glass, slightly more orange. Fill most of a 64x64 cell with 1-2 texels clear margin, readable at 16x16. Crisp stepped clusters, strong dark warm-brown outline, upper-left light, no antialiasing, blur or gradients; no disc, background, post, footing, text or extra objects."
+    },
+    {
+      "key": "lamp-stone-flames-generated",
+      "source": "source/lamp-stone-flames-generated.png",
+      "prompt": "Transparent source strip for a Glimway relit stone loop: three distinct silhouettes of a large bright warm-amber flame, flame only. Broad aligned bases, tapered tall flame sized to fill a narrow 12x24-pixel niche; tips lean and shift visibly between frames. Crisp stepped pixel clusters, 1-pixel dark warm-brown outline, saturated amber-orange body, bright golden core and small pale-gold highlight, upper-left light. No stone, wick, holder, external glow, smoke, text or other objects."
+    }
+  ],
+  "build": "build_pass.py fits the transparent generated cell crops with nearest-neighbour sampling, composites the three flames over the unchanged canonical dark stone, and records source rectangles, canvases, anchors, atlas frames and loop metadata."
+}

@@ -381,11 +381,11 @@
       }
     },
     "lamp-stone-relit-0": {
-      "source": "lamp-stones-generated",
-      "x": 520,
-      "y": 210,
-      "w": 130,
-      "h": 140,
+      "source": "lamp-stone-flames-generated",
+      "x": 0,
+      "y": 0,
+      "w": 724,
+      "h": 724,
       "canvas": {
         "w": 64,
         "h": 128
@@ -400,11 +400,11 @@
       }
     },
     "lamp-stone-relit-1": {
-      "source": "lamp-stones-generated",
-      "x": 840,
-      "y": 210,
-      "w": 130,
-      "h": 140,
+      "source": "lamp-stone-flames-generated",
+      "x": 724,
+      "y": 0,
+      "w": 724,
+      "h": 724,
       "canvas": {
         "w": 64,
         "h": 128
@@ -419,11 +419,11 @@
       }
     },
     "lamp-stone-relit-2": {
-      "source": "lamp-stones-generated",
-      "x": 1160,
-      "y": 210,
-      "w": 130,
-      "h": 140,
+      "source": "lamp-stone-flames-generated",
+      "x": 1448,
+      "y": 0,
+      "w": 724,
+      "h": 724,
       "canvas": {
         "w": 64,
         "h": 128
@@ -457,11 +457,11 @@
       }
     },
     "route-stone-relit-0": {
-      "source": "lamp-stones-generated",
-      "x": 520,
-      "y": 210,
-      "w": 130,
-      "h": 140,
+      "source": "lamp-stone-flames-generated",
+      "x": 0,
+      "y": 0,
+      "w": 724,
+      "h": 724,
       "canvas": {
         "w": 128,
         "h": 128
@@ -476,11 +476,11 @@
       }
     },
     "route-stone-relit-1": {
-      "source": "lamp-stones-generated",
-      "x": 840,
-      "y": 210,
-      "w": 130,
-      "h": 140,
+      "source": "lamp-stone-flames-generated",
+      "x": 724,
+      "y": 0,
+      "w": 724,
+      "h": 724,
       "canvas": {
         "w": 128,
         "h": 128
@@ -495,11 +495,11 @@
       }
     },
     "route-stone-relit-2": {
-      "source": "lamp-stones-generated",
-      "x": 1160,
-      "y": 210,
-      "w": 130,
-      "h": 140,
+      "source": "lamp-stone-flames-generated",
+      "x": 1448,
+      "y": 0,
+      "w": 724,
+      "h": 724,
       "canvas": {
         "w": 128,
         "h": 128
@@ -1043,6 +1043,44 @@
       "footPoint": {
         "x": 16,
         "y": 32
+      }
+    },
+    "map-lamp-lit": {
+      "source": "map-lamp-icons-generated",
+      "x": 0,
+      "y": 0,
+      "w": 887,
+      "h": 887,
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "map-lamp-dimming": {
+      "source": "map-lamp-icons-generated",
+      "x": 887,
+      "y": 0,
+      "w": 887,
+      "h": 887,
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
       }
     }
   },
