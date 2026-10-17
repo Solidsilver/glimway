@@ -182,6 +182,7 @@ var routes = []routeMetadata{
 	{method: "GET", path: "/api/homestead/land/", prefix: true, label: "/api/homestead/land/:gate", handler: (*Server).landRead},
 	{method: "GET", path: "/api/homestead/", prefix: true, label: "/api/homestead/:gate", handler: (*Server).homeRead},
 	{method: "GET", path: "/api/wilds/chunk/", prefix: true, label: "/api/wilds/chunk/:epoch/:layer/:cx/:cy", handler: (*Server).chunkRead},
+	{method: "POST", path: "/api/wilds/map", label: "/api/wilds/map", handler: (*Server).mapStatusRead},
 	{method: "GET", path: "/api/wilds/near/", prefix: true, label: "/api/wilds/near/:cx/:cy", handler: (*Server).nearRead},
 	{method: "GET", path: "/api/sprites/", prefix: true, label: "/api/sprites/:name", handler: (*Server).sprite},
 	{method: "HEAD", path: "/api/sprites/", prefix: true, label: "/api/sprites/:name", handler: (*Server).sprite},

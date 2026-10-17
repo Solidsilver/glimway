@@ -9,9 +9,9 @@ import './helpers/scene-modules.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { fromJson, type JsonValue } from '@bufbuild/protobuf';
+import { create, fromJson, type JsonValue } from '@bufbuild/protobuf';
 
-const { WildsNearResultSchema } = await import('../src/lib/gen/glimway/v1/wilds_pb.js');
+const { WildsNearResultSchema, WildsMapStatusSchema } = await import('../src/lib/gen/glimway/v1/wilds_pb.js');
 const store = await import('../src/game/wilds/store.ts');
 const { forgetFixed } = await import('../src/game/wilds/fixed.ts');
 const { decodeChunk } = await import('../src/lib/api/chunks.ts');
@@ -44,6 +44,7 @@ function start(edit: (j: Record<string, any>) => void = () => {}): void {
 function chunkApi(o: { fail?: (cx: number, cy: number) => boolean } = {}) {
   const c = { calls: 0, running: 0, most: 0, near: 0 };
   const api = {
+    mapStatus: async (_keys: readonly { cx: number; cy: number }[]) => create(WildsMapStatusSchema, { wick: store.wildsView()!.wick.id }),
     near: async () => {
       c.near++;
       throw new Error('offline');
@@ -179,6 +180,7 @@ function heldApi() {
   const gate = new Promise<void>((r) => (open = r));
   const c = { asked: 0 };
   const api = {
+    mapStatus: async (_keys: readonly { cx: number; cy: number }[]) => create(WildsMapStatusSchema, { wick: store.wildsView()!.wick.id }),
     near: async () => {
       throw new Error('offline');
     },
@@ -267,3 +269,28 @@ test('indoor hero map-dot resolves to the exterior door on hearthwick or lot doo
   assert.equal(mapHeroTile('unknown-area'), null);
 });
 
+
+
+test('status requests contain only known terrain; offline and expired maps reuse no new knowledge', async () => {
+  start();
+  markWalked(WICK,'2,-4');
+  const { api } = chunkApi();
+  let calls=0; let asked: { cx: number; cy: number }[] = [];
+  const { create } = await import('@bufbuild/protobuf');
+  const { WildsMapStatusSchema } = await import('../src/lib/gen/glimway/v1/wilds_pb.js');
+  api.mapStatus = async (keys) => {
+    calls++; asked=[...keys];
+    return create(WildsMapStatusSchema, { wick: WICK, chunks: [{ chunk: { realm: 'hearthwick',cx:2,cy:-4 },tier:'common',visited:true,nextTurning:'carries',ground:{changes:[{tx:3,ty:14,change:'stone',by:'builder',at:1}]} }] });
+  };
+  const live=await loadMap(session(api));
+  assert.equal(calls,1);
+  assert.ok(asked.some((k) => k.cx===2 && k.cy===-4));
+  assert.ok(asked.every((k) => (k.cx===2 && k.cy===-4) || (k.cx>=-1 && k.cx<=1 && k.cy>=-2 && k.cy<=0)),'the near window is never treated as explored');
+  assert.equal(live.input!.land!.find((s) => s.tier==='common')!.visited,true);
+  await loadMap(session(api));assert.equal(calls,1,'same knowledge and version reuses the status read');
+  const offline=await loadMap(session(api,{online:false}));
+  assert.equal(calls,1);assert.equal(offline.input!.land!.length,live.input!.land!.length);
+  store.wildsView()!.wick.endsAt=1;
+  const ended=await loadMap(session(api,{online:false}));
+  assert.deepEqual(ended.input!.land,[]);assert.deepEqual(ended.input!.lamps,[]);
+});

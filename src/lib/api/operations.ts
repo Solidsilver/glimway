@@ -4,9 +4,10 @@ import { ApiError } from './errors.ts';
 import { decodeWire } from './wire.ts';
 import { decodePlayerState, validatePlayerState } from './state-contract.ts';
 import { EnvelopeSchema, LoginRequestSchema, PlayRequestSchema, SessionResponseSchema, StateResponseSchema, PlayResponseSchema, WorldChooseRequestSchema, type Envelope, type LoginRequest, type PlayRequest, type SessionResponse, type StateResponse, type PlayResponse } from '../gen/glimway/v1/state_pb.js';
-import { WildsNearResultSchema, HomesteadLandSchema, type WorldChunk, type WildsNearResult, type HomesteadLand } from '../gen/glimway/v1/wilds_pb.js';
+import { WildsMapRequestSchema, WildsMapStatusSchema, type WildsMapStatus, WildsNearResultSchema, HomesteadLandSchema, type WorldChunk, type WildsNearResult, type HomesteadLand } from '../gen/glimway/v1/wilds_pb.js';
 import { decodeChunk } from './chunks.ts';
-import { validateNear } from './near.ts';
+import { validateNear, validateMapStatus } from './near.ts';
+import { loadWilds } from '../wilds/data.ts';
 import { type CompanionsRequest, type MountHomeRequest, type MountOutRequest, type StableExtendRequest, type StallRequest } from '../gen/glimway/v1/companions_pb.js';
 import { WardrobeReadSchema, type WardrobeCheckRequest, type WardrobeRead, type WardrobeRequest } from '../gen/glimway/v1/wardrobe_pb.js';
 import { FishingWatersSchema, type FishCastRequest, type FishSettleRequest, type FishCancelRequest, type FishingWaters } from '../gen/glimway/v1/fishing_pb.js';
@@ -26,6 +27,8 @@ export interface OperationsApi {
   chunk(epoch: string, layer: number, cx: number, cy: number): Promise<WorldChunk>;
   /** The open map's near read around a chunk (open-map.md 2.4). */
   near(cx: number, cy: number): Promise<WildsNearResult>;
+  /** Read-only status for explored keys; never credits a visit. */
+  mapStatus(explored: readonly { cx: number; cy: number }[]): Promise<WildsMapStatus>;
   homeLand(gate: number): Promise<HomesteadLand>;
   report(request: ReportRequest, options?: { keepalive?: boolean }): Promise<Envelope>;
   questStep(request: QuestStepRequest): Promise<Envelope>;
@@ -97,6 +100,11 @@ export function createOperationsApi(send: Transport): OperationsApi {
     async worldChoose(choice) { return validatedSession(await send('POST', '/api/world/choose', toJson(WorldChooseRequestSchema, create(WorldChooseRequestSchema, { choice })))); },
     async logout() { await send('DELETE', '/api/session'); },
     async chunk(epoch, layer, cx, cy) { const raw = await send('GET', `/api/wilds/chunk/${encodeURIComponent(epoch)}/${layer}/${cx}/${cy}`, undefined, { binary: true }); return validated(() => { if (!(raw instanceof Uint8Array)) throw new Error('missing binary chunk'); const chunk = decodeChunk(raw); if (chunk.epochId !== epoch || chunk.layer !== layer || chunk.cx !== cx || chunk.cy !== cy) throw new Error("chunk identity mismatch"); return chunk; }); },
+    async mapStatus(explored) {
+      const req = create(WildsMapRequestSchema, { explored: explored.map((k) => ({ ...k, realm: loadWilds().realm, layer: 0 })) });
+      const raw = await send('POST', '/api/wilds/map', toJson(WildsMapRequestSchema, req));
+      return validated(() => validateMapStatus(decodeWire(WildsMapStatusSchema, raw), explored));
+    },
     async near(cx, cy) { const raw = await send('GET', `/api/wilds/near/${cx}/${cy}`); return validated(() => validateNear(decodeWire(WildsNearResultSchema, raw), cx, cy)); },
     async homeLand(gate) { const raw = await send('GET', `/api/homestead/land/${gate}`); return validated(() => {
       const out = decodeWire(HomesteadLandSchema, raw);

@@ -3,7 +3,7 @@
  * WildsNearResult reaches the game. Everything a client later indexes by
  * (chunk keys, local tiles, epochs, way paths) is held to the contract here.
  */
-import type { WildsChunkKey, WildsNearResult, WorldTile } from '../gen/glimway/v1/wilds_pb.js';
+import type { WildsMapStatus, WildsChunkKey, WildsNearResult, WorldTile } from '../gen/glimway/v1/wilds_pb.js';
 import { loadWilds } from '../wilds/data.ts';
 import { epochKindAt, insideFrontier } from '../wilds/coords.ts';
 import { onGrid, sourceOf } from '../location.ts';
@@ -85,5 +85,40 @@ export function validateNear(out: WildsNearResult, cx: number, cy: number): Wild
   }
 
   for (const qty of Object.values(out.materials)) if (!Number.isSafeInteger(qty) || qty < 0) throw new Error('invalid material balance');
+  return out;
+}
+
+/** Refuse statuses outside the requested explored set. Own lot marks carry no terrain. */
+export function validateMapStatus(out: WildsMapStatus, explored: readonly { cx: number; cy: number }[]): WildsMapStatus {
+  if (!out.wick) throw new Error('invalid map wick');
+  const keys = new Set(explored.map((k) => k.cx + ',' + k.cy));
+  const seen = new Set<string>();
+  const land = (s: WildsMapStatus['chunks'][number]) => {
+    if (!s.chunk || s.chunk.realm !== loadWilds().realm || s.chunk.layer !== 0 || !['wild','common','built','still','permanent'].includes(s.tier) || !['held','dimming','turns','released','carries','paths-turn','detail-turns','permanent'].includes(s.nextTurning)) throw new Error('invalid land status');
+    if (s.tier === 'built' && (!s.claimId || s.cost !== 1)) throw new Error('invalid built status');
+    if (s.epoch && (!s.epoch.id || s.epoch.kind !== 'wick' || s.tier !== 'built')) throw new Error('invalid map epoch');
+    if (s.ground) {
+      if (s.tier !== 'common' || s.ground.changes.length > loadWilds().paths.maxChanges) throw new Error('invalid map ground');
+      const tiles = new Set<number>();
+      for (const t of s.ground.changes) {
+        const key = t.ty * loadWilds().chunkSize + t.tx;
+        if (t.tx >= loadWilds().chunkSize || t.ty >= loadWilds().chunkSize || !CHANGES.includes(t.change) || !t.by || !Number.isFinite(t.at) || tiles.has(key)) throw new Error('invalid map ground');
+        tiles.add(key);
+      }
+    }
+  };
+  for (const s of out.chunks) {
+    land(s);
+    const key = s.chunk!.cx + ',' + s.chunk!.cy;
+    if (!keys.has(key) || seen.has(key)) throw new Error('unexplored land status');
+    seen.add(key);
+  }
+  const ids = new Set<string>();
+  for (const l of out.lamps) {
+    if (!l.id || ids.has(l.id) || !l.land || !['lot-lantern','way-lamp','common-lamp'].includes(l.kind) || !Number.isFinite(l.at)) throw new Error('invalid map lamp');
+    ids.add(l.id); land(l.land);
+    const k = l.land.chunk!;
+    if (l.kind !== 'lot-lantern' && !keys.has(k.cx + ',' + k.cy)) throw new Error('unexplored map lamp');
+  }
   return out;
 }

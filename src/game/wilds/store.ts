@@ -34,7 +34,7 @@ import { insideFrontier } from '../../lib/wilds/coords.ts';
 import { prepareFixed } from './fixed.ts';
 import { MATERIALS, TRINKETS } from '../../content/expansion-writing.ts';
 import type { WildsEntityView, WildsLanternView } from '../../lib/api/types.ts';
-import type { ChunkGroundChanges, GroundChange, WildsEntityState, WildsEpoch as WildsEpochPb, WildsLantern, WildsNearResult, WildsWay } from '../../lib/gen/glimway/v1/wilds_pb.js';
+import type { ChunkGroundChanges, GroundChange, ChunkLandStatus, WildsEntityState, WildsEpoch as WildsEpochPb, WildsLantern, WildsNearResult, WildsWay } from '../../lib/gen/glimway/v1/wilds_pb.js';
 import { tileKey } from '../../lib/tile.ts';
 import type { WildsClaimResult } from '../../lib/gen/glimway/v1/operations_pb.js';
 import { epochKindAt } from '../../lib/wilds/coords.ts';
@@ -94,6 +94,8 @@ export interface Glimpse {
 type EntityStateView = Pick<WildsEntityView, 'cycle' | 'state' | 'available_at' | 'by' | 'at' | 'camp_claimable'>;
 
 export interface WildsView {
+  /** Explicit status of occupied/explored chunks from near reads. */
+  land: Map<string, ChunkLandStatus>;
   still: WildsEpoch;
   wick: WildsEpoch;
   frontier: FrontierRect;
@@ -355,6 +357,7 @@ export function applyNear(res: WildsNearResult, since: number = markNow(), link:
       glimpse: new Map(),
       ways: new Map(),
       held: new Map(),
+      land: new Map(),
       stale: false,
       version: (view?.version ?? 0) + 1,
     };
@@ -397,6 +400,10 @@ export function applyNear(res: WildsNearResult, since: number = markNow(), link:
     const older = res.held.find((e) => e.id === n.epoch);
     const pinned = n.epoch === wick.id ? wick : older ? epochView(older, 'wick') : null;
     if (pinned) v.held.set(chunkKey(k.cx, k.cy), pinned);
+  }
+  for (const land of res.land?.chunks ?? []) {
+    const k = land.chunk;
+    if (k && !newer(readSeq.get(chunkKey(k.cx,k.cy)))) v.land.set(chunkKey(k.cx,k.cy), land);
   }
   // Adding what the read names: anywhere no later read spoke for (an id naming no chunk: wherever).
   const speaks = (key: string) => ours.has(key) || !newer(readSeq.get(key));

@@ -1513,6 +1513,13 @@ export declare type WildsNearResult = Message<"glimway.v1.WildsNearResult"> & {
    * @generated from field: repeated glimway.v1.WildsEpoch held = 16;
    */
   held: WildsEpoch[];
+
+  /**
+   * Status of the occupied chunk only: neighbouring reads are not exploration.
+   *
+   * @generated from field: glimway.v1.WildsMapStatus land = 17;
+   */
+  land?: WildsMapStatus | undefined;
 };
 
 export declare type WildsNearResultValid = WildsNearResult;
@@ -1692,6 +1699,200 @@ export declare type HomesteadLandValid = HomesteadLand;
  * Use `create(HomesteadLandSchema)` to create a new message.
  */
 export declare const HomesteadLandSchema: GenMessage<HomesteadLand, {validType: HomesteadLandValid}>;
+
+/**
+ * Read-only map status. Exploration is device-local, as for map terrain:
+ * callers submit only explored keys, in batches of at most 256. This read
+ * neither generates terrain nor credits presence. No capabilities ride here.
+ *
+ * @generated from message glimway.v1.WildsMapRequest
+ */
+export declare type WildsMapRequest = Message<"glimway.v1.WildsMapRequest"> & {
+  /**
+   * @generated from field: repeated glimway.v1.WildsChunkKey explored = 1;
+   */
+  explored: WildsChunkKey[];
+};
+
+export declare type WildsMapRequestValid = WildsMapRequest;
+
+/**
+ * Describes the message glimway.v1.WildsMapRequest.
+ * Use `create(WildsMapRequestSchema)` to create a new message.
+ */
+export declare const WildsMapRequestSchema: GenMessage<WildsMapRequest, {validType: WildsMapRequestValid}>;
+
+/**
+ * @generated from message glimway.v1.WildsMapStatus
+ */
+export declare type WildsMapStatus = Message<"glimway.v1.WildsMapStatus"> & {
+  /**
+   * @generated from field: string wick = 1;
+   */
+  wick: string;
+
+  /**
+   * @generated from field: repeated glimway.v1.ChunkLandStatus chunks = 2;
+   */
+  chunks: ChunkLandStatus[];
+
+  /**
+   * Explored lamps and the reader's own lot lantern (its known fixed stake).
+   *
+   * @generated from field: repeated glimway.v1.MapLamp lamps = 3;
+   */
+  lamps: MapLamp[];
+};
+
+export declare type WildsMapStatusValid = WildsMapStatus;
+
+/**
+ * Describes the message glimway.v1.WildsMapStatus.
+ * Use `create(WildsMapStatusSchema)` to create a new message.
+ */
+export declare const WildsMapStatusSchema: GenMessage<WildsMapStatus, {validType: WildsMapStatusValid}>;
+
+/**
+ * @generated from message glimway.v1.ChunkLandStatus
+ */
+export declare type ChunkLandStatus = Message<"glimway.v1.ChunkLandStatus"> & {
+  /**
+   * @generated from field: glimway.v1.WildsChunkKey chunk = 1;
+   */
+  chunk?: WildsChunkKey | undefined;
+
+  /**
+   * wild, common, built; permanent and still are outside oil upkeep.
+   *
+   * @generated from field: string tier = 2;
+   */
+  tier: string;
+
+  /**
+   * @generated from field: bool visited = 3;
+   */
+  visited: boolean;
+
+  /**
+   * @generated from field: string claim_id = 4;
+   */
+  claimId: string;
+
+  /**
+   * @generated from field: bool dimming = 5;
+   */
+  dimming: boolean;
+
+  /**
+   * charged wicks, excluding the warning wick
+   *
+   * @generated from field: uint32 reserve = 6;
+   */
+  reserve: number;
+
+  /**
+   * wicks charged each turning
+   *
+   * @generated from field: uint32 cost = 7;
+   */
+  cost: number;
+
+  /**
+   * held, dimming, turns, released, carries, paths-turn, detail-turns, permanent
+   *
+   * @generated from field: string next_turning = 8;
+   */
+  nextTurning: string;
+
+  /**
+   * Built terrain stays pinned even when its mark is far outside the near window.
+   *
+   * @generated from field: glimway.v1.WildsEpoch epoch = 9;
+   */
+  epoch?: WildsEpoch | undefined;
+
+  /**
+   * Known Common paths, so a map read outside the near window keeps their line.
+   *
+   * @generated from field: glimway.v1.GroundChanges ground = 10;
+   */
+  ground?: GroundChanges | undefined;
+};
+
+export declare type ChunkLandStatusValid = ChunkLandStatus;
+
+/**
+ * Describes the message glimway.v1.ChunkLandStatus.
+ * Use `create(ChunkLandStatusSchema)` to create a new message.
+ */
+export declare const ChunkLandStatusSchema: GenMessage<ChunkLandStatus, {validType: ChunkLandStatusValid}>;
+
+/**
+ * @generated from message glimway.v1.MapLamp
+ */
+export declare type MapLamp = Message<"glimway.v1.MapLamp"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * lot-lantern, way-lamp; common-lamp is reserved for communal lights.
+   *
+   * @generated from field: string kind = 2;
+   */
+  kind: string;
+
+  /**
+   * @generated from field: sint32 x = 3;
+   */
+  x: number;
+
+  /**
+   * world tiles; never reveal adjacent terrain
+   *
+   * @generated from field: sint32 y = 4;
+   */
+  y: number;
+
+  /**
+   * @generated from field: double at = 5;
+   */
+  at: number;
+
+  /**
+   * @generated from field: string name = 6;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string naming = 7;
+   */
+  naming: string;
+
+  /**
+   * @generated from field: string namer = 8;
+   */
+  namer: string;
+
+  /**
+   * @generated from field: glimway.v1.ChunkLandStatus land = 9;
+   */
+  land?: ChunkLandStatus | undefined;
+
+  /**
+   * @generated from field: bool mage_lit = 10;
+   */
+  mageLit: boolean;
+};
+
+export declare type MapLampValid = MapLamp;
+
+/**
+ * Describes the message glimway.v1.MapLamp.
+ * Use `create(MapLampSchema)` to create a new message.
+ */
+export declare const MapLampSchema: GenMessage<MapLamp, {validType: MapLampValid}>;
 
 /**
  * Dir, Tile and Exit belonged to generator v2's chunk exits. Nothing uses them

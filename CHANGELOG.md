@@ -15,6 +15,8 @@ the game can show the first part as "What's new":
 
 ### For players
 
+- The world map shows held land, common paths and dimming warnings. Open Details for the Lamps ledger: see each known light’s reserve and what happens at the turning, then pick a row to find it on the map.
+
 - Signing in, reloading and stepping outdoors no longer freeze the game for a moment as the world appears.
 - The Wilds keep their shape across the turning: the Wend runs the same course and woods and meadows stay where they are. Only the living detail (trees, forage, camps, chests, places and paths) changes each wick.
 - The Wilds turn early once, when this version arrives: the current wick's land is replaced. The Tangle keeps everything.
@@ -26,6 +28,8 @@ the game can show the first part as "What's new":
 - Way-lamps now have their own stone-footed, hooded lamp art in the Wilds and a matching pack icon.
 
 ### Technical
+
+- Explicit land status in `wilds.proto`, separate from chunk source: Wild/Common/Built, permanent town and still ground, Common visits, oil reserve and next-turning prediction. Read-only `POST /api/wilds/map` takes device-explored chunk keys in batches of 256; near reads include only the occupied chunk’s status. Neither read credits presence. Known lamps and one’s own lot stake feed the map’s Lamps layer and Details ledger; pinned epochs and Common overlays keep distant known chunks accurate. Tier drawing uses existing terrain transforms and explored clipping. Naming and communal-lamp fields are ready for their lanes. No migration or judging changes.
 
 - Added `lantern-stake-2` as a generated 64×96 Hearthwick 2 frame, packed at 64 texels per tile; it is registered as a texture only and is not used by lot layouts.
 - Added generated 64×96 way-lamp frames and a 16×16 inventory icon, packed into the open-map and items atlases; camps now draw their own steady and dimming frames. The camp model has no set-but-unlit state, so the dark frame is registered but not selected.

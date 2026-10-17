@@ -353,6 +353,16 @@ func (a *Server) near(ctx context.Context, tx *sql.Tx, s store.Snapshot, cx, cy 
 			}
 		}
 	}
+	// Only the occupied chunk is explored by this read; the map submits its own known list.
+	var known []*contract.WildsChunkKey
+	if s.State.Area == outdoorsArea {
+		x, y := wilds.ChunkOf(wilds.TileOfPixel(s.State.Position.X, s.State.Position.Y))
+		known = append(known, chunkKeyProto(x, y))
+	}
+	out.Land, err = a.mapStatus(ctx, tx, s, ep, known, now)
+	if err != nil {
+		return nil, err
+	}
 	m, err := materialsProto(ctx, tx, s.AccountID)
 	out.Materials = m
 	return out, err

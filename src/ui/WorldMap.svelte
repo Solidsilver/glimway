@@ -28,6 +28,8 @@
   } from '../lib/wilds/map-view'
   import { MapRenderer, backingSize, canvasImage } from './map-renderer'
   import { foundByText, placeName } from '../lib/wilds/paths'
+  import { MAP_LAMPS } from '../content/map-lamps'
+  import { lampLedger, landLabel, turningLabel, distanceFromTown } from '../lib/wilds/map-lamps'
   import { MAP_LABELS } from '../content/open-map'
   import { focusTrap } from './focus'
   import { ui } from './store.svelte'
@@ -58,6 +60,7 @@
   let vp = $state({ w: 0, h: 0 })
   let dpr = $state(typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1)
   let detailsOpen = $state(false)
+  let lampsOn = $state(true)
   let status = $state('')
   let viewportEl = $state<HTMLDivElement | null>(null)
   let canvas = $state<HTMLCanvasElement | null>(null)
@@ -240,6 +243,7 @@
     const v = view
     const size = vp
     const ratio = dpr
+    const tierLayer = lampsOn
     void inputVersion
     const c = canvas
     if (!v || !c || size.w <= 0) return
@@ -251,7 +255,7 @@
       if (c.height !== b.h) c.height = b.h
       const ctx = c.getContext('2d')
       if (!ctx) return
-      renderer.draw(ctx, v, size, ratio)
+      renderer.draw(ctx, v, size, ratio, tierLayer)
       draws++
     })
   })
@@ -421,6 +425,20 @@
   const input = $derived(result?.input ?? null)
   const places = $derived((input?.places ?? []).filter((p) => p.seen || p.foundBy))
   const ways = $derived(input?.ways ?? [])
+  const ledger = $derived(lampLedger(input?.lamps ?? []))
+  const commonSections = $derived((input?.land ?? []).filter((s) => s.tier === 'common' && s.chunk))
+  const tierChips = $derived.by(() => {
+    if (!lampsOn || !view || !input) return []
+    const known = new Set(input.chunks.map((c) => c.cx + ',' + c.cy))
+    return (input.land ?? []).filter((s) => s.chunk && known.has(s.chunk.cx + ',' + s.chunk.cy) && (s.tier === 'common' || s.dimming)).map((s) => {
+      const k = s.chunk!
+      return { land: s, ...toScreen(view!,vp,(k.cx+0.5)*CHUNK_TILES,(k.cy+0.5)*CHUNK_TILES) }
+    }).filter((p) => p.x >= 0 && p.x <= vp.w && p.y >= 0 && p.y <= vp.h && view!.scale * CHUNK_TILES >= 100)
+  })
+  function centreLamp(x: number, y: number, name: string): void {
+    if (view && frame) view = centreOn(x+0.5,y+0.5,view.scale,vp,frame)
+    status = name
+  }
   /** A place by name for the list ("the camp glade", "the Tangle"). */
   const nameOf = (id: string) => placeName(id, input?.places.find((p) => p.id === id)?.kind ?? null)
   const notes = $derived.by(() => {
@@ -478,6 +496,9 @@
           {l.text}{#if l.sub}<small>{foundByText(l.sub)}</small>{/if}
         </span>
       {/each}
+      {#each tierChips as p}
+        <span class:amber={p.land.dimming} class="tier-chip" style={`left:${p.x}px;top:${p.y}px`}>{p.land.dimming ? '⚠ ' + MAP_LAMPS.dimming : landLabel(p.land)}</span>
+      {/each}
       {#if youAt}
         <span class="dot" style={`left:${youAt.x}px;top:${youAt.y}px`} data-testid="map-you"></span>
       {/if}
@@ -522,6 +543,51 @@
       <!-- Phones: the gate's button lives here, out of the toolbar row. -->
       <button type="button" class="gate-inline" onclick={toGate}>{MAP_LABELS.gate}</button>
       <p class="fine">{MAP_LABELS.wick}</p>
+      <h3>{MAP_LAMPS.heading}</h3>
+      <label class="layer-toggle"><input type="checkbox" bind:checked={lampsOn} data-testid="map-lamps-layer" /> {MAP_LAMPS.layer}</label>
+      {#if ledger.length}
+        <ul class="lamp-ledger" data-testid="map-lamps">
+          {#each ledger as row (row.lamp.id)}
+            <li>
+              <button type="button" class="lamp-row" onclick={() => centreLamp(row.lamp.x,row.lamp.y,row.name)} data-lamp={row.lamp.id}>
+                <strong>◇ {row.name}</strong>
+                {#if row.lamp.naming}<span>{row.lamp.naming}</span>{/if}
+                {#if row.lamp.namer}<span class="fine">{MAP_LAMPS.namer(row.lamp.namer)}</span>{/if}
+                <span class="fine">{MAP_LAMPS.distance(row.distance)}{row.lamp.mageLit ? ' · ' + MAP_LAMPS.mageLit : ''}</span>
+                {#if row.lamp.land}
+                  <span>{landLabel(row.lamp.land)}{row.lamp.land.tier === 'built' ? ' · ' + MAP_LAMPS.reserve(row.lamp.land.reserve) : ''}</span>
+                  <span class:amber={row.lamp.land.dimming || row.lamp.land.nextTurning === 'dimming'}>{turningLabel(row.lamp.land)}</span>
+                {/if}
+              </button>
+            </li>
+          {/each}
+        </ul>
+      {:else}
+        <p class="fine" data-testid="map-lamps-empty">{MAP_LAMPS.empty}</p>
+      {/if}
+      {#if commonSections.length}
+        <h3>{MAP_LAMPS.commonHeading}</h3>
+        <ul data-testid="map-common-paths">
+          {#each commonSections as section}
+            {@const k = section.chunk!}
+            <li>
+              <button type="button" class="lamp-row" onclick={() => centreLamp((k.cx+0.5)*CHUNK_TILES-0.5,(k.cy+0.5)*CHUNK_TILES-0.5,MAP_LAMPS.commonHeading)}>
+                <strong>┄ {landLabel(section)}</strong>
+                <span class="fine">{MAP_LAMPS.distance(distanceFromTown((k.cx+0.5)*CHUNK_TILES,(k.cy+0.5)*CHUNK_TILES))}</span>
+                <span>{turningLabel(section)}</span>
+              </button>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+      <ul class="tier-key">
+        <li>▣ {MAP_LAMPS.held}</li>
+        <li class="amber">▨ Dimming · {MAP_LAMPS.dimming}</li>
+        <li>┄ Common · paths kept by a visit</li>
+        <li>{MAP_LAMPS.wild}</li>
+        <li>{MAP_LAMPS.permanent}</li>
+        <li>{MAP_LAMPS.still}</li>
+      </ul>
       <h3>{MAP_LABELS.ways}</h3>
       {#if ways.length}
         <ul data-testid="map-ways">
@@ -839,6 +905,13 @@
   .swatch.dash {
     background: repeating-linear-gradient(90deg, #8a7b9c 0 3px, transparent 3px 6px);
   }
+  .layer-toggle { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: 13px; }
+  .lamp-row { width: 100%; min-height: 44px; text-align: left; display: grid; gap: 4px; padding: 8px; font-size: 12px; overflow-wrap: anywhere; }
+  .lamp-ledger li { width: 100%; }
+  .details .tier-key { margin-top: 10px; font-size: 12px; }
+  .amber { color: #704210; background: #ffe4a1; border-radius: 4px; }
+  .tier-chip { position: absolute; transform: translate(-50%,-50%); font-size: 11px; padding: 3px 5px; border: 1px dashed #84734e; border-radius: 4px; background: #fff5dc; max-width: 150px; text-align: center; }
+  .tier-chip.amber { background: #ffe4a1; border-style: solid; }
   .sr {
     position: absolute;
     width: 1px;
