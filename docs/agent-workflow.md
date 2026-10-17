@@ -61,5 +61,9 @@ Development runs on the same machine as the live game, so:
 - Run builds and tests inside the dev shell, at low priority: `nix develop -c nice -n 10 npm run verify`.
   Node, Go and git-lfs exist only in the dev shell.
 - Dev servers use their own ports and a fresh `-db`.
-- Run unit tests, Go tests and `verify` locally. A separate agent runs E2E, and the full suite
-  runs in CI. See [testing.md](testing.md).
+- Run unit tests, Go tests and `verify` locally. Don't run E2E on the host: paseo agents can't
+  start Vite (the service lacks `AF_NETLINK`), and E2E bogs the machine down. Instead push your
+  `exp/<lane>` branch and wait for CI in the foreground (`gh run watch <id> --exit-status`). On
+  `exp/*` the self-hosted GPU job runs only the specs your changes touch (`npm run test:changed`
+  against `origin/dev`), plus the smoke tier on GitHub. `dev` and `main` run the full suite. See
+  [testing.md](testing.md).
