@@ -16,11 +16,13 @@ import { itemInfo } from '../../content/world'
 import { echoCampSpeaker, echoForKeepsake } from '../../content/echoes'
 import { foundToast, paperById } from '../../content/papers'
 import { ADA_OIL_REPLIES, HEIRLOOMS, HEIRLOOM_IDS, countAdaOilGifts, type HeirloomId } from '../../content/heirlooms'
-import { spendErrorText } from '../../content/errors'
+import { itemErrorText, spendErrorText } from '../../content/errors'
 import { CHARM_ITEM, ROAD_LANTERNS, type GlimSpend, type RoadLanternId } from '../../lib/glims'
 import { yieldLine } from '../../lib/gathering'
 import { sellerFor } from '../../lib/items'
 import { parseBuy } from '../../lib/purse'
+import { REFINED_LINE, WICK_SAP, alreadyTappedLine, tapLines } from '../../lib/wick-sap'
+import { serverNow } from '../clock'
 import { echoSettled } from '../../lib/wilds/stories'
 import { TILE, tileMid } from '../../lib/tile'
 import { refreshLanternVisuals, type LightProp } from '../area/lanterns'
@@ -90,7 +92,10 @@ export class WorldActions {
         const buy = parseBuy(rest)
         if (buy) this.marketBuy(buy.seller, buy.good)
       }
-    ]
+    ],
+    // The Wick Tree's weekly sap, and the chandler's refining (lamps.md 2.5).
+    ['sap:tap', () => this.tapSap()],
+    ['sap:refine', () => this.refineSap()]
   ]
 
   constructor(private deps: WorldActionDeps) {}
@@ -182,6 +187,33 @@ export class WorldActions {
         if (!bought) return
         const line = sellerFor(bought.seller)?.goods.find((g) => g.item === bought.itemDef)?.line
         bus.emit(EV.toast, { text: line ?? `Bought: ${yieldLine([{ itemDef: bought.itemDef, qty: bought.qty }])}.`, icon: 'bag', art: `icon-${bought.itemDef}` })
+      }
+    )
+  }
+
+  /** A jar of the Wick Tree's sap, once a wick; already tapped, the tree says when it gives again. */
+  private tapSap(): void {
+    this.withServer(
+      () => itemsFor(this.deps.session).tapSap(),
+      (value) => {
+        const got = value.tapped ?? { itemDef: WICK_SAP.item, qty: WICK_SAP.qty }
+        openDialogue({ id: 'wick-tree-tapped', speaker: 'The Wick Tree', lines: tapLines(!!value.firstTap) }, { sound: null })
+        bus.emit(EV.toast, { text: `Tapped: ${yieldLine([got])}.`, icon: 'bag', kind: 'gain', gain: { to: 'bag', itemDef: got.itemDef, qty: got.qty } })
+      },
+      (code) => {
+        if (code === 'already-tapped') openDialogue({ id: 'wick-tree-tapped', speaker: 'The Wick Tree', lines: [alreadyTappedLine(serverNow())] }, { sound: null })
+        else bus.emit(EV.toast, { text: itemErrorText(code), kind: 'error' })
+      }
+    )
+  }
+
+  /** The chandler refines a jar of sap into hearth oil, for nothing. */
+  private refineSap(): void {
+    this.withServer(
+      () => itemsFor(this.deps.session).refineSap(),
+      (value) => {
+        const got = value.refined ?? { itemDef: WICK_SAP.oil, qty: WICK_SAP.oilQty }
+        bus.emit(EV.toast, { text: REFINED_LINE, icon: 'bag', art: `icon-${got.itemDef}`, kind: 'gain', gain: { to: 'bag', itemDef: got.itemDef, qty: got.qty } })
       }
     )
   }

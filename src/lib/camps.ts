@@ -96,13 +96,28 @@ function listed(parts: string[]): string {
   return parts.length <= 1 ? (parts[0] ?? '') : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`
 }
 
+/** Why an entry waits at Pell's (RecoveryEntry.reason; '' is a lapse). */
+export const RECOVERY_REASONS = { landChanged: 'land-changed', deedLost: 'deed-lost', packedUp: 'packed-up' } as const
+
+/** Pell's opening line for entries waiting for a reason other than a lapse. */
+const REASON_LINES: Record<string, [string, string]> = {
+  [RECOVERY_REASONS.landChanged]: ['The land changed out past the Commons, and your old paths went with it. What you paid for them didn’t.', 'Every tile you laid, counted'],
+  [RECOVERY_REASONS.deedLost]: ['Your lot went back to the deeds book. Before it did, I packed up everything on it.', 'Yours whenever you want it'],
+  [RECOVERY_REASONS.packedUp]: ['You packed up your camp. It’s all here, every piece of it.', 'All of it, as you left it'],
+}
+
 /**
  * Pell's words for a crate waiting: what a lapse packed (the woods turned),
- * then what each camp's keeper moved off their camp, by keeper.
+ * what the land changing or a lost deed sent here, then what each camp's
+ * keeper moved off their camp, by keeper.
  */
-export function crateLines(entries: readonly (Pick<RecoveryEntry, 'itemDef' | 'qty'> & { movedBy?: string })[]): string[] {
-  const lapsed = entries.filter((e) => !e.movedBy)
+export function crateLines(entries: readonly (Pick<RecoveryEntry, 'itemDef' | 'qty'> & { movedBy?: string; reason?: string })[]): string[] {
+  const lapsed = entries.filter((e) => !e.movedBy && !e.reason)
   const lines = lapsed.length ? ['The woods turned. I have your things.', `In the crate: ${listed(lapsed.map(entryPhrase))}. Nothing’s missing. I counted.`] : []
+  for (const [reason, [why, tail]] of Object.entries(REASON_LINES)) {
+    const these = entries.filter((e) => !e.movedBy && e.reason === reason)
+    if (these.length) lines.push(why, `In the crate: ${listed(these.map(entryPhrase))}. ${tail}.`)
+  }
   const keepers = [...new Set(entries.map((e) => e.movedBy).filter((k): k is string => !!k))]
   for (const k of keepers) lines.push(`Moved off ${k}’s camp: ${listed(entries.filter((e) => e.movedBy === k).map(entryPhrase))}. I kept it safe for you.`)
   return lines
@@ -200,6 +215,11 @@ export function personName(people: readonly CampMember[], id: string): string {
   return people.find((p) => p.accountId === id)?.name || 'someone'
 }
 
+/** Whose a camp piece or plant is: the name the camp read carries, else the world list's. */
+export function ownerName(people: readonly CampMember[], p: { ownerId: string; ownerName?: string }): string {
+  return p.ownerName || personName(people, p.ownerId)
+}
+
 /** Asked before the keeper moves someone's piece off: it goes to Pell's, still theirs. */
 export function moveOffLines(owner: string, piece: string): string[] {
   return [`Move ${owner}’s ${piece.toLowerCase()} off your camp? Pell keeps it in a crate for ${owner}. Nothing is lost.`]
@@ -214,3 +234,34 @@ export function movedOffLine(owner: string, piece: string): string {
 export function campPieceName(itemDef: string): string {
   return itemName(itemDef)
 }
+
+// ------------------------------------------------------------ taking a camp apart
+
+/**
+ * A plant at a camp: whose it is, and digging it up. Anyone who may build
+ * there can dig one up, and whoever planted it always can. It goes into the
+ * digger's pack as its seed (api/camp_teardown.go).
+ */
+export function campPlantLines(plant: string, owner: string | null): string[] {
+  const name = plant.toLowerCase()
+  return [owner ? `${owner}’s ${name}, growing in the lamp’s light.` : `Your ${name}, growing in the lamp’s light.`]
+}
+
+/** Said once it's dug up. */
+export function uprootedLine(plant: string): string {
+  return `You dig up the ${plant.toLowerCase()}. It’s in your pack.`
+}
+
+/** The keeper's "pack up the camp": everything to Pell's at once, as at a lapse. */
+export const CAMP_PACK_WORDS = {
+  dig: { text: 'Dig it up', note: 'It goes back in your pack' },
+  pack: { text: 'Pack up the camp', note: 'Everything here goes to Pell’s' },
+  ask: [
+    'Pack up the whole camp?',
+    'Pell keeps every piece and plant in a crate for whoever it belongs to. The lamp and its oil wait there for you. Nothing is lost.',
+    'Any path laid here comes back at the turning.'
+  ],
+  confirm: 'Pack it all up',
+  keep: 'Leave it standing',
+  done: 'The camp’s packed up. Everything waits at Pell’s.'
+} as const

@@ -108,7 +108,7 @@ func (a *Server) shelfRead(w http.ResponseWriter, r *http.Request) error {
 	defer tx.Rollback()
 	ctx := r.Context()
 	now := a.requestTime(r.Context()).Unix()
-	if err = settleHomes(ctx, tx, s.WorldID, now); err != nil {
+	if err = a.settleHomes(ctx, tx, s.WorldID, now); err != nil {
 		return err
 	}
 	gateParam := r.URL.Query().Get("gate")
@@ -160,7 +160,7 @@ func (a *Server) shelfMutation(w http.ResponseWriter, r *http.Request) error {
 	var changedWorld string
 	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		changedWorld = s.WorldID
-		if err := settleHomes(ctx, tx, s.WorldID, now); err != nil {
+		if err := a.settleHomes(ctx, tx, s.WorldID, now); err != nil {
 			return nil, err
 		}
 		var homeID string

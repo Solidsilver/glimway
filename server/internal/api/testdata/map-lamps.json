@@ -1,0 +1,106 @@
+{
+  "unvisited": {
+    "chunks": [
+      {
+        "chunk": {
+          "cx": 2,
+          "cy": -4,
+          "layer": 0,
+          "realm": "hearthwick"
+        },
+        "claimId": "",
+        "cost": 0,
+        "dimming": false,
+        "epoch": null,
+        "ground": null,
+        "nextTurning": "lamps-turn",
+        "reserve": 0,
+        "tier": "common",
+        "visited": false
+      }
+    ],
+    "lamps": [
+      {
+        "at": 1769731200,
+        "id": "post",
+        "kind": "common-lamp",
+        "land": {
+          "chunk": {
+            "cx": 2,
+            "cy": -4,
+            "layer": 0,
+            "realm": "hearthwick"
+          },
+          "claimId": "",
+          "cost": 0,
+          "dimming": false,
+          "epoch": null,
+          "ground": null,
+          "nextTurning": "lamps-turn",
+          "reserve": 0,
+          "tier": "common",
+          "visited": false
+        },
+        "mageLit": false,
+        "name": "",
+        "namer": "",
+        "naming": "",
+        "x": 51,
+        "y": -93
+      }
+    ],
+    "wick": "wick"
+  },
+  "visited": {
+    "chunks": [
+      {
+        "chunk": {
+          "cx": 2,
+          "cy": -4,
+          "layer": 0,
+          "realm": "hearthwick"
+        },
+        "claimId": "",
+        "cost": 0,
+        "dimming": false,
+        "epoch": null,
+        "ground": null,
+        "nextTurning": "lamps-carry",
+        "reserve": 0,
+        "tier": "common",
+        "visited": true
+      }
+    ],
+    "lamps": [
+      {
+        "at": 1769731200,
+        "id": "post",
+        "kind": "common-lamp",
+        "land": {
+          "chunk": {
+            "cx": 2,
+            "cy": -4,
+            "layer": 0,
+            "realm": "hearthwick"
+          },
+          "claimId": "",
+          "cost": 0,
+          "dimming": false,
+          "epoch": null,
+          "ground": null,
+          "nextTurning": "lamps-carry",
+          "reserve": 0,
+          "tier": "common",
+          "visited": true
+        },
+        "mageLit": false,
+        "name": "",
+        "namer": "",
+        "naming": "",
+        "x": 51,
+        "y": -93
+      }
+    ],
+    "wick": "wick"
+  }
+}

@@ -30,7 +30,7 @@ func (a *Server) spendOp(w http.ResponseWriter, r *http.Request) error {
 			return nil, fail(409, "not-at-safe-boundary")
 		}
 		if req.Kind == "home-rest" {
-			if e := checkHomeRest(ctx, tx, s, now); e != nil {
+			if e := a.checkHomeRest(ctx, tx, s, now); e != nil {
 				return nil, e
 			}
 		}

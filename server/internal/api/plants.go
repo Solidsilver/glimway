@@ -148,6 +148,9 @@ func (a *Server) plant(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *
 	if !content.IsGatheringSeed(req.ItemDef) {
 		return fail(400, "not-a-seed")
 	}
+	if err := a.settleTurning(ctx, tx, s.WorldID, now); err != nil {
+		return err
+	}
 	h, err := ownLand(ctx, tx, s, s.State.Area, now, "cannot-plant-here")
 	if err != nil {
 		return err

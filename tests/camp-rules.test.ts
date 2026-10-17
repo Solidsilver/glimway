@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { create } from '@bufbuild/protobuf';
 import { CampMemberSchema, CampViewSchema } from '../src/lib/gen/glimway/v1/camps_pb.js';
-import { CAMP_RULES, CAMP_RULE_WORDS, crateLines, campNameable, campRefusal, campRule, campRuleLines, moveOffLines, movedOffLine, personName, ruleNames, withMember, withoutMember } from '../src/lib/camps.ts';
+import { CAMP_RULES, CAMP_RULE_WORDS, crateLines, campNameable, campRefusal, campRule, campRuleLines, moveOffLines, movedOffLine, ownerName, personName, ruleNames, withMember, withoutMember } from '../src/lib/camps.ts';
 import { HOME_ERRORS, ITEM_ERRORS } from '../src/content/errors.ts';
 
 const person = (accountId: string, name: string) => create(CampMemberSchema, { accountId, name });
@@ -62,4 +62,35 @@ test('Pell: what a lapse packed says the woods turned; what a keeper moved off s
   assert.match(lines[1]!, /In the crate: a way-lamp\./);
   assert.match(lines[2]!, /^Moved off Alice’s camp: a wooden stool and a raised bed\. I kept it safe for you\.$/i);
   assert.deepEqual(crateLines([{ itemDef: 'wooden-stool', qty: 1, movedBy: 'Bo' }]).length, 1, 'no lapse line without a lapse');
+});
+
+test('Pell: old paths refunded say the land changed; a lost deed says so; lapses and keepers unchanged', () => {
+  const lines = crateLines([
+    { itemDef: 'stone', qty: 3, reason: 'land-changed' },
+    { itemDef: 'wooden-stool', qty: 1, reason: 'deed-lost' },
+    { itemDef: 'way-lamp', qty: 1 }
+  ]);
+  assert.equal(lines[0], 'The woods turned. I have your things.');
+  assert.match(lines[2]!, /^The land changed/);
+  assert.match(lines[3]!, /In the crate: 3 stones\./i);
+  assert.match(lines[4]!, /deeds book/);
+  assert.match(lines[5]!, /In the crate: a wooden stool\./);
+  assert.equal(lines.length, 6);
+});
+
+test('Pell: a keeper’s own pack-up says they packed it; others’ things still name the keeper', () => {
+  const lines = crateLines([
+    { itemDef: 'way-lamp', qty: 1, reason: 'packed-up' },
+    { itemDef: 'wooden-stool', qty: 1, reason: 'packed-up', movedBy: 'Alice' }
+  ]);
+  assert.match(lines[0]!, /^You packed up your camp/);
+  assert.match(lines[1]!, /In the crate: a way-lamp\./);
+  assert.match(lines[2]!, /^Moved off Alice’s camp: a wooden stool/);
+  assert.equal(lines.length, 3);
+});
+
+test('a camp piece or plant is named by the camp read for every viewer, the world list as a fallback', () => {
+  assert.equal(ownerName([], { ownerId: 'bob', ownerName: 'Bob' }), 'Bob');
+  assert.equal(ownerName([bob], { ownerId: 'bob', ownerName: '' }), 'Bob');
+  assert.equal(ownerName([], { ownerId: 'bob' }), 'someone');
 });

@@ -6,6 +6,9 @@ import { lampLedger, landLabel, turningLabel } from '../src/lib/wilds/map-lamps.
 import { validateMapStatus } from '../src/lib/api/near.ts'
 import { loadWilds } from '../src/lib/wilds/data.ts'
 import { gateTile } from '../src/lib/wilds/map-model.ts'
+import { readFileSync } from 'node:fs'
+import { createOperationsApi } from '../src/lib/api/operations.ts'
+import { MAP_LAMPS } from '../src/content/map-lamps.ts'
 
 const land = (cx: number, cy: number) => create(ChunkLandStatusSchema, { chunk: { realm: loadWilds().realm, cx, cy }, tier: 'built', claimId: 'test', cost: 1, reserve: 2, nextTurning: 'held' })
 test('ledger includes lot and future Common lamps, newest first with stable ties and neutral names', () => {
@@ -48,4 +51,20 @@ test('map transport refuses unexplored extents and lamps while accepting a known
   assert.throws(() => validateMapStatus(out,[]),/unexplored/)
   out.lamps=[create(MapLampSchema,{id:'lot',kind:'lot-lantern',land:land(-3,1)})]
   assert.equal(validateMapStatus(out,[]),out)
+})
+test('a lamp-only Common chunk from the real map endpoint decodes, visited and not (review B4)', async () => {
+  const raw = JSON.parse(readFileSync(new URL('../server/internal/api/testdata/map-lamps.json', import.meta.url), 'utf8')) as Record<'visited' | 'unvisited', unknown>
+  let current: unknown = null
+  const api = createOperationsApi(async (method, path) => {
+    assert.equal(`${method} ${path}`, 'POST /api/wilds/map')
+    return current
+  })
+  for (const [state, next] of [['visited', 'lamps-carry'], ['unvisited', 'lamps-turn']] as const) {
+    current = raw[state]
+    const out = await api.mapStatus([{ cx: 2, cy: -4 }])
+    assert.equal(out.chunks[0]!.nextTurning, next)
+    assert.equal(out.chunks[0]!.tier, 'common')
+    assert.equal(out.lamps[0]!.kind, 'common-lamp')
+    assert.equal(turningLabel(out.chunks[0]!), next === 'lamps-carry' ? MAP_LAMPS.lampsCarry : MAP_LAMPS.lampsTurn)
+  }
 })

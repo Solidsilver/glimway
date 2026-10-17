@@ -7,7 +7,7 @@
   import { itemErrorText } from '../content/errors'
   import { presence } from '../game/presence'
   import { bus, EV } from '../game/events'
-  import { assetOf, fitTargets, inventoryEntries, mendLabel, modelEntries, newestFirst, newTabs, wearWords, type InventoryEntry, type InventoryTab } from '../lib/inventory'
+  import { assetOf, carriedPiece, fitTargets, homePieces, inventoryEntries, mendLabel, modelEntries, newestFirst, newTabs, wearWords, type InventoryEntry, type InventoryTab } from '../lib/inventory'
   import { conditionFraction, fittingLine, itemDef, itemName, ITEM_RULES } from '../lib/items'
   import type { InstanceView } from '../lib/api/types'
   import { INVENTORY_FILTERS, inventoryCopy } from '../content/inventory'
@@ -127,10 +127,16 @@
     return connected && items.view ? items.view : null
   })
 
+  /** Home pieces: set out at your homestead, and in your pack with or without a deed. */
+  const pieces = $derived.by(() => {
+    void changed.value
+    return homePieces(homes.mine?.items, items.view?.carried)
+  })
+
   const entries = $derived.by<InventoryEntry[]>(() => {
     void changed.value
     const pack = inventory.pack.length ? inventory.pack : session.state.inventory
-    const decorations = homes.mine?.items ?? []
+    const decorations = pieces
     if (model) return modelEntries(model, { pack, decorations })
     return inventoryEntries({
       pack,
@@ -367,7 +373,7 @@
 
   /** A carried (not set out) home piece of this kind. */
   function carried(def: string): string | null {
-    return homes.mine?.items.find((i) => i.itemDef === def && i.scene === null)?.id ?? null
+    return carriedPiece(pieces, def)
   }
 
   /** A carried way-lamp can be set in the Wilds, outside any camp; the server says where it holds. */

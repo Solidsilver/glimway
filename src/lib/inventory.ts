@@ -90,6 +90,25 @@ export interface InventorySource {
   decorations?: ReadonlyArray<{ itemDef: string; scene: string | null }>;
 }
 
+/** A home piece: set out (`scene`) or in the pack (`scene` null). */
+export interface HomePiece { id: string; itemDef: string; scene: string | null }
+
+/**
+ * Your home pieces: those set out at your homestead, then those in your
+ * pack. The items read lists the pack's whether or not you hold a deed
+ * (`carried`); until it lands, the homestead's own copy stands in.
+ */
+export function homePieces(home: readonly HomePiece[] | null | undefined, carried: readonly { id: string; itemDef: string }[] | null | undefined): HomePiece[] {
+  const placed = (home ?? []).filter((p) => p.scene !== null);
+  const pack = carried ? carried.map((p) => ({ id: p.id, itemDef: p.itemDef, scene: null })) : (home ?? []).filter((p) => p.scene === null);
+  return [...placed, ...pack];
+}
+
+/** A piece of this kind in the pack, to set out: its id, or null. */
+export function carriedPiece(pieces: readonly HomePiece[], def: string): string | null {
+  return pieces.find((p) => p.itemDef === def && p.scene === null)?.id ?? null;
+}
+
 /**
  * The pack entry prefix for a material balance. Guest packs kept materials
  * this way (`material:<id>:<qty>`); the Wilds store still writes and reads

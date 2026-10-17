@@ -698,13 +698,16 @@ func (x *Thanks) GetAt() float64 {
 
 // What the caller carries (GET /api/items and every item mutation).
 type ItemsView struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Stacks        []*Stack               `protobuf:"bytes,1,rep,name=stacks,proto3" json:"stacks,omitempty"`
-	Instances     []*Instance            `protobuf:"bytes,2,rep,name=instances,proto3" json:"instances,omitempty"`
-	Pockets       []*Slot                `protobuf:"bytes,3,rep,name=pockets,proto3" json:"pockets,omitempty"`
-	OffHand       *OffHand               `protobuf:"bytes,4,opt,name=off_hand,json=offHand,proto3" json:"off_hand,omitempty"`
-	PickedUp      []string               `protobuf:"bytes,5,rep,name=picked_up,json=pickedUp,proto3" json:"picked_up,omitempty"`
-	Thanks        []*Thanks              `protobuf:"bytes,6,rep,name=thanks,proto3" json:"thanks,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Stacks    []*Stack               `protobuf:"bytes,1,rep,name=stacks,proto3" json:"stacks,omitempty"`
+	Instances []*Instance            `protobuf:"bytes,2,rep,name=instances,proto3" json:"instances,omitempty"`
+	Pockets   []*Slot                `protobuf:"bytes,3,rep,name=pockets,proto3" json:"pockets,omitempty"`
+	OffHand   *OffHand               `protobuf:"bytes,4,opt,name=off_hand,json=offHand,proto3" json:"off_hand,omitempty"`
+	PickedUp  []string               `protobuf:"bytes,5,rep,name=picked_up,json=pickedUp,proto3" json:"picked_up,omitempty"`
+	Thanks    []*Thanks              `protobuf:"bytes,6,rep,name=thanks,proto3" json:"thanks,omitempty"`
+	// The home pieces in the pack (a way-lamp, a stool), deed or no deed:
+	// what can be set as a camp, a communal post or a piece at a camp.
+	Carried       []*HomeInstance `protobuf:"bytes,7,rep,name=carried,proto3" json:"carried,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -777,6 +780,13 @@ func (x *ItemsView) GetPickedUp() []string {
 func (x *ItemsView) GetThanks() []*Thanks {
 	if x != nil {
 		return x.Thanks
+	}
+	return nil
+}
+
+func (x *ItemsView) GetCarried() []*HomeInstance {
+	if x != nil {
+		return x.Carried
 	}
 	return nil
 }
@@ -1607,14 +1617,15 @@ const file_glimway_v1_goods_proto_rawDesc = "" +
 	"\x06Thanks\x12\x1b\n" +
 	"\tfrom_name\x18\x01 \x01(\tR\bfromName\x12\x19\n" +
 	"\bitem_def\x18\x02 \x01(\tR\aitemDef\x12\x0e\n" +
-	"\x02at\x18\x03 \x01(\x01R\x02at\"\x8f\x02\n" +
+	"\x02at\x18\x03 \x01(\x01R\x02at\"\xc3\x02\n" +
 	"\tItemsView\x12)\n" +
 	"\x06stacks\x18\x01 \x03(\v2\x11.glimway.v1.StackR\x06stacks\x122\n" +
 	"\tinstances\x18\x02 \x03(\v2\x14.glimway.v1.InstanceR\tinstances\x12*\n" +
 	"\apockets\x18\x03 \x03(\v2\x10.glimway.v1.SlotR\apockets\x12.\n" +
 	"\boff_hand\x18\x04 \x01(\v2\x13.glimway.v1.OffHandR\aoffHand\x12\x1b\n" +
 	"\tpicked_up\x18\x05 \x03(\tR\bpickedUp\x12*\n" +
-	"\x06thanks\x18\x06 \x03(\v2\x12.glimway.v1.ThanksR\x06thanks\"?\n" +
+	"\x06thanks\x18\x06 \x03(\v2\x12.glimway.v1.ThanksR\x06thanks\x122\n" +
+	"\acarried\x18\a \x03(\v2\x18.glimway.v1.HomeInstanceR\acarried\"?\n" +
 	"\n" +
 	"HomeMember\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
@@ -1748,29 +1759,30 @@ var file_glimway_v1_goods_proto_depIdxs = []int32{
 	6,  // 18: glimway.v1.ItemsView.pockets:type_name -> glimway.v1.Slot
 	7,  // 19: glimway.v1.ItemsView.off_hand:type_name -> glimway.v1.OffHand
 	8,  // 20: glimway.v1.ItemsView.thanks:type_name -> glimway.v1.Thanks
-	23, // 21: glimway.v1.HomeInstance.scene:type_name -> google.protobuf.StringValue
-	25, // 22: glimway.v1.HomeInstance.x:type_name -> google.protobuf.Int32Value
-	25, // 23: glimway.v1.HomeInstance.y:type_name -> google.protobuf.Int32Value
-	25, // 24: glimway.v1.HomeInstance.rotation:type_name -> google.protobuf.Int32Value
-	23, // 25: glimway.v1.HomeInstance.name:type_name -> google.protobuf.StringValue
-	25, // 26: glimway.v1.HomeInstance.stalls:type_name -> google.protobuf.Int32Value
-	10, // 27: glimway.v1.HomeView.members:type_name -> glimway.v1.HomeMember
-	24, // 28: glimway.v1.HomeView.vacant_since:type_name -> google.protobuf.DoubleValue
-	11, // 29: glimway.v1.HomeView.cleared:type_name -> glimway.v1.Coord
-	11, // 30: glimway.v1.HomeView.stumps:type_name -> glimway.v1.Coord
-	14, // 31: glimway.v1.HomeView.plants:type_name -> glimway.v1.HomePlant
-	22, // 32: glimway.v1.HomeView.next_post:type_name -> glimway.v1.HomeView.NextPostEntry
-	12, // 33: glimway.v1.HomeView.outdoor:type_name -> glimway.v1.HomeGrid
-	12, // 34: glimway.v1.HomeView.indoor:type_name -> glimway.v1.HomeGrid
-	13, // 35: glimway.v1.HomeView.items:type_name -> glimway.v1.HomeInstance
-	15, // 36: glimway.v1.HomeView.stalls:type_name -> glimway.v1.Stall
-	16, // 37: glimway.v1.HomeView.yard_pets:type_name -> glimway.v1.YardPet
-	18, // 38: glimway.v1.HomeView.lantern:type_name -> glimway.v1.LotLanternView
-	39, // [39:39] is the sub-list for method output_type
-	39, // [39:39] is the sub-list for method input_type
-	39, // [39:39] is the sub-list for extension type_name
-	39, // [39:39] is the sub-list for extension extendee
-	0,  // [0:39] is the sub-list for field type_name
+	13, // 21: glimway.v1.ItemsView.carried:type_name -> glimway.v1.HomeInstance
+	23, // 22: glimway.v1.HomeInstance.scene:type_name -> google.protobuf.StringValue
+	25, // 23: glimway.v1.HomeInstance.x:type_name -> google.protobuf.Int32Value
+	25, // 24: glimway.v1.HomeInstance.y:type_name -> google.protobuf.Int32Value
+	25, // 25: glimway.v1.HomeInstance.rotation:type_name -> google.protobuf.Int32Value
+	23, // 26: glimway.v1.HomeInstance.name:type_name -> google.protobuf.StringValue
+	25, // 27: glimway.v1.HomeInstance.stalls:type_name -> google.protobuf.Int32Value
+	10, // 28: glimway.v1.HomeView.members:type_name -> glimway.v1.HomeMember
+	24, // 29: glimway.v1.HomeView.vacant_since:type_name -> google.protobuf.DoubleValue
+	11, // 30: glimway.v1.HomeView.cleared:type_name -> glimway.v1.Coord
+	11, // 31: glimway.v1.HomeView.stumps:type_name -> glimway.v1.Coord
+	14, // 32: glimway.v1.HomeView.plants:type_name -> glimway.v1.HomePlant
+	22, // 33: glimway.v1.HomeView.next_post:type_name -> glimway.v1.HomeView.NextPostEntry
+	12, // 34: glimway.v1.HomeView.outdoor:type_name -> glimway.v1.HomeGrid
+	12, // 35: glimway.v1.HomeView.indoor:type_name -> glimway.v1.HomeGrid
+	13, // 36: glimway.v1.HomeView.items:type_name -> glimway.v1.HomeInstance
+	15, // 37: glimway.v1.HomeView.stalls:type_name -> glimway.v1.Stall
+	16, // 38: glimway.v1.HomeView.yard_pets:type_name -> glimway.v1.YardPet
+	18, // 39: glimway.v1.HomeView.lantern:type_name -> glimway.v1.LotLanternView
+	40, // [40:40] is the sub-list for method output_type
+	40, // [40:40] is the sub-list for method input_type
+	40, // [40:40] is the sub-list for extension type_name
+	40, // [40:40] is the sub-list for extension extendee
+	0,  // [0:40] is the sub-list for field type_name
 }
 
 func init() { file_glimway_v1_goods_proto_init() }

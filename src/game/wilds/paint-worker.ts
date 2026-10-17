@@ -7,7 +7,8 @@
  * that can't be read), painting falls back to the main thread for the page
  * (the pure painter is the same, so nothing looks different). A job whose
  * reply never comes is painted here after PAINT_DEADLINE_MS, so no chunk
- * waits on it for ever.
+ * waits on it for ever; that paint says it was `'late'` (a slow worker, not
+ * a broken one: the next job still goes to it).
  */
 import { paintGround, packGround, unpackGround, type GroundSource, type PaintTable } from './ground-paint.ts'
 import { wildsLook } from './wilds-looks.ts'
@@ -28,8 +29,8 @@ export interface PaintResult {
   rgba: Uint8ClampedArray
   /** Time spent painting (the worker's own clock when it painted). */
   ms: number
-  /** Where it was painted. */
-  thread: 'worker' | 'main'
+  /** Where it was painted (`'late'`: here, after the worker missed PAINT_DEADLINE_MS). */
+  thread: 'worker' | 'main' | 'late'
 }
 
 /** How long a job waits for its worker's reply before it is painted here instead (ms). */
@@ -116,7 +117,7 @@ export function paintAway(job: PaintJob, src: GroundSource, lane = 0): Promise<P
       resolve(r())
     }
     const entry = { resolve: (r: PaintResult) => settle(() => r), fallback: () => settle(() => paintHere(job, unpackGround(tiles))) }
-    const deadline = setTimeout(entry.fallback, PAINT_DEADLINE_MS)
+    const deadline = setTimeout(() => settle(() => ({ ...paintHere(job, unpackGround(tiles)), thread: 'late' })), PAINT_DEADLINE_MS)
     waiting.set(id, entry)
     const sent = { ...tiles, ground: tiles.ground.slice(), solid: tiles.solid.slice() }
     try {

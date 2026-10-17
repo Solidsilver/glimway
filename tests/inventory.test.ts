@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { assetOf, costLine, inventoryEntries, materialsFromPack, mendLabel, newestFirst, newTabs, unseen, wearWords, type InventoryEntry } from '../src/lib/inventory.ts';
+import { assetOf, carriedPiece, costLine, homePieces, inventoryEntries, materialsFromPack, mendLabel, newestFirst, newTabs, unseen, wearWords, type InventoryEntry } from '../src/lib/inventory.ts';
 /** Entries by tab, in the bag's usual order (nothing seen yet): the old tab groups. */
 const group = (entries: readonly InventoryEntry[]) => {
   const out = {} as Record<'tools' | 'supplies' | 'keepsakes' | 'home', { main: InventoryEntry[]; road: InventoryEntry[] }>;
@@ -123,4 +123,25 @@ test('the card helpers: cost lines, hand-over assets, wear in words', () => {
   assert.equal(wearWords({ ...tool, state: 'blunt' } as never), 'Blunt. Mend it to use it again.');
   assert.equal(wearWords({ ...tool, maxCondition: 0 } as never), 'Never wears');
   assert.equal(wearWords({ ...tool, wardenSet: true, condition: 30 } as never), 'Sharp');
+});
+
+test('carried home pieces come from the items read, deed or no deed (review B6)', () => {
+  const home = [
+    { id: 'bench', itemDef: 'garden-bench', scene: 'outdoor' },
+    { id: 'old-lamp', itemDef: 'way-lamp', scene: null },
+  ];
+  // No deed: nothing from a homestead, the pack's way-lamp still there to set.
+  const noDeed = homePieces(null, [{ id: 'lamp', itemDef: 'way-lamp' }]);
+  assert.deepEqual(noDeed, [{ id: 'lamp', itemDef: 'way-lamp', scene: null }]);
+  assert.equal(carriedPiece(noDeed, 'way-lamp'), 'lamp');
+  assert.equal(carriedPiece(noDeed, 'garden-bench'), null);
+  // With a deed: what's set out at home, then the pack as the items read has it.
+  const both = homePieces(home, [{ id: 'lamp', itemDef: 'way-lamp' }]);
+  assert.deepEqual(both.map((p) => p.id), ['bench', 'lamp']);
+  assert.equal(carriedPiece(both, 'garden-bench'), null);
+  // Before the items read lands, the homestead's copy of the pack stands in.
+  assert.deepEqual(homePieces(home, null).map((p) => p.id), ['bench', 'old-lamp']);
+  const entry = inventoryEntries({ pack: [], decorations: noDeed }).find((e) => e.id === 'way-lamp');
+  assert.equal(entry?.kind, 'decoration');
+  assert.equal(entry?.stored, 1);
 });

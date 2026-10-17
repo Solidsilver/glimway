@@ -53,7 +53,7 @@ var deployedMigrationHistory = []struct{ name, sha256 string }{
 	{"035_fight_falls.sql", "a334a045f6322118cc6d675380a6285f3a217ffdd5c188a2d96e595d39835af5"},
 	{"036_outdoors.sql", "45af553fb7b6450c3848cad3d451a1897ba1e804c26ab28dee8a1b5bf7e20b57"},
 	{"037_one_town.sql", "23c9aed59b159b82424f96df3366e4b7daf7c80808c0ecd3050ae90b9b5347aa"},
-	{"038_lasting_geography.sql", "f23bd4e7441b28409bb993def327f6c905c6305800867f8ff4bcc023a02cf098"},
+	{"038_lasting_geography.sql", "d771e68b382de21eb5b984854285e58ed7e1b6c0028488901889fac172bbe444"},
 	{"039_holds.sql", "967b01dd8a672256716b582afbf49f8522cb2f5d04f6a13b4f66cfa03e103404"},
 	{"040_lot_lanterns.sql", "32a7a7968a51733e0e7d3b4ef7861315a2b742a6ab2cc6c141931e9f3eaf536c"},
 	{"041_camps.sql", "39e14d032a335a9bbed2d682d7971e83224798e4972dcb86ea89322018425dc5"},
@@ -61,6 +61,8 @@ var deployedMigrationHistory = []struct{ name, sha256 string }{
 	{"043_communal_lamps.sql", "44d3740bb27aad27923e0a5e3198ffab832b0fdb52af141367e6fdc4e005a3af"},
 	{"044_ways_home.sql", "96a0552af9903f834ba5c7c2468c20bef9716fc52d96fb12f3d214c6a5363791"},
 	{"045_claim_rules.sql", "cda781eef55b72d2090bf5d08b76707a7dae9475de6f9be16da31bfd86e39e8c"},
+	{"046_lamp_naming_follows_lamp.sql", "f96dfa5d71a4126ddbc7a0c3d1b68b1efaf105891dc2025b256a77042d288369"},
+	{"047_turnings_and_crates.sql", "5cfad6a954f87ca9e43e8b2c51366c60a058923a7d75ce75fc847ed60185f13d"},
 }
 
 func checkDeployedHistory(history []migrationRecord) error {

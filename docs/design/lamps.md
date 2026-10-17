@@ -134,6 +134,7 @@ The first rows were added as 0.12 and 0.13 landed and describe the code as built
 | Holds | [store/holds.go](../../server/internal/store/holds.go), migration 039: `Chunks.Hold`, `Release`, `HoldAt`, `HeldEpoch(s)`; one `Holder` per kind (`Keeps`, `Released`), registered in `api.New` and judged once when the new wick epoch is made. Fixed → held → generated. |
 | Lot lanterns | [api/lot_lanterns.go](../../server/internal/api/lot_lanterns.go), migration 040: holder kind `lot-lantern`. Fuel is `hearth-oil` (the chandler sells it at 4 glims, 3 a day), a 3-wick store in the lantern, one wick burned a turning, a wick of dimming, then lapse. |
 | Camps and Pell's crate | [api/camps.go](../../server/internal/api/camps.go), [api/recovery.go](../../server/internal/api/recovery.go), migration 041: holder kind `way-lamp`, `camps`, `camp_plants`, `recovery_crates`/`recovery_entries`; `GET`/`POST /api/camps`, `GET /api/recovery`, `POST /api/recovery/collect`. |
+| Wick Tree sap | [api/wick_sap.go](../../server/internal/api/wick_sap.go), no migration: `POST /api/items/tap` (one `wick-sap` a calendar wick, an `outcomes` row `wick-sap:<WickStart>`) and `POST /api/items/refine` (one sap → one `hearth-oil` at the chandler, free). Content `homestead.wickSap`. |
 | Ways home | [api/ways_home.go](../../server/internal/api/ways_home.go), migration 044: `GET`/`POST /api/ways-home` (`bind`, `turncap`, `pouch`), `ways_home_bindings` (one per player). Bench recipes with pages; the Keeper's-hand quest gives both pages. |
 
 | Existing seam | Source and consequence |
@@ -147,7 +148,7 @@ The first rows were added as 0.12 and 0.13 landed and describe the code as built
 | Ground overlay | [chunks/effective.go](../../server/internal/chunks/effective.go) opens cleared/laid tiles over immutable bodies. Common carryover also needs exclusion of newly generated entity/decor collisions. |
 | Presence | [api/presence_socket.go](../../server/internal/api/presence_socket.go) has outdoor chunk rooms and position/frontier checks. This is the occupancy integration seam; neighbouring viewers are not visits. Durable weekly presence is new. |
 | Home work | [api/home_placement.go](../../server/internal/api/home_placement.go) chains connected lights and places `homestead_items`; [api/plants.go](../../server/internal/api/plants.go) projects plants. Backland service bounds, held planting and recovery must be added. |
-| Tree and oil | [layouts/hearthwick.json](../../content/layouts/hearthwick.json) contains seasonal Wick Tree and chandler scenery. [items.json](../../content/items.json) has `hearth-oil`; [crafting.json](../../content/crafting.json) makes it from three amber and one tallow. Those definitions do not yet provide a Wick Tree sap-to-chandler supply loop; scenery is not an oil shop. |
+| Tree and oil | [layouts/hearthwick.json](../../content/layouts/hearthwick.json) contains seasonal Wick Tree and chandler scenery. [items.json](../../content/items.json) has `hearth-oil`; [crafting.json](../../content/crafting.json) makes it from three amber and one tallow. The sap-to-chandler loop is now built (the Wick Tree sap row above); the recipe stays as a home route from amber. |
 
 ### 2.2 Holds and lasting geography
 
@@ -285,8 +286,13 @@ lot lanterns and way-lamps alike (content `lotLantern`, `wayLamp`). The store is
 lamp itself; no separate placeable store exists yet. The way-lamp is a home piece crafted at the
 bench from six timber, four stone, a lamp head and a lamp wick, so the whole cost comes back
 with the lamp on recovery; setting it takes the first flask. Its setter keeps the camp and says
-who builds there (below); anyone fills it. The setter may take an empty lamp down, its unspent oil
-returned.
+who builds there (below); anyone fills it. Setting it needs no homestead (the pack read lists
+carried pieces, deed or not). The setter may take an empty lamp down, its unspent oil
+returned, or pack the whole camp up from beside the lamp (`api/camp_teardown.go`): everything
+goes to Pell's as at a lapse, anyone else's things naming the keeper who moved them, and the hold
+lets go at the turning, which refunds laid paths. A camp plant comes up into the digger's pack as
+its seed: anyone who may build there, or whoever planted it, whatever the rule. Nothing planted
+grows into a crop yet.
 
 Who may build (0.13, owner decision 2026-10-17; migration 045, `api/claim_rules.go`): a Built
 claim's keeper sets one rule and one list of world members. The rules are `household` (the
@@ -304,7 +310,9 @@ same check.
 Communal lamps (0.13, content `communalLamp`): relighting a dark road stone burns one lamp wick,
 not refunded when it goes dark (spent like oil); a communal post is the same `way-lamp` piece set
 with no oil, crated whole to its setter if its chunk goes a wick unvisited. Both keep their stable
-lamp id (stone site id, or piece id) and a `lamp_namings` row that outlives the light.
+lamp id (stone site id, or piece id) and a `lamp_namings` row that outlives the light. A piece's
+naming has no world (migration 046): it follows the lamp into any world, named and its ash given
+once ever. A stone's id repeats between worlds, so its naming is its world's.
 
 Retire distance escalation and the automatic 3×3 hold. Extra lanterns in one funded chunk do
 not multiply upkeep. Each claim has one linked placeable store. Refuse unlinking/removing it
@@ -322,6 +330,19 @@ weekly fuel; extra sap-derived oil sold by the chandler. Explain it and provide 
 first deposit at first lighting. Tune allotment, extra price and yield in content; no dependency
 on 0.14 station-chain crafting. Reuse `hearth-oil` if its recipe/text can be reconciled, rather
 than describing its existing amber/tallow recipe as an implemented tree interaction (§2.1).
+
+As built (owner decisions 2026-10-17): once a calendar wick, anyone may tap the Wick Tree in
+Hearthwick for one `wick-sap`, whether they hold a lantern or not. It's server-checked by an
+`outcomes` row keyed by the wick's start, so a second tap that wick is refused (`already-tapped`)
+and a replay is safe. Missed wicks don't carry over; the lantern's three-wick store covers gaps.
+The chandler refines one sap into one `hearth-oil` for free, which is one lot lantern's weekly
+upkeep. Extra oil is still bought there (4 glims, 3 a day), so the free sap covers one backland
+and camps need bought oil. The tree's spot, reach, yield and refiner are content
+(`homestead.wickSap`). `hearth-oil` reuses the old item, and its text now says it's refined sap.
+The amber and tallow bench recipe stays: amber is already "sap the woods have let go of", set
+hard, so rendering it at home still fits the story. The first tap explains the free weekly sap
+and the chandler. Tapping again in the same wick says, in days, when the next wick brings more,
+with no countdown. There is no `wick-sap` icon yet; it uses the item fallback.
 
 Anyone in the world, including guests and non-Keepers, may donate oil. A keyed operation checks
 world, range, inventory and capacity; debit only what fits, show overflow, and make retries safe.
@@ -383,6 +404,16 @@ transfers and recovery rights after the claim ends. Existing lot items belong to
 homestead, not a guessed maker from a nullable account field
 ([home_placement.go](../../server/internal/api/home_placement.go)). Each beneficiary sees only
 entries they can collect. Public refuelling never changes these rights.
+
+As built (0.12 server review): a lost deed is a lapse too. Before the home goes, its lot packs
+into one crate (`deed:<home>`): pieces and the chest's and shelf's tools as the same instances,
+stacks with their makers, plants with their planting, the lantern's unspent oil as flasks. The
+household's share goes to the **last member to leave**; woodpile timber to whoever stacked it. Each
+entry carries a `reason` beside the keeper's `movedBy`: `""` (a lapse), `land-changed` (0.11.2
+paths refunded after 038's geography reset), `deed-lost`, `packed-up` (the keeper's own pack-up).
+Pell's opening line follows the reason. Missed turnings are judged one by one at their own
+moments (`wick_turnings`); oil poured between a deed lapsing and its processing burns as normal
+upkeep.
 
 In one transaction, move/snapshot all entries, mark placements packed, remove/refund paid ground,
 retire affected ways, release holds and record the boundary result. Only then may epoch cleanup
@@ -615,4 +646,4 @@ use this proposal with numbers kept in content.
 
 | Question | Proposed answer |
 |---|---|
-| How generous is the tree/chandler's initial oil supply? | Free weekly sap/refining sufficient for one backland, extra sap-derived oil sold at the chandler. Start at one vial per funded chunk per wick, three-vial stores; tune extra price/effort in the backland/camp playtest. More land still needs more oil. |
+| How generous is the tree/chandler's initial oil supply? | **Answered 2026-10-17, built (§2.5):** one free tap of Wick Tree sap per player per calendar wick, refined free by the chandler into one flask of hearth oil (one backland's wick). No carry-over. Extra oil stays at 4 glims, 3 a day. Numbers are in content (`homestead.wickSap`) for the playtest. |

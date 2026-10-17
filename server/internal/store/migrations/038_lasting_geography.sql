@@ -6,6 +6,15 @@
 -- is unchanged, so the Tangle and its world changes stay.
 INSERT OR IGNORE INTO one_town_lantern_archive
  SELECT l.id,l.epoch,l.world_id,l.owner_id,l.x,l.y,l.lit_by,l.at,l.lit_at FROM lanterns l JOIN wild_epochs e ON e.id=l.epoch WHERE e.kind='wick';
+-- The wick's ground changes hold paths players paid stone and timber for
+-- (roadmap rule 3: never item loss). They wait here until Pell's crates
+-- exist (041); 047 refunds each laid tile to whoever laid it.
+CREATE TABLE lasting_geography_paths(
+ world_id TEXT NOT NULL, chunk TEXT NOT NULL, epoch TEXT NOT NULL, state TEXT NOT NULL
+);
+INSERT INTO lasting_geography_paths(world_id,chunk,epoch,state)
+ SELECT world_id,chunk,epoch,state FROM world_changes
+ WHERE kind='ground' AND layer=0 AND epoch IN (SELECT id FROM wild_epochs WHERE kind='wick');
 DELETE FROM world_changes WHERE epoch IN (SELECT id FROM wild_epochs WHERE kind='wick');
 UPDATE player_place SET last_wick_epoch='',last_wick_starts_at=NULL WHERE last_wick_epoch IN (SELECT id FROM wild_epochs WHERE kind='wick');
 DELETE FROM wild_epochs WHERE kind='wick';

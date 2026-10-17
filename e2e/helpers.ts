@@ -30,6 +30,15 @@ export type ExitView = ReturnType<FsHooks['__fsWorld']>['exits'][number]
  */
 export const SERVER_ANSWER_MS = 15_000
 
+/**
+ * How long a test waits for the title after something in the page reloads it
+ * (a logout: upload what's pending, end the session, then a full reload). A
+ * `page.reload()` waits for the load event on its own; an in-page reload
+ * doesn't, so the wait covers the whole module load through Vite. That takes
+ * ~1 s here, but on a shared, loaded CI host it ran past the 5 s default.
+ */
+export const PAGE_RELOAD_MS = 30_000
+
 /** Per page and per text: the newest toast an expectToast already matched. */
 const toastsMatched = new WeakMap<Page, Map<string, number>>()
 

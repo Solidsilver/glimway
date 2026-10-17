@@ -18,6 +18,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"slices"
 	"strings"
@@ -177,19 +178,24 @@ func campView(ctx context.Context, tx *sql.Tx, c *camp, caller string) (*contrac
 			return nil, err
 		}
 	}
+	// Whose each piece and plant is, by name, for everyone at the camp.
+	names, err := campOwnerNames(ctx, tx, c.ID)
+	if err != nil {
+		return nil, err
+	}
 	pieces, owners, err := campPieces(ctx, tx, c.ID)
 	if err != nil {
 		return nil, err
 	}
 	for i, p := range pieces {
-		v.Pieces = append(v.Pieces, &contract.CampPiece{Id: p.ID, ItemDef: p.ItemDef, X: int32(ox + *p.X), Y: int32(oy + *p.Y), Rotation: int32(*p.Rotation), OwnerId: owners[i]})
+		v.Pieces = append(v.Pieces, &contract.CampPiece{Id: p.ID, ItemDef: p.ItemDef, X: int32(ox + *p.X), Y: int32(oy + *p.Y), Rotation: int32(*p.Rotation), OwnerId: owners[i], OwnerName: names[owners[i]]})
 	}
 	plants, err := campPlants(ctx, tx, c.ID)
 	if err != nil {
 		return nil, err
 	}
 	for _, p := range plants {
-		v.Plants = append(v.Plants, &contract.CampPlant{Id: p.ID, ItemDef: p.Def, X: int32(ox + p.X), Y: int32(oy + p.Y), PlantedAt: float64(p.At), PlantedDay: float64(p.Day), OwnerId: p.Owner})
+		v.Plants = append(v.Plants, &contract.CampPlant{Id: p.ID, ItemDef: p.Def, X: int32(ox + p.X), Y: int32(oy + p.Y), PlantedAt: float64(p.At), PlantedDay: float64(p.Day), OwnerId: p.Owner, OwnerName: names[p.Owner]})
 	}
 	return v, nil
 }
@@ -282,7 +288,8 @@ func (a *Server) campsRead(w http.ResponseWriter, r *http.Request) error {
 	return a.finishRead(w, r, tx, s, out)
 }
 
-// campOp is POST /api/camps: set, fill, place, remove, plant, name or rule.
+// campOp is POST /api/camps: set, fill, place, remove, plant, uproot,
+// name, rule or pack (camp_teardown.go).
 func (a *Server) campOp(w http.ResponseWriter, r *http.Request) error {
 	req := &contract.CampRequest{}
 	if err := decodeOp(w, r, req); err != nil {
@@ -308,6 +315,10 @@ func (a *Server) campOp(w http.ResponseWriter, r *http.Request) error {
 			c, given, err = a.nameCamp(ctx, tx, s, req, now)
 		case "rule":
 			c, err = setCampRule(ctx, tx, s, req, now)
+		case "uproot":
+			c, err = uprootCampPlant(ctx, tx, s, req, now)
+		case "pack":
+			err = a.packUpCamp(ctx, tx, s, req, now)
 		default:
 			err = fail(400, "invalid-request")
 		}
@@ -408,6 +419,9 @@ func (a *Server) setWayLamp(ctx context.Context, tx *sql.Tx, s *store.Snapshot, 
 	if g == nil || !g.buildable(lx, ly) {
 		return nil, fail(409, "land-blocked")
 	}
+	if err = clearOfCommunalLamps(ctx, tx, s.WorldID, cx, cy, rect{lx, ly, 1, 1}); err != nil {
+		return nil, err
+	}
 	if err = takeOil(ctx, tx, s.AccountID, req.ItemId, now); err != nil {
 		return nil, err
 	}
@@ -498,6 +512,9 @@ func (a *Server) buildAtCamp(ctx context.Context, tx *sql.Tx, s *store.Snapshot,
 				return nil, fail(409, "land-blocked")
 			}
 		}
+	}
+	if err = clearOfCommunalLamps(ctx, tx, s.WorldID, cx, cy, here); err != nil {
+		return nil, err
 	}
 	pieces, _, err := campPieces(ctx, tx, c.ID)
 	if err != nil {
@@ -657,11 +674,13 @@ func crateCampPiece(ctx context.Context, tx *sql.Tx, c *camp, id, def, owner str
 type wayLampHolder struct{}
 
 // Keeps burns a wick of oil; with none left a lit lamp dims for one wick
-// (a full wick of warning); dimming and still empty, the camp lapses.
+// (a full wick of warning); dimming and still empty, the camp lapses. A
+// hold is its camp's only where the camp stands: a lamp taken down and set
+// again elsewhere is a new camp, under its own hold.
 func (wayLampHolder) Keeps(ctx context.Context, tx *sql.Tx, h store.Hold, now int64) (bool, error) {
 	var oil int
 	var dimming bool
-	err := tx.QueryRowContext(ctx, "SELECT oil,dimming FROM camps WHERE id=? AND world_id=?", h.HolderID, h.World).Scan(&oil, &dimming)
+	err := tx.QueryRowContext(ctx, "SELECT oil,dimming FROM camps WHERE id=? AND world_id=? AND cx=? AND cy=?", h.HolderID, h.World, h.CX, h.CY).Scan(&oil, &dimming)
 	if errors.Is(err, sql.ErrNoRows) {
 		return false, nil
 	}
@@ -682,7 +701,7 @@ func (wayLampHolder) Keeps(ctx context.Context, tx *sql.Tx, h store.Hold, now in
 // Released: the camp has lapsed and its chunk turns. Nothing a player
 // placed is lost (roadmap rule 3): it all packs into a crate at Pell's.
 func (wayLampHolder) Released(ctx context.Context, tx *sql.Tx, h store.Hold, now int64) error {
-	return packCamp(ctx, tx, h, now)
+	return packCamp(ctx, tx, h, false, now)
 }
 
 // packCamp packs a lapsed camp into one crate at Pell's, in the turning's
@@ -690,8 +709,14 @@ func (wayLampHolder) Released(ctx context.Context, tx *sql.Tx, h store.Hold, now
 // same instance, every plant with its planting kept (its seed to collect),
 // the unspent oil to the lamp's setter, and each laid path tile's stone or
 // plank to whoever laid it. Then the camp is gone. A hold released with no
-// camp left (its lamp taken down) still refunds its paths.
-func packCamp(ctx context.Context, tx *sql.Tx, h store.Hold, now int64) error {
+// camp left (its lamp taken down, or the camp packed up) still refunds its
+// paths, and never packs the lamp's camp in another chunk (set again there
+// this wick). The crate is the hold's own, by lamp and chunk, so two places
+// of one lamp lapsing at one turning never share a crate. packedUp: its
+// keeper packed it up (camp_teardown.go), not a lapse: the paths wait for
+// the turning, and what was someone else's names the keeper who moved it
+// off (movedBy), as crateCampPiece does.
+func packCamp(ctx context.Context, tx *sql.Tx, h store.Hold, packedUp bool, now int64) error {
 	type entry struct {
 		account, kind, def string
 		qty                int
@@ -703,7 +728,7 @@ func packCamp(ctx context.Context, tx *sql.Tx, h store.Hold, now int64) error {
 	var c *camp
 	if v, err := campByID(ctx, tx, h.World, h.HolderID); err != nil {
 		return err
-	} else if v != nil {
+	} else if v != nil && v.CX == int(h.CX) && v.CY == int(h.CY) {
 		c = v
 	}
 	if c != nil {
@@ -712,7 +737,11 @@ func packCamp(ctx context.Context, tx *sql.Tx, h store.Hold, now int64) error {
 			return err
 		}
 		for i, p := range pieces {
-			state, _ := json.Marshal(map[string]int{"x": *p.X, "y": *p.Y, "rotation": *p.Rotation})
+			st := map[string]any{"x": *p.X, "y": *p.Y, "rotation": *p.Rotation}
+			if packedUp && owners[i] != c.Setter {
+				st["movedBy"] = c.Setter
+			}
+			state, _ := json.Marshal(st)
 			entries = append(entries, entry{owners[i], "piece", p.ItemDef, 1, p.ID, string(state)})
 		}
 		plants, err := campPlants(ctx, tx, c.ID)
@@ -720,22 +749,29 @@ func packCamp(ctx context.Context, tx *sql.Tx, h store.Hold, now int64) error {
 			return err
 		}
 		for _, p := range plants {
-			state, _ := json.Marshal(map[string]any{"id": p.ID, "x": p.X, "y": p.Y, "plantedAt": p.At, "plantedDay": p.Day})
+			st := map[string]any{"id": p.ID, "x": p.X, "y": p.Y, "plantedAt": p.At, "plantedDay": p.Day}
+			if packedUp && p.Owner != c.Setter {
+				st["movedBy"] = c.Setter
+			}
+			state, _ := json.Marshal(st)
 			entries = append(entries, entry{p.Owner, "plant", p.Def, 1, nil, string(state)})
 		}
 		if flasks := c.Oil / int(content.HomeRules.GetWayLamp().GetWicksPerOil()); flasks > 0 {
 			stacks[[2]string{c.Setter, content.HomeRules.GetWayLamp().GetOil()}] += flasks
 		}
 	}
-	g, err := groundChanges(ctx, tx, h.World, &contract.WildsEpoch{Id: h.Epoch}, int(h.CX), int(h.CY), now)
-	if err != nil {
-		return err
-	}
-	for _, ch := range g.GetChanges() {
-		if lay := chunks.LayKind(ch.Change); lay != nil && ch.By != "" {
-			stacks[[2]string{ch.By, lay.GetMaterial()}] += int(lay.GetCost())
+	if !packedUp {
+		g, err := groundChanges(ctx, tx, h.World, &contract.WildsEpoch{Id: h.Epoch}, int(h.CX), int(h.CY), now)
+		if err != nil {
+			return err
+		}
+		for _, ch := range g.GetChanges() {
+			if lay := chunks.LayKind(ch.Change); lay != nil && ch.By != "" {
+				stacks[[2]string{ch.By, lay.GetMaterial()}] += int(lay.GetCost())
+			}
 		}
 	}
+	var err error
 	keys := make([][2]string, 0, len(stacks))
 	for k := range stacks {
 		keys = append(keys, k)
@@ -755,13 +791,18 @@ func packCamp(ctx context.Context, tx *sql.Tx, h store.Hold, now int64) error {
 			entries = append(entries, entry{k[0], "stack", k[1], stacks[k], nil, "{}"})
 		}
 	}
+	// A lapse's entries have no reason; a pack-up's say the keeper did it.
+	reason := ""
+	if packedUp {
+		reason = reasonPackedUp
+	}
 	if len(entries) > 0 {
-		crate, err := recoveryCrate(ctx, tx, h.World, "camp:"+h.HolderID, int(h.CX), int(h.CY), now)
+		crate, err := recoveryCrate(ctx, tx, h.World, fmt.Sprintf("camp:%s:%d:%d", h.HolderID, h.CX, h.CY), int(h.CX), int(h.CY), now)
 		if err != nil {
 			return err
 		}
 		for _, e := range entries {
-			if err = addRecoveryEntry(ctx, tx, crate, e.account, e.kind, e.def, e.qty, e.instance, e.state); err != nil {
+			if err = addRecoveryEntryFor(ctx, tx, crate, e.account, e.kind, e.def, e.qty, e.instance, e.state, reason); err != nil {
 				return err
 			}
 		}
@@ -776,4 +817,24 @@ func packCamp(ctx context.Context, tx *sql.Tx, h store.Hold, now int64) error {
 		return err
 	}
 	return dropCamp(ctx, tx, c)
+}
+
+// campOwnerNames are the display names of everyone with a piece or a
+// plant at a camp, by account.
+func campOwnerNames(ctx context.Context, tx *sql.Tx, id string) (map[string]string, error) {
+	rows, err := tx.QueryContext(ctx, `SELECT p.account_id,p.display_name FROM players p WHERE p.account_id IN
+ (SELECT account_id FROM homestead_items WHERE camp_id=? AND location='camp' UNION SELECT account_id FROM camp_plants WHERE camp_id=?)`, id, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]string{}
+	for rows.Next() {
+		var account, name string
+		if err = rows.Scan(&account, &name); err != nil {
+			return nil, err
+		}
+		out[account] = capDonor(name)
+	}
+	return out, rows.Err()
 }

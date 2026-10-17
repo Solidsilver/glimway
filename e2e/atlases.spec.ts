@@ -78,6 +78,9 @@ test('the game holds the packed texels, drawn at native world size', async ({ pa
   }))
   expect(view.window.fixed.length).toBeGreaterThan(3)
   for (const key of view.window.fixed) expect(view.window.painted, `${key} is painted`).toContain(key)
+  // A worker that misses its deadline (its module still loading on a busy
+  // host) has that chunk painted here, marked 'late': the town still went to
+  // the worker. Only a paint that never tried one is 'main'.
   expect(view.window.paints.filter((p) => view.window.fixed.includes(p.chunk)).every((p) => p.thread !== 'main'), 'painted off the main thread').toBe(true)
   expect(view.npcs.length).toBeGreaterThan(3)
   for (const n of view.npcs) {

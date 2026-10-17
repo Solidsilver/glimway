@@ -37,9 +37,23 @@ func recoveryCrate(ctx context.Context, tx *sql.Tx, world, source string, cx, cy
 }
 
 // addRecoveryEntry puts one beneficiary's entry in a crate: a piece (its
-// instance id), a stack or a plant (no instance).
+// instance id), a stack or a plant (no instance), packed by a lapse.
 func addRecoveryEntry(ctx context.Context, tx *sql.Tx, crate, account, kind, def string, qty int, instance any, state string) error {
-	_, err := tx.ExecContext(ctx, "INSERT INTO recovery_entries(crate_id,account_id,kind,item_def,qty,instance_id,state) VALUES(?,?,?,?,?,?,?)", crate, account, kind, def, qty, instance, state)
+	return addRecoveryEntryFor(ctx, tx, crate, account, kind, def, qty, instance, state, "")
+}
+
+// Recovery reasons (recovery_entries.reason, RecoveryEntry.reason): why an
+// entry waits at Pell's. A lapse's is "".
+const (
+	reasonLandChanged = "land-changed"
+	reasonDeedLost    = "deed-lost"
+	reasonPackedUp    = "packed-up"
+)
+
+// addRecoveryEntryFor is addRecoveryEntry with its reason; a tool (an item
+// instance) has its instance id too.
+func addRecoveryEntryFor(ctx context.Context, tx *sql.Tx, crate, account, kind, def string, qty int, instance any, state, reason string) error {
+	_, err := tx.ExecContext(ctx, "INSERT INTO recovery_entries(crate_id,account_id,kind,item_def,qty,instance_id,state,reason) VALUES(?,?,?,?,?,?,?,?)", crate, account, kind, def, qty, instance, state, reason)
 	return err
 }
 
@@ -47,12 +61,14 @@ func addRecoveryEntry(ctx context.Context, tx *sql.Tx, crate, account, kind, def
 type recoveryEntry struct {
 	*contract.RecoveryEntry
 	instance *string
+	// maker: a stack's maker, kept with it (a lost deed's chest).
+	maker string
 }
 
 // waiting are the caller's uncollected entries in this world, oldest first,
 // each naming the keeper who moved it off their camp, if one did.
 func waiting(ctx context.Context, tx *sql.Tx, world, account string) ([]recoveryEntry, error) {
-	rows, err := tx.QueryContext(ctx, `SELECT e.id,e.kind,e.item_def,e.qty,c.cx,c.cy,c.lapsed_at,e.instance_id,json_extract(e.state,'$.movedBy'),COALESCE(k.display_name,'') FROM recovery_entries e JOIN recovery_crates c ON c.id=e.crate_id
+	rows, err := tx.QueryContext(ctx, `SELECT e.id,e.kind,e.item_def,e.qty,c.cx,c.cy,c.lapsed_at,e.instance_id,e.reason,coalesce(json_extract(e.state,'$.maker'),''),json_extract(e.state,'$.movedBy'),COALESCE(k.display_name,'') FROM recovery_entries e JOIN recovery_crates c ON c.id=e.crate_id
  LEFT JOIN players k ON k.account_id=json_extract(e.state,'$.movedBy')
  WHERE c.world_id=? AND e.account_id=? AND e.collected_at IS NULL ORDER BY c.lapsed_at,e.id`, world, account)
 	if err != nil {
@@ -65,7 +81,7 @@ func waiting(ctx context.Context, tx *sql.Tx, world, account string) ([]recovery
 		var at int64
 		var mover sql.NullString
 		var name string
-		if err = rows.Scan(&e.Id, &e.Kind, &e.ItemDef, &e.Qty, &e.Cx, &e.Cy, &at, &e.instance, &mover, &name); err != nil {
+		if err = rows.Scan(&e.Id, &e.Kind, &e.ItemDef, &e.Qty, &e.Cx, &e.Cy, &at, &e.instance, &e.Reason, &e.maker, &mover, &name); err != nil {
 			return nil, err
 		}
 		e.LapsedAt = float64(at)
@@ -170,5 +186,18 @@ func collectEntry(ctx context.Context, tx *sql.Tx, account string, e recoveryEnt
 		}
 		return true, currency(ctx, tx, account, "decoration:"+e.ItemDef, 1, "recovery-collect", *e.instance, now)
 	}
-	return true, packPut(ctx, tx, account, e.ItemDef, []makerQty{{Qty: int(e.Qty)}}, "recovery-collect", ref, now)
+	if e.Kind == "tool" {
+		// A tool or gear, its fittings still on it, into the pack.
+		if e.instance == nil {
+			return false, fail(409, "item-not-available")
+		}
+		if err := moveInstance(ctx, tx, *e.instance, e.ItemDef, instanceAt{"crate", account}, instanceAt{"pack", account}, now); err != nil {
+			return false, err
+		}
+		if err := currency(ctx, tx, account, content.StackCurrency(e.ItemDef), 1, "recovery-collect", *e.instance, now); err != nil {
+			return false, err
+		}
+		return true, fittedLedger(ctx, tx, account, *e.instance, 1, "recovery-collect", *e.instance, now)
+	}
+	return true, packPut(ctx, tx, account, e.ItemDef, []makerQty{{Maker: e.maker, Qty: int(e.Qty)}}, "recovery-collect", ref, now)
 }

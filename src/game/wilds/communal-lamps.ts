@@ -133,7 +133,11 @@ export class WildsCommunalLamps {
   private clear(): void {
     for (const t of this.tweens) t.stop()
     for (const o of this.images) o.destroy()
-    for (const b of this.bodies) this.deps.solids.remove(b, true, true)
+    for (const b of this.bodies) {
+      // Phaser may destroy the static group before the scene's shutdown reaches the lamps.
+      if (this.deps.solids.children) this.deps.solids.remove(b, true, true)
+      else b.destroy()
+    }
     this.tweens = []
     this.images = []
     this.bodies = []

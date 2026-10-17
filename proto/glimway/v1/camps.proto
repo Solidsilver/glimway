@@ -12,9 +12,11 @@ import "glimway/v1/lamps.proto";
 // Tiles on the wire are world tiles.
 
 // A piece standing at a camp (a home piece; the lamp is one): whose it is.
-message CampPiece { string id = 1; string item_def = 2; sint32 x = 3; sint32 y = 4; int32 rotation = 5; string owner_id = 6; }
-// A seed or sapling planted at a camp, by whom, and when.
-message CampPlant { string id = 1; string item_def = 2; sint32 x = 3; sint32 y = 4; double planted_at = 5; double planted_day = 6; string owner_id = 7; }
+// owner_name: the owner's display name, for every viewer.
+message CampPiece { string id = 1; string item_def = 2; sint32 x = 3; sint32 y = 4; int32 rotation = 5; string owner_id = 6; string owner_name = 7; }
+// A seed or sapling planted at a camp, by whom (owner_name: the planter's
+// display name, for every viewer), and when.
+message CampPlant { string id = 1; string item_def = 2; sint32 x = 3; sint32 y = 4; double planted_at = 5; double planted_day = 6; string owner_id = 7; string owner_name = 8; }
 // A world member, by account and name: someone a camp's keeper may name.
 message CampMember { string account_id = 1; string name = 2; }
 // A camp: its chunk, its lamp (id, tile), who set it (its keeper), its oil
@@ -56,17 +58,22 @@ message CampRequest {
 // pack's material balances, and what a naming gave (lamp ash, once).
 message CampResult { CampView camp = 1; map<string,double> materials = 2; repeated string given = 3; }
 
-// One thing waiting in a crate at Pell's: a piece, a stack (oil, path stone)
-// or a plant's seed, from the camp at chunk (cx, cy) that lapsed at
-// lapsed_at.
+// One thing waiting in a crate at Pell's: a piece, a tool, a stack (oil,
+// path stone) or a plant's seed, from the place at chunk (cx, cy) it left
+// at lapsed_at.
 // The id is int32: the HTTP JSON carries numbers, and protojson writes a
 // 64-bit integer as a string, which the client refuses.
 // moved_by: the camp keeper's name when they moved the piece off their camp
 // (empty for what a lapse packed).
+// reason: why it waits. "" a lapsed claim packed it (the woods turned);
+// "land-changed" 0.12's lasting geography ended the wick it was paid on (old
+// paths refunded); "deed-lost" its home's deed was lost; "packed-up" its
+// camp's keeper packed the camp up (moved_by names them on what wasn't theirs).
 message RecoveryEntry {
   int32 id = 1; string kind = 2; string item_def = 3; int32 qty = 4;
   sint32 cx = 5; sint32 cy = 6; double lapsed_at = 7;
   string moved_by = 8;
+  string reason = 9;
 }
 // GET /api/recovery: what waits for the caller at Pell's, in this world.
 message RecoveryRead { repeated RecoveryEntry entries = 1; }

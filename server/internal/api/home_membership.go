@@ -156,13 +156,13 @@ func heroAvatar(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (*presenceAv
 
 // checkHomeRest requires the cottage on a gate named by your deed, or, before
 // there is a cottage (tier 0), the bedroll on that land.
-func checkHomeRest(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) error {
+func (a *Server) checkHomeRest(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) error {
 	gate := homeGateAt(s)
 	inside := strings.HasPrefix(s.State.Area, "in:home:")
 	if gate < 0 || !inside && !onPrivateLot(s, gate) {
 		return fail(409, "not-at-own-plot")
 	}
-	if err := settleHomes(ctx, tx, s.WorldID, now); err != nil {
+	if err := a.settleHomes(ctx, tx, s.WorldID, now); err != nil {
 		return err
 	}
 	var mine, tier int

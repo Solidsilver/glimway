@@ -6482,6 +6482,18 @@
             "itemDef": "fixture",
             "at": 1
           }
+        ],
+        "carried": [
+          {
+            "id": "fixture",
+            "itemDef": "fixture",
+            "scene": "fixture",
+            "x": 1,
+            "y": 1,
+            "rotation": 1,
+            "name": "fixture",
+            "stalls": 1
+          }
         ]
       }
     }
@@ -13614,7 +13626,8 @@
             "instance": null
           },
           "pickedUp": [],
-          "thanks": []
+          "thanks": [],
+          "carried": []
         }
       }
     }
@@ -14444,7 +14457,8 @@
             "instance": null
           },
           "pickedUp": [],
-          "thanks": []
+          "thanks": [],
+          "carried": []
         },
         "wear": null,
         "used": "",
@@ -14466,7 +14480,10 @@
         "heirloom": "",
         "adaOilCount": 0,
         "bought": null,
-        "glimsGiven": 0
+        "glimsGiven": 0,
+        "tapped": null,
+        "firstTap": false,
+        "refined": null
       }
     }
   }
