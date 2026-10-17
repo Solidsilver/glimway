@@ -25,6 +25,7 @@ screen. Everything made at either carries a **maker's mark**.
 | Bench axe | timber 2, stone 2, fiber 1 |
 | Bench pick | timber 2, stone 3 |
 | Bench spade | timber 2, stone 2 |
+| Bench trowel | timber 1, stone 1 |
 | Stave bucket | timber 3, fiber 1, wooden peg 2 |
 
 The tin watering can is bought from Silas (Tarrow tin isn't made here).

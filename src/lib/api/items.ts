@@ -98,7 +98,7 @@ interface WearResult {
   condition: number;
   instance: InstanceView | null;
 }
-export type ItemsOp = 'use' | 'repair' | 'fit' | 'unfit' | 'give' | 'pocket' | 'offhand' | 'pickup' | 'return' | 'gather' | 'plant' | 'heirloom' | 'ada-oil' | 'buy' | 'tap' | 'refine';
+export type ItemsOp = 'use' | 'repair' | 'fit' | 'unfit' | 'give' | 'pocket' | 'offhand' | 'pickup' | 'return' | 'gather' | 'plant' | 'uproot' | 'heirloom' | 'ada-oil' | 'buy' | 'tap' | 'refine';
 export interface ItemsActionResponse extends Snapshot {
   result: {
     items: ItemsView;

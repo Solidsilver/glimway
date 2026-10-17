@@ -3,6 +3,7 @@ package glimway.v1;
 option go_package = "glimway/server/internal/gen/glimway/v1;contract";
 import "glimway/v1/op.proto";
 import "glimway/v1/lamps.proto";
+import "glimway/v1/items.proto";
 
 // Camps (roadmap 0.13; docs/design/lamps.md 2.5, 2.7): a way-lamp set in a
 // Wilds chunk holds that one chunk while it has oil. Its setter (and their
@@ -55,8 +56,9 @@ message CampRequest {
   string rule = 11; repeated string members = 12;
 }
 // The camp after the operation (none: the lamp was taken down), the
-// pack's material balances, and what a naming gave (lamp ash, once).
-message CampResult { CampView camp = 1; map<string,double> materials = 2; repeated string given = 3; }
+// pack's material balances, what a naming gave (lamp ash, once), and the
+// trowel's wear when a plant was dug up (uproot).
+message CampResult { CampView camp = 1; map<string,double> materials = 2; repeated string given = 3; WearResult wear = 4; }
 
 // One thing waiting in a crate at Pell's: a piece, a tool, a stack (oil,
 // path stone) or a plant's seed, from the place at chunk (cx, cy) it left

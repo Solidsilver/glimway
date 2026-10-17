@@ -301,6 +301,7 @@ func (a *Server) campOp(w http.ResponseWriter, r *http.Request) error {
 		}
 		var c *camp
 		var given []string
+		var wear *contract.WearResult
 		var err error
 		switch req.Action {
 		case "set":
@@ -316,7 +317,7 @@ func (a *Server) campOp(w http.ResponseWriter, r *http.Request) error {
 		case "rule":
 			c, err = setCampRule(ctx, tx, s, req, now)
 		case "uproot":
-			c, err = uprootCampPlant(ctx, tx, s, req, now)
+			c, wear, err = a.uprootCampPlant(ctx, tx, s, req, now)
 		case "pack":
 			err = a.packUpCamp(ctx, tx, s, req, now)
 		default:
@@ -325,7 +326,7 @@ func (a *Server) campOp(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		out := &contract.CampResult{Given: given}
+		out := &contract.CampResult{Given: given, Wear: wear}
 		if c != nil {
 			if c, err = campByID(ctx, tx, s.WorldID, c.ID); err != nil {
 				return nil, err

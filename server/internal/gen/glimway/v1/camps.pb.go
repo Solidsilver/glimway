@@ -632,12 +632,14 @@ func (x *CampRequest) GetMembers() []string {
 }
 
 // The camp after the operation (none: the lamp was taken down), the
-// pack's material balances, and what a naming gave (lamp ash, once).
+// pack's material balances, what a naming gave (lamp ash, once), and the
+// trowel's wear when a plant was dug up (uproot).
 type CampResult struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Camp          *CampView              `protobuf:"bytes,1,opt,name=camp,proto3" json:"camp,omitempty"`
 	Materials     map[string]float64     `protobuf:"bytes,2,rep,name=materials,proto3" json:"materials,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed64,2,opt,name=value"`
 	Given         []string               `protobuf:"bytes,3,rep,name=given,proto3" json:"given,omitempty"`
+	Wear          *WearResult            `protobuf:"bytes,4,opt,name=wear,proto3" json:"wear,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -689,6 +691,13 @@ func (x *CampResult) GetMaterials() map[string]float64 {
 func (x *CampResult) GetGiven() []string {
 	if x != nil {
 		return x.Given
+	}
+	return nil
+}
+
+func (x *CampResult) GetWear() *WearResult {
+	if x != nil {
+		return x.Wear
 	}
 	return nil
 }
@@ -968,7 +977,7 @@ var File_glimway_v1_camps_proto protoreflect.FileDescriptor
 const file_glimway_v1_camps_proto_rawDesc = "" +
 	"\n" +
 	"\x16glimway/v1/camps.proto\x12\n" +
-	"glimway.v1\x1a\x13glimway/v1/op.proto\x1a\x16glimway/v1/lamps.proto\"\xa8\x01\n" +
+	"glimway.v1\x1a\x13glimway/v1/op.proto\x1a\x16glimway/v1/lamps.proto\x1a\x16glimway/v1/items.proto\"\xa8\x01\n" +
 	"\tCampPiece\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bitem_def\x18\x02 \x01(\tR\aitemDef\x12\f\n" +
@@ -1029,12 +1038,13 @@ const file_glimway_v1_camps_proto_rawDesc = "" +
 	"\x05parts\x18\n" +
 	" \x03(\tR\x05parts\x12\x12\n" +
 	"\x04rule\x18\v \x01(\tR\x04rule\x12\x18\n" +
-	"\amembers\x18\f \x03(\tR\amembers\"\xcf\x01\n" +
+	"\amembers\x18\f \x03(\tR\amembers\"\xfb\x01\n" +
 	"\n" +
 	"CampResult\x12(\n" +
 	"\x04camp\x18\x01 \x01(\v2\x14.glimway.v1.CampViewR\x04camp\x12C\n" +
 	"\tmaterials\x18\x02 \x03(\v2%.glimway.v1.CampResult.MaterialsEntryR\tmaterials\x12\x14\n" +
-	"\x05given\x18\x03 \x03(\tR\x05given\x1a<\n" +
+	"\x05given\x18\x03 \x03(\tR\x05given\x12*\n" +
+	"\x04wear\x18\x04 \x01(\v2\x16.glimway.v1.WearResultR\x04wear\x1a<\n" +
 	"\x0eMaterialsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"\xd0\x01\n" +
@@ -1090,6 +1100,7 @@ var file_glimway_v1_camps_proto_goTypes = []any{
 	(*LampNaming)(nil),             // 13: glimway.v1.LampNaming
 	(*OpHeader)(nil),               // 14: glimway.v1.OpHeader
 	(*Where)(nil),                  // 15: glimway.v1.Where
+	(*WearResult)(nil),             // 16: glimway.v1.WearResult
 }
 var file_glimway_v1_camps_proto_depIdxs = []int32{
 	0,  // 0: glimway.v1.CampView.pieces:type_name -> glimway.v1.CampPiece
@@ -1102,16 +1113,17 @@ var file_glimway_v1_camps_proto_depIdxs = []int32{
 	15, // 7: glimway.v1.CampRequest.where:type_name -> glimway.v1.Where
 	3,  // 8: glimway.v1.CampResult.camp:type_name -> glimway.v1.CampView
 	11, // 9: glimway.v1.CampResult.materials:type_name -> glimway.v1.CampResult.MaterialsEntry
-	7,  // 10: glimway.v1.RecoveryRead.entries:type_name -> glimway.v1.RecoveryEntry
-	14, // 11: glimway.v1.RecoveryCollectRequest.op:type_name -> glimway.v1.OpHeader
-	15, // 12: glimway.v1.RecoveryCollectRequest.where:type_name -> glimway.v1.Where
-	7,  // 13: glimway.v1.RecoveryCollectResult.collected:type_name -> glimway.v1.RecoveryEntry
-	12, // 14: glimway.v1.RecoveryCollectResult.materials:type_name -> glimway.v1.RecoveryCollectResult.MaterialsEntry
-	15, // [15:15] is the sub-list for method output_type
-	15, // [15:15] is the sub-list for method input_type
-	15, // [15:15] is the sub-list for extension type_name
-	15, // [15:15] is the sub-list for extension extendee
-	0,  // [0:15] is the sub-list for field type_name
+	16, // 10: glimway.v1.CampResult.wear:type_name -> glimway.v1.WearResult
+	7,  // 11: glimway.v1.RecoveryRead.entries:type_name -> glimway.v1.RecoveryEntry
+	14, // 12: glimway.v1.RecoveryCollectRequest.op:type_name -> glimway.v1.OpHeader
+	15, // 13: glimway.v1.RecoveryCollectRequest.where:type_name -> glimway.v1.Where
+	7,  // 14: glimway.v1.RecoveryCollectResult.collected:type_name -> glimway.v1.RecoveryEntry
+	12, // 15: glimway.v1.RecoveryCollectResult.materials:type_name -> glimway.v1.RecoveryCollectResult.MaterialsEntry
+	16, // [16:16] is the sub-list for method output_type
+	16, // [16:16] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_glimway_v1_camps_proto_init() }
@@ -1121,6 +1133,7 @@ func file_glimway_v1_camps_proto_init() {
 	}
 	file_glimway_v1_op_proto_init()
 	file_glimway_v1_lamps_proto_init()
+	file_glimway_v1_items_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

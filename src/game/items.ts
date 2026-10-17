@@ -125,6 +125,10 @@ export class Items {
   plant(itemDef: string, tile: [number, number]) {
     return this.run('plant', { itemDef, tile })
   }
+  /** Dig up a plant on your own land with the trowel: it comes back to the pack as its seed. */
+  uproot(plantId: string) {
+    return this.run('uproot', { target: plantId })
+  }
   /** One use of a tool (gathering wears tools through gather; the dev hook calls this). */
   async useTool(instance: string, action?: string) {
     const makerId = this.view?.instances.find((i) => i.id === instance)?.maker?.id

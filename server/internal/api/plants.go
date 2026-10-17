@@ -200,3 +200,26 @@ func (a *Server) plant(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *
 	out.Plant = &contract.HomePlant{Id: id, ItemDef: req.ItemDef, X: int32(x), Y: int32(y), PlantedAt: float64(now), PlantedDay: float64(day), Lit: chunks.InBackland(x, y, h.Gate) || land.Lit(connectedLights(placedItems(*h), ""), x, y)}
 	return nil
 }
+
+// uprootHomePlant digs a plant on your own land up with a trowel, from
+// beside where it stands today, into your pack as its seed
+// (camp_teardown.go digUpPlant). Whoever may plant there may dig: a
+// member, on the lot or in its lit backland (ownLand). The plant is
+// req.Target.
+func (a *Server) uprootHomePlant(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contract.ItemsRequest, now int64, out *contract.ItemsResult) error {
+	h, err := ownLand(ctx, tx, s, s.State.Area, now, "not-your-land")
+	if err != nil {
+		return err
+	}
+	i := slices.IndexFunc(h.Plants, func(p homePlantView) bool { return p.ID == req.Target })
+	if i < 0 {
+		return fail(409, "not-placed")
+	}
+	p := h.Plants[i]
+	x, y := worldHomeTile(s, h.Gate, p.X, p.Y)
+	if !nearTile(s, s.State.Area, x, y, 2) {
+		return fail(409, "too-far-away")
+	}
+	out.Wear, err = a.digUpPlant(ctx, tx, s, "homestead_plants", p.ID, p.ItemDef, "uproot", now)
+	return err
+}

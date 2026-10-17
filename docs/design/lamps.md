@@ -294,6 +294,19 @@ lets go at the turning, which refunds laid paths. A camp plant comes up into the
 its seed: anyone who may build there, or whoever planted it, whatever the rule. Nothing planted
 grows into a crop yet.
 
+Digging up takes a trowel (owner decision 2026-10-17): `bench-trowel`, tool action `uproot`,
+crafted at the bench from one timber and one stone. It is the only way to dig up a planted
+thing, so a plant's look never offers it. Anyone at a camp may look at a plant there: whose it
+is, and "Leave it". With the trowel in hand, a plant you may dig prompts "Dig up the …". The
+same rules apply everywhere you plant. At a camp, that's the camp's builders and whoever
+planted it (`uproot` on `POST /api/camps`). On the lot and in its lit backland, it's whoever
+may plant there: any household member standing on that land (`ownLand`), any plant there,
+within two tiles (`POST /api/items/uproot`, `target` the plant id). Both share `digUpPlant` in
+`api/camp_teardown.go`: no trowel in the pack is `wrong-tool`. Each dig is one use of the
+trowel through `useTool`, the same wear as any tool (the keenest trowel carried, as the belt
+holds it); at zero it gives out like any cheap tool and thanks its maker. The answer carries the
+wear (`ItemsResult.wear`, `CampResult.wear`). The plant comes back as its seed. No migration.
+
 Who may build (0.13, owner decision 2026-10-17; migration 045, `api/claim_rules.go`): a Built
 claim's keeper sets one rule and one list of world members. The rules are `household` (the
 default), `listed` (household plus the list), `except` (every world member but the list) and

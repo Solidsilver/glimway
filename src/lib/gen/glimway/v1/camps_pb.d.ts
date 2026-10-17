@@ -6,6 +6,7 @@ import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
 import type { Message } from "@bufbuild/protobuf";
 import type { LampNaming } from "./lamps_pb.js";
 import type { OpHeader, Where } from "./op_pb.js";
+import type { WearResult } from "./items_pb.js";
 
 /**
  * Describes the file glimway/v1/camps.proto.
@@ -352,7 +353,8 @@ export declare const CampRequestSchema: GenMessage<CampRequest, {validType: Camp
 
 /**
  * The camp after the operation (none: the lamp was taken down), the
- * pack's material balances, and what a naming gave (lamp ash, once).
+ * pack's material balances, what a naming gave (lamp ash, once), and the
+ * trowel's wear when a plant was dug up (uproot).
  *
  * @generated from message glimway.v1.CampResult
  */
@@ -371,6 +373,11 @@ export declare type CampResult = Message<"glimway.v1.CampResult"> & {
    * @generated from field: repeated string given = 3;
    */
   given: string[];
+
+  /**
+   * @generated from field: glimway.v1.WearResult wear = 4;
+   */
+  wear?: WearResult | undefined;
 };
 
 export declare type CampResultValid = CampResult;
