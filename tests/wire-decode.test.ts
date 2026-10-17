@@ -4,7 +4,7 @@ import { parseWorld, parseWorldChoice } from '../src/lib/api/world.ts';
 import { parseHome, parseShelf } from '../src/lib/api/homestead.ts';
 import { parseItems, parseItemsAction } from '../src/lib/api/items.ts';
 import { parseMail, parseCraft } from '../src/lib/api/village.ts';
-import type { JsonValue } from '@bufbuild/protobuf';
+import type { DescFile, DescMessage, JsonValue } from '@bufbuild/protobuf';
 
 /**
  * The migrated response parsers decode through the strict wire decoder
@@ -153,4 +153,24 @@ test('the world choice answers through the same decoder', () => {
   assert.equal(parseWorldChoice({ worldChoice: choice })?.partyCanOpen, true);
   assert.throws(() => parseWorldChoice({ worldChoice: { ...choice, party_can_open: true } }), 'alias refused');
   assert.throws(() => parseWorldChoice({ worldChoice: { ...choice, habiticaId: undefined } }), 'missing field');
+});
+
+test('the v1 contract has no 64-bit integers: the server spells them as strings, which the decoder refuses', async () => {
+  const { readdirSync } = await import('node:fs');
+  const { ScalarType } = await import('@bufbuild/protobuf');
+  const wide = new Set([ScalarType.INT64, ScalarType.UINT64, ScalarType.SINT64, ScalarType.FIXED64, ScalarType.SFIXED64]);
+  const found: string[] = [];
+  const walk = (m: DescMessage) => {
+    for (const f of m.fields) {
+      const scalar = f.fieldKind === 'scalar' ? f.scalar : f.fieldKind === 'list' && f.listKind === 'scalar' ? f.scalar : f.fieldKind === 'map' && f.mapKind === 'scalar' ? f.scalar : undefined;
+      if (scalar !== undefined && wide.has(scalar)) found.push(`${m.typeName}.${f.name}`);
+    }
+    m.nestedMessages.forEach(walk);
+  };
+  const dir = new URL('../src/lib/gen/glimway/v1/', import.meta.url);
+  for (const name of readdirSync(dir).filter((n) => n.endsWith('_pb.js'))) {
+    const mod = await import(new URL(name, dir).href) as Record<string, unknown>;
+    for (const v of Object.values(mod)) if ((v as DescFile)?.kind === 'file') (v as DescFile).messages.forEach(walk);
+  }
+  assert.deepEqual(found, []);
 });

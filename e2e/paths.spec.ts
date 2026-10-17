@@ -79,7 +79,7 @@ async function stepTo(page: Page, tx: number, ty: number): Promise<void> {
   await page.evaluate(([x, y]) => (window as unknown as Hooks).__fsDevWalk([{ x: x * 16 + 8, y: y * 16 + 10 }]), [tx, ty] as const)
   await expect.poll(() => page.evaluate(() => (window as unknown as Hooks).__fsDevWalking()), { timeout: 10_000 }).toBe(false)
   const p = await page.evaluate(() => (window as unknown as Hooks).__fsPlayer())
-  expect([Math.floor(p.x / 16), Math.floor(p.y / 16)]).toEqual([tx, ty])
+  if (Math.floor(p.x / 16) !== tx || Math.floor(p.y / 16) !== ty) throw new Error(`the step to ${tx},${ty} ended elsewhere: ${await diagnose(page)}`)
 }
 
 /** The outcome of the last path operation, once the queue has emptied. */
@@ -519,11 +519,13 @@ test.describe('on a phone', () => {
   test('the path buttons press once on a tap, and also on Enter (a click with no pointer)', async ({ page }) => {
     test.setTimeout(180_000)
     const id = await freshPlayer(page)
+    await pinWorld(page, SEED)
     giveInstance(id, 'bench-spade', { max: 90 })
     fund(id, { materials: { stone: 10 } })
-    // The Tangle keeps its paths (no turning-land confirm): an open tile in its middle chunk.
+    // The Tangle keeps its paths (no turning-land confirm): an open tile in its
+    // middle chunk, read once the window is built whole (its things on their tiles).
     await warp(page, 'outdoors', 12, -12)
-    await waitForWilds(page)
+    await windowWhole(page)
     const open = await page.evaluate(() => {
       const w = window as unknown as Hooks
       for (let r = 0; r < 12; r++)
@@ -534,10 +536,11 @@ test.describe('on a phone', () => {
           }
       return null
     })
-    expect(open).not.toBeNull()
+    expect(open, `an open tile in the Tangle (seed ${SEED})`).not.toBeNull()
     await warp(page, 'outdoors', open!.tx, open!.ty)
-    await waitForWilds(page)
-    await page.evaluate(() => (window as unknown as Hooks).__fsDevParkCreatures())
+    // Parked once the window is whole: a creature of a chunk attached later can knock the hero off the tile.
+    await windowWhole(page)
+    await parkCreatures(page)
     await hold(page, 'dig')
     await expect.poll(async () => (await paths(page))?.materials?.stone ?? 0).toBeGreaterThanOrEqual(10)
     const stone = (await paths(page))!.materials!.stone!

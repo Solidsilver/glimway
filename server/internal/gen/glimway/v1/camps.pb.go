@@ -551,9 +551,11 @@ func (x *CampResult) GetMaterials() map[string]float64 {
 // One thing waiting in a crate at Pell's: a piece, a stack (oil, path stone)
 // or a plant's seed, from the camp at chunk (cx, cy) that lapsed at
 // lapsed_at.
+// The id is int32: the HTTP JSON carries numbers, and protojson writes a
+// 64-bit integer as a string, which the client refuses.
 type RecoveryEntry struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
 	Kind          string                 `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
 	ItemDef       string                 `protobuf:"bytes,3,opt,name=item_def,json=itemDef,proto3" json:"item_def,omitempty"`
 	Qty           int32                  `protobuf:"varint,4,opt,name=qty,proto3" json:"qty,omitempty"`
@@ -594,7 +596,7 @@ func (*RecoveryEntry) Descriptor() ([]byte, []int) {
 	return file_glimway_v1_camps_proto_rawDescGZIP(), []int{6}
 }
 
-func (x *RecoveryEntry) GetId() int64 {
+func (x *RecoveryEntry) GetId() int32 {
 	if x != nil {
 		return x.Id
 	}
@@ -852,7 +854,7 @@ const file_glimway_v1_camps_proto_rawDesc = "" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"\x9d\x01\n" +
 	"\rRecoveryEntry\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
+	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x19\n" +
 	"\bitem_def\x18\x03 \x01(\tR\aitemDef\x12\x10\n" +
 	"\x03qty\x18\x04 \x01(\x05R\x03qty\x12\x0e\n" +

@@ -298,14 +298,16 @@ export declare const CampResultSchema: GenMessage<CampResult, {validType: CampRe
  * One thing waiting in a crate at Pell's: a piece, a stack (oil, path stone)
  * or a plant's seed, from the camp at chunk (cx, cy) that lapsed at
  * lapsed_at.
+ * The id is int32: the HTTP JSON carries numbers, and protojson writes a
+ * 64-bit integer as a string, which the client refuses.
  *
  * @generated from message glimway.v1.RecoveryEntry
  */
 export declare type RecoveryEntry = Message<"glimway.v1.RecoveryEntry"> & {
   /**
-   * @generated from field: int64 id = 1;
+   * @generated from field: int32 id = 1;
    */
-  id: bigint;
+  id: number;
 
   /**
    * @generated from field: string kind = 2;

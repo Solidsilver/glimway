@@ -111,7 +111,9 @@ export class WildsCamps {
   private clear(): void {
     for (const o of this.images) o.destroy()
     for (const b of this.bodies) {
-      this.deps.solids.remove(b, true, true)
+      // Phaser may destroy the static group before the scene's shutdown reaches the camps.
+      if (this.deps.solids.children) this.deps.solids.remove(b, true, true)
+      else b.destroy()
     }
     this.images = []
     this.bodies = []
