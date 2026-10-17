@@ -1298,6 +1298,13 @@ export enum ErrorCode {
    * @generated from enum value: ERROR_CODE_NOT_IN_WORLD = 251;
    */
   NOT_IN_WORLD = 251,
+
+  /**
+   * 0.13 The Wick Tree's weekly sap (lamps.md 2.5).
+   *
+   * @generated from enum value: ERROR_CODE_ALREADY_TAPPED = 252;
+   */
+  ALREADY_TAPPED = 252,
 }
 
 /**

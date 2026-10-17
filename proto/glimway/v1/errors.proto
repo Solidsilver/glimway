@@ -269,4 +269,6 @@ enum ErrorCode {
   // 0.13 Who may build at a camp (lamps.md 2.5).
   ERROR_CODE_NOT_YOUR_CAMP = 250;
   ERROR_CODE_NOT_IN_WORLD = 251;
+  // 0.13 The Wick Tree's weekly sap (lamps.md 2.5).
+  ERROR_CODE_ALREADY_TAPPED = 252;
 }

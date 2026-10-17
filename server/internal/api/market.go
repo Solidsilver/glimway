@@ -32,10 +32,7 @@ func (a *Server) marketBuy(ctx context.Context, tx *sql.Tx, s *store.Snapshot, r
 	if good == nil {
 		return fail(400, "invalid-good")
 	}
-	// In the seller's shop, the goods sell whoever is in (Silas's honesty
-	// tin); otherwise you stand by the seller.
-	inShop := seller.GetShop() != "" && s.State.Area == seller.GetShop()
-	if !inShop && (seller.GetWith() != "" && !nearResident(s, seller.GetWith(), now, int(seller.GetRadiusTiles())) || seller.GetWith() == "" && !nearTile(s, seller.GetArea(), int(seller.GetTx()), int(seller.GetTy()), int(seller.GetRadiusTiles()))) {
+	if !atSeller(s, seller, now) {
 		return fail(409, "too-far-away")
 	}
 	day := content.CalendarAt(content.CalendarRules, now)
@@ -78,4 +75,16 @@ func (a *Server) marketBuy(ctx context.Context, tx *sql.Tx, s *store.Snapshot, r
 	}
 	out.Bought = &contract.Bought{Seller: seller.GetId(), ItemDef: good.Item, Qty: int32(int(good.GetQty())), Glims: int32(price)}
 	return refreshItems(ctx, tx, s)
+}
+
+// atSeller: in the seller's shop, the goods sell whoever is in (Silas's
+// honesty tin); otherwise you stand by the seller.
+func atSeller(s *store.Snapshot, seller *content.ItemSeller, now int64) bool {
+	if seller.GetShop() != "" && s.State.Area == seller.GetShop() {
+		return true
+	}
+	if seller.GetWith() != "" {
+		return nearResident(s, seller.GetWith(), now, int(seller.GetRadiusTiles()))
+	}
+	return nearTile(s, seller.GetArea(), int(seller.GetTx()), int(seller.GetTy()), int(seller.GetRadiusTiles()))
 }

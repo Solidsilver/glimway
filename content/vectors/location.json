@@ -1412,6 +1412,15 @@
       ]
     },
     {
+      "source": "homestead.wickSap",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        34,
+        37
+      ]
+    },
+    {
       "source": "papers.papers.pip-copybook-warden-corrections.rule",
       "kind": "stand",
       "area": "hearthwick",
