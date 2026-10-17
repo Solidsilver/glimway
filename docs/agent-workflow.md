@@ -29,6 +29,18 @@ Paseo on the development server.
 
 Keep `exp/*` branches local. Don't push them.
 
+Two things Paseo needs on this machine:
+
+- **Git LFS.** Paseo's own git calls run with a bare PATH, so the LFS filters must name the
+  binary by its absolute path in the repo's local config:
+  `git config --local filter.lfs.process "/run/current-system/sw/bin/git-lfs filter-process"`,
+  and the same for `filter.lfs.clean` (`… clean -- %f`) and `filter.lfs.smudge`
+  (`… smudge -- %f`). Done 2026-10-17. If a worktree checkout still fails, make it with
+  `git worktree add` yourself (with git-lfs on PATH), then adopt it with `create_workspace`
+  `isolation: "local"` and that `path`.
+- **A mode for Codex agents.** `create_agent` from a Claude orchestrator can't inherit its mode
+  into a Codex agent; pass `settings.modeId: "auto"` (and `thinkingOptionId`).
+
 ## Providers
 
 | Use | Paseo provider string |
