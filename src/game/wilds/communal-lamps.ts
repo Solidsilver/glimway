@@ -1,7 +1,8 @@
 /**
  * Communal lamps on the open map (roadmap 0.13; docs/design/lamps.md §1.3,
- * §2.4): Lantern Road stones someone relit, burning over the dark stone art,
- * and way-lamps set as communal posts. Look at a dark stone (./sites.ts
+ * §2.4): Lantern Road stones someone relit, their relit frames drawn over
+ * the chunk's dark stone, and way-lamps set as communal posts. The Keeper's-
+ * hand quest stone is drawn as the route stone, dark or relit. Look at a dark stone (./sites.ts
  * sends EV.lampStoneLook) to light it with a lamp wick; look at a lit lamp
  * to tend it (the visit counts this wick), and at your own post to take it
  * down. From the pack (EV.communalPost): set a carried way-lamp beside you
@@ -18,7 +19,7 @@
  */
 import Phaser from 'phaser'
 import type { CommunalLampView } from '../../lib/gen/glimway/v1/lamps_pb.js'
-import { COMMUNAL_LAMP_DONE, COMMUNAL_LAMP_ERRORS, COMMUNAL_POST_FRAME, canLift, canRelight, communalLampLines, communalLampName, darkStoneLines, lampTiles, lampsNear, litStone, relightCost } from '../../lib/communal-lamps.ts'
+import { COMMUNAL_LAMP_DONE, COMMUNAL_LAMP_ERRORS, COMMUNAL_POST_FRAME, ROUTE_STONE_ORIGIN_X, canLift, canRelight, communalLampLines, communalLampName, darkStoneLines, lampTiles, lampsNear, litStone, relightCost, roadStoneArt } from '../../lib/communal-lamps.ts'
 import { campSpot } from '../../lib/camps.ts'
 import { HOMESTEAD_DATA } from '../../lib/homestead.ts'
 import { TERRAIN, TILE, tileFeet } from '../../lib/tile.ts'
@@ -39,6 +40,8 @@ import { omArt } from './open-map-art.ts'
 import { itemsFor } from '../items.ts'
 import { homesteadsFor } from '../homestead.ts'
 import { groundAt, solidAt } from './ground-view.ts'
+import { chunkTerrain } from './store.ts'
+import { chunkOrigin } from './terrain.ts'
 import { wildsPoint } from './sites.ts'
 
 export interface CommunalLampsDeps {
@@ -54,6 +57,8 @@ export interface CommunalLampsDeps {
 const READ_EVERY_MS = 30_000
 /** The warm light of a lit lamp. */
 const LAMPLIGHT = 0xffb054
+/** A lamp stone's niche, world px above its foot (the relit wick fills texel rows 44..63 of 128). */
+const STONE_NICHE_Y = 19
 
 export class WildsCommunalLamps {
   private lamps: CommunalLampView[] = []
@@ -67,6 +72,8 @@ export class WildsCommunalLamps {
   private busy = false
   /** The Keeper's-hand quest's stone (the read's cut_stone). */
   private cutStone = ''
+  /** The road stones drawn over the chunks' dark ones, for playtests. */
+  private stones: { site: string; frame: string }[] = []
 
   constructor(private scene: Phaser.Scene, private deps: CommunalLampsDeps) {
     const onPost = (d: { itemId: string }) => void this.post(d.itemId)
@@ -141,11 +148,46 @@ export class WildsCommunalLamps {
     this.tweens = []
     this.images = []
     this.bodies = []
+    this.stones = []
+  }
+
+  /**
+   * A road stone's art over the dark stone its chunk draws (./sites.ts), at
+   * the same foot point: relit, or the quest stone's route stone. A plain
+   * dark stone needs nothing more.
+   */
+  private drawStone(site: string, at: { x: number; y: number }, lit: boolean): void {
+    const art = roadStoneArt(site, this.cutStone, lit)
+    if (!art.route && !lit) return
+    const key = omArt(art.frame)
+    if (!this.scene.textures.exists(key)) return
+    const loop = art.loop ? omArt(art.loop) : null
+    const img = loop && !this.deps.reducedMotion && this.scene.anims.exists(loop) ? this.scene.add.sprite(at.x, at.y, key).play(loop) : this.scene.add.image(at.x, at.y, key)
+    img.setOrigin(art.route ? ROUTE_STONE_ORIGIN_X : 0.5, 1).setDepth(at.y - 1)
+    this.images.push(img)
+    this.stones.push({ site, frame: art.frame })
+  }
+
+  /** The quest stone's tile, when its chunk is one of those drawn around the hero. */
+  private cutStoneAt(cx: number, cy: number): { x: number; y: number } | null {
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const t = chunkTerrain(cx + dx, cy + dy)
+        const s = t?.sites.find((x) => x.id === this.cutStone && x.kind === 'lamp-stone')
+        if (!t || !s) continue
+        const o = chunkOrigin(t)
+        return tileFeet(o.tx + s.tx, o.ty + s.ty)
+      }
+    }
+    return null
   }
 
   private draw(cx: number, cy: number): void {
     this.clear()
     const points = []
+    // The quest stone while it's dark (lit, it's drawn with the lamps below).
+    const cut = this.cutStone && !litStone(this.lamps, this.cutStone) ? this.cutStoneAt(cx, cy) : null
+    if (cut) this.drawStone(this.cutStone, cut, false)
     for (const l of lampsNear(this.lamps, cx, cy)) {
       const at = tileFeet(l.x, l.y)
       if (l.kind === 'post') {
@@ -160,9 +202,10 @@ export class WildsCommunalLamps {
         this.deps.solids.add(body)
         this.bodies.push(body)
         points.push({ ...wildsPoint(`communal-lamp:${l.id}`, at, 30, () => ({ label: l.naming?.shortName ? `Look at ${l.naming.shortName}` : `Look at the ${communalLampName(l).toLowerCase()}`, verb: 'Look', claim: () => this.look(l.id) })), rank: 0 })
-      }
-      // Its light: over the stone's soot-dark niche, or the post's lamp.
-      const glow = this.scene.add.image(at.x, at.y - (l.kind === 'stone' ? 26 : 22), 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(LAMPLIGHT).setScale(0.55).setAlpha(0.8).setDepth(4001)
+      } else this.drawStone(l.id, at, true)
+      // Its light, over the stone's small wick or the post's lamp: the relit
+      // flame is a few texels, so the glow is what reads at play zoom.
+      const glow = this.scene.add.image(at.x, at.y - (l.kind === 'stone' ? STONE_NICHE_Y : 22), 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(LAMPLIGHT).setScale(0.55).setAlpha(0.8).setDepth(4001)
       this.images.push(glow)
       if (!this.deps.reducedMotion) this.tweens.push(this.scene.tweens.add({ targets: glow, alpha: { from: 0.8, to: 0.55 }, duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' }))
     }
@@ -288,7 +331,7 @@ export class WildsCommunalLamps {
 
   // ------------------------------------------------------------ playtests
 
-  debug(): { lamps: { id: string; kind: string; x: number; y: number; visited: boolean; name: string }[] } {
-    return { lamps: this.lamps.map((l) => ({ id: l.id, kind: l.kind, x: l.x, y: l.y, visited: l.visited, name: communalLampName(l) })) }
+  debug(): { lamps: { id: string; kind: string; x: number; y: number; visited: boolean; name: string }[]; stones: { site: string; frame: string }[] } {
+    return { lamps: this.lamps.map((l) => ({ id: l.id, kind: l.kind, x: l.x, y: l.y, visited: l.visited, name: communalLampName(l) })), stones: [...this.stones] }
   }
 }

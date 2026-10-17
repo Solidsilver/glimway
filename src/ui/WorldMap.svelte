@@ -29,11 +29,12 @@
   import { MapRenderer, backingSize, canvasImage } from './map-renderer'
   import { foundByText, placeName } from '../lib/wilds/paths'
   import { MAP_LAMPS } from '../content/map-lamps'
-  import { lampLedger, landLabel, turningLabel, distanceFromTown } from '../lib/wilds/map-lamps'
+  import { lampLedger, landLabel, turningLabel, distanceFromTown, mapLampMark, MAP_LAMP_ICON } from '../lib/wilds/map-lamps'
   import { MAP_LABELS } from '../content/open-map'
   import { focusTrap } from './focus'
   import { ui } from './store.svelte'
   import Icon from './Icon.svelte'
+  import ArtIcon from './ArtIcon.svelte'
 
   /**
    * The world map (docs/design/world-map.md): the Wilds you've walked this
@@ -435,6 +436,12 @@
       return { land: s, ...toScreen(view!,vp,(k.cx+0.5)*CHUNK_TILES,(k.cy+0.5)*CHUNK_TILES) }
     }).filter((p) => p.x >= 0 && p.x <= vp.w && p.y >= 0 && p.y <= vp.h && view!.scale * CHUNK_TILES >= 100)
   })
+  /** The Lamps layer: each lamp's mark where it stands, while the layer is on. */
+  const lampMarks = $derived.by(() => {
+    if (!lampsOn || !view || !input) return []
+    return (input.lamps ?? []).map((l) => ({ id: l.id, ...mapLampMark(l), ...toScreen(view!,vp,l.x+0.5,l.y+0.5) }))
+      .filter((p) => p.x >= 0 && p.x <= vp.w && p.y >= 0 && p.y <= vp.h)
+  })
   function centreLamp(x: number, y: number, name: string): void {
     if (view && frame) view = centreOn(x+0.5,y+0.5,view.scale,vp,frame)
     status = name
@@ -499,6 +506,9 @@
       {#each tierChips as p}
         <span class:amber={p.land.dimming} class="tier-chip" style={`left:${p.x}px;top:${p.y}px`}>{p.land.dimming ? '⚠ ' + MAP_LAMPS.dimming : landLabel(p.land)}</span>
       {/each}
+      {#each lampMarks as m (m.id)}
+        <span class="lamp-mark" class:dimming={m.dimming} style={`left:${m.x}px;top:${m.y}px`} data-lamp-mark={m.id}><ArtIcon art={m.art} name="lantern" size={16} /></span>
+      {/each}
       {#if youAt}
         <span class="dot" style={`left:${youAt.x}px;top:${youAt.y}px`} data-testid="map-you"></span>
       {/if}
@@ -544,7 +554,7 @@
       <button type="button" class="gate-inline" onclick={toGate}>{MAP_LABELS.gate}</button>
       <p class="fine">{MAP_LABELS.wick}</p>
       <h3>{MAP_LAMPS.heading}</h3>
-      <label class="layer-toggle"><input type="checkbox" bind:checked={lampsOn} data-testid="map-lamps-layer" /> {MAP_LAMPS.layer}</label>
+      <label class="layer-toggle"><input type="checkbox" bind:checked={lampsOn} data-testid="map-lamps-layer" /> <ArtIcon art={MAP_LAMP_ICON.lit} name="lantern" size={16} /> {MAP_LAMPS.layer}</label>
       {#if ledger.length}
         <ul class="lamp-ledger" data-testid="map-lamps">
           {#each ledger as row (row.lamp.id)}
@@ -911,6 +921,9 @@
   .details .tier-key { margin-top: 10px; font-size: 12px; }
   .amber { color: #704210; background: #ffe4a1; border-radius: 4px; }
   .tier-chip { position: absolute; transform: translate(-50%,-50%); font-size: 11px; padding: 3px 5px; border: 1px dashed #84734e; border-radius: 4px; background: #fff5dc; max-width: 150px; text-align: center; }
+  /* A lamp on the Lamps layer: its icon on a small light disc, so it reads on any ground; dimming, paler. */
+  .lamp-mark { position: absolute; transform: translate(-50%,-50%); display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: rgba(255, 245, 220, 0.85); box-shadow: 0 0 0 1px #84734e; }
+  .lamp-mark.dimming { opacity: 0.6; filter: saturate(0.4); box-shadow: 0 0 0 1px #c08a2a; }
   .tier-chip.amber { background: #ffe4a1; border-style: solid; }
   .sr {
     position: absolute;

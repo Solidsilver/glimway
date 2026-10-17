@@ -24,3 +24,16 @@ export function lampLedger(lamps: readonly MapLamp[]): { lamp: MapLamp; name: st
     distance: distanceFromTown(lamp.x,lamp.y),
   }))
 }
+
+/**
+ * The Lamps layer's mark (ui.artIcons, src/ui/ArtIcon.svelte), lit or
+ * dimming. A placeholder for now: the items pass's lit way-lamp, dimmed by
+ * the map for a dimming lamp, until the map-layer lamp icon is drawn
+ * (docs/art-request-lamps.md, "The map's Lamps layer").
+ */
+export const MAP_LAMP_ICON = { lit: 'item-way-lamp', dimming: 'item-way-lamp' } as const
+
+export function mapLampMark(lamp: Pick<MapLamp, 'land'>): { art: string; dimming: boolean } {
+  const dimming = lamp.land?.dimming ?? false
+  return { art: dimming ? MAP_LAMP_ICON.dimming : MAP_LAMP_ICON.lit, dimming }
+}

@@ -529,6 +529,12 @@ claim a `lamps-pass` exists. Add store and readable dimming states. Reuse the ic
 the map's Lamps layer, not a Journal tab. Match front-facing outdoor props at 64 texels per
 16 world pixels, final art before acceptance.
 
+As built (0.13): relit stones draw the open-map pass's `lamp-stone-relit-*` loop, the
+Keeper's-hand quest stone draws as the route stone (dark and relit), and camps and posts use
+`way-lamp-1`/`-2`. `way-lamp-0` (dark) has no state to show. The map's Lamps layer marks each lamp
+with a placeholder (`item-way-lamp`) until its own icon is drawn. The details, and the request for
+that icon, are in [the art request](../art-request-lamps.md) under "As delivered and wired".
+
 ## 3. The eleven old questions, closed
 
 These are Q1–11 in their old order. No unanswered proposal carries over.

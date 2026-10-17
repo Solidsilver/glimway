@@ -68,3 +68,12 @@ test('a lamp-only Common chunk from the real map endpoint decodes, visited and n
     assert.equal(turningLabel(out.chunks[0]!), next === 'lamps-carry' ? MAP_LAMPS.lampsCarry : MAP_LAMPS.lampsTurn)
   }
 })
+
+test('the Lamps layer marks a lamp with the placeholder way-lamp icon, dimmed when its land dims', async () => {
+  const { mapLampMark, MAP_LAMP_ICON } = await import('../src/lib/wilds/map-lamps.ts')
+  const manifest = JSON.parse(readFileSync('public/assets/fingersnap/items-pass/manifest.json', 'utf8')) as { frames: { key: string }[] }
+  for (const art of Object.values(MAP_LAMP_ICON)) assert.ok(manifest.frames.some((f) => f.key === art), `${art} is delivered`)
+  assert.deepEqual(mapLampMark(create(MapLampSchema, { land: land(1, 1) })), { art: MAP_LAMP_ICON.lit, dimming: false })
+  assert.deepEqual(mapLampMark(create(MapLampSchema, { land: create(ChunkLandStatusSchema, { tier: 'built', dimming: true }) })), { art: MAP_LAMP_ICON.dimming, dimming: true })
+  assert.deepEqual(mapLampMark(create(MapLampSchema, {})), { art: MAP_LAMP_ICON.lit, dimming: false })
+})
