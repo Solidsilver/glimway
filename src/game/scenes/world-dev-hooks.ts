@@ -145,7 +145,7 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
     areaId: s['world'].areaId,
     frames: s.game.loop.frame - builtAt,
     loop: s.game.loop.frame,
-    fading: s.cameras.main.fadeEffect.isRunning || s['holdingFade'],
+    fading: s.cameras.main.fadeEffect.isRunning || s['fadeHold'].active,
     transitioning: s['transitioning'],
     cinematic: s['cinematic'],
     live: s['worldLive']()
