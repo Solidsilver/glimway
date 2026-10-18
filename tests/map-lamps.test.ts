@@ -84,5 +84,7 @@ test('the Lamps layer marks a lamp with the open-map icon for its state', async 
   for (const art of Object.values(MAP_LAMP_ICON)) assert.ok(art in manifest.frames, `${art} is delivered`)
   assert.deepEqual(mapLampMark(create(MapLampSchema, { land: land(1, 1) })), { art: MAP_LAMP_ICON.lit, dimming: false })
   assert.deepEqual(mapLampMark(create(MapLampSchema, { land: create(ChunkLandStatusSchema, { tier: 'built', dimming: true, nextTurning: 'turns' }) })), { art: MAP_LAMP_ICON.dimming, dimming: true })
+  // On its last wick (not yet guttering) the icon is the dimming one too, as the chip says.
+  assert.deepEqual(mapLampMark(create(MapLampSchema, { land: create(ChunkLandStatusSchema, { tier: 'built', reserve: 0, nextTurning: 'dimming' }) })), { art: MAP_LAMP_ICON.dimming, dimming: true })
   assert.deepEqual(mapLampMark(create(MapLampSchema, {})), { art: MAP_LAMP_ICON.lit, dimming: false })
 })
