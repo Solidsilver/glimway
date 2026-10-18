@@ -125,6 +125,7 @@ function normalizeReports(raw: unknown): StoredReports | null {
     seq: raw.seq,
     next: { place, hp: num(n.hp), mana: num(n.mana), casts: Math.floor(num(n.casts)), abilityCasts: tally(n.abilityCasts), basis: num(n.basis), boundary: whole(n.boundary) ? n.boundary : null, changed: n.changed === true },
     captured,
+    moved: num(raw.moved),
   };
 }
 

@@ -44,7 +44,7 @@ func Open(path string) (*Store, error) {
 	}
 	// Apply timeout before WAL setup; CLI and service may open concurrently.
 	dsn += "?_txlock=immediate&_pragma=busy_timeout(10000)&_pragma=foreign_keys(ON)&_pragma=synchronous(FULL)"
-	db, err := sql.Open("sqlite", dsn)
+	db, err := sql.Open(reachDriverName, dsn)
 	if err != nil {
 		return nil, err
 	}
@@ -198,6 +198,9 @@ type Snapshot struct {
 	VitalsWritten      bool                `json:"-"`
 	VitalsAt           float64             `json:"-"` // Fractional Unix seconds captured by a server operation; zero uses Persist now.
 	PlaceWritten       bool                `json:"-"`
+	// PlaceMoved: the server chose the written place itself (a way home's
+	// landing): the client follows it (Place.moved_version).
+	PlaceMoved         bool                `json:"-"`
 	State              rules.State         `json:"state"`
 	Version            int64               `json:"version"`
 	VitalsSource       string              `json:"vitalsSource"`

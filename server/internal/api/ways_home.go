@@ -462,7 +462,7 @@ func bindPouch(ctx context.Context, tx *sql.Tx, s *store.Snapshot, id string, no
 // chunk visits it, as standing there does.
 func (a *Server) arrive(ctx context.Context, tx *sql.Tx, s *store.Snapshot, area string, x, y float64, now int64) error {
 	s.State.Area, s.State.Position.X, s.State.Position.Y = area, x, y
-	s.PlaceWritten = true
+	s.PlaceWritten, s.PlaceMoved = true, true
 	where := &contract.Where{Area: area, X: x, Y: y}
 	if a.Config.Placement != nil {
 		if err := a.Config.Placement.Record(ctx, tx, s, where, now); err != nil {

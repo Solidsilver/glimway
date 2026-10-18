@@ -6,8 +6,10 @@ package api
 // gutters for a wick (dimming), then lapses. Filling it ends the episode.
 // Oil only runs out at a turning, so the episode began at this wick's start
 // for an empty lamp not yet guttering, or the wick before for a guttering
-// one; an outcome row lamp-dimming:<kind>:<id>:<episode start> is the
-// once. No migration.
+// one; an outcome row lamp-dimming:<kind>:<key>:<episode start> is the
+// once. A camp's key is its lamp; a lot lantern's is its world and home,
+// not the gate the notice names, which repeats in every world (step-back
+// S3). No migration.
 import (
 	"context"
 	"database/sql"
@@ -49,10 +51,12 @@ func (a *Server) lampNoticesRead(w http.ResponseWriter, r *http.Request) error {
 }
 
 // dimmingLight is one light the caller keeps that is dimming: its notice,
-// whether it is already guttering (its warning wick), and the chunks
-// standing in which counts as being there (the lamp's and the land it holds).
+// the key its episode is told once by, whether it is already guttering (its
+// warning wick), and the chunks standing in which counts as being there (the
+// lamp's and the land it holds).
 type dimmingLight struct {
 	notice    *contract.LampNotice
+	key       string
 	guttering bool
 	near      [][2]int
 }
@@ -77,7 +81,7 @@ func lampNotices(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) 
 	out := &contract.LampNoticesRead{}
 	for _, l := range lights {
 		n := l.notice
-		fresh, err := store.Outcome(ctx, tx, s.AccountID, fmt.Sprintf("%s:%s:%s:%d", lampDimmingReason, n.Kind, n.Id, episodeStart(l.guttering, now)), lampDimmingReason, now)
+		fresh, err := store.Outcome(ctx, tx, s.AccountID, fmt.Sprintf("%s:%s:%s:%d", lampDimmingReason, n.Kind, l.key, episodeStart(l.guttering, now)), lampDimmingReason, now)
 		if err != nil {
 			return nil, err
 		}
@@ -133,22 +137,23 @@ WHERE c.world_id=? AND c.setter=? AND c.oil=0 ORDER BY c.id`, wayLampKind, world
 		if naming != nil {
 			n.Name = naming.ShortName
 		}
-		out = append(out, dimmingLight{n, c.Dimming, [][2]int{{c.CX, c.CY}}})
+		out = append(out, dimmingLight{n, c.ID, c.Dimming, [][2]int{{c.CX, c.CY}}})
 	}
-	rows, err = tx.QueryContext(ctx, `SELECT h.gate,l.dimming FROM homesteads h JOIN homestead_members m ON m.homestead_id=h.id JOIN lot_lanterns l ON l.homestead_id=h.id
+	rows, err = tx.QueryContext(ctx, `SELECT h.id,h.gate,l.dimming FROM homesteads h JOIN homestead_members m ON m.homestead_id=h.id JOIN lot_lanterns l ON l.homestead_id=h.id
 JOIN holds d ON d.world_id=h.world_id AND d.holder_kind=? AND d.holder_id=CAST(h.gate AS TEXT) AND d.released_at IS NULL
 WHERE h.world_id=? AND m.account_id=? AND l.oil=0 ORDER BY h.gate`, lotLanternKind, world, account)
 	if err != nil {
 		return nil, err
 	}
 	type lot struct {
+		home      string
 		gate      int
 		guttering bool
 	}
 	var lots []lot
 	for rows.Next() {
 		var l lot
-		if err = rows.Scan(&l.gate, &l.guttering); err != nil {
+		if err = rows.Scan(&l.home, &l.gate, &l.guttering); err != nil {
 			rows.Close()
 			return nil, err
 		}
@@ -163,7 +168,7 @@ WHERE h.world_id=? AND m.account_id=? AND l.oil=0 ORDER BY h.gate`, lotLanternKi
 		x, y := chunks.LanternStake(l.gate)
 		sx, sy := wilds.ChunkOf(ox+x, oy+y)
 		n := &contract.LampNotice{Kind: lotLanternKind, Id: strconv.Itoa(l.gate), Cx: int32(bx), Cy: int32(by)}
-		out = append(out, dimmingLight{n, l.guttering, [][2]int{{bx, by}, {sx, sy}}})
+		out = append(out, dimmingLight{n, world + ":" + l.home, l.guttering, [][2]int{{bx, by}, {sx, sy}}})
 	}
 	return out, nil
 }

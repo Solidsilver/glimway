@@ -15,6 +15,7 @@ import (
 	"glimway/server/internal/location"
 	"glimway/server/internal/wilds"
 
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -373,5 +374,50 @@ func TestAnEnemyWindUpRefusesTravel(t *testing.T) {
 	x.waysOp(c, s, waysTurncap, sx, sy, 200)
 	if x.packQty(s.AccountID, "homing-turncap") != 0 {
 		t.Fatal("the turncap wasn't spent")
+	}
+}
+
+// Only a place the server chose is a move (Place.moved_version, which the
+// client follows): an operation's own place raises the place watermark but
+// is never one, and a way home's landing is one in its answer, its replay
+// and every read after.
+func TestOnlyAPlaceTheServerChoseIsAMove(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	moved := func() (set, at int64) {
+		x.t.Helper()
+		if err := x.db.DB.QueryRow("SELECT place_set_version,place_moved_version FROM player_place WHERE account_id=?", s.AccountID).Scan(&set, &at); err != nil {
+			t.Fatal(err)
+		}
+		return
+	}
+	sx, sy := local(campCX, campCY, [2]int{12, 12})
+	mark := &contract.MarkRequest{Op: opHeader(s.Lease, "mark-here"), Mark: "seen:test", Where: tileWhere(sx, sy)}
+	env, _ := x.call("/api/story/mark", mark, c, 200)
+	if set, at := moved(); set == 0 || at != 0 || env.GetState().GetPlace().GetMovedVersion() != 0 {
+		t.Fatalf("an operation's own place: set %d, moved %d", set, at)
+	}
+	x.stack(s.AccountID, "homing-turncap", "", 1)
+	req := &contract.WaysHomeRequest{Op: opHeader(s.Lease, "turncap-moves"), Where: tileWhere(sx, sy), Action: waysTurncap}
+	env, _ = x.call("/api/ways-home", req, c, 200)
+	p := env.GetState().GetPlace()
+	if p.GetMovedVersion() != env.GetState().GetVersion() || p.GetPlaceSetVersion() != p.GetMovedVersion() {
+		t.Fatalf("a landing is a move at its version: %+v (version %v)", p, env.GetState().GetVersion())
+	}
+	if again, _ := x.call("/api/ways-home", req, c, 200); again.GetState().GetPlace().GetMovedVersion() != p.GetMovedVersion() {
+		t.Fatal("the replay lost the move")
+	}
+	var st contract.StateResponse
+	if w := x.rawHTTP("GET", "/api/state", nil, c); w.Code != 200 || (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(w.Body.Bytes(), &st) != nil {
+		t.Fatalf("state read: %d %s", w.Code, w.Body.String())
+	}
+	if st.GetState().GetPlace().GetMovedVersion() != p.GetMovedVersion() {
+		t.Fatal("a read lost the move")
+	}
+	// Walking on from the landing is the client's own place again.
+	mark.Op = opHeader(s.Lease, "mark-after")
+	env, _ = x.call("/api/story/mark", mark, c, 200)
+	if got := env.GetState().GetPlace(); got.GetMovedVersion() != p.GetMovedVersion() || got.GetPlaceSetVersion() <= p.GetMovedVersion() {
+		t.Fatalf("an operation after the landing: %+v", got)
 	}
 }

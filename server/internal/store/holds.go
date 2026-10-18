@@ -118,9 +118,6 @@ func (c *Chunks) Holds(ctx context.Context, tx *sql.Tx, world string) ([]Hold, e
 // back a release); for another holder it is ErrHeld.
 func (c *Chunks) Hold(ctx context.Context, tx *sql.Tx, world string, cx, cy int32, kind, id string, now int64) (Hold, error) {
 	x, y := int(cx), int(cy)
-	if err := confirmReach(ctx, tx, world); err != nil {
-		return Hold{}, err
-	}
 	if kind == "" || location.SourceOf(x, y).Kind != location.SourceGenerated || wilds.EpochKindAt(x, y) != EpochWick || wilds.FootprintAt(x, y) != nil || !frontier.Inside(world, x, y) {
 		return Hold{}, ErrNotHoldable
 	}

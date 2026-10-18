@@ -19,6 +19,7 @@ func TestUpgradeFromLastRelease(t *testing.T) {
 	old := newUpgradeFixture(t, path, lastShippedMigration, nil)
 	if _, err := old.Exec(`INSERT INTO worlds(id,owner_id,seed,created_at) VALUES('w','alice','seed',1);
  INSERT INTO players(account_id,display_name,world_id,created_at,last_seen_at,version) VALUES('alice','Alice','w',1,50,7),('bob','Bob','w',2,60,3);
+ INSERT INTO player_place(account_id,area,x,y,place_set_version) VALUES('alice','outdoors',-424.5,-744,7),('bob','in:hearthwick:inn',40,56,0);
  INSERT INTO homesteads(id,world_id,gate,tier,claimed_at) VALUES('house','w',0,2,1);
  INSERT INTO homestead_members VALUES('alice','house',1),('bob','house',2);
  INSERT INTO homestead_items(id,item_def,location,account_id,homestead_id,scene,x,y,rotation,name,stalls) VALUES
@@ -58,6 +59,8 @@ func TestUpgradeFromLastRelease(t *testing.T) {
 	kept := []string{
 		"SELECT * FROM worlds ORDER BY id",
 		"SELECT * FROM players ORDER BY account_id",
+		// Where each player stands and its watermark (038 adds place_moved_version beside them).
+		"SELECT account_id,area,x,y,place_set_version FROM player_place ORDER BY account_id",
 		"SELECT * FROM homesteads ORDER BY id",
 		"SELECT * FROM homestead_members ORDER BY account_id",
 		"SELECT id,item_def,location,account_id,homestead_id,scene,x,y,rotation,name,stalls FROM homestead_items ORDER BY id",
@@ -99,6 +102,8 @@ func TestUpgradeFromLastRelease(t *testing.T) {
 		"SELECT qty FROM recovery_entries WHERE account_id='alice' AND item_def='stone' AND kind='stack' AND reason='land-changed' AND collected_at IS NULL": 2,
 		"SELECT qty FROM recovery_entries WHERE account_id='bob' AND item_def='timber' AND kind='stack' AND reason='land-changed' AND collected_at IS NULL":  1,
 		"SELECT count(*) FROM recovery_entries": 2,
+		// No place was chosen by the server before 038: nobody follows a move on upgrade.
+		"SELECT count(*) FROM player_place WHERE place_moved_version=0": 2,
 		// Nothing else starts populated.
 		"SELECT count(*) FROM wick_turnings": 0,
 		"SELECT count(*) FROM holds":         0,

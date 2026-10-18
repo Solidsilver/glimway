@@ -694,7 +694,8 @@
             "x": 400,
             "y": 300,
             "placeSetVersion": 0,
-            "wickEpoch": ""
+            "wickEpoch": "",
+            "movedVersion": 0
           },
           "story": {
             "quests": {},
@@ -922,7 +923,8 @@
           "x": 400,
           "y": 300,
           "placeSetVersion": 0,
-          "wickEpoch": ""
+          "wickEpoch": "",
+          "movedVersion": 0
         },
         "story": {
           "quests": {},

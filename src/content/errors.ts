@@ -214,7 +214,7 @@ export const WAYS_HOME_ERRORS: Table = {
   'not-needed': 'You’re on safe ground already. Keep the turncap for the woods.',
   'no-lamp': 'Stand by a lit lamp to bind your pouch to it.',
   'invalid-item': 'You don’t have one with you.',
-  pending: 'No answer yet. It may have gone through; nothing is spent twice.'
+  pending: 'No answer yet. It may still go through when the world answers; nothing is spent twice.'
 }
 
 /**

@@ -45,7 +45,7 @@ function scene(session: Session) {
   };
 }
 
-/** The server's answer: the hero somewhere else (link.waysHome → refresh({ relocate: true })). */
+/** The server's answer: the hero somewhere else (link.ts followMove → refresh({ relocate: true })). */
 function answer(session: Session, area: string, x: number, y: number): void {
   session.applyServer({ ...session.state, area, position: { x, y } }, { vitalsSource: 'demo', importedProfile: null }, { relocate: true });
 }

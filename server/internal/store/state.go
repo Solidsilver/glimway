@@ -162,11 +162,14 @@ func Persist(ctx context.Context, tx *sql.Tx, s *Snapshot, now int64) error {
 			return err
 		}
 	}
-	placeVersion := int64(0)
+	placeVersion, movedVersion := int64(0), int64(0)
 	if s.PlaceWritten {
 		placeVersion = s.Version
 	}
-	if _, err := tx.ExecContext(ctx, `INSERT INTO player_place(account_id,area,x,y,place_set_version) VALUES(?,?,?,?,?) ON CONFLICT(account_id) DO UPDATE SET area=excluded.area,x=excluded.x,y=excluded.y,place_set_version=MAX(player_place.place_set_version,excluded.place_set_version)`, s.AccountID, s.State.Area, s.State.Position.X, s.State.Position.Y, placeVersion); err != nil {
+	if s.PlaceMoved {
+		placeVersion, movedVersion = s.Version, s.Version
+	}
+	if _, err := tx.ExecContext(ctx, `INSERT INTO player_place(account_id,area,x,y,place_set_version,place_moved_version) VALUES(?,?,?,?,?,?) ON CONFLICT(account_id) DO UPDATE SET area=excluded.area,x=excluded.x,y=excluded.y,place_set_version=MAX(player_place.place_set_version,excluded.place_set_version),place_moved_version=MAX(player_place.place_moved_version,excluded.place_moved_version)`, s.AccountID, s.State.Area, s.State.Position.X, s.State.Position.Y, placeVersion, movedVersion); err != nil {
 		return err
 	}
 	if _, err := tx.ExecContext(ctx, "UPDATE players SET play_seconds=? WHERE account_id=?", s.State.PlaySeconds, s.AccountID); err != nil {

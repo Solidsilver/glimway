@@ -391,7 +391,7 @@ func (a *Server) scanFightRooms(p *presencePeer, wake bool) (covered, done bool)
 	for dy := -1; dy <= 1; dy++ {
 		for dx := -1; dx <= 1; dx++ {
 			cx, cy := pcx+dx, pcy+dy
-			if !frontier.Inside(world, cx, cy) || location.SourceOf(cx, cy).Kind != location.SourceGenerated {
+			if !frontier.InsidePublished(world, cx, cy) || location.SourceOf(cx, cy).Kind != location.SourceGenerated {
 				continue
 			}
 			location := fightLocation{world: world, realm: content.WildsRules.GetRealm(), layer: 0, cx: int32(cx), cy: int32(cy)}
