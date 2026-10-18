@@ -52,11 +52,12 @@ async function turncapDuringTurning(page: Page, before: WildsDump, rewrite?: (pl
   let asked!: (r: Route) => void
   const held = new Promise<Route>((resolve) => (asked = resolve))
   await page.route('**/api/ways-home', (route) => (route.request().method() === 'POST' ? asked(route) : route.continue()))
+  await parkCreatures(page)
   await page.evaluate(() => (window as unknown as { __fsEmit: (e: string, p: unknown) => void }).__fsEmit('game:ways-home', { way: 'turncap' }))
   // The pause (three seconds, standing still) passes, and the way home is asked for.
   const route = await held
   const res = await route.fetch()
-  expect(res.ok(), `the world answered the turncap: ${res.status()}`).toBe(true)
+  expect(res.ok(), `the world answered the turncap: ${res.status()} ${res.ok() ? "" : await res.text()}`).toBe(true)
   const body = await res.json()
   const chose = { area: body.state.place.area, x: body.state.place.x, y: body.state.place.y } as Place
   expect(chose.area).toBe('outdoors')

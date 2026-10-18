@@ -177,9 +177,11 @@ async function takeTwice(page: Page, crate: Locator, button: Locator, row: numbe
     if (r.method() === 'POST' && r.url().includes('/api/recovery/collect')) collects++
   }
   page.on('request', count)
-  await page.route('**/api/recovery', async (route) => {
-    await reread
-    await route.continue()
+  const held: Promise<void>[] = []
+  await page.route('**/api/recovery', (route) => {
+    const done = reread.then(() => route.continue())
+    held.push(done)
+    return done
   })
   try {
     const answered = page.waitForResponse((r) => r.request().method() === 'POST' && r.url().includes('/api/recovery/collect'))
@@ -192,6 +194,8 @@ async function takeTwice(page: Page, crate: Locator, button: Locator, row: numbe
     if (await takeAll.count()) await expect(takeAll, 'the buttons wait for the crate to be read again').toBeDisabled()
   } finally {
     release()
+    // Every held read goes on before the route is taken away (one let go after it is "already handled").
+    await Promise.allSettled(held)
     await page.unroute('**/api/recovery')
   }
   await expect(crate.getByTestId('crate-message')).toContainText(/Signed out to you: /)
@@ -243,6 +247,8 @@ test('the lamp naming holds I, J and C and Escape cancels it; the bag’s camp b
   await pinWorld(page, SEED)
   await seedDeed(page, id)
   seedMarks(id, 'keeper:hand')
+  // Setting a way-lamp out burns its first oil.
+  fund(id, { items: { 'hearth-oil': 1 } })
   await reenter(page)
   const lamp = randomUUID(), stool = randomUUID()
   sql(`INSERT INTO homestead_items(id,item_def,location,account_id) VALUES('${lamp}','way-lamp','inventory','${accountOf(id)}'),('${stool}','wooden-stool','inventory','${accountOf(id)}');`)
