@@ -1,6 +1,7 @@
 import type { ChunkLandStatus } from '../gen/glimway/v1/wilds_pb.js'
 import type { LampNotice } from '../gen/glimway/v1/camps_pb.js'
 import { LAMP_NOTICE, LAND_CHIP } from '../../content/land-chip.ts'
+import { landDimming } from './map-lamps.ts'
 
 /**
  * The land underfoot as the HUD's chip (lamps.md 1.1): held (and whose),
@@ -40,8 +41,9 @@ export function landChip(land: LandFields | null | undefined): LandChip | null {
     case 'built': {
       if (land.nextTurning === 'released') return chip('turning', LAND_CHIP.turning, why.released)
       const whose = landWhose(land)
-      if (land.dimming && land.reserve === 0) return chip('dimming', LAND_CHIP.dimming(whose), why.dimming)
-      return chip('held', LAND_CHIP.held(whose), land.nextTurning === 'dimming' ? why.lastOil : why.held)
+      // Out of oil, on its last wick or guttering (landDimming, as the map says it).
+      if (landDimming(land)) return chip('dimming', LAND_CHIP.dimming(whose), land.nextTurning === 'turns' ? why.guttering : why.lastWick)
+      return chip('held', LAND_CHIP.held(whose), why.held)
     }
     case 'common':
       return chip('common', LAND_CHIP.common, why.common)

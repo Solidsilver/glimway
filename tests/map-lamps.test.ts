@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { create } from '@bufbuild/protobuf'
 import { MapLampSchema, ChunkLandStatusSchema, WildsMapStatusSchema } from '../src/lib/gen/glimway/v1/wilds_pb.js'
-import { lampLedger, landLabel, turningLabel } from '../src/lib/wilds/map-lamps.ts'
+import { lampLedger, landDimming, landLabel, mapLampMark, turningLabel } from '../src/lib/wilds/map-lamps.ts'
 import { validateMapStatus } from '../src/lib/api/near.ts'
 import { loadWilds } from '../src/lib/wilds/data.ts'
 import { gateTile } from '../src/lib/wilds/map-model.ts'
@@ -30,9 +30,18 @@ test('land words distinguish still/permanent and the two different empty-store o
   const s = land(2,-4)
   assert.equal(landLabel(s),'Built · held')
   s.reserve=0;s.nextTurning='dimming'
-  assert.equal(turningLabel(s),'Dims next turning unless tended')
+  assert.equal(turningLabel(s),'Last wick · gutters next turning unless tended')
+  // The last wick is dimming already (owner, 2026-10-17): label, mark and hatch agree.
+  assert.equal(landLabel(s),'Built · dimming')
+  assert.ok(landDimming(s))
+  assert.ok(mapLampMark({ land: s }).dimming)
   s.dimming=true;s.nextTurning='turns'
   assert.equal(turningLabel(s),'Turns next turning unless tended')
+  assert.ok(landDimming(s))
+  s.reserve=1;s.dimming=false;s.nextTurning='held'
+  assert.ok(!landDimming(s))
+  assert.ok(!mapLampMark({ land: s }).dimming)
+  s.reserve=0;s.dimming=true;s.nextTurning='turns'
   s.nextTurning='released';assert.equal(turningLabel(s),'Turns at the next turning')
   s.tier='common';s.visited=false
   assert.equal(landLabel(s),'Common · needs a visit')
@@ -74,6 +83,6 @@ test('the Lamps layer marks a lamp with the placeholder way-lamp icon, dimmed wh
   const manifest = JSON.parse(readFileSync('public/assets/fingersnap/items-pass/manifest.json', 'utf8')) as { frames: { key: string }[] }
   for (const art of Object.values(MAP_LAMP_ICON)) assert.ok(manifest.frames.some((f) => f.key === art), `${art} is delivered`)
   assert.deepEqual(mapLampMark(create(MapLampSchema, { land: land(1, 1) })), { art: MAP_LAMP_ICON.lit, dimming: false })
-  assert.deepEqual(mapLampMark(create(MapLampSchema, { land: create(ChunkLandStatusSchema, { tier: 'built', dimming: true }) })), { art: MAP_LAMP_ICON.dimming, dimming: true })
+  assert.deepEqual(mapLampMark(create(MapLampSchema, { land: create(ChunkLandStatusSchema, { tier: 'built', dimming: true, nextTurning: 'turns' }) })), { art: MAP_LAMP_ICON.dimming, dimming: true })
   assert.deepEqual(mapLampMark(create(MapLampSchema, {})), { art: MAP_LAMP_ICON.lit, dimming: false })
 })

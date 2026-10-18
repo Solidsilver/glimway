@@ -26,10 +26,12 @@ test('held land says whose: your camp, a named friend’s, a friend’s, your lo
   assert.equal(held.why, LAND_CHIP.why.held)
 })
 
-test('a hold on its last oil is still held, and says it dims at the turning', () => {
+test('a hold on its last wick is dimming already, and says it gutters after the turning', () => {
   const c = landChip(camp({ reserve: 0, nextTurning: 'dimming', yours: true }))!
-  assert.equal(c.state, 'held')
-  assert.equal(c.why, LAND_CHIP.why.lastOil)
+  assert.equal(c.state, 'dimming')
+  assert.equal(c.text, 'Dimming · your camp')
+  assert.equal(c.why, LAND_CHIP.why.lastWick)
+  assert.match(c.why, /gutters for a wick/)
 })
 
 test('a dimming hold is its own state, with whose, and no countdown', () => {
@@ -37,6 +39,7 @@ test('a dimming hold is its own state, with whose, and no countdown', () => {
   assert.equal(c.state, 'dimming')
   assert.equal(c.text, 'Dimming · your camp')
   assert.equal(c.short, 'Dimming')
+  assert.equal(c.why, LAND_CHIP.why.guttering)
   assert.match(c.why, /next turning/)
   assert.doesNotMatch(c.why, /\d/)
   // Filled while dimming: the store has oil again, so it reads as held.
@@ -70,13 +73,13 @@ test('sameChip compares the words', () => {
 })
 
 test('dimming notices are short, plain and countdown-free', () => {
-  assert.equal(lampNoticeText(create(LampNoticeSchema, { kind: 'way-lamp' })), 'Your way-lamp is guttering. A flask of oil keeps the camp lit.')
-  assert.equal(lampNoticeText(create(LampNoticeSchema, { kind: 'way-lamp', name: 'First lamp past the Whitequiet' })), 'Your way-lamp, First lamp past the Whitequiet, is guttering. A flask of oil keeps the camp lit.')
+  assert.equal(lampNoticeText(create(LampNoticeSchema, { kind: 'way-lamp' })), 'Your way-lamp is dimming. A flask of oil keeps the camp lit.')
+  assert.equal(lampNoticeText(create(LampNoticeSchema, { kind: 'way-lamp', name: 'First lamp past the Whitequiet' })), 'Your way-lamp, First lamp past the Whitequiet, is dimming. A flask of oil keeps the camp lit.')
   assert.equal(lampNoticeText(create(LampNoticeSchema, { kind: 'lot-lantern', id: '3' })), LAMP_NOTICE.lotLantern)
   assert.equal(lampNoticeText(create(LampNoticeSchema, { kind: 'charter' })), null)
   for (const text of [LAMP_NOTICE.wayLamp(''), LAMP_NOTICE.lotLantern]) {
     assert.doesNotMatch(text, /\d|hurry|soon|left|hours?|days?/i)
-    assert.match(text, /guttering/)
+    assert.match(text, /dimming/)
   }
 })
 

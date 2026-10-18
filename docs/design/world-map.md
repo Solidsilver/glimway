@@ -278,10 +278,12 @@ read carries the occupied chunk's status.
 
 | Tier | On the map (Lamps layer) | In the ledger | Underfoot (HUD chip) |
 |---|---|---|---|
-| **Held** (Built: a lot lantern's backland, a way-lamp camp) | Warm fill and a double solid boundary, so it doesn't rely on colour | **Built · held**, reserve in wicks, **Holds at the next turning** or **Dims next turning unless tended** | **Held · your camp**, *Ana's camp*, *a friend's camp*, *your lot* or *a lot* |
-| **Dimming** (a held claim out of oil at the last turning) | The held look plus diagonal hatching, and an amber **⚠ Turns next turning unless tended** label | **Built · dimming**, amber, **0 wicks in reserve** | **Dimming · …**, amber with a dashed edge, and no animation |
+| **Held** (Built: a lot lantern's backland, a way-lamp camp, with oil left) | Warm fill and a double solid boundary, so it doesn't rely on colour | **Built · held**, reserve in wicks, **Holds at the next turning** | **Held · your camp**, *Ana's camp*, *a friend's camp*, *your lot* or *a lot* |
+| **Dimming** (a held claim out of oil: on its last wick, then guttering for its warning wick) | The held look plus diagonal hatching, a paler lamp mark, and an amber label: **⚠ Last wick · gutters next turning unless tended**, then **⚠ Turns next turning unless tended** | **Built · dimming**, amber, **0 wicks in reserve**, with the same two outcomes | **Dimming · …**, amber with a dashed edge, and no animation |
 | **Common** (laid paths and communal lamps, kept by visits) | Dashed outline only, never a fill: the woods around aren't held | Under *Common paths*: **Common · visited this wick** or **Common · needs a visit**, and whether paths or lamps carry | **Common** |
 | **Turning** (Wild; also a released claim) | Plain explored terrain | Not listed | **Turning** |
+
+**What dimming means** (owner, 2026-10-17): a held claim is dimming from the turning that burns its last flask, a wick before it starts guttering, so the warning comes a wick earlier. `landDimming` in `src/lib/wilds/map-lamps.ts` is the one rule: a Built status whose `next_turning` is `dimming` (last wick) or `turns` (guttering). The map hatch, the lamp mark, the ledger label and its amber, the HUD chip, and the lamps' own looks (`campLook`, `lanternLook`: frame `way-lamp-2` or `lantern-stake-2`, a smaller glow, the readout) all follow it. Before this, the map hatched only the guttering wick, the ledger was amber on the last wick, and the lamps looked lit until they guttered. The server's `dimming` flag still means the guttering (warning) wick, which the turning judges.
 
 Town and the still Tangle get no chip; the map's key names them (**Town · permanent**,
 **Still land · no oil needed**). Words are in `src/content/map-lamps.ts` and
@@ -300,7 +302,7 @@ chip only when it says dimming, not at every chunk edge. The chip stays a button
 focus and ask.
 
 **Dimming notices** ([lamps.md §2.5](lamps.md#25-built-claims-stores-and-tending)): a light you
-keep is told once per dimming, as a toast, by `GET /api/lamp-notices`.
+keep is told once per dimming, as a toast, by `GET /api/lamp-notices`, when its last wick starts.
 
 Tests: `tests/land-chip.test.ts` and `tests/map-lamps.test.ts` for words and states;
 `api/map_tiers_test.go` and `api/lamp_notices_test.go` on the server; `e2e/map-tiers.spec.ts`

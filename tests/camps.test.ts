@@ -57,10 +57,12 @@ test('a spot beside the hero: the open tile above first, never across the chunk 
 test('the lamp’s looks and readouts: burning, empty, guttering; whose it is; room for a flask', () => {
   assert.equal(campLook(camp()), 'lit');
   assert.equal(campLook(camp({ dimming: true, oil: 0 })), 'dimming');
+  assert.equal(campLook(camp({ oil: 0 })), 'dimming', 'the last wick is dimming');
+  assert.equal(campLook(camp({ oil: 1 })), 'lit');
   assert.equal(campFrame('lit'), 'way-lamp-1');
   assert.equal(campFrame('dimming'), 'way-lamp-2');
   assert.match(campLines(camp({ oil: 2 }), 'alice')[0]!, /^Your way-lamp\. It burns, 2 of 3 wicks/);
-  assert.match(campLines(camp({ oil: 0 }), 'bob')[0]!, /^Alice’s way-lamp\. .*dims at the turning/);
+  assert.match(campLines(camp({ oil: 0 }), 'bob')[0]!, /^Alice’s way-lamp\. It’s dimming: .*last wick.*gutters for a wick/);
   assert.match(campLines(camp({ oil: 0, dimming: true }), 'bob')[0]!, /guttering.*Pell’s/);
   assert.equal(campHasRoom(camp({ oil: 2 })), true);
   assert.equal(campHasRoom(camp({ oil: 3 })), false);

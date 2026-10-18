@@ -23,7 +23,8 @@ func noticeKinds(ns []*contract.LampNotice) []string {
 	return out
 }
 
-// A light you keep is told once per dimming: not on every read, not to
+// A light you keep is told once per dimming, from its last wick through its
+// guttering one: not on every read, not to
 // someone who doesn't keep it, not while you stand by it (you can see it),
 // and again only when it dims afresh at a later turning.
 func TestLampNoticeOncePerDimming(t *testing.T) {
@@ -42,9 +43,7 @@ func TestLampNoticeOncePerDimming(t *testing.T) {
 	if got := x.lampNotices(c); len(got) != 0 {
 		t.Fatal("lit lights told", got)
 	}
-	// The funded turning, then the one that dims both.
-	x.turn()
-	x.camps(c)
+	// The turning burns the last flask: both start their last wick, which is dimming.
 	x.turn()
 	c, s = x.again("alice")
 	s = x.standAt(c, s, stand[0], stand[1])
@@ -60,7 +59,8 @@ func TestLampNoticeOncePerDimming(t *testing.T) {
 		t.Fatal("told twice", again)
 	}
 	// Walking away doesn't bring the camp's back: it was seen there.
-	s = x.standAt(c, s, sx, sy)
+	ax, ay := local(2, -1, [2]int{13, 14})
+	s = x.standAt(c, s, ax, ay)
 	if again := x.lampNotices(c); len(again) != 0 {
 		t.Fatal("told after leaving", again)
 	}
@@ -69,15 +69,23 @@ func TestLampNoticeOncePerDimming(t *testing.T) {
 	if other := x.lampNotices(bc); len(other) != 0 {
 		t.Fatal("told a non-keeper", other)
 	}
+	// The next turning sets both guttering: the same dimming, not told again.
+	x.turn()
+	c, s = x.again("alice")
+	s = x.standAt(c, s, ax, ay)
+	if again := x.lampNotices(c); len(again) != 0 {
+		t.Fatal("guttering told again", again)
+	}
+	if cs := x.camps(c); len(cs) != 1 || !cs[0].Dimming {
+		t.Fatal("not guttering", cs)
+	}
 	// Filling it ends this dimming; the next one is told afresh.
 	s = x.standAt(c, s, stand[0], stand[1])
 	x.campOp(c, s, &contract.CampRequest{Action: "fill", Camp: lamp}, stand[0], stand[1], 200)
 	x.turn()
-	c, _ = x.again("alice")
-	x.camps(c)
-	x.turn()
 	c, s = x.again("alice")
-	x.standAt(c, s, sx, sy)
+	x.standAt(c, s, ax, ay)
+	// The lot lantern went dark at that turning: no longer told of.
 	got = x.lampNotices(c)
 	if len(got) != 1 || got[0].Kind != wayLampKind || got[0].Id != lamp || got[0].Cx != campCX || got[0].Cy != campCY {
 		t.Fatal(noticeKinds(got), got)

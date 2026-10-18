@@ -169,7 +169,7 @@ export class WildsCamps {
           return offer && { label: offer.label, verb: offer.verb, claim: () => (offer.dig ? this.uproot(p.id) : this.lookPlant(p.id, mayDig)) }
         }))
       }
-      // The lamp itself: lit, or guttering in its wick of warning.
+      // The lamp itself: lit, or dimming once its oil is gone (on its last wick, then guttering).
       const at = tileFeet(c.x, c.y)
       const key = omArt(campFrame(campLook(c)))
       if (this.scene.textures.exists(key)) {
@@ -177,7 +177,7 @@ export class WildsCamps {
         img.setData('camp', c.id)
         this.images.push(img)
       }
-      const glow = this.scene.add.image(at.x, at.y - 22, 'glow').setBlendMode(Phaser.BlendModes.ADD).setScale(c.dimming ? 0.35 : 0.6).setAlpha(c.dimming ? 0.45 : 0.8).setDepth(4001)
+      const glow = this.scene.add.image(at.x, at.y - 22, 'glow').setBlendMode(Phaser.BlendModes.ADD).setScale(campLook(c) === 'dimming' ? 0.35 : 0.6).setAlpha(campLook(c) === 'dimming' ? 0.45 : 0.8).setDepth(4001)
       this.images.push(glow)
       this.body(at.x, at.y - TILE / 2, TILE - 6, TILE - 6)
       points.push({ ...wildsPoint(`camp:${c.id}`, at, 30, () => ({ label: c.naming?.shortName ? `Look at ${c.naming.shortName}` : 'Look at the way-lamp', verb: 'Look', claim: () => this.look(c.id) })), rank: 0 })

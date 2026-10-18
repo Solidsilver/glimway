@@ -18,7 +18,8 @@ const S = 24
 const SEED = 'e2e-camps'
 
 type Hooks = {
-  __fsCamps: () => { camps: { id: string; cx: number; cy: number; oil: number }[]; spot: { tx: number; ty: number } | null } | null
+  __fsImagesNamed: (p: string) => { key: string; x: number; y: number }[]
+  __fsCamps: () => { camps: { id: string; cx: number; cy: number; x: number; y: number; oil: number }[]; spot: { tx: number; ty: number } | null } | null
   __fsPathTile: (tx: number, ty: number) => { surface: string | null; baseSolid: boolean; decor: string[]; occupied: boolean; change: unknown } | null
   __fsHomes: { fresh: () => Promise<void> }
   __fsToasts: () => { seen: { text: string }[] }
@@ -26,7 +27,7 @@ type Hooks = {
 
 const camps = (page: Page) => page.evaluate(() => (window as unknown as Hooks).__fsCamps())
 const toasts = (page: Page) => page.evaluate(() => (window as unknown as Hooks).__fsToasts().seen.map((t) => t.text))
-const GUTTERING = /Your way-lamp is guttering\. A flask of oil keeps the camp lit\./
+const DIMMING_NOTICE = /Your way-lamp is dimming\. A flask of oil keeps the camp lit\./
 
 /** The next lamp-notices answer (a new session asks with its first calendar): kind and id of each light told. */
 const noticesAnswer = (page: Page) =>
@@ -98,18 +99,24 @@ test('the land chip: turning, held and yours, none in town, dimming; the dimming
   await expect(chip).toHaveCount(0)
 
   // The oil runs out while you're away: the next session says so, once.
-  sql(`UPDATE camps SET oil=0,dimming=1 WHERE id='${lamp}';`)
+  // Its last wick (the oil gone at a turning, not yet guttering) is dimming already.
+  sql(`UPDATE camps SET oil=0,dimming=0 WHERE id='${lamp}';`)
   let told = noticesAnswer(page)
   await reenter(page)
   expect(await told).toEqual([{ kind: 'way-lamp', id: lamp }])
-  await expect.poll(() => toasts(page), { timeout: 15_000 }).toContainEqual(expect.stringMatching(GUTTERING))
+  await expect.poll(() => toasts(page), { timeout: 15_000 }).toContainEqual(expect.stringMatching(DIMMING_NOTICE))
 
   // Back at the camp: the chip says it's dimming, in words and a dashed edge.
   await warp(page, 'outdoors', at.tx, at.ty)
   await waitForWilds(page)
   await expect(chip).toHaveText('Dimming · your camp')
   await expect(chip).toHaveClass(/dimming/)
-  await expect(chip).toHaveAttribute('title', /guttering/)
+  await expect(chip).toHaveAttribute('title', /last wick/)
+  // The lamp itself agrees: drawn dimming on its last wick.
+  await expect.poll(async () => (await camps(page))?.camps.find((c) => c.id === lamp)?.oil ?? null).toBe(0)
+  const set = (await camps(page))!.camps.find((c) => c.id === lamp)!
+  await expect.poll(() => page.evaluate(([x, y]) => (window as unknown as Hooks).__fsImagesNamed('om-art:way-lamp-')
+    .filter((i) => Math.abs(i.x - x) < 9 && Math.abs(i.y - y) < 9).map((i) => i.key), [set.x * 16 + 8, set.y * 16 + 16] as const)).toEqual(['om-art:way-lamp-2'])
   await shot(page, 'land-chip-dimming')
 
   // Told once: another session says nothing more.
@@ -117,5 +124,5 @@ test('the land chip: turning, held and yours, none in town, dimming; the dimming
   told = noticesAnswer(page)
   await reenter(page)
   expect(await told).toEqual([])
-  expect((await toasts(page)).filter((t) => GUTTERING.test(t))).toEqual([])
+  expect((await toasts(page)).filter((t) => DIMMING_NOTICE.test(t))).toEqual([])
 })

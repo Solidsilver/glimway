@@ -1,10 +1,13 @@
 package api
 
 // Lamp notices (0.13; docs/design/lamps.md 2.5): a light the caller keeps
-// that dimmed at this wick's turning is told to them once. A dimming
-// lasts exactly one wick (filling it clears it; the next turning holds or
-// lapses it), so the wick's start names the episode, and an outcome row
-// lamp-dimming:<kind>:<id>:<wick start> is the once. No migration.
+// is told to them once when it starts dimming, which is when its last wick
+// starts (owner, 2026-10-17): its oil is gone, so at the next turning it
+// gutters for a wick (dimming), then lapses. Filling it ends the episode.
+// Oil only runs out at a turning, so the episode began at this wick's start
+// for an empty lamp not yet guttering, or the wick before for a guttering
+// one; an outcome row lamp-dimming:<kind>:<id>:<episode start> is the
+// once. No migration.
 import (
 	"context"
 	"database/sql"
@@ -12,6 +15,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"glimway/content"
 	"glimway/server/internal/chunks"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/store"
@@ -39,25 +43,35 @@ func (a *Server) lampNoticesRead(w http.ResponseWriter, r *http.Request) error {
 }
 
 // dimmingLight is one light the caller keeps that is dimming: its notice,
-// and the chunks standing in which counts as being there (the lamp's and
-// the land it holds).
+// whether it is already guttering (its warning wick), and the chunks
+// standing in which counts as being there (the lamp's and the land it holds).
 type dimmingLight struct {
-	notice *contract.LampNotice
-	near   [][2]int
+	notice    *contract.LampNotice
+	guttering bool
+	near      [][2]int
 }
 
-// lampNotices: the caller's dimming lights not yet told this wick. Each is
-// recorded as told; one the caller stands by is recorded but not said.
+// episodeStart is the start of the wick a light's dimming began in: this
+// wick's for a light on its last wick, the wick before for a guttering one.
+func episodeStart(guttering bool, now int64) int64 {
+	start := store.WickStart(now)
+	if guttering {
+		return content.CalendarAt(content.CalendarRules, start-1).StartsAt
+	}
+	return start
+}
+
+// lampNotices: the caller's dimming lights not yet told this episode. Each
+// is recorded as told; one the caller stands by is recorded but not said.
 func lampNotices(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (*contract.LampNoticesRead, error) {
 	lights, err := keptDimming(ctx, tx, s.WorldID, s.AccountID)
 	if err != nil {
 		return nil, err
 	}
 	out := &contract.LampNoticesRead{}
-	wick := store.WickStart(now)
 	for _, l := range lights {
 		n := l.notice
-		fresh, err := store.Outcome(ctx, tx, s.AccountID, fmt.Sprintf("%s:%s:%s:%d", lampDimmingReason, n.Kind, n.Id, wick), lampDimmingReason, now)
+		fresh, err := store.Outcome(ctx, tx, s.AccountID, fmt.Sprintf("%s:%s:%s:%d", lampDimmingReason, n.Kind, n.Id, episodeStart(l.guttering, now)), lampDimmingReason, now)
 		if err != nil {
 			return nil, err
 		}
@@ -82,12 +96,13 @@ func standingBy(s *store.Snapshot, near [][2]int) bool {
 	return false
 }
 
-// keptDimming: the dimming camps the account set, then its households'
-// dimming lot lanterns, in this world. Communal lamps run on visits, not
-// oil, so they never dim.
+// keptDimming: the lit camps the account set and its households' lit lot
+// lanterns, out of oil, in this world. Lit is a standing hold, not let go.
+// Communal lamps run on visits, not oil, so they never dim.
 func keptDimming(ctx context.Context, tx *sql.Tx, world, account string) ([]dimmingLight, error) {
 	var out []dimmingLight
-	rows, err := tx.QueryContext(ctx, campSelect+"WHERE c.world_id=? AND c.setter=? AND c.dimming=1 ORDER BY c.id", world, account)
+	rows, err := tx.QueryContext(ctx, campSelect+`JOIN holds h ON h.world_id=c.world_id AND h.holder_kind=? AND h.holder_id=c.id AND h.cx=c.cx AND h.cy=c.cy AND h.released_at IS NULL
+WHERE c.world_id=? AND c.setter=? AND c.oil=0 ORDER BY c.id`, wayLampKind, world, account)
 	if err != nil {
 		return nil, err
 	}
@@ -112,31 +127,37 @@ func keptDimming(ctx context.Context, tx *sql.Tx, world, account string) ([]dimm
 		if naming != nil {
 			n.Name = naming.ShortName
 		}
-		out = append(out, dimmingLight{n, [][2]int{{c.CX, c.CY}}})
+		out = append(out, dimmingLight{n, c.Dimming, [][2]int{{c.CX, c.CY}}})
 	}
-	rows, err = tx.QueryContext(ctx, `SELECT h.gate FROM homesteads h JOIN homestead_members m ON m.homestead_id=h.id JOIN lot_lanterns l ON l.homestead_id=h.id WHERE h.world_id=? AND m.account_id=? AND l.dimming=1 ORDER BY h.gate`, world, account)
+	rows, err = tx.QueryContext(ctx, `SELECT h.gate,l.dimming FROM homesteads h JOIN homestead_members m ON m.homestead_id=h.id JOIN lot_lanterns l ON l.homestead_id=h.id
+JOIN holds d ON d.world_id=h.world_id AND d.holder_kind=? AND d.holder_id=CAST(h.gate AS TEXT) AND d.released_at IS NULL
+WHERE h.world_id=? AND m.account_id=? AND l.oil=0 ORDER BY h.gate`, lotLanternKind, world, account)
 	if err != nil {
 		return nil, err
 	}
-	var gates []int
+	type lot struct {
+		gate      int
+		guttering bool
+	}
+	var lots []lot
 	for rows.Next() {
-		var gate int
-		if err = rows.Scan(&gate); err != nil {
+		var l lot
+		if err = rows.Scan(&l.gate, &l.guttering); err != nil {
 			rows.Close()
 			return nil, err
 		}
-		gates = append(gates, gate)
+		lots = append(lots, l)
 	}
 	if err = closeRows(rows); err != nil {
 		return nil, err
 	}
-	for _, gate := range gates {
-		bx, by := chunks.BacklandChunk(gate)
-		ox, oy := chunks.LotOrigin(gate)
-		x, y := chunks.LanternStake(gate)
+	for _, l := range lots {
+		bx, by := chunks.BacklandChunk(l.gate)
+		ox, oy := chunks.LotOrigin(l.gate)
+		x, y := chunks.LanternStake(l.gate)
 		sx, sy := wilds.ChunkOf(ox+x, oy+y)
-		n := &contract.LampNotice{Kind: lotLanternKind, Id: strconv.Itoa(gate), Cx: int32(bx), Cy: int32(by)}
-		out = append(out, dimmingLight{n, [][2]int{{bx, by}, {sx, sy}}})
+		n := &contract.LampNotice{Kind: lotLanternKind, Id: strconv.Itoa(l.gate), Cx: int32(bx), Cy: int32(by)}
+		out = append(out, dimmingLight{n, l.guttering, [][2]int{{bx, by}, {sx, sy}}})
 	}
 	return out, nil
 }

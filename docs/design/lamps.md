@@ -413,14 +413,19 @@ Dimming retains services and lowers the flame. Show an amber warning chip and ma
 store's reserve and next-boundary result without a ticking seconds-to-loss display. Cracks and
 repairs are not needed for warning.
 
-As built (0.13): the HUD's land chip (§1.1) turns amber with a dashed edge, **Dimming · your
-camp**, and doesn't animate. A light you keep (a camp you set, your household's lot lantern) is
-told once when it starts dimming: "Your way-lamp is guttering. A flask of oil keeps the camp lit."
-or "The lantern behind your lot is guttering. A flask of oil keeps the woods out back." The client
+As built (0.13): dimming starts a wick earlier than the warning wick (owner, 2026-10-17). A lamp
+is dimming once its oil is gone: through its last wick, then through the warning wick it
+gutters in. Every view uses one rule ([world-map §13](world-map.md#13-as-built-three-tiers-and-dimming-013)):
+the map hatch and mark, the ledger, the lamp's frame and readout, and the HUD's land chip (§1.1),
+which turns amber with a dashed edge, **Dimming · your camp**, and doesn't animate. A light you
+keep (a camp you set, your household's lot lantern) is told once, when its last wick starts:
+"Your way-lamp is dimming. A flask of oil keeps the camp lit." or "The lantern behind your lot
+is dimming. A flask of oil keeps the woods out back." The client
 asks `GET /api/lamp-notices` with each session's first calendar read and at each new day. The
-server answers lights dimming this wick that haven't been told, and records each as an `outcomes`
-row `lamp-dimming:<kind>:<id>:<wick start>` (a dimming lasts exactly one wick, so the wick names
-it; no migration). One you're standing by (its chunk, or a lot's stake) is recorded but not said,
+server answers lit lights out of oil that haven't been told, and records each as an `outcomes`
+row `lamp-dimming:<kind>:<id>:<episode start>`. Oil only runs out at a turning, so the episode
+starts at this wick for a lamp on its last wick, or the wick before for a guttering one; filling
+it ends the episode. No migration. One you're standing by (its chunk, or a lot's stake) is recorded but not said,
 because the chip already shows it. Communal lamps run on visits, not oil, so they never dim and
 send no notice. Mail isn't used: its schema allows only player-to-player letters.
 
