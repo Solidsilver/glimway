@@ -41,8 +41,14 @@ test('server wisp observes menus and close/resync; press predicts but death wait
   const hero = await player(page)
   const tick = Math.floor(Date.now() / 100) >>> 0
   const send = (event: NonNullable<Parameters<typeof create<typeof PresenceMessageSchema>>[1]>['event']) => socket!.send(serverFrame(event))
-  send({ case: 'fightJoin', value: { room: 41, tick, critSeed: 123, roomKey: { world: 'fake', realm: 'outdoors', layer: 0, cx: 0, cy: 0, epoch: 'still' }, enemies: [{ enemy: 0, id: `${camp}:0`, campId: camp, kind: 1, x: Math.round(hero.x + 14), y: Math.round(hero.y), state: 1, stateTick: tick, hp: 28, maxHp: 28, facing: 0 }] } })
-  await expect.poll(() => serverEnemy(page)).not.toBeNull()
+  const join = () => send({ case: 'fightJoin', value: { room: 41, tick, critSeed: 123, roomKey: { world: 'fake', realm: 'outdoors', layer: 0, cx: 0, cy: 0, epoch: 'still' }, enemies: [{ enemy: 0, id: `${camp}:0`, campId: camp, kind: 1, x: Math.round(hero.x + 14), y: Math.round(hero.y), state: 1, stateTick: tick, hp: 28, maxHp: 28, facing: 0 }] } })
+  // A join is the room's whole picture, so sending it again is safe: one sent
+  // before the link settled (or on a socket since replaced) is lost (CI, 2026-10-18).
+  await expect.poll(async () => {
+    const enemy = await serverEnemy(page)
+    if (!enemy) join()
+    return enemy
+  }, { timeout: 15_000, message: 'the server enemy from the fight join' }).not.toBeNull()
   expect((await serverEnemy(page))!.bodyEnabled).toBe(false)
   await page.getByRole('button', { name: 'Menu (Esc)' }).click()
   send({ case: 'fightDelta', value: { room: 41, tick: (tick + 1) >>> 0, changed: [{ enemy: 0, x: Math.round(hero.x + 22), state: 2, stateTick: (tick + 1) >>> 0 }] } })

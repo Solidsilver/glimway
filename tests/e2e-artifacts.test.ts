@@ -14,8 +14,10 @@ function fixture(t: test.TestContext, report?: unknown) {
   if (report !== undefined) writeFileSync(join(dir, 'test-results/e2e-results.json'), JSON.stringify(report))
   return {
     dir,
+    stepSummary: join(dir, 'step-summary.md'),
     collect() {
-      execFileSync(process.execPath, [script], { cwd: dir })
+      // Never the real job's step summary (verify runs these tests in CI).
+      execFileSync(process.execPath, [script], { cwd: dir, env: { ...process.env, GITHUB_STEP_SUMMARY: join(dir, 'step-summary.md'), E2E_SUMMARY_TITLE: 'e2e test' }, stdio: 'pipe' })
       return JSON.parse(readFileSync(join(dir, '.e2e-artifacts/summary.json'), 'utf8'))
     },
   }
@@ -70,6 +72,31 @@ test('a lane run’s smoke pass adds its own report to the first pass’s, not o
   assert.equal(summary.report.passes, 2)
   assert.deepEqual(summary.reportPolicy.copiedPaths, ['e2e-results.json', 'smoke-e2e-results.json'])
   assert.deepEqual(JSON.parse(readFileSync(join(f.dir, '.e2e-artifacts/smoke-e2e-results.json'), 'utf8')), smoke)
+})
+
+test('the step summary counts flaky and failed tests and names the ten slowest', (t) => {
+  const attempt = (status: string, retry: number, duration: number) => ({ status, retry, duration })
+  const spec = (title: string, status: string, results: ReturnType<typeof attempt>[]) => ({ title, file: `${title}.spec.ts`, tests: [{ projectName: 'chromium', status, expectedStatus: 'passed', results }] })
+  const specs = [
+    spec('retried', 'flaky', [attempt('failed', 0, 30_000), attempt('passed', 1, 25_000)]),
+    spec('broken', 'unexpected', [attempt('failed', 0, 4_000), attempt('failed', 1, 4_000)]),
+    ...Array.from({ length: 11 }, (_, i) => spec(`fine-${i}`, 'expected', [attempt('passed', 0, (i + 1) * 1_000)])),
+  ]
+  // Playwright titles each file's suite with the file name, as here for the first.
+  const f = fixture(t, { stats: { duration: 90_000 }, suites: [{ title: 'retried.spec.ts', specs: specs.slice(0, 1) }, { title: 'all', specs: specs.slice(1) }] })
+  const summary = f.collect()
+  assert.deepEqual(summary.health.flaky, ['retried.spec.ts › retried'])
+  assert.deepEqual(summary.health.hard, ['broken.spec.ts › all › broken'])
+  assert.equal(summary.health.slowest.length, 10)
+  assert.deepEqual(summary.health.slowest[0], { test: 'retried.spec.ts › retried', durationMs: 55_000, attempts: 2 })
+  assert.equal(summary.health.slowest[1].test, 'fine-10.spec.ts › all › fine-10')
+  assert.ok(!summary.health.slowest.some((s: { test: string }) => s.test === 'fine-0.spec.ts › all › fine-0'))
+  const md = readFileSync(f.stepSummary, 'utf8')
+  assert.match(md, /^### e2e test/)
+  assert.match(md, /\*\*11 passed, 1 flaky, 1 failed\*\* in 1\.5 min/)
+  assert.match(md, /- broken\.spec\.ts › all › broken/)
+  assert.match(md, /\| retried\.spec\.ts › retried \| 55\.0 s \| 2 \|/)
+  assert.equal(readFileSync(join(f.dir, '.e2e-artifacts/summary.md'), 'utf8') + '\n', md)
 })
 
 test('setup failure with no tests retains report-level errors', (t) => {

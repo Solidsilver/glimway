@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { moveServerClock, reenter, seedStory, serverState, wickSlack } from './connected'
+import { moveServerClock, reenter, seedStory, serverState, wickSlack, PLACE_REPORTED_MS } from './connected'
 import { player, warp, waitForWilds, wilds, worldTileOf, type WildsDump, waitForLive, readDialogue, toastAfter, expectToast, parkCreatures, windowWhole } from './helpers'
 import { freshPlayer } from './home-helpers'
 import { ECHOES } from '../src/content/echoes.ts'
@@ -218,7 +218,11 @@ test('a place in the Whitequiet reloads there, and a turned wick leaves you wher
   const again = await player(page)
   expect(Math.hypot(again.x - here.x, again.y - here.y)).toBeLessThan(10 * 16)
   await expectToast(page, /turned since you were last here/)
-  await expect.poll(async () => (await serverState(page)).body.state.flags).toContain('wilds:turned')
+  // Connected, the server writes the flag when it sees this place reported, and the link reports
+  // a place on a 10 s deadline: the default 5 s poll lost that race (T4).
+  await expect
+    .poll(async () => (await serverState(page)).body.state.flags, { timeout: PLACE_REPORTED_MS, message: 'the server records the turning' })
+    .toContain('wilds:turned')
 })
 
 test.describe('in a world', () => {

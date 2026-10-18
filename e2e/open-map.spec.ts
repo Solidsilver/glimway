@@ -348,12 +348,16 @@ test('two players in neighbouring chunks see each other; two chunks apart they d
   await waitForWilds(page)
   await warp(other, 'outdoors', rowanAt.tx, rowanAt.ty)
   await waitForWilds(other)
-  expect((await wilds(page)).chunk).toEqual({ cx: 0, cy: -1 })
-  expect((await wilds(other)).chunk).toEqual({ cx: 1, cy: -1 })
-  await expect.poll(async () => (await remotes(page)).map((r) => r.name), { timeout: 20_000 }).toEqual(['Rowan'])
-  await expect.poll(async () => (await remotes(other)).map((r) => r.name), { timeout: 20_000 }).toEqual(['Ash'])
-  const seen = (await remotes(page))[0]!
-  const there = await player(other)
+  // Two samples that agree, not one read after a warp or a join (T4).
+  const chunkOf = async (p: Page) => (await wilds(p)).chunk
+  expect(await steady(page, () => chunkOf(page), { frames: 2, seconds: 10, message: 'Ash in chunk 0,-1' })).toEqual({ cx: 0, cy: -1 })
+  expect(await steady(other, () => chunkOf(other), { frames: 2, seconds: 10, message: 'Rowan in chunk 1,-1' })).toEqual({ cx: 1, cy: -1 })
+  const names = async (p: Page) => (await remotes(p)).map((r) => r.name)
+  const same = (want: string[]) => (v: string[]) => JSON.stringify(v) === JSON.stringify(want)
+  await steady(page, () => names(page), { frames: 2, seconds: 20, message: 'Ash sees Rowan', ready: same(['Rowan']) })
+  await steady(other, () => names(other), { frames: 2, seconds: 20, message: 'Rowan sees Ash', ready: same(['Ash']) })
+  const there = await steady(other, () => player(other), { frames: 2, seconds: 10, message: 'Rowan stands still' })
+  const seen = (await steady(page, () => remotes(page), { frames: 2, seconds: 10, message: 'Rowan drawn at rest', ready: (r) => r.length === 1 }))[0]!
   expect(Math.hypot(seen.x - there.x, seen.y - there.y), 'drawn where Rowan stands (world pixels)').toBeLessThan(24)
   await expect.poll(async () => (await remotes(page))[0]?.alpha ?? 0).toBe(1)
   await shot(page, '64-open-map-two-players-desktop')
@@ -361,7 +365,7 @@ test('two players in neighbouring chunks see each other; two chunks apart they d
   // Rowan goes two chunks further east: out of Ash's 3×3, so they part.
   await warp(other, 'outdoors', 3 * S + 12, -12)
   await waitForWilds(other)
-  await expect.poll(async () => (await remotes(page)).length, { timeout: 15_000 }).toBe(0)
+  await steady(page, () => names(page), { frames: 2, seconds: 15, message: 'Ash no longer sees Rowan', ready: same([]) })
   await ctx.close()
 })
 
@@ -554,14 +558,15 @@ test('the Whitequiet’s motes drift with each outer chunk, stay through its sit
   // A paper found redraws every site layer (its key counts paper flags): the motes stay, nothing doubles.
   await page.evaluate(() => (window as unknown as { __fsDevAddFlag: (f: string) => void }).__fsDevAddFlag('paper:motes-test'))
   await frames(page, 5)
-  await expect.poll(async () => moteResources(page), {
-    timeout: 20_000,
-    message: 'Whitequiet scene counts settle after redraw'
-  }).toEqual({
-    motes: MOTES * outer.length,
-    tweens: before.tweens
-  })
-  const after = await moteResources(page)
+  // Two samples that agree on the counts before redraw, not a poll that passes once and a
+  // fresh read after it (T4). A count that never comes back fails below with what was seen.
+  const want = { motes: MOTES * outer.length, tweens: before.tweens }
+  const after = await steady(page, () => moteResources(page), {
+    frames: 2,
+    seconds: 20,
+    message: 'Whitequiet scene counts settle after redraw',
+    ready: (z) => z.motes === want.motes && z.tweens === want.tweens
+  }).catch(() => moteResources(page))
   expect(after.motes, 'the motes survive the redraw').toBe(MOTES * outer.length)
   expect(after.tweens, 'and so do their tweens (no more, no fewer)').toBe(before.tweens)
 

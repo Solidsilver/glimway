@@ -157,7 +157,9 @@ test('a reload on either side of the mouth comes back where it was', async ({ pa
   await connected(page, context)
   for (const at of [ARCH, GATE_IN]) {
     await warp(page, 'outdoors', at.tx, at.ty)
-    await parkCreatures(page)
+    // Kept parked across the reload: a creature in the fresh scene could knock
+    // the hero off the spot before the next park (CI, 2026-10-18: 20 px off).
+    await parkCreatures(page, { keep: true })
     await page.evaluate(() => (window as unknown as { __fsDevSaveSoon: () => void }).__fsDevSaveSoon())
     await expect.poll(async () => (await serverState(page)).body.state.position, { timeout: PLACE_REPORTED_MS }).toEqual({ x: at.tx * TILE + 8, y: at.ty * TILE + 8 })
     await reenter(page, 'outdoors')

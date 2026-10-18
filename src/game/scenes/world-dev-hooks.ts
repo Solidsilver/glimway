@@ -345,9 +345,10 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
     const textures = s.textures.getTextureKeys().filter((k) => /^wilds-(ground|drift):/.test(k)).length
     const listeners = Object.values(EV).reduce((n, e) => n + bus.listenerCount(e), 0)
     // What each tween moves and how (type:texture or a text's words, then its properties), so a stray one can be named.
-    const tweening = tweens.flatMap((t) => t.targets.map((o) => {
+    // A tween torn down mid-frame (a detaching chunk's) has no targets or data left.
+    const tweening = tweens.flatMap((t) => (t.targets ?? []).map((o) => {
       const g = o as { type?: string; texture?: { key: string }; text?: string }
-      return `${g.type ?? '?'}:${g.text ?? g.texture?.key ?? ''} ${t.data.map((d) => ('key' in d ? d.key : '')).join(',')}`
+      return `${g.type ?? '?'}:${g.text ?? g.texture?.key ?? ''} ${(t.data ?? []).map((d) => ('key' in d ? d.key : '')).join(',')}`
     }))
     return { list: s.children.length, tweens: tweens.length, transientTweens: tweens.filter(t => !t.isInfinite).length, tweening, statics: s.physics.world.staticBodies.size, textures, listeners, kinds }
   })

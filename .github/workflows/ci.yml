@@ -13,6 +13,44 @@ permissions:
   contents: read
 
 jobs:
+  # Whether this push changes anything but docs. A push touching only docs/**
+  # or Markdown files skips both E2E jobs (verify still runs); CHANGELOG.md is
+  # not docs here: the build reads it for the "What's new" card. Anything in
+  # doubt (a new branch, a force push whose old head can't be fetched, a pull
+  # request, a manual run) counts as code. A skipped job leaves the run green,
+  # which is all tag-release.yml reads (main and dev have no required checks).
+  changes:
+    name: changes
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          lfs: false
+          sparse-checkout: .github
+      - name: Does this push change more than docs?
+        id: diff
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          SHA: ${{ github.sha }}
+        run: |
+          code=true
+          case "$EVENT:$BEFORE" in
+            push:|push:0000000000000000000000000000000000000000) echo "a new branch: everything runs" ;;
+            push:*)
+              if git fetch --no-tags --depth=1 origin "$BEFORE" && files=$(git diff --name-only "$BEFORE" "$SHA"); then
+                printf 'changed:\n%s\n' "$files"
+                others=$(printf '%s\n' "$files" | grep -Ev '^docs/|\.md$' || true)
+                if [ -n "$files" ] && [ -z "$others" ] && ! printf '%s\n' "$files" | grep -qx 'CHANGELOG.md'; then code=false; fi
+              else
+                echo "the previous head isn't reachable: everything runs"
+              fi ;;
+            *) echo "$EVENT: everything runs" ;;
+          esac
+          echo "code=$code" | tee -a "$GITHUB_OUTPUT"
+
   verify:
     runs-on: ubuntu-latest
     env:
@@ -80,6 +118,8 @@ jobs:
   # (software WebGL, so only the handful of critical-path tests).
   e2e-smoke:
     name: e2e smoke
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -118,6 +158,8 @@ jobs:
         run: npx playwright test --grep @smoke
       - name: Prepare bounded E2E evidence
         if: always()
+        env:
+          E2E_SUMMARY_TITLE: e2e smoke
         run: node scripts/e2e-artifacts.mjs
       - name: Upload E2E report, summary and capped traces
         if: always()
@@ -135,7 +177,9 @@ jobs:
   # dispatch, by the repository owner: never for pull requests, never for forks.
   e2e-full:
     name: e2e full (self-hosted GPU)
+    needs: changes
     if: >-
+      needs.changes.outputs.code == 'true' &&
       github.repository == 'Solidsilver/glimway' &&
       github.actor == github.repository_owner &&
       (github.event_name == 'workflow_dispatch' ||
@@ -144,7 +188,8 @@ jobs:
          github.ref == 'refs/heads/dev' ||
          startsWith(github.ref, 'refs/heads/exp/'))))
     runs-on: [self-hosted, linux, x64, glimway-e2e]
-    timeout-minutes: 45
+    # Dev full runs take 25 min, with outliers near 41 (review T5, 2026-10-18).
+    timeout-minutes: 60
     concurrency:
       group: e2e-full-${{ github.ref }}
       # Never on main: tag-release.yml tags the commit whose CI passed, so a
@@ -245,6 +290,8 @@ jobs:
           esac
       - name: Prepare bounded E2E evidence
         if: always()
+        env:
+          E2E_SUMMARY_TITLE: e2e full
         run: node scripts/e2e-artifacts.mjs
       - name: Upload E2E report, summary and capped traces
         if: always()
