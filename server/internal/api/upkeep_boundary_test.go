@@ -122,7 +122,9 @@ func (x *rig) lapsedToSeed(s response) {
 
 // A near read in a camp's slack, first after the turning its camp lapses
 // at, is beyond the frontier: the read judges the turning before it checks
-// the frontier, never the lapsed slack. A read first changes nothing.
+// the frontier, and keeps that judgement when it refuses, so straight after
+// the refusal nothing is held and the slack is gone for everyone. A read
+// first changes nothing.
 func TestNearReadAfterADueLapse(t *testing.T) {
 	for _, readFirst := range []bool{false, true} {
 		t.Run(fmt.Sprintf("readFirst=%v", readFirst), func(t *testing.T) {
@@ -142,10 +144,15 @@ func TestNearReadAfterADueLapse(t *testing.T) {
 			if readFirst {
 				x.refresh(c, &s)
 			}
-			x.near(c, ex, ey-2, 409)
-			x.near(c, ex, ey, 200)
-			if frontier.Inside(s.WorldID, ex, ey-2) || frontier.InsidePublished(s.WorldID, ex, ey-2) {
-				t.Fatal("the lapsed camp kept its reach")
+			for i := range 2 {
+				x.near(c, ex, ey-2, 409)
+				var held int
+				if err := x.db.DB.QueryRow("SELECT count(*) FROM holds WHERE world_id=?", s.WorldID).Scan(&held); err != nil {
+					t.Fatal(err)
+				}
+				if held != 0 || frontier.Inside(s.WorldID, ex, ey-2) || frontier.InsidePublished(s.WorldID, ex, ey-2) {
+					t.Fatalf("after refused read %d: %d holds, reach %v, published %v", i+1, held, frontier.Inside(s.WorldID, ex, ey-2), frontier.InsidePublished(s.WorldID, ex, ey-2))
+				}
 			}
 		})
 	}

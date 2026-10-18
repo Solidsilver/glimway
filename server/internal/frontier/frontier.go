@@ -152,6 +152,18 @@ func Stage(world string, held [][2]int) {
 	staged[world] = r
 }
 
+// Staged is the worlds the open transaction has staged.
+func Staged() []string {
+	mu.RLock()
+	defer mu.RUnlock()
+	out := make([]string, 0, len(staged))
+	for w := range staged {
+		out = append(out, w)
+	}
+	slices.Sort(out)
+	return out
+}
+
 // Publish makes every staged view the published one: its transaction
 // committed.
 func Publish() {

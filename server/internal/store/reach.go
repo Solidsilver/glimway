@@ -7,18 +7,16 @@ package store
 // release keeps its chunk, so its reach, until then. Each stages the world's
 // keys as its transaction now sees them (frontier.Stage): that transaction
 // reads its own reach from then on, and nobody else does. The store's
-// connection publishes what was staged when the transaction commits and
-// drops it when it rolls back (reachDriver); a rollback to a savepoint
-// stages the keys again (RefreshReach). As a backstop, the next transaction
-// reads again the keys of a world another transaction set (ConfirmReach,
-// and confirmReach before a world's epoch is read): the store has one
-// connection, so that transaction has ended, however it ended.
+// driver publishes what was staged once the transaction's commit has
+// succeeded, and drops it when the transaction rolls back or its commit
+// fails (reachTx); a rollback to a savepoint stages the keys again
+// (RefreshReach). The store has one connection, so the staged reach is the
+// open transaction's, and the next can't begin before it is published.
 
 import (
 	"context"
 	"database/sql"
-	"slices"
-	"sync"
+	"database/sql/driver"
 
 	"glimway/content"
 	"glimway/server/internal/frontier"
@@ -27,28 +25,63 @@ import (
 	"modernc.org/sqlite"
 )
 
-var (
-	reachMu sync.Mutex
-	// reachBy: the transaction that last set a world's keys, until
-	// another transaction confirms them.
-	reachBy = map[string]*sql.Tx{}
-)
+// reachDriverName is SQLite whose transactions end their staged reach.
+const reachDriverName = "sqlite-glimway"
 
-// reachDriver is SQLite with the hooks that end a transaction's staged
-// reach. A commit hook runs as the commit starts; if the commit then fails,
-// SQLite rolls back and the next transaction's ConfirmReach reads the keys
-// again.
-const reachDriver = "sqlite-glimway"
+func init() { sql.Register(reachDriverName, reachDriver{&sqlite.Driver{}}) }
 
-func init() {
-	d := &sqlite.Driver{}
-	d.RegisterConnectionHook(func(c sqlite.ExecQuerierContext, _ string) error {
-		h := c.(sqlite.HookRegisterer)
-		h.RegisterCommitHook(func() int32 { frontier.Publish(); return 0 })
-		h.RegisterRollbackHook(frontier.Discard)
-		return nil
-	})
-	sql.Register(reachDriver, d)
+type reachDriver struct{ sqlite *sqlite.Driver }
+
+// sqliteConn is what database/sql uses of a SQLite connection.
+type sqliteConn interface {
+	driver.Conn
+	driver.ConnBeginTx
+	driver.ConnPrepareContext
+	driver.ExecerContext
+	driver.QueryerContext
+	driver.Pinger
+	driver.SessionResetter
+	driver.Validator
+}
+
+func (d reachDriver) Open(name string) (driver.Conn, error) {
+	c, err := d.sqlite.Open(name)
+	if err != nil {
+		return nil, err
+	}
+	return reachConn{c.(sqliteConn)}, nil
+}
+
+type reachConn struct{ sqliteConn }
+
+func (c reachConn) Begin() (driver.Tx, error) {
+	return c.BeginTx(context.Background(), driver.TxOptions{})
+}
+
+func (c reachConn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, error) {
+	t, err := c.sqliteConn.BeginTx(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+	return reachTx{t}, nil
+}
+
+// reachTx publishes its staged reach after its commit succeeds, before
+// database/sql hands the connection on; otherwise it drops it.
+type reachTx struct{ driver.Tx }
+
+func (t reachTx) Commit() error {
+	if err := t.Tx.Commit(); err != nil {
+		frontier.Discard()
+		return err
+	}
+	frontier.Publish()
+	return nil
+}
+
+func (t reachTx) Rollback() error {
+	defer frontier.Discard()
+	return t.Tx.Rollback()
 }
 
 // heldKeys are the world's held chunks.
@@ -78,70 +111,18 @@ func syncReach(ctx context.Context, tx *sql.Tx, world string) error {
 	if err != nil {
 		return err
 	}
-	reachMu.Lock()
-	defer reachMu.Unlock()
 	frontier.Stage(world, keys)
-	reachBy[world] = tx
 	return nil
 }
 
-// RefreshReach stages again the keys of every world tx set, after tx rolled
-// back to a savepoint: the holds it took or let go since may be undone.
+// RefreshReach stages again the keys of every world tx staged, after tx
+// rolled back to a savepoint: the holds it took or let go since may be
+// undone.
 func RefreshReach(ctx context.Context, tx *sql.Tx) error {
-	reachMu.Lock()
-	var worlds []string
-	for w, by := range reachBy {
-		if by == tx {
-			worlds = append(worlds, w)
-		}
-	}
-	reachMu.Unlock()
-	for _, w := range worlds {
+	for _, w := range frontier.Staged() {
 		if err := syncReach(ctx, tx, w); err != nil {
 			return err
 		}
-	}
-	return nil
-}
-
-// ConfirmReach confirms every world's keys another transaction set; a
-// request runs it as it begins, before any boundary check.
-func ConfirmReach(ctx context.Context, tx *sql.Tx) error {
-	reachMu.Lock()
-	var worlds []string
-	for w, by := range reachBy {
-		if by != tx {
-			worlds = append(worlds, w)
-		}
-	}
-	reachMu.Unlock()
-	slices.Sort(worlds)
-	for _, w := range worlds {
-		if err := confirmReach(ctx, tx, w); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// confirmReach reads the world's keys again when another transaction set
-// them last: it has ended, and may have rolled back.
-func confirmReach(ctx context.Context, tx *sql.Tx, world string) error {
-	reachMu.Lock()
-	by, ok := reachBy[world]
-	reachMu.Unlock()
-	if !ok || by == tx {
-		return nil
-	}
-	keys, err := heldKeys(ctx, tx, world)
-	if err != nil {
-		return err
-	}
-	reachMu.Lock()
-	defer reachMu.Unlock()
-	if reachBy[world] == by {
-		frontier.Set(world, keys)
-		delete(reachBy, world)
 	}
 	return nil
 }
@@ -165,10 +146,7 @@ func loadReach(ctx context.Context, db *sql.DB) error {
 	if err = rows.Err(); err != nil {
 		return err
 	}
-	reachMu.Lock()
-	defer reachMu.Unlock()
 	frontier.Reset()
-	clear(reachBy)
 	for _, w := range worlds {
 		keys, err := heldKeys(ctx, db, w)
 		if err != nil {

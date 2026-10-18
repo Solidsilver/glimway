@@ -118,7 +118,20 @@ func (a *Server) nearRead(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	defer tx.Rollback()
-	view, err := a.near(r.Context(), tx, s, cx, cy, a.requestTime(r.Context()).Unix())
+	ctx, now := r.Context(), a.requestTime(r.Context()).Unix()
+	ep, err := a.openEpochs(ctx, tx, s.WorldID, now)
+	if err != nil {
+		return chunkError(err)
+	}
+	// Only past a turning that may have let holds go is the frontier this
+	// read's to check; a refusal keeps that turning (it is upkeep, done).
+	if !location.OnGrid(s.WorldID, cx, cy) {
+		if err = tx.Commit(); err != nil {
+			return err
+		}
+		return fail(409, "beyond-frontier")
+	}
+	view, err := a.near(ctx, tx, s, ep, cx, cy, now)
 	if err != nil {
 		return chunkError(err)
 	}
@@ -129,16 +142,7 @@ func (a *Server) nearRead(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func (a *Server) near(ctx context.Context, tx *sql.Tx, s store.Snapshot, cx, cy int, now int64) (*contract.WildsNearResult, error) {
-	ep, err := a.openEpochs(ctx, tx, s.WorldID, now)
-	if err != nil {
-		return nil, err
-	}
-	// Only now, past a turning that may have let holds go, is the frontier
-	// this read's to check.
-	if !location.OnGrid(s.WorldID, cx, cy) {
-		return nil, fail(409, "beyond-frontier")
-	}
+func (a *Server) near(ctx context.Context, tx *sql.Tx, s store.Snapshot, ep openEpochs, cx, cy int, now int64) (*contract.WildsNearResult, error) {
 	x0, y0, x1, y1 := frontier.Rect(s.WorldID)
 	held := frontier.Held(s.WorldID)
 	reach := &contract.WildsFrontier{Rect: &contract.WildsChunkRect{MinCx: int32(x0), MinCy: int32(y0), MaxCx: int32(x1), MaxCy: int32(y1)}, Held: make([]*contract.WildsChunkKey, 0, len(held))}
