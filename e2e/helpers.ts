@@ -735,10 +735,27 @@ export async function readDialogue(page: Page, opts: { pick?: RegExp; picked?: (
 
 /** Press E at an interactable once its prompt shows and world input is live; the conversation opens. */
 export async function openTalk(page: Page, prompt: RegExp | string): Promise<void> {
-  await expect(page.locator('.prompt')).toContainText(prompt)
-  await waitForLive(page)
-  await page.keyboard.press('e')
+  await pressToTalk(page, prompt)
   await expect(page.getByRole('dialog', { name: /Conversation with/ })).toBeVisible()
+}
+
+/**
+ * Press E at `prompt` until a conversation opens. Someone who walks (Silas
+ * on his cycle) can step out of reach between the prompt read and the press,
+ * and that E opens nothing (CI, 2026-10-18: homestead.spec.ts). A player
+ * presses again; so does this, while the prompt still shows and nothing
+ * opened, up to three presses.
+ */
+export async function pressToTalk(page: Page, prompt: RegExp | string): Promise<void> {
+  const before = (await dialogueState(page)).opened
+  for (let press = 1; ; press++) {
+    await expect(page.locator('.prompt')).toContainText(prompt)
+    await waitForLive(page)
+    await page.keyboard.press('e')
+    const opened = await waitGame(page, () => dialogueState(page), (d) => d.opened > before, { seconds: 5, message: `a conversation at ${prompt}` }).then(() => true, () => false)
+    if (opened) return
+    if (press >= 3 || (await dialogueState(page)).open) throw new Error(`E at ${prompt} opened no conversation after ${press} presses: ${await diagnose(page)}`)
+  }
 }
 
 /**

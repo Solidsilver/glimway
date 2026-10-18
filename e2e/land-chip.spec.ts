@@ -59,7 +59,7 @@ async function standInTheWilds(page: Page): Promise<{ tx: number; ty: number }> 
   throw new Error(`no open land for a way-lamp (seed ${SEED})`)
 }
 
-test('the land chip: turning, held and yours, none in town, dimming; the dimming is told once', async ({ page }) => {
+test('the land chip: wild, held and yours, none in town, dimming; the dimming is told once', async ({ page }) => {
   // About 40 s on the CI runner; a stall fails in minutes, not five (T5).
   test.setTimeout(150_000)
   const id = await freshPlayer(page, 'Wren')
@@ -75,10 +75,10 @@ test('the land chip: turning, held and yours, none in town, dimming; the dimming
   await page.evaluate(() => (window as unknown as Hooks).__fsHomes.fresh())
   await expect.poll(async () => (await homes(page)).mine?.items?.length ?? 0).toBeGreaterThanOrEqual(1)
 
-  // Out in the Wilds: unheld land turns.
+  // Out in the Wilds: unheld land is wild.
   const at = await standInTheWilds(page)
   const chip = page.getByTestId('land-chip')
-  await expect(chip).toHaveText(/Turning|Common/)
+  await expect(chip).toHaveText(/Wild|Common/)
 
   // A way-lamp set here holds the chunk, and it's yours.
   await page.keyboard.press('i')

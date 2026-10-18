@@ -3,7 +3,7 @@ import { expect, type Page } from './fixtures'
 import type { Locator } from '@playwright/test'
 import { accountOf, allow, CONTRACT, newUser, openTitleGuide, pasteAndConnect, pastOpening, routeHabitica, serverState, setHabitica, sql, syncFromMenu, waitForWorld, served } from './connected'
 import { landFromCells, type Land } from '../src/lib/homestead-land.ts'
-import { dialogueState, frames, inCommons, readDialogue, settled, waitForArea, waitForLive, expectToast, SERVER_ANSWER_MS } from './helpers'
+import { dialogueState, frames, inCommons, pressToTalk, readDialogue, settled, waitForArea, waitForLive, expectToast, SERVER_ANSWER_MS } from './helpers'
 import { setHour } from './room-helpers'
 import { residentAt } from '../src/lib/residents.ts'
 
@@ -89,11 +89,9 @@ export async function talk(page: Page, prompt: RegExp, pick?: RegExp): Promise<v
   // With a reply to pick: someone not ready yet ("Hold on, I'm finding your
   // page") is asked again, as a player would.
   for (let attempt = 1; ; attempt++) {
-    await expect(page.locator('.prompt')).toContainText(prompt)
-    await waitForLive(page)
     const mark = (await dialogueState(page)).opened
     talkedFrom.set(page, mark)
-    await page.keyboard.press('e')
+    await pressToTalk(page, prompt)
     await expect(dialogue).toBeVisible()
     let picked = false
     await readDialogue(page, { pick, picked: () => (picked = true) })
