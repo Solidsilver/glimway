@@ -31,8 +31,13 @@ func gatherCaps(action string) (visit, day int) {
 
 // ownLand: the caller's homestead when `area` is its land, or its
 // backland while the lantern burns (nil, refused, for anyone else's:
-// visiting is read-only).
-func ownLand(ctx context.Context, tx *sql.Tx, s *store.Snapshot, area string, now int64, refusal string) (*homeView, error) {
+// visiting is read-only). A turning due is judged first (settleTurning):
+// a backland lapsed since the last read is lapsed for this action too, never
+// lit until someone reads the state (step-back S2).
+func (a *Server) ownLand(ctx context.Context, tx *sql.Tx, s *store.Snapshot, area string, now int64, refusal string) (*homeView, error) {
+	if err := a.settleTurning(ctx, tx, s.WorldID, now); err != nil {
+		return nil, err
+	}
 	gate := homeGateAt(s)
 	back := gate < 0 && backlandGateAt(s) >= 0
 	if back {
@@ -228,10 +233,7 @@ func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req 
 	lit := false
 	if homeGateAt(s) >= 0 && area == outdoorsArea {
 		var err error
-		if err = a.settleTurning(ctx, tx, s.WorldID, now); err != nil {
-			return err
-		}
-		if home, err = ownLand(ctx, tx, s, area, now, "cannot-gather-here"); err != nil {
+		if home, err = a.ownLand(ctx, tx, s, area, now, "cannot-gather-here"); err != nil {
 			return chunkError(err)
 		}
 		if len(req.Tile) != 2 {

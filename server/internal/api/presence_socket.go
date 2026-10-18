@@ -26,7 +26,7 @@ func validPresenceRoom(world, area string) bool {
 		return area != outdoorsArea
 	}
 	x, y, ok := wildsRoomChunk(area)
-	return ok && location.OnGrid(world, x, y)
+	return ok && location.OnGridPublished(world, x, y)
 }
 
 // wildsRoomChunk is the chunk a Wilds room names. Joining checks it is on
@@ -53,7 +53,7 @@ func wildsRoomChunk(room string) (cx, cy int, ok bool) {
 func positionInsideFrontier(world string, x, y float64) bool {
 	tx, ty := wilds.TileOfPixel(x, y)
 	cx, cy := wilds.ChunkOf(tx, ty)
-	return location.OnGrid(world, cx, cy)
+	return location.OnGridPublished(world, cx, cy)
 }
 
 // sharedRoom: two rooms see each other. An area's room sees only itself; a

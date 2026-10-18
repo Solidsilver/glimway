@@ -207,6 +207,12 @@ func OnGrid(world string, cx, cy int) bool {
 	return frontier.Inside(world, cx, cy) || fixedAt(cx, cy) != nil
 }
 
+// OnGridPublished is OnGrid as committed holds make the frontier, for
+// readers outside the store's transaction (the presence socket).
+func OnGridPublished(world string, cx, cy int) bool {
+	return frontier.InsidePublished(world, cx, cy) || fixedAt(cx, cy) != nil
+}
+
 // Anchor resolves "<place>:<anchor>" ("hearthwick:arch", "hearthwick:lot:3") to
 // its space and the centre of its tile in world pixels.
 func Anchor(id string) (Space, float64, float64, bool) {

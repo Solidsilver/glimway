@@ -44,7 +44,7 @@ func Open(path string) (*Store, error) {
 	}
 	// Apply timeout before WAL setup; CLI and service may open concurrently.
 	dsn += "?_txlock=immediate&_pragma=busy_timeout(10000)&_pragma=foreign_keys(ON)&_pragma=synchronous(FULL)"
-	db, err := sql.Open("sqlite", dsn)
+	db, err := sql.Open(reachDriverName, dsn)
 	if err != nil {
 		return nil, err
 	}
