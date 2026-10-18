@@ -1,6 +1,7 @@
 import { lanternStake, lotAtPixel, lotOrigin } from '../../lib/lots'
 import { lanternHasRoom, lanternLines } from '../../lib/lot-lantern'
-import { CRATE_WORDS, collectedLine, crateLines } from '../../lib/camps'
+import { collectedLine, crateLines } from '../../lib/camps'
+import { CRATE_WORDS, LAMP_OIL } from '../../content/camps'
 import { homeErrorText, itemErrorText } from '../../content/errors'
 import { dugUpLine, plantOffer } from '../../lib/trowel'
 import { itemName } from '../../lib/items'
@@ -391,7 +392,7 @@ export class HomesteadTalk {
     // A member lights it; once lit, anyone may keep it burning.
     if ((home.lantern.lit || home.member) && lanternHasRoom(home.lantern, rules.maxWicks, rules.wicksPerOil)) {
       const oil = itemsFor(this.deps.session).view?.stacks.filter((x) => x.itemDef === rules.oil).reduce((n, x) => n + x.qty, 0) ?? 0
-      choices.push({ text: home.lantern.lit ? 'Top it up with hearth oil' : 'Fill it with hearth oil', action: `home:lantern:${gate}`, disabled: oil < 1, ...(oil < 1 ? { note: 'You need hearth oil (the chandler sells it)' } : {}) })
+      choices.push({ text: home.lantern.lit ? LAMP_OIL.topUp : LAMP_OIL.fill, action: `home:lantern:${gate}`, disabled: oil < 1, ...(oil < 1 ? { note: LAMP_OIL.needOil } : {}) })
     }
     choices.push({ text: 'Leave it' })
     this.say({ speaker: 'Lot Lantern', lines: lanternLines(home.lantern, rules.maxWicks, lotName(gate)), choices })

@@ -46,11 +46,11 @@ test('a dimming hold is its own state, with whose, and no countdown', () => {
   assert.equal(landChip(camp({ reserve: 1, dimming: true, nextTurning: 'held' }))!.state, 'held')
 })
 
-test('a released claim, wild land and common land', () => {
+test('a released claim says Turning; wild land says Wild; and common land', () => {
   assert.deepEqual(landChip(camp({ nextTurning: 'released' })), { state: 'turning', text: 'Turning', short: 'Turning', why: LAND_CHIP.why.released })
+  // "Turning" is the weekly event too: ordinary wild land never says it (owner, 2026-10-18).
   const wild = landChip(land({ tier: 'wild', nextTurning: 'detail-turns' }))!
-  assert.equal(wild.state, 'turning')
-  assert.equal(wild.why, LAND_CHIP.why.turning)
+  assert.deepEqual(wild, { state: 'wild', text: 'Wild', short: 'Wild', why: LAND_CHIP.why.wild })
   for (const visited of [false, true]) {
     const c = landChip(land({ tier: 'common', visited, nextTurning: visited ? 'carries' : 'paths-turn' }))!
     assert.equal(c.state, 'common')

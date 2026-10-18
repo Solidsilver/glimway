@@ -121,7 +121,7 @@
 
   // ---- status chips: an icon and a word; the sentence on hover or tap
   type Chip = { id: string; icon: string; text: string; why: string; tone: string; testid?: string }
-  const LAND_ICONS: Record<LandChipState, string> = { held: 'lantern', dimming: 'ember', common: 'stone', turning: 'world' }
+  const LAND_ICONS: Record<LandChipState, string> = { held: 'lantern', dimming: 'ember', common: 'stone', wild: 'world', turning: 'world' }
   const chips = $derived.by((): Chip[] => {
     const out: Chip[] = []
     if (ui.link?.busy) out.push({ id: 'pending', icon: 'clock', text: offlineCopy.pending, why: offlineCopy.pending, tone: 'busy', testid: 'net-pending' })

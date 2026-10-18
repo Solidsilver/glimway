@@ -262,7 +262,7 @@ test('a failed status read is asked again while you stand still, and the chip re
     await frame()
     assert.equal(asked.length, 3)
     await frame()
-    assert.equal(chips.at(-1), 'Turning', 'the answer reaches the chip')
+    assert.equal(chips.at(-1), 'Wild', 'the answer reaches the chip')
     clock += 60_000
     await frame()
     assert.equal(asked.length, 3, 'once answered, standing still asks no more')

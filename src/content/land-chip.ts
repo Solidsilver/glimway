@@ -2,14 +2,17 @@
  * The HUD's land chip (lamps.md 1.1): the land underfoot in a word, the
  * sentence on hover or tap. And the notice when a light you keep starts
  * dimming, told once (server/internal/api/lamp_notices.go). Plain words,
- * no countdown: the turning is the only clock (lamps.md 2.5).
+ * no countdown: the turning is the only clock (lamps.md 2.5). Wild land
+ * says "Wild"; "Turning" is kept for a hold whose lamp is gone, which turns
+ * at the next one (owner, 2026-10-18).
  */
 export const LAND_CHIP = {
   held: (whose: string) => `Held · ${whose}`,
   dimming: (whose: string) => `Dimming · ${whose}`,
   /** One word each, for a phone's narrow strip (the whole line on tap). */
-  short: { held: 'Held', dimming: 'Dimming', common: 'Common', turning: 'Turning' },
+  short: { held: 'Held', dimming: 'Dimming', common: 'Common', wild: 'Wild', turning: 'Turning' },
   common: 'Common',
+  wild: 'Wild',
   turning: 'Turning',
   whose: {
     yourCamp: 'your camp',
@@ -25,7 +28,7 @@ export const LAND_CHIP = {
     guttering: 'The lamp here is guttering. Unless someone fills it, this land turns at the next turning. Nothing set out here is lost.',
     released: 'The lamp that held this land is gone. It turns at the next turning.',
     common: 'Common land, kept by visits: its paths and lamps carry across the turning while someone walks by each wick. You being here counts.',
-    turning: 'Wild land. Its trees and finds change at the next turning; the lie of the land stays.',
+    wild: 'Wild land. Its trees and finds change at the next turning; the lie of the land stays.',
   },
 } as const
 

@@ -15,13 +15,14 @@
  */
 import Phaser from 'phaser'
 import type { CampResult, CampView } from '../../lib/gen/glimway/v1/camps_pb.js'
-import { CAMP_ERRORS, CAMP_PACK_WORDS, CAMP_RULE_WORDS, CAMP_RULES, campAtTile, campFrame, campHasRoom, campLampName, campLines, campLook, campNameable, campPieceName, campPlantLines, CAMP_PLANT_CHOICES, campRefusal, ownerName, campRule, campRuleLines, campSpot, campTaken, movedOffLine, moveOffLines, ruleNames, withMember, withoutMember, type CampRule } from '../../lib/camps.ts'
+import { CAMP_ERRORS, CAMP_RULES, campAtTile, campFrame, campHasRoom, campLampName, campLines, campLook, campNameable, campPieceName, campPlantLines, campRefusal, ownerName, campRule, campRuleLines, campSpot, campTaken, movedOffLine, moveOffLines, ruleNames, withMember, withoutMember, type CampRule } from '../../lib/camps.ts'
 import { dugUpLine, plantOffer } from '../../lib/trowel.ts'
 import { heldNow } from '../held.ts'
 import { HOMESTEAD_DATA, homeItem, rotatedFootprint } from '../../lib/homestead.ts'
 import { TILE, tileFeet } from '../../lib/tile.ts'
 import { chunkOf } from '../../lib/wilds/coords.ts'
 import { homeErrorText } from '../../content/errors.ts'
+import { CAMP_PACK_WORDS, CAMP_PLANT_CHOICES, CAMP_RULE_WORDS, CAMP_WORDS, LAMP_OIL } from '../../content/camps.ts'
 import { LAMP_NAMING } from '../../content/lamp-naming.ts'
 import { isKeeper } from '../../lib/lamp-naming.ts'
 import { adoptCamps, campsKnown, type CampsKnown, type CampsOwner } from './camps-state.ts'
@@ -164,11 +165,11 @@ export class WildsCamps {
         this.drawPiece(p.itemDef, p.x, p.y, p.rotation)
         if (p.ownerId === this.me) {
           const at = tileFeet(p.x, p.y)
-          points.push(wildsPoint(`camp-piece:${p.id}`, at, 20, () => ({ label: `Pick up the ${campPieceName(p.itemDef).toLowerCase()}`, verb: 'Pick up', claim: () => void this.act({ action: 'remove', itemId: p.id }) })))
+          points.push(wildsPoint(`camp-piece:${p.id}`, at, 20, () => ({ label: CAMP_WORDS.pickUp(campPieceName(p.itemDef)), verb: 'Pick up', claim: () => void this.act({ action: 'remove', itemId: p.id }) })))
         } else if (c.setterId === this.me) {
           // The keeper may move someone's piece off: it waits at Pell's, still theirs.
           const at = tileFeet(p.x, p.y)
-          points.push(wildsPoint(`camp-piece:${p.id}`, at, 20, () => ({ label: `Move ${ownerName(this.known.people, p)}’s ${campPieceName(p.itemDef).toLowerCase()} off`, verb: 'Move off', claim: () => this.askMoveOff(p.id) })))
+          points.push(wildsPoint(`camp-piece:${p.id}`, at, 20, () => ({ label: CAMP_WORDS.moveOff(ownerName(this.known.people, p), campPieceName(p.itemDef)), verb: 'Move off', claim: () => this.askMoveOff(p.id) })))
         }
       }
       for (const p of c.plants) {
@@ -193,7 +194,7 @@ export class WildsCamps {
       const glow = this.scene.add.image(at.x, at.y - 22, 'glow').setBlendMode(Phaser.BlendModes.ADD).setScale(campLook(c) === 'dimming' ? 0.35 : 0.6).setAlpha(campLook(c) === 'dimming' ? 0.45 : 0.8).setDepth(4001)
       this.images.push(glow)
       this.body(at.x, at.y - TILE / 2, TILE - 6, TILE - 6)
-      points.push({ ...wildsPoint(`camp:${c.id}`, at, 30, () => ({ label: c.naming?.shortName ? `Look at ${c.naming.shortName}` : 'Look at the way-lamp', verb: 'Look', claim: () => this.look(c.id) })), rank: 0 })
+      points.push({ ...wildsPoint(`camp:${c.id}`, at, 30, () => ({ label: CAMP_WORDS.look(c.naming?.shortName ?? ''), verb: 'Look', claim: () => this.look(c.id) })), rank: 0 })
     }
     this.deps.interactables.register(this, points)
   }
@@ -240,13 +241,13 @@ export class WildsCamps {
     const choices: DialogueChoice[] = []
     if (campHasRoom(c)) {
       const oil = this.oilCarried()
-      choices.push({ text: 'Top it up with hearth oil', action: `camp:fill:${c.id}`, disabled: oil < 1, ...(oil < 1 ? { note: 'You need hearth oil (the chandler sells it)' } : {}) })
+      choices.push({ text: LAMP_OIL.topUp, action: `camp:fill:${c.id}`, disabled: oil < 1, ...(oil < 1 ? { note: LAMP_OIL.needOil } : {}) })
     }
     if (c.builder && !c.naming && isKeeper(this.deps.session.state.flags)) choices.push({ ...LAMP_NAMING.name, action: `camp:name:${c.id}` })
     if (c.setterId === this.me) choices.push({ text: CAMP_RULE_WORDS.heading, note: CAMP_RULE_WORDS.rules[campRule(c)].pick, action: `camp:rules:${c.id}` })
-    if (c.setterId === this.me && c.pieces.length === 1 && c.plants.length === 0) choices.push({ text: 'Take the lamp down', note: 'The camp goes; its oil comes back to you', action: `camp:down:${c.id}` })
+    if (c.setterId === this.me && c.pieces.length === 1 && c.plants.length === 0) choices.push({ ...CAMP_WORDS.takeDown, action: `camp:down:${c.id}` })
     else if (c.setterId === this.me) choices.push({ ...CAMP_PACK_WORDS.pack, action: `camp:pack:${c.id}` })
-    choices.push({ text: 'Leave it' })
+    choices.push({ text: CAMP_WORDS.leave })
     openDialogue({ id: 'camp', speaker: campLampName(c), lines: campLines(c, this.me), choices })
   }
 
@@ -295,7 +296,7 @@ export class WildsCamps {
     const c = this.camp(id)
     if (!c) return
     const choices: DialogueChoice[] = campNameable(c, this.known.people).map((p) => ({ text: p.name, action: `camp:add:${c.id}:${p.accountId}` }))
-    choices.push({ text: 'Never mind', action: `camp:rules:${c.id}` })
+    choices.push({ text: CAMP_WORDS.neverMind, action: `camp:rules:${c.id}` })
     openDialogue({ id: 'camp-rules', speaker: CAMP_RULE_WORDS.heading, lines: [CAMP_RULE_WORDS.pickWho], choices })
   }
 
@@ -310,7 +311,7 @@ export class WildsCamps {
     const p = c?.pieces.find((x) => x.id === pieceId)
     if (!c || !p) return
     const owner = ownerName(this.known.people, p)
-    openDialogue({ id: 'camp', speaker: campLampName(c), lines: moveOffLines(owner, campPieceName(p.itemDef)), choices: [{ text: 'Send it to Pell’s', action: `camp:moveoff:${pieceId}` }, { text: 'Leave it', dismiss: true }] })
+    openDialogue({ id: 'camp', speaker: campLampName(c), lines: moveOffLines(owner, campPieceName(p.itemDef)), choices: [{ text: CAMP_WORDS.sendToPell, action: `camp:moveoff:${pieceId}` }, { text: CAMP_WORDS.leave, dismiss: true }] })
   }
 
   /** A choice picked in the lamp's talk (WorldActions routes `camp:` here). */
@@ -333,7 +334,7 @@ export class WildsCamps {
     if (what === 'packup') return void this.act({ action: 'pack', camp: id }, () => bus.emit(EV.toast, { text: CAMP_PACK_WORDS.done, icon: 'glim' }))
     if (what === 'fill') void this.act({ action: 'fill', camp: id }, (c) => { if (c && !this.gone) openDialogue({ id: 'camp', speaker: campLampName(c), lines: campLines(c, this.me) }) })
     else if (what === 'name') void this.beginNaming(id)
-    else if (what === 'down') void this.act({ action: 'remove', itemId: id }, () => bus.emit(EV.toast, { text: 'You take the way-lamp down. Its oil is back in your pack.', icon: 'glim' }))
+    else if (what === 'down') void this.act({ action: 'remove', itemId: id }, () => bus.emit(EV.toast, { text: CAMP_WORDS.takenDown, icon: 'glim' }))
   }
 
   /** A Keeper's naming: the landmarks around the lamp, then the panel (answered on EV.lampNamed). */
@@ -368,7 +369,7 @@ export class WildsCamps {
       bus.emit(EV.toast, { text: homeErrorText('land-blocked'), icon: 'glim', kind: 'error' })
       return
     }
-    const done = d.action === 'set' ? 'The way-lamp is lit. The woods in its light hold through the turning while it has oil.' : d.action === 'plant' ? 'Planted, in the lamp’s light.' : 'Set out at the camp.'
+    const done = d.action === 'set' ? CAMP_WORDS.lit : d.action === 'plant' ? CAMP_WORDS.planted : CAMP_WORDS.setOut
     await this.act({ action: d.action, itemId: d.itemId ?? '', itemDef: d.itemDef ?? '', x: spot.tx, y: spot.ty }, () => bus.emit(EV.toast, { text: done, icon: 'glim' }))
   }
 

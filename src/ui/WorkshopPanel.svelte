@@ -8,6 +8,7 @@
   import type { Asset, ChestId } from '../lib/api/types'
   import { HOMESTEAD_DATA } from '../lib/homestead'
   import { itemName } from '../lib/items'
+  import { LOCKED_RECIPE } from '../content/crafting'
   import { actionRunner, busVersion } from './panel-state.svelte'
   import { home } from './home.svelte'
   import Panel from './Panel.svelte'
@@ -208,12 +209,12 @@
               <span class="cost">{costPhrase(recipeCost(r, n))}{n > 1 ? ` for ${n}` : ''}</span>
               <span class="can">{can > 0 ? `You can make ${can}` : 'Not enough materials'}</span>
             {:else}
-              <span class="can">You never learned this recipe — {r.found}.</span>
+              <span class="can">{LOCKED_RECIPE.line(r.found)}</span>
             {/if}
           </span>
           <span class="go">
             {#if !learned}
-              <span class="locked-tag" data-testid="locked">page not found</span>
+              <span class="locked-tag" data-testid="locked">{LOCKED_RECIPE.tag}</span>
             {:else if can > 1}
               <span class="batch">
                 <button type="button" class="tiny" aria-label="Fewer" disabled={n <= 1} onclick={() => (batches = { ...batches, [r.id]: n - 1 })}>−</button>
