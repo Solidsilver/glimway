@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { expect, test, type Page } from './fixtures'
 import { accountOf, pinWorld, PLACE_REPORTED_MS, reenter, seedMarks, serverState, sql, wickSlack } from './connected'
-import { claimDeed, freshPlayer, fund, homes, shot } from './home-helpers'
+import { freshPlayer, fund, homes, seedDeed, shot } from './home-helpers'
 import { atTile, parkCreatures, waitForWilds, warp, windowWhole } from './helpers'
 import { anchorPoint } from './positions'
 
@@ -60,11 +60,13 @@ async function standInTheWilds(page: Page): Promise<{ tx: number; ty: number }> 
 }
 
 test('the land chip: turning, held and yours, none in town, dimming; the dimming is told once', async ({ page }) => {
-  test.setTimeout(300_000)
+  // About 40 s on the CI runner; a stall fails in minutes, not five (T5).
+  test.setTimeout(150_000)
   const id = await freshPlayer(page, 'Wren')
   await wickSlack(page)
   await pinWorld(page, SEED)
-  await claimDeed(page)
+  // A deed on record (buying one is homestead.spec.ts's): the reenter below reads it.
+  await seedDeed(page, id)
   seedMarks(id, 'keeper:hand')
   await reenter(page)
   const lamp = randomUUID()

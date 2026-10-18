@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { expect, test, type Page } from './fixtures'
 import { accountOf, moveServerClock, pinWorld, reenter, seedMarks, sql, wickSlack } from './connected'
-import { AT_PELL, claimDeed, DEEDS, freshPlayer, fund, go, homes, pellSays, readOn, shot, talk } from './home-helpers'
+import { AT_PELL, DEEDS, freshPlayer, fund, go, homes, pellSays, readOn, seedDeed, shot, talk } from './home-helpers'
 import { parkCreatures, spotsAround, standFor, waitForWilds, warp, windowWhole } from './helpers'
 import { calendarAt } from '../src/lib/calendar.ts'
 
@@ -63,11 +63,13 @@ async function homeCard(page: Page, def: string) {
 }
 
 test('set a way-lamp, fill it, set a stool out; it lapses and Pell has everything', async ({ page }) => {
-  test.setTimeout(300_000)
+  // About 50 s on the CI runner; a stall fails in minutes, not five (T5).
+  test.setTimeout(150_000)
   const id = await freshPlayer(page, 'Wren')
   await wickSlack(page)
   await pinWorld(page, SEED)
-  await claimDeed(page)
+  // A deed on record (buying one is homestead.spec.ts's): the reenter below reads it.
+  await seedDeed(page, id)
   // A camp's way-lamp takes the Keeper's hand (Mara's ledger; lamps.md 2.8).
   seedMarks(id, 'keeper:hand')
   await reenter(page)
@@ -130,11 +132,11 @@ test('set a way-lamp, fill it, set a stool out; it lapses and Pell has everythin
 })
 
 test('a communal post in view comes through leaving the Wilds and coming back', async ({ page }) => {
-  test.setTimeout(240_000)
+  test.setTimeout(150_000)
   const id = await freshPlayer(page, 'Wren')
   await wickSlack(page)
   await pinWorld(page, SEED)
-  await claimDeed(page)
+  await seedDeed(page, id)
   await reenter(page)
   const lamp = randomUUID()
   sql(`INSERT INTO homestead_items(id,item_def,location,account_id) VALUES('${lamp}','way-lamp','inventory','${accountOf(id)}');`)

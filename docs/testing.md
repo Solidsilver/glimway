@@ -69,8 +69,12 @@ it). At the end, run `npm run test:changed`. In CI, every push and pull
 request runs `verify`, the Go tests, the Docker smoke test and the smoke tier
 on GitHub's runners. The full suite runs on a self-hosted runner with an
 NVIDIA GPU, for pushes to `main`, `dev` and `exp/**` and for manual
-dispatch, never for pull requests ([ci-runner.md](ci-runner.md)). Each E2E
-job uploads a JSON attempt summary (a lane run's two passes, its specs and
+dispatch, never for pull requests ([ci-runner.md](ci-runner.md)). A push
+that changes only docs (`docs/**` and Markdown files, except `CHANGELOG.md`,
+which the build reads) skips both E2E jobs; `verify` still runs. Each E2E
+job writes its health to the run's step summary: passed, flaky (failed, then
+passed on the retry) and failed tests by name, and the ten slowest tests. It
+also uploads a JSON attempt summary (a lane run's two passes, its specs and
 then the smoke tier, each keep their own report and traces); up to three retry
 traces are retained within a 50 MiB cap. The first retry is traced, so it can
 show a successful attempt while the JSON summary preserves the original

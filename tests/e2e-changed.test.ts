@@ -153,3 +153,30 @@ for (const path of ['e2e/room-helpers.ts', 'e2e/positions.ts', 'go.mod', 'svelte
 test('e2e/harness runs only the spec that loads it', () => {
   assert.deepEqual(specsOf(list('e2e/harness/phaser.html')), ['window-order.spec.ts'])
 })
+
+// The 0.13 domains the step-back review found unmapped (T1): each now runs the specs that use it.
+for (const [file, want, smoke] of [
+  ['content/papers.json', ['papers.spec.ts', 'papers-screens.spec.ts', 'connected.spec.ts', 'inventory.spec.ts'], true],
+  ['content/items.json', ['items.spec.ts', 'crafting.spec.ts', 'camps.spec.ts', 'lot-lantern.spec.ts', 'homestead.spec.ts', 'inventory.spec.ts'], true],
+  ['content/crafting.json', ['items.spec.ts', 'crafting.spec.ts', 'camps.spec.ts', 'lot-lantern.spec.ts', 'homestead.spec.ts', 'inventory.spec.ts'], true],
+  ['content/homestead.json', ['items.spec.ts', 'crafting.spec.ts', 'camps.spec.ts', 'lot-lantern.spec.ts', 'homestead.spec.ts', 'inventory.spec.ts'], true],
+  ['content/quests.json', ['quest.spec.ts', 'camps.spec.ts', 'rumour.spec.ts'], true],
+  ['content/story.json', ['quest.spec.ts', 'camps.spec.ts', 'rumour.spec.ts'], true],
+  ['src/content/quests/keepers-hand.ts', ['quest.spec.ts', 'camps.spec.ts', 'rumour.spec.ts'], true],
+  ['server/internal/api/common_ways.go', ['paths.spec.ts'], false],
+  ['server/internal/api/frontier_reach.go', ['camps.spec.ts', 'lot-lantern.spec.ts', 'land-chip.spec.ts', 'paths.spec.ts'], false],
+  ['server/internal/api/claim_rules.go', ['camps.spec.ts', 'lot-lantern.spec.ts', 'land-chip.spec.ts', 'paths.spec.ts'], false],
+  ['server/internal/store/holds.go', ['camps.spec.ts', 'lot-lantern.spec.ts', 'land-chip.spec.ts', 'paths.spec.ts'], false],
+  ['server/internal/store/reach.go', ['camps.spec.ts', 'lot-lantern.spec.ts', 'land-chip.spec.ts', 'paths.spec.ts'], false],
+  ['server/internal/store/commons.go', ['camps.spec.ts', 'lot-lantern.spec.ts', 'land-chip.spec.ts', 'paths.spec.ts'], false],
+  ['src/lib/lamp-naming.ts', ['camps.spec.ts'], false],
+  ['src/content/lamp-naming.ts', ['camps.spec.ts'], false],
+  ['src/ui/LampNamingPanel.svelte', ['camps.spec.ts'], false],
+] as const) {
+  test(`0.13 domain: ${file} runs its own specs, not the catch-all`, () => {
+    const output = list(file)
+    assert.deepEqual(specsOf(output), [...want].sort(), output)
+    assert.equal(smokeTier(output), smoke, output)
+    assert.doesNotMatch(output, /not in e2e\/changed-map\.json/, output)
+  })
+}

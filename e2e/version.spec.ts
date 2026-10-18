@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { devices } from '@playwright/test'
 import { expect, test, type Page } from './fixtures'
 import { serverState } from './connected'
-import { player } from './helpers'
+import { frames, player } from './helpers'
 import { freshPlayer } from './home-helpers'
 
 /**
@@ -21,12 +21,41 @@ async function serveBuild(page: Page, build: string): Promise<void> {
 
 const checkNow = (page: Page) => page.evaluate(() => (window as unknown as { __fsDevVersionCheck: () => Promise<void> }).__fsDevVersionCheck())
 
-/** Move the hero a little and ask for a save, which waits 350 ms before it writes. */
+const place = (page: Page, at: { x: number; y: number }) =>
+  page.evaluate(([x, y]) => (window as unknown as { __fsDevPlace: (x: number, y: number) => void }).__fsDevPlace(x, y), [at.x, at.y] as const)
+
+/** Where the hero stands, rounded as the save writes it, once two samples a few frames apart agree. */
+async function settled(page: Page): Promise<{ x: number; y: number }> {
+  const at = async () => {
+    const p = await player(page)
+    return { x: Math.round(p.x), y: Math.round(p.y) }
+  }
+  let last = await at()
+  await expect
+    .poll(async () => {
+      await frames(page, 3)
+      const now = await at()
+      const same = now.x === last.x && now.y === last.y
+      last = now
+      return same
+    }, { message: 'the hero comes to rest' })
+    .toBe(true)
+  return last
+}
+
+/**
+ * Move the hero a little and ask for a save, which waits 350 ms before it
+ * writes. Returns where the hero landed: a collision can nudge the placement,
+ * so a nudged hero is placed again where it rests, and the save names that.
+ */
 async function stepAside(page: Page): Promise<{ x: number; y: number }> {
   const at = await player(page)
   const to = { x: Math.round(at.x) + 40, y: Math.round(at.y) }
-  await page.evaluate(([x, y]) => (window as unknown as { __fsDevPlace: (x: number, y: number) => void }).__fsDevPlace(x, y), [to.x, to.y] as const)
-  return to
+  await place(page, to)
+  const landed = await settled(page)
+  if (landed.x === to.x && landed.y === to.y) return to
+  await place(page, landed)
+  return settled(page)
 }
 
 test('a new build shows a calm notice, waits for an open panel, and stays away once dismissed', async ({ page }) => {
@@ -125,7 +154,7 @@ test.describe('in a world', () => {
     await expect.poll(() => events.includes('reload')).toBe(true)
     expect(events.slice(0, events.indexOf('reload'))).toContain('report')
     const s = await serverState(page)
-    expect(s.body.state.position).toEqual(to)
+    expect(s.body.state.position, `the server's saved place (the hero landed at ${to.x},${to.y})`).toEqual(to)
   })
 
   test('Reload waits, and says so, while the save cannot reach the server', async ({ page }) => {

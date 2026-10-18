@@ -1,4 +1,4 @@
-import { copyFileSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
+import { appendFileSync, copyFileSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { basename, join, relative } from 'node:path'
 
 // The run's report, and a second pass's (scripts/e2e-changed.ts: the smoke
@@ -162,9 +162,54 @@ for (const candidate of candidates) {
   bytes += candidate.size
 }
 
+/**
+ * What a reader of the run needs without opening a log (review T4/T5): how
+ * many tests passed only on their retry, which failed both attempts, and the
+ * ten slowest tests (every attempt's time added: what the run paid for them).
+ */
+function health(report) {
+  const name = (t) => `${t.file ?? '?'} › ${t.title}`
+  const flaky = report.tests.filter((t) => t.status === 'flaky').map(name)
+  const hard = report.tests.filter((t) => t.status === 'unexpected').map(name)
+  const slowest = report.tests
+    .map((t) => ({ test: name(t), durationMs: t.attempts.reduce((sum, a) => sum + (a.durationMs ?? 0), 0), attempts: t.attempts.length }))
+    .sort((a, b) => b.durationMs - a.durationMs)
+    .slice(0, 10)
+  return { flaky, hard, slowest }
+}
+
+const seconds = (ms) => `${(ms / 1000).toFixed(1)} s`
+const cell = (text) => text.replace(/\|/g, '\\|')
+
+/** The health as Markdown, for the job's step summary. */
+function healthMarkdown(report, h) {
+  const title = process.env.E2E_SUMMARY_TITLE || 'E2E'
+  if (!report.available) return `### ${title}\n\nNo Playwright report: ${report.error}\n`
+  const passed = report.tests.filter((t) => t.status === 'expected').length
+  const lines = [`### ${title}`, '', `**${passed} passed, ${h.flaky.length} flaky, ${h.hard.length} failed**${report.stats?.duration ? ` in ${(report.stats.duration / 60000).toFixed(1)} min` : ''}. Flaky: failed, then passed on the retry.`, '']
+  for (const [label, list] of [['Failed', h.hard], ['Flaky', h.flaky]]) {
+    if (!list.length) continue
+    lines.push(`**${label}:**`, '', ...list.map((t) => `- ${t}`), '')
+  }
+  if (h.slowest.length) {
+    lines.push('**Slowest tests** (all attempts):', '', '| Test | Time | Attempts |', '|---|---:|---:|')
+    for (const t of h.slowest) lines.push(`| ${cell(t.test)} | ${seconds(t.durationMs)} | ${t.attempts} |`)
+    lines.push('')
+  }
+  return lines.join('\n')
+}
+
+const report = summarizeReport()
+const runHealth = health(report)
+const markdown = healthMarkdown(report, runHealth)
+writeFileSync(join(outDir, 'summary.md'), markdown)
+if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, markdown + '\n')
+console.log(markdown)
+
 writeFileSync(join(outDir, 'summary.json'), JSON.stringify({
   generatedAt: new Date().toISOString(),
-  report: summarizeReport(),
+  report,
+  health: runHealth,
   reportPolicy,
   tracePolicy: {
     maximumFiles: traceMaxCount,

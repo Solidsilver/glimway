@@ -86,6 +86,39 @@
       "specs": ["connected.spec.ts", "papers.spec.ts", "papers-screens.spec.ts", "inventory.spec.ts"]
     },
     {
+      "about": "The shared content the 0.13 review (T1) found running smoke only. Papers: the paper totals that connected, inventory and papers count (#46). Each loads at start-up, so the smoke tier too.",
+      "paths": ["content/papers.json"],
+      "specs": ["papers.spec.ts", "papers-screens.spec.ts", "connected.spec.ts", "inventory.spec.ts"],
+      "smoke": true
+    },
+    {
+      "about": "Items, recipes and home goods (the way-lamp recipe, the trowel, the lamp items): the specs that make, carry and set them.",
+      "paths": ["content/items.json", "content/crafting.json", "content/homestead.json"],
+      "specs": ["items.spec.ts", "crafting.spec.ts", "camps.spec.ts", "lot-lantern.spec.ts", "homestead.spec.ts", "inventory.spec.ts"],
+      "smoke": true
+    },
+    {
+      "about": "Quests and story, data and the quest modules (the Keeper's hand gates setting a camp, #36).",
+      "paths": ["content/quests.json", "content/story.json", "src/content/quests/**"],
+      "specs": ["quest.spec.ts", "camps.spec.ts", "rumour.spec.ts"],
+      "smoke": true
+    },
+    {
+      "about": "The common ways (the common path test is in paths.spec.ts).",
+      "paths": ["server/internal/api/common_ways*.go"],
+      "specs": ["paths.spec.ts"]
+    },
+    {
+      "about": "Holds, frontier reach and claim rules: who may set or keep a lamp, and where.",
+      "paths": ["server/internal/api/frontier_reach*.go", "server/internal/api/claim_rules*.go", "server/internal/store/holds.go", "server/internal/store/reach.go", "server/internal/store/commons.go"],
+      "specs": ["camps.spec.ts", "lot-lantern.spec.ts", "land-chip.spec.ts", "paths.spec.ts"]
+    },
+    {
+      "about": "Naming a lamp: camps.spec.ts sets the lamps it names.",
+      "paths": ["src/lib/lamp-naming.ts", "src/content/lamp-naming.ts", "src/ui/LampNamingPanel.svelte"],
+      "specs": ["camps.spec.ts"]
+    },
+    {
       "paths": ["src/game/entities/interactables.ts", "src/game/wilds/fixed-life.ts", "src/game/wilds/fixed-scope.ts", "src/game/entities/homesteads.ts", "src/game/entities/npcs.ts", "src/game/entities/world-talk.ts", "src/game/entities/repairs.ts", "src/game/entities/item-pickups.ts", "src/game/entities/papers.ts", "src/game/entities/village-life.ts", "src/game/entities/touches.ts"],
       "specs": ["seam.spec.ts", "residents.spec.ts", "homestead.spec.ts", "yard.spec.ts", "village.spec.ts", "open-map.spec.ts"]
     },
