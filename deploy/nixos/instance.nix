@@ -6,6 +6,9 @@
 # Put the package itself on PATH. Only one instance may: the others install a
 # `<name>-server` command instead, so `glimway-server` stays the live binary.
 , installPackage ? false
+# Let this instance turn on dev mode (settings.dev.enable). Only the staging
+# instance (glimway-dev.nix) does: the live one can never run dev tools.
+, allowDevMode ? false
 }:
 { config, lib, pkgs, utils, ... }:
 let
@@ -19,6 +22,17 @@ let
   webListen = listen cfg.web.listenAddress cfg.web.port;
   webRoot = if cfg.web.root == null then toString cfg.webPackage else cfg.web.root;
   bool = lib.boolToString;
+  toml = pkgs.formats.toml { };
+  devMode = cfg.settings.dev.enable;
+  # The settings file, checked by the server it is for (a typo, or dev mode
+  # for a release build, fails the rebuild instead of the reload). It sits at
+  # a fixed path in /etc, so a change reloads the server (reloadTriggers)
+  # rather than restarting it.
+  settingsFile = pkgs.runCommand "${name}-settings.toml" { raw = toml.generate "${name}-settings.toml" cfg.settings; } ''
+    ${lib.getExe cfg.package} -config "$raw" check-config
+    cp "$raw" "$out"
+  '';
+  settingsPath = "${name}/config.toml";
   option = type: default: description: mkOption { inherit type default description; };
   args = [
     "-login-concurrency" (toString cfg.login.concurrency)
@@ -63,11 +77,50 @@ let
 in {
   options.services.${name} = {
     enable = mkEnableOption "${title} game server and static web app";
-    package = option types.package (pkgs.callPackage ../../nix/server.nix { }) "Go server and admin CLI package.";
-    webPackage = option types.package (pkgs.callPackage ../../nix/web.nix {
-      habiticaCreatorId = cfg.habitica.creatorId;
-      habiticaAppName = cfg.habitica.appName;
-    }) "Built static site; default uses the configured public Habitica identity.";
+    package = mkOption {
+      type = types.package;
+      default = pkgs.callPackage ../../nix/server.nix { devTools = devMode; };
+      defaultText = lib.literalMD "the release build, or the dev build (`-tags dev`) when `settings.dev.enable`";
+      description = "Go server and admin CLI package.";
+    };
+    webPackage = mkOption {
+      type = types.package;
+      default = pkgs.callPackage ../../nix/web.nix {
+        habiticaCreatorId = cfg.habitica.creatorId;
+        habiticaAppName = cfg.habitica.appName;
+        devTools = devMode;
+      };
+      defaultText = lib.literalMD "the release site, or the dev-tools site when `settings.dev.enable`; built with the configured public Habitica identity";
+      description = "Built static site.";
+    };
+    settings = mkOption {
+      # RFC 42: the server's own TOML file as an attribute set, with the
+      # settings the module itself reads typed and the rest freeform.
+      type = types.submodule {
+        freeformType = toml.type;
+        options.dev = {
+          enable = option types.bool false
+            "Dev mode: the dev panel, grants, playtest hooks and clock ([server.dev], [web.dev]). Picks the dev builds of `package` and `webPackage`. Only an instance that allows dev mode (the staging `services.glimway-dev`) may turn it on.";
+          accounts = option (types.listOf types.str) [ ]
+            "Habitica user ids that get dev mode's tools. Empty: every signed-in player on this instance.";
+        };
+      };
+      default = { };
+      example = lib.literalExpression ''
+        {
+          dev = { enable = true; accounts = [ "<your Habitica user id>" ]; };
+          server.dev.clock = false;
+        }
+      '';
+      description = ''
+        The server's settings file (TOML), as an attribute set, rendered to
+        /etc/<name>/config.toml. Every setting, its default and whether a change
+        applies live or at restart: deploy/glimway.example.toml. An unknown key
+        fails the rebuild. A change to live settings reloads the server (players
+        stay connected); flags, `extraFlags` and GLIMWAY_* variables in
+        `extraEnvironment` still win over the file.
+      '';
+    };
     listenAddress = option types.str "127.0.0.1" "Backend bind address (IPv6 without brackets).";
     port = option types.port port "Backend HTTP port.";
     publicOrigin = option types.str "https://glimway.example.org" "Public HTTP(S) origin, including a nonstandard port if needed. Used by the optional Caddy virtual host; preserve this Host when using another proxy.";
@@ -134,7 +187,12 @@ in {
           message = "${opt}.publicOrigin must be an HTTP(S) hostname origin without a path."; }
         { assertion = !cfg.reverseProxy.enable || cfg.web.enable;
           message = "${title}'s managed Caddy proxy requires the static web listener."; }
+        { assertion = !devMode || allowDevMode;
+          message = "${opt}.settings.dev.enable: ${title} doesn't allow dev mode. Only the staging instance (services.glimway-dev) may run dev tools."; }
+        { assertion = !devMode || (cfg.package.passthru.devTools or false) && (cfg.webPackage.passthru.devTools or false);
+          message = "${opt}.settings.dev.enable needs the dev builds of package and webPackage (nix/server.nix and nix/web.nix with devTools = true), the defaults when it is on."; }
       ];
+      environment.etc.${settingsPath}.source = settingsFile;
       environment.systemPackages = if installPackage then [ cfg.package ] else [
         (pkgs.writeShellScriptBin serverUnit ''exec ${lib.getExe cfg.package} "$@"'')
       ];
@@ -154,9 +212,13 @@ in {
           GLIMWAY_PARTY_ADMISSION = bool cfg.partyAdmission;
           GLIMWAY_HABITICA_ASSETS_URL = cfg.sprite.assetsUrl;
           GLIMWAY_SPRITE_CACHE = cfg.sprite.cacheDirectory;
+          GLIMWAY_CONFIG = "/etc/${settingsPath}";
         } // cfg.extraEnvironment;
+        # A settings change reloads (SIGHUP): live settings apply, players stay.
+        reloadTriggers = [ settingsFile ];
         serviceConfig = hardening // {
           ExecStart = utils.escapeSystemdExecArgs ([ (lib.getExe cfg.package) ] ++ args);
+          ExecReload = "${pkgs.coreutils}/bin/kill -HUP $MAINPID";
           WorkingDirectory = stateDir;
           Restart = "on-failure";
           RestartSec = "5s";

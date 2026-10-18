@@ -21,7 +21,7 @@ func TestProductionBuildHasNoDevClock(t *testing.T) {
 	if err := f.Parse([]string{"-dev-clock=100"}); err == nil {
 		t.Fatal("-dev-clock parsed in a production build")
 	}
-	c, err := start()
+	c, err := start(false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,7 +32,7 @@ func TestProductionBuildHasNoDevClock(t *testing.T) {
 	r := httptest.NewRequest(http.MethodPost, "/api/dev/clock", strings.NewReader(`{"advance_seconds": 60}`))
 	r.RemoteAddr = "127.0.0.1:5000"
 	w := httptest.NewRecorder()
-	c.mount(inner).ServeHTTP(w, r)
+	c.mount(inner, nil).ServeHTTP(w, r)
 	if w.Code != http.StatusTeapot {
 		t.Fatal("the dev clock route answered in a production build:", w.Code)
 	}

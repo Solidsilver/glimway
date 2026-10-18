@@ -54,7 +54,7 @@ export async function devGrant(session: Session, grants: GrantRequest[]): Promis
   });
   if (!r.ok) {
     const f = failed as DevGrantError | null;
-    if (f?.status === 404) return { ok: false, text: 'This server has no dev mode. Run it with npm run server (a -tags dev build), on this machine.' };
+    if (f?.status === 404) return { ok: false, text: 'This server gives you no grants: run npm run server (a -tags dev build) on this machine, or ask for this server’s dev mode.' };
     if (f?.code === 'invalid-asset') return { ok: false, text: 'The server won’t give that: only Glimway’s own things.' };
     if (f?.code === 'invalid-quantity') return { ok: false, text: 'Too many at once for that.' };
     return { ok: false, text: `The grant didn’t go through (${f ? `${f.status} ${f.code}` : r.code}).` };

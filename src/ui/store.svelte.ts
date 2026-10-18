@@ -1,4 +1,5 @@
 import type { PurseView } from '../lib/purse'
+import { DEV_TOOLS } from '../lib/dev-tools'
 import type { LandChip } from '../lib/wilds/land-chip'
 import type { AbilityPayload, AreaPayload, GoalDirPayload, MagicPayload, GoalLinePayload, LinkPayload, PresencePayload, PromptPayload, QuestPayload, StatsPayload, ToastPayload } from '../game/events'
 import type { HabiticaProfile, VitalsSource } from '../lib/habitica/types'
@@ -145,7 +146,7 @@ class UiStore {
 
   toast(payload: ToastPayload): void {
     const kind = payload.kind ?? 'info'
-    if (import.meta.env.DEV) {
+    if (DEV_TOOLS) {
       this.toastCount += 1
       this.toastLog.push({ n: this.toastCount, text: payload.text, kind })
       if (this.toastLog.length > 100) this.toastLog.shift()

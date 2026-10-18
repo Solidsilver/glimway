@@ -11,6 +11,7 @@
  * (src/game/presence.ts).
  */
 import Phaser from 'phaser'
+import { DEV_TOOLS } from '../../lib/dev-tools'
 import type { AreaId, QuestEvent } from '../../lib/state'
 import { buildGround } from '../area/terrain'
 import { buildSolids, clearSolidTile, type Solids } from '../area/collision'
@@ -659,7 +660,7 @@ export class WorldScene extends Phaser.Scene {
     })
     onSceneEnd(this, dropSafety)
     // Playtest hooks (docs/playtest.md), dev builds only.
-    if (import.meta.env.DEV) exposeWorldHooks(this, { papers, pickups, repairs })
+    if (DEV_TOOLS) exposeWorldHooks(this, { papers, pickups, repairs })
 
     if (this.pendingDefeatToast) {
       this.pendingDefeatToast = false

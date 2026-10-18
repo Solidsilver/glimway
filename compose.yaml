@@ -7,6 +7,8 @@ services:
       args:
         VITE_HABITICA_CREATOR_ID: ${VITE_HABITICA_CREATOR_ID:-5abfd539-22eb-457f-8e2a-9fb3d66731f1}
         VITE_HABITICA_APP_NAME: ${VITE_HABITICA_APP_NAME:-glimway}
+        # 1: a dev build, for a staging server's dev mode only (docs/home-server.md).
+        GLIMWAY_DEV_TOOLS: ${GLIMWAY_DEV_TOOLS:-}
     restart: unless-stopped
     init: true
     ports:
@@ -14,6 +16,8 @@ services:
       - "${GLIMWAY_BIND_ADDRESS:-127.0.0.1}:${GLIMWAY_HTTP_PORT:-8090}:${GLIMWAY_CONTAINER_PORT:-8090}"
     volumes:
       - glimway-data:/data
+      # A settings file (deploy/glimway.example.toml), with GLIMWAY_CONFIG below:
+      # - ./glimway.toml:/config/glimway.toml:ro
     environment:
       # All backend flags have matching GLIMWAY_* variables. CLI flags win.
       GLIMWAY_LISTEN: ${GLIMWAY_LISTEN:-0.0.0.0:8090}
@@ -32,6 +36,8 @@ services:
       GLIMWAY_HABITICA_ASSETS_URL: ${GLIMWAY_HABITICA_ASSETS_URL:-https://habitica-assets.s3.amazonaws.com/mobileApp/images/}
       GLIMWAY_SPRITE_CACHE: ${GLIMWAY_SPRITE_CACHE:-/data/habitica-sprites}
       GLIMWAY_HEALTHCHECK_URL: ${GLIMWAY_HEALTHCHECK_URL:-http://127.0.0.1:8090/api/health}
+      # The settings file's path in the container (empty: none). Reload: docker compose kill -s HUP glimway.
+      GLIMWAY_CONFIG: ${GLIMWAY_CONFIG:-}
     # Explicit for engines that omit image healthchecks in OCI image format.
     healthcheck:
       test: [CMD-SHELL, 'wget -q -O /dev/null "$${GLIMWAY_HEALTHCHECK_URL}" || exit 1']

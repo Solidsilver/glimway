@@ -20,6 +20,7 @@
  * stays there (the quest event is still 'defeat-guardian', for saves).
  */
 import Phaser from 'phaser'
+import { DEV_TOOLS } from '../../lib/dev-tools'
 import { CAMP_LEASH, CAMP_RETURN_MARGIN, fightLeashFraction } from '../../lib/fight-math'
 import { ServerEnemies } from './server-enemies'
 import type { FightTargetRef } from '../../lib/presence'
@@ -172,7 +173,7 @@ export class EnemySystem {
     this.hpBars = scene.add.graphics().setDepth(5000)
     if (world.areaId === 'outdoors') this.server = new ServerEnemies(this)
     // Dev: a playtest that parked for good (across a reload) starts every scene parked.
-    if (import.meta.env?.DEV && sessionStorage.getItem(DEV_PARKED_KEY)) this.parkAll()
+    if (DEV_TOOLS && sessionStorage.getItem(DEV_PARKED_KEY)) this.parkAll()
   }
 
   get enemies(): Enemy[] {

@@ -1,8 +1,9 @@
 /**
  * Playtest hooks: the `window.__fs*` handles the e2e suite reads and drives
- * the game through (docs/playtest.md). They exist in dev builds only (e2e
- * runs the Vite dev server), so a production bundle carries none of them,
- * and a hook tied to a scene is deleted when that scene ends (shuts down or
+ * the game through (docs/playtest.md). They exist only in builds with dev
+ * tools (the Vite dev server, which e2e runs, and a staging server's
+ * dev-tools build for players its dev mode allows; src/lib/dev-tools.ts), so
+ * a release bundle installs none of them, and a hook tied to a scene is deleted when that scene ends (shuts down or
  * is destroyed), so it never keeps a dead scene alive.
  *
  * FsHooks is the one list of them, typed; `e2e/` can import it
@@ -28,6 +29,8 @@ import type { LibraryOpenPayload } from './event-names.ts'
 import type { PerfReport } from './perf.ts'
 import type { InteractableView } from './entities/interactables.ts'
 import { onSceneEnd, type SceneEvents } from './scene-end.ts'
+import { DEV_TOOLS, devTools } from '../lib/dev-tools.ts'
+import { onWebSettings } from '../lib/web-settings.ts'
 
 type Box = { x: number; y: number; w: number; h: number }
 type Insets = { top: number; right: number; bottom: number; left: number }
@@ -249,14 +252,45 @@ export interface FsHooks {
 }
 
 /**
- * Put a playtest hook on `window` (dev builds only; a no-op otherwise).
+ * Put a playtest hook on `window` (builds with dev tools only; a no-op
+ * otherwise). Under the Vite dev server it goes on at once; in a dev-tools
+ * build, once the server says this player has the hooks (web.dev.hooks),
+ * which may be after the hook is registered.
  * The returned disposer removes only this registration. With a scene, it is deleted when that scene shuts down or is destroyed, unless a
  * newer registration has taken the name meanwhile.
  */
 export function expose<K extends keyof FsHooks>(name: K, fn: FsHooks[K], scene?: { events: SceneEvents }): () => void {
-  // `?.`: Node tests load modules that expose hooks, and have no import.meta.env.
-  if (import.meta.env?.DEV) return hook(window as unknown as Partial<FsHooks>, name, fn, scene)
-  return () => {}
+  if (!DEV_TOOLS) return () => {}
+  if (devTools()?.hooks) return hook(window as unknown as Partial<FsHooks>, name, fn, scene)
+  return later(name, fn, scene)
+}
+
+/** Hooks registered before the server granted them, newest per name. */
+const waiting = new Map<string, () => void>()
+let watching = false
+
+/** expose's wait: the hook goes on when web settings grant hooks, unless disposed first. */
+function later<K extends keyof FsHooks>(name: K, fn: FsHooks[K], scene?: { events: SceneEvents }): () => void {
+  let dispose: (() => void) | null = null
+  const install = () => {
+    dispose = hook(window as unknown as Partial<FsHooks>, name, fn, scene)
+  }
+  waiting.set(name, install)
+  if (!watching) {
+    watching = true
+    onWebSettings((s) => {
+      if (!s.dev?.hooks) return
+      const now = [...waiting.values()]
+      waiting.clear()
+      for (const go of now) go()
+    })
+  }
+  const cancel = () => {
+    if (dispose) dispose()
+    else if (waiting.get(name) === install) waiting.delete(name)
+  }
+  if (scene) onSceneEnd(scene, cancel)
+  return cancel
 }
 
 /** Who registered each hook last, per target: the same function can be registered twice. */

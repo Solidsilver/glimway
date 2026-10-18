@@ -88,7 +88,8 @@ in [deploy/nixos/instance.nix](../deploy/nixos/instance.nix).
 | Option | Default / purpose |
 |---|---|
 | `enable` | `false`; enable the backend and configured companion services |
-| `package`, `webPackage` | Go server/admin CLI and built static site |
+| `package`, `webPackage` | Go server/admin CLI and built static site; the dev builds when `settings.dev.enable` |
+| `settings` | `{}`; the server's settings file as an attribute set ([Server settings and dev mode](#server-settings-and-dev-mode)) |
 | `listenAddress`, `port` | `127.0.0.1`, `8090`; IPv6 addresses without brackets |
 | `publicOrigin` | `https://glimway.example.org`; HTTP(S) hostname origin, optional port, no path |
 | `stateDirectory` | `glimway-server`; relative systemd directory under `/var/lib` |
@@ -325,6 +326,10 @@ Anyone playing there signs in with their real Habitica account, exactly as on
 live: the same read-only login proof, nothing written to Habitica. Their dev
 progress is separate from their live progress and may be wiped at any time.
 
+To give yourself the playtesting tools there (grants, the clock, the
+`__fs*` hooks), turn on its dev mode: [Server settings and dev
+mode](#server-settings-and-dev-mode).
+
 ### Resetting its world
 
 To start the dev world from empty again, stop the dev units, move the
@@ -342,6 +347,97 @@ The server creates a new database on start. The state directory is mode 0700,
 hence the root shell. Delete the `old-*` directory once you no longer want the
 previous world; `backups/` keeps its snapshots until they age out. Never run
 this against `/var/lib/glimway-server`, which is the live game.
+
+## Server settings and dev mode
+
+The server reads its settings from one TOML file, given by `-config <path>` or
+`GLIMWAY_CONFIG=<path>`. It works the same under every deployment.
+[deploy/glimway.example.toml](../deploy/glimway.example.toml) lists every
+setting with its default and whether a change applies **live** (on reload,
+with players still connected) or at **restart**. The design, and how to add a
+setting: [design/server-settings.md](design/server-settings.md).
+
+- Layers, lowest first: the defaults, the file, `GLIMWAY_*` variables, then
+  flags. Each setting has a variable: `dev.enable` is `GLIMWAY_DEV_ENABLE`.
+  The existing variables and flags (`GLIMWAY_LOGIN_RATE`, `-login-rate`)
+  still work.
+- A key the server doesn't know is an error. Check a file with
+  `glimway-server -config FILE check-config`.
+- To reload, send SIGHUP. If the file doesn't load, the server keeps its
+  settings and logs why. Settings marked restart wait for one, and the log
+  names them.
+
+### Dev mode
+
+Dev mode gives chosen players the playtesting tools on a staging server:
+
+- the dev panel's grants (glims, materials, items);
+- moving the server clock forward (world-wide, forward-only, behind a confirm);
+- finishing a camp's fight at once;
+- the browser's `window.__fs*` hooks.
+
+It needs dev builds of both the server (`-tags dev`) and the web app
+(`GLIMWAY_DEV_TOOLS=1`). A release server refuses to start with
+`dev.enable = true`.
+
+```toml
+[dev]
+enable = true
+accounts = ["<Habitica user id>"]   # empty: every signed-in player
+
+[server.dev]
+clock = false                       # each tool can be switched off on its own
+```
+
+Once dev mode is on, a player in `accounts` who signs in sees **Open dev
+mode** in the Menu, or presses <kbd>`</kbd>. Anyone else gets a 404 from the
+dev routes.
+
+### Under NixOS
+
+Set `services.<name>.settings`. The module renders it to
+`/etc/<name>/config.toml`. `nh os switch` then reloads the server rather than
+restarting it, unless the change also needs a restart. Turning
+`settings.dev.enable` on or off swaps the server and web packages for their
+dev builds, which does restart it. With it off, the instance runs exactly the
+release code. Only the staging instance (`services.glimway-dev`) may enable
+it: on `services.glimway` the rebuild fails with an assertion.
+
+```nix
+services.glimway-dev.settings = {
+  dev = {
+    enable = true;
+    accounts = [ "<your Habitica user id>" ];
+  };
+};
+```
+
+The rebuild runs the file through the new server's `check-config`, so a typo
+fails `nh os switch` rather than the reload. Edit the settings in your NixOS
+configuration and rebuild; don't hand-edit `/etc/<name>/config.toml`.
+
+### In Docker
+
+Mount the file and point `GLIMWAY_CONFIG` at it. In `compose.yaml`, uncomment
+the volume line and set `GLIMWAY_CONFIG=/config/glimway.toml` in `.env`:
+
+```yaml
+    volumes:
+      - glimway-data:/data
+      - ./glimway.toml:/config/glimway.toml:ro
+```
+
+Reload with `docker compose kill -s HUP glimway` (`docker kill -s HUP
+<container>`), or restart the container. Single settings can also go in
+the environment (`GLIMWAY_DEV_ENABLE=true`).
+
+Dev mode needs a dev image. The published images never include dev tools;
+build one yourself:
+
+```sh
+docker build --build-arg GLIMWAY_DEV_TOOLS=1 -t glimway:dev .
+# or: GLIMWAY_DEV_TOOLS=1 GLIMWAY_IMAGE_TAG=dev docker compose build
+```
 
 ## Admission and backups
 

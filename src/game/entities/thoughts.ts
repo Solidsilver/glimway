@@ -5,6 +5,7 @@
  * (`EV.thought`) for toasts of `kind: 'thought'`.
  */
 import Phaser from 'phaser'
+import { DEV_TOOLS } from '../../lib/dev-tools'
 import { bus, EV } from '../events'
 import { uiState } from '../input'
 import { expose } from '../dev-hooks'
@@ -75,7 +76,7 @@ export class Thoughts {
     g.fillStyle(0xfbf1da, 1).fillCircle(3, h / 2 + 3, 1.3).fillCircle(6, h / 2 + 7, 0.6)
     const bubble = s.add.container(0, 0, [g, label]).setDepth(9000).setAlpha(0)
     bubble.setData('thought', text)
-    if (import.meta.env.DEV) {
+    if (DEV_TOOLS) {
       shownLog.push(text)
       if (shownLog.length > 100) shownLog.shift()
     }
