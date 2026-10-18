@@ -241,6 +241,11 @@ are stateful refusals, not successful `ProfileResult.status` values.
    its sequence but ignores vitals, place and casts. A report older only than the place watermark
    accepts vitals and casts and ignores only place. This preserves in-flight combat through an
    unrelated crafting or gathering operation.
+   A place the server chooses itself (a way home's landing, a reach settled around the player, a
+   recovered room) also sets `player_place.place_moved_version` (`Place.movedVersion`); a place
+   the client sent never does, however the server keeps it. The client follows a move newer than
+   the last one its live place followed (kept with its reports, across reloads) as it adopts the
+   state carrying it, answers and reads alike, before any report takes the new basis.
    `ReportResult {client, generation, seq, accepted, staleBasis, casts, basis, placeIgnored}`
    echoes the requested sequence; `accepted` means vitals/casts applied, `staleBasis` means the
    combat basis was consumed and ignored, and `placeIgnored` means place did not apply.

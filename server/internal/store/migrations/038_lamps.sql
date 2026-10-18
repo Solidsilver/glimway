@@ -300,5 +300,10 @@ CREATE TABLE claim_rule_members(
  FOREIGN KEY(world_id,holder_kind,holder_id) REFERENCES claim_rules(world_id,holder_kind,holder_id)
 );
 
+-- A place the server chose (a way home's landing, a settled reach, a
+-- recovered room) is marked with the version it chose it at, apart from the
+-- place watermark every written place raises: the client follows only that.
+ALTER TABLE player_place ADD COLUMN place_moved_version INTEGER NOT NULL DEFAULT 0 CHECK(place_moved_version>=0);
+
 -- The paths set aside above are refunded by the backfill
 -- (migration_038_backfill.go), which then drops lasting_geography_paths.

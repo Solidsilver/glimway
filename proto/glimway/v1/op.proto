@@ -16,6 +16,11 @@ message Vitals { double hp = 1; double mana = 2; double max_hp = 3; double max_m
 // wick_epoch: the wick epoch this player's place was last recorded in ('' before
 // any); a place left in an ended epoch is moved to the entrance.
 // (outer_epoch, the 3x3 regions' name for it, was 5.)
+// moved_version: the version at which the server last chose this place
+// itself (a way home's landing, a reach settled around the player, a room
+// it recovered; 0: never). Never an echo of a place the client sent: the
+// client follows a move newer than the last it applied, and only then.
 message Place { string area = 1; double x = 2; double y = 3; double place_set_version = 4;
   reserved 5; reserved "outer_epoch";
-  string wick_epoch = 6; }
+  string wick_epoch = 6;
+  double moved_version = 7; }

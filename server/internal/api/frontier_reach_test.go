@@ -198,6 +198,11 @@ func TestLapsedReachMovesPlayerSafely(t *testing.T) {
 	if cx != ex || cy != ey {
 		t.Fatalf("not the nearest chunk in reach: %d,%d", cx, cy)
 	}
+	// A place the server chose: the client follows it (Place.moved_version).
+	var movedAt int64
+	if err := x.db.DB.QueryRow("SELECT place_moved_version FROM player_place WHERE account_id=?", s.AccountID).Scan(&movedAt); err != nil || movedAt != setAt {
+		t.Fatalf("moved at %d, set at %d (%v)", movedAt, setAt, err)
+	}
 	// On open ground, as the server reads it.
 	var px, py float64
 	if err := x.db.DB.QueryRow("SELECT x,y FROM player_place WHERE account_id=?", s.AccountID).Scan(&px, &py); err != nil {

@@ -76,6 +76,7 @@ import { rawUserFor } from '../lib/habitica/client.ts'
 import type { HabiticaProfile, VitalsSource } from '../lib/habitica/types.ts'
 import { FLAGS, WELCOME_GLIMS, type GlimSpend, type SpendReason } from '../lib/glims.ts'
 import type { GameState } from '../lib/state.ts'
+import { WAYS_HOME_LINES } from '../lib/ways-home.ts'
 import { EV, type Emit, type LinkPayload, type LinkStatus, type WildsSettledPayload } from './event-names.ts'
 import { serverNow } from './clock.ts'
 import { glimsGift } from '../content/purse.ts'
@@ -487,7 +488,11 @@ export class Link {
     // The same tab's lease resumes after a reload; another tab's never does.
     this.lease = record.client === init.clientId ? record.lease : null
     this.reports = new ReportBook(record.client === init.clientId ? record.reports : null)
-    if (record.client !== init.clientId || !record.reports) this.reports.reset(this.basis())
+    if (record.client !== init.clientId || !record.reports) {
+      this.reports.reset(this.basis())
+      // No place of this page's own: the hero starts at the world's, every move in it followed.
+      this.reports.moved = this.movedVersion()
+    }
     this.reporter = new ReportPump({
       reports: this.reports,
       lease: () => this.lease ?? '',
@@ -499,13 +504,7 @@ export class Link {
       answered: () => this.answered(),
       stalled: (err) => this.stalled(err),
       stopFor: (err) => this.stopFor(err),
-      adopt: (state, ctx) => {
-        const before = this.placeSet()
-        // Only a place the world took and then moved (a reach settled around
-        // it); an ignored one is followServerPlace's.
-        const took = ctx.ack?.accepted && !ctx.ack.staleBasis && !ctx.ack.placeIgnored
-        if (this.adopt(state, ctx) && took) this.followPlaced(before, ctx.captured.place)
-      },
+      adopt: (state, ctx) => this.adopt(state, ctx),
       adoptRead: (state) => {
         if (state && this.compare(state) !== 'older') this.adopt(state, { read: true })
       },
@@ -530,7 +529,10 @@ export class Link {
     const n = this.reports.next
     const pendingFall = n.boundary !== null && this.entries.some((e) => e.id === n.boundary && e.kind === 'fall')
     if (n.place && (pendingFall || n.basis >= (this.server.vitals?.vitalsSetVersion ?? 0))) {
-      const live = gameStateOf(create(PlayerStateSchema, { ...this.server, place: { ...this.server.place!, area: n.place.area, x: n.place.x, y: n.place.y } }))
+      // A move the world made since that place was noted (a way home whose
+      // answer was lost) puts the hero where it chose; attach follows it.
+      const place = this.movedVersion() > this.reports.moved ? this.server.place! : { ...this.server.place!, area: n.place.area, x: n.place.x, y: n.place.y }
+      const live = gameStateOf(create(PlayerStateSchema, { ...this.server, place }))
       return { ...view, area: live.area, position: live.position, hp: Math.min(n.hp, view.maxHp), mana: Math.min(n.mana, view.maxMana) }
     }
     return view
@@ -804,42 +806,31 @@ export class Link {
     return Math.max(this.server.vitals?.vitalsSetVersion ?? 0, this.server.place?.placeSetVersion ?? 0)
   }
 
-  /** The place watermark of the state held. */
-  private placeSet(): number {
-    return this.server.place?.placeSetVersion ?? 0
+  /** The last place the world chose itself (`Place.movedVersion`; 0: none). */
+  private movedVersion(): number {
+    return this.server.place?.movedVersion ?? 0
   }
 
   /**
-   * A settled operation's answer: the hero goes where the world put them
-   * (`followPlaced`). A fall's place was predicted already, and a mutation
-   * that moves the hero (a world move) rebuilds the session itself.
+   * The world chose the hero's place (a way home's landing, a reach
+   * settled around them, a room it recovered: `Place.movedVersion`) since
+   * the live place last followed such a move: the session goes there (the
+   * scene follows, EV.relocate). Checked as each state is adopted, answers
+   * and reads alike, and before any place is noted, so no report carries a
+   * basis whose move the hero hasn't made. A place the client sent itself
+   * is never a move, whatever the world echoes. True when it moved the hero.
    */
-  private settledPlace(head: OutboxEntry, before: number): boolean {
-    return head.kind !== 'fall' && head.kind !== 'mutation' && this.followPlaced(before, whereIn(head))
-  }
-
-  /**
-   * The world chose the hero's place while answering (a ways-home arrival,
-   * a reach settled around them, a room it recovered): the place watermark
-   * rose past `before`, to a place other than the one the request named
-   * (`named`). The session moves there (the scene follows, EV.relocate) and
-   * the next report samples it, at once: an answer's watermark becomes the
-   * reports' basis as it is adopted, and a report must never carry that
-   * basis with the place the hero left, which the world would take (a reload
-   * would start there). True when it moved the hero.
-   */
-  private followPlaced(before: number, named: WhereJson | null): boolean {
-    const p = this.server.place
-    if (!p || p.placeSetVersion <= before) return false
-    if (named && named.area === p.area && Math.abs(named.x - p.x) <= 1 && Math.abs(named.y - p.y) <= 1) return false
+  private followMove(): boolean {
+    if (!this.session || this.movedVersion() <= this.reports.moved) return false
+    this.reports.moved = this.movedVersion()
     this.refresh({ relocate: true })
-    this.noteLive()
     return true
   }
 
   private noteLive(): void {
     const s = this.session
     if (!s) return
+    this.followMove()
     this.reports.note(whereOf(s.state), Math.max(0, s.state.hp), Math.max(0, s.state.mana))
   }
 
@@ -889,6 +880,7 @@ export class Link {
     // A place watermark the screen now follows (no vitals written): name it.
     this.reports.rebase(this.basis())
     this.refresh({ vitals })
+    if (this.followMove()) this.noteLive()
     return true
   }
 
@@ -1270,18 +1262,18 @@ export class Link {
     }
     this.answered()
     if (!trusted) return this.stalled(untrusted())
-    const before = this.placeSet()
     // No state, or one that disagrees with ours at its version: a read must say first.
     const how = state ? this.compare(state) : 'conflict'
     if ((how === 'conflict' || how === 'older') && (await this.reconcile()) !== 'ok') return false
     this.entries = this.entries.filter((e) => e !== head)
     if (state && (how === 'newer' || how === 'equal')) this.adopt(state, head.kind === 'fall' ? { fall: head } : {})
     if (head.kind === 'fall') this.fallSettled(head, result)
-    else if (!this.settledPlace(head, before)) this.refresh()
+    else this.refresh()
     const stored = await this.dispositionSaved()
     // A step's gift (paid once, by the server): the toast follows its answer.
     const gift = head.kind === 'quest-step' && (result as { case?: string; value?: { glims?: number } })?.case === 'questStep' ? (result as { value: { glims: number } }).value.glims : 0
     if (gift > 0) this.emitter(EV.toast, { text: glimsGift(gift), icon: 'glim', art: 'glims-few' })
+    this.landedLate(head, result)
     this.notify(head, { ok: true, state, result })
     return stored
   }
@@ -1305,7 +1297,6 @@ export class Link {
    * left to read (past retention) the queue pauses rather than guess.
    */
   private async resolveMismatch(head: OutboxEntry, err: ApiError): Promise<boolean> {
-    const before = this.placeSet()
     if (err.state && this.compare(err.state) === 'newer') this.adopt(err.state)
     let found: Awaited<ReturnType<RawApi['operationResult']>>
     try {
@@ -1335,15 +1326,31 @@ export class Link {
     }
     this.entries = this.entries.filter((e) => e !== head)
     if (head.kind === 'fall') this.fallSettled(head, result)
-    else if (!same || !this.settledPlace(head, before)) this.refresh()
+    else this.refresh()
     const stored = await this.dispositionSaved()
     if (!same) {
       console.warn('[glimway] a queued key committed a different request', head.kind)
       if (!this.waiters.has(head.id)) this.emitter(EV.toast, { text: UNDONE[head.kind] ?? 'Something this device queued was already used for something else. It didn’t happen.', kind: 'error' })
       this.notify(head, { ok: false, code: 'idempotency-mismatch' })
     } else if (head.kind === 'mutation') this.notify(head, { ok: false, code: 'resolved' })
-    else this.notify(head, { ok: true, state: this.server, result })
+    else {
+      this.landedLate(head, result)
+      this.notify(head, { ok: true, state: this.server, result })
+    }
     return stored
+  }
+
+  /**
+   * A way home that went through after its caller stopped waiting (it heard
+   * `pending`, or the page reloaded): the hero has already been moved
+   * (`followMove`), so say why.
+   */
+  private landedLate(head: OutboxEntry, result: unknown): void {
+    if (head.kind !== 'ways-home' || this.waiters.has(head.id)) return
+    const r = result as { case?: string; value?: WaysHomeResult } | null
+    if (r?.case !== 'waysHome' || !r.value || r.value.action === 'bind') return
+    const b = r.value.binding
+    this.emitter(EV.toast, { text: WAYS_HOME_LINES.late(r.value.action === 'pouch' && b ? WAYS_HOME_LINES.arrivedBeside(b) : WAYS_HOME_LINES.arrived.turncap) })
   }
 
   /**
@@ -2072,9 +2079,10 @@ export class Link {
 
   /**
    * Bind your lamp-ash pouch to the lamp beside you, or travel by turncap or
-   * pouch. Travel is the server's: it moves the hero as its answer settles
-   * (`followPlaced`, before any report samples the place), and the scene
-   * follows (EV.relocate). Needs a connection.
+   * pouch. Travel is the server's: its landing is a move the world made, so
+   * the hero follows it as the answer is adopted (`followMove`), and the
+   * scene follows (EV.relocate). `pending`: it may still land later, and is
+   * told then (`landedLate`). Needs a connection.
    */
   async waysHome(fields: OperationFields<'ways-home'>): Promise<WildsOutcome<WaysHomeResult>> {
     if (!this.session) return { ok: false, code: 'unknown' }

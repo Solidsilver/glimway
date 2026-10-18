@@ -135,7 +135,7 @@ test('a Wilds place loads: the open map is one area, its position world pixels',
   // A 0.7 region place is gone with the regions (a clean break): the village spawn.
   assert.equal(at('wilds:outer-1').area, 'outdoors');
   // Through the response parser too (a reload's state read).
-  const snap = parseSnapshot({ state: { ...structuredClone(BASE), place: { area: 'outdoors', x: -424, y: -744, placeSetVersion: 0, wickEpoch: '' } } });
+  const snap = parseSnapshot({ state: { ...structuredClone(BASE), place: { area: 'outdoors', x: -424, y: -744, placeSetVersion: 0, movedVersion: 0, wickEpoch: '' } } });
   assert.deepEqual([snap.state.area, snap.state.position], ['outdoors', { x: -424, y: -744 }]);
   // A place this build can't draw never fails the load.
   const lost = at('somewhere-new');
@@ -188,8 +188,8 @@ test('fall recovery: a quarter of max HP and half of max mana, rounded up, never
 });
 
 test('the wick epoch the server last recorded the place in comes with the state', () => {
-  const s = gameStateOf(state((j) => (j.place = { area: 'outdoors', x: 424, y: -744, placeSetVersion: 0, wickEpoch: 'e-old' })));
+  const s = gameStateOf(state((j) => (j.place = { area: 'outdoors', x: 424, y: -744, placeSetVersion: 0, movedVersion: 0, wickEpoch: 'e-old' })));
   assert.equal(s.wickEpoch, 'e-old');
-  const none = gameStateOf(state((j) => (j.place = { area: 'outdoors', x: 88, y: 968, placeSetVersion: 0, wickEpoch: '' })));
+  const none = gameStateOf(state((j) => (j.place = { area: 'outdoors', x: 88, y: 968, placeSetVersion: 0, movedVersion: 0, wickEpoch: '' })));
   assert.equal(none.wickEpoch, undefined);
 });
