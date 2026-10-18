@@ -168,7 +168,8 @@ for (const candidate of candidates) {
  * ten slowest tests (every attempt's time added: what the run paid for them).
  */
 function health(report) {
-  const name = (t) => `${t.file ?? '?'} › ${t.title}`
+  // A spec file's own suite is titled with its file name: say it once.
+  const name = (t) => [t.file ?? '?', ...t.title.split(' › ').filter((part, i) => !(i === 0 && part === t.file))].join(' › ')
   const flaky = report.tests.filter((t) => t.status === 'flaky').map(name)
   const hard = report.tests.filter((t) => t.status === 'unexpected').map(name)
   const slowest = report.tests
