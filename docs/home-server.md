@@ -179,14 +179,16 @@ sudo nixos-rebuild switch --flake .#example
 
 Back up before switching, and check the snapshot with `verify-backup` (see
 [Admission and backups](#admission-and-backups)) so you know you can go back.
-Review migrations before upgrading an existing
-database: migration 010 deliberately resets early homestead data. A database
-with real players that has not applied it needs a preserving migration before
-this version is used. Rolling back NixOS switches binaries, not the database;
-restore a compatible backup if the old binary cannot read the upgraded schema.
+A new version migrates the database when it starts, and nothing undoes that:
+rolling back NixOS switches binaries, not the database, so restore a
+compatible backup if the old binary can't read the upgraded schema. Read the
+release's changelog for what its migrations change (0.13.0's `038_lamps.sql`
+resets the Wilds' current wick and refunds laid paths at Pell's, for
+example), and rehearse the upgrade first.
 
 To rehearse an upgrade, run the new version's binary on a copy of a recent
-backup before switching:
+backup before switching (the release flow's own step:
+[releasing.md](releasing.md)):
 
 ```sh
 nix build github:Solidsilver/glimway/<tag>#glimway-server
@@ -329,6 +331,14 @@ nh os switch -U glimway-dev
 
 This only moves the `glimway-dev` input; the live input stays pinned. Check
 `curl -fsS https://glim-dev.solidsilver.dev/api/health`.
+
+Migrations past the last release can still change before it ships. A dev
+database that ran a pending migration which was later edited or folded into
+another one refuses to start (`out-of-order migration 038_lamps.sql after
+…`), and `verify-backup` calls its snapshots' old migrations unknown. That happened when 0.13.0 folded
+038–048 into `038_lamps.sql`: glim-dev had run the old ones. Reset its world
+([below](#resetting-its-world)) and start it again; a staging world may be
+wiped at any time.
 
 ### Letting people in
 
@@ -664,7 +674,11 @@ docker compose exec -T glimway glimway-server -db /data/glimway.sqlite backup /d
 docker compose exec -T glimway glimway-server verify-backup /data/backups/before-update.sqlite
 mkdir -p backups
 docker compose cp glimway:/data/backups/before-update.sqlite ./backups/
-# Review migrations, then select a release tag in .env and update.
+# Rehearse the upgrade on that copy with the new image (migrate --dry-run
+# only reads it):
+docker run --rm --user "$(id -u):$(id -g)" -v "$PWD/backups:/rehearse:ro" \
+  ghcr.io/solidsilver/glimway:X.Y.Z migrate --dry-run /rehearse/before-update.sqlite
+# Then select that release tag in .env and update.
 docker compose pull glimway
 docker compose up -d --no-build --wait
 ```
