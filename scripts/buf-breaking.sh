@@ -40,7 +40,9 @@ else
   echo "No protobuf schema on origin/main yet; establishing the initial contract."
 fi
 
-tag=$(git describe --abbrev=0 --match 'v*' --tags 2>/dev/null || true)
+# Pre-release tags (v0.12.0-alpha.1) are skipped: an alpha cut on dev is not a
+# contract players run, so a break it already carried must still fail here.
+tag=$(git describe --abbrev=0 --tags --match 'v*' --exclude 'v*-*' 2>/dev/null || true)
 if [ -n "$tag" ] && git cat-file -e "$tag:buf.yaml" 2>/dev/null; then
   check ".git#ref=$tag"
 else

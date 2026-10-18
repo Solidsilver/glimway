@@ -10,8 +10,15 @@ NVIDIA GPU, and the hosted runners keep the quick checks:
 | Job | Runner | When |
 |---|---|---|
 | `verify` (typecheck, unit tests, build, `go test`, Docker smoke test) | GitHub-hosted | every push and pull request |
-| `e2e-smoke` (the `@smoke` tier) | GitHub-hosted, software WebGL | every push and pull request |
-| `e2e-full` (every playtest) | self-hosted, `[self-hosted, linux, x64, glimway-e2e]` | pushes to `main`, `expansion` and `exp/**` in this repository, and manual dispatch |
+| `e2e-smoke` (the `@smoke` tier) | GitHub-hosted, software WebGL | every push and pull request, unless it changes only docs |
+| `e2e-full`: the full suite | self-hosted, `[self-hosted, linux, x64, glimway-e2e]` | pushes to `main` and `dev` in this repository, and a manual run with `full` (`gh workflow run ci.yml --ref <branch> -f full=true`) |
+| `e2e-full`: only the specs a lane's changes touch (`test:changed` against `origin/dev`) | the same | pushes to `exp/**` in this repository |
+| `browser-performance` ("measured browser budget", opt-in) | the same | every manual run. Fails today: the sparse-map drag p95 is about 240 ms against 16 ms ([testing.md](testing.md#ci)) |
+
+`e2e-full` times out after 60 minutes (a full run takes about 25). A push
+that changes only docs skips both E2E jobs. With one runner, a manual run's
+`e2e-full` and `browser-performance` queue behind each other and behind any
+other branch's run.
 
 This page covers what such a runner needs. Any Linux machine with an NVIDIA
 GPU, Docker 25+ and the NVIDIA Container Toolkit will do; the examples use
