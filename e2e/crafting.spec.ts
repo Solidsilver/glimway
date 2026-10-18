@@ -92,7 +92,7 @@ test('the hearth: cook a remedy at the cottage hearth, your maker\'s mark on it'
   await waitForLive(page)
   await page.keyboard.press('e')
   await expect(panel).toBeVisible()
-  await expect(panel.locator('[data-recipe="hearth-wax-seal"]')).toContainText('You never learned this recipe')
+  await expect(panel.locator('[data-recipe="hearth-wax-seal"]')).toContainText('You haven’t learned this recipe yet')
   await expect(panel.locator('[data-recipe="hearth-wax-seal"] [data-testid="locked"]')).toBeVisible()
   fund(id, { items: { 'recipe-page-wax-seal': 1 }, materials: { beeswax: 2 } })
   await panel.getByRole('button', { name: 'Close the hearth' }).click()
