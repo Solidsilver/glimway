@@ -13,10 +13,11 @@ import (
 
 const migrateUsage = "usage: migrate --dry-run COPY.sqlite"
 
-// migrateDryRun rehearses an upgrade on a copy of a database (a backup):
-// verify-backup's checks, this binary's pending migrations applied to the
-// copy, the checks again, and the key counts before and after. Starting the
-// server migrates -db for real; this only ever writes the copy it is given.
+// migrateDryRun rehearses an upgrade of a copy of a database (a backup):
+// verify-backup's checks, this binary's pending migrations applied to a
+// private snapshot of it, the checks again, and the key counts before and
+// after. Starting the server migrates -db for real; this never writes a file
+// it is given (store.DryRunMigrate).
 func migrateDryRun(ctx context.Context, args []string, db string) error {
 	f := flag.NewFlagSet("migrate", flag.ContinueOnError)
 	f.SetOutput(io.Discard)

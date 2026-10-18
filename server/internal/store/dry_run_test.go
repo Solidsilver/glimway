@@ -1,7 +1,9 @@
 package store
 
 import (
+	"bytes"
 	"context"
+	"database/sql"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -24,6 +26,7 @@ func TestDryRunMigrateUpgradesACopy(t *testing.T) {
 		t.Fatal(err)
 	}
 	old.Close()
+	original := fileBytes(t, path)
 	run, err := DryRunMigrate(context.Background(), path)
 	if err != nil {
 		t.Fatal(err)
@@ -50,14 +53,18 @@ func TestDryRunMigrateUpgradesACopy(t *testing.T) {
 	if n, ok := run.After.Counts["holds"]; !ok || n != 0 {
 		t.Fatal("holds after", n, ok)
 	}
-	// The copy is left closed and current: a second run applies nothing.
-	for _, suffix := range []string{"-wal", "-shm"} {
+	// The file given is only read: byte for byte the same, nothing beside it,
+	// so a second run rehearses the same upgrade.
+	if !bytes.Equal(fileBytes(t, path), original) {
+		t.Fatal("the dry run wrote to the file it was given")
+	}
+	for _, suffix := range []string{"-wal", "-shm", "-journal"} {
 		if _, err := os.Stat(path + suffix); err == nil {
 			t.Fatalf("%s left behind", suffix)
 		}
 	}
 	again, err := DryRunMigrate(context.Background(), path)
-	if err != nil || len(again.Applied) != 0 || again.Before.Schema != run.After.Schema {
+	if err != nil || !reflect.DeepEqual(again.Applied, run.Applied) || again.Before.Schema != lastShippedMigration {
 		t.Fatal("second run", again, err)
 	}
 }
@@ -115,5 +122,96 @@ func TestDryRunMigrateRefusals(t *testing.T) {
 	defer held.Close()
 	if _, err = DryRunMigrate(ctx, current); err == nil || !strings.Contains(err.Error(), "open: rehearse on a copy") {
 		t.Fatal("ran on a held file", err)
+	}
+}
+
+// newestMigration reads a database's newest applied migration without
+// migrating it.
+func newestMigration(t *testing.T, path string) string {
+	t.Helper()
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	var name string
+	if err = db.QueryRow("SELECT MAX(name) FROM schema_migrations").Scan(&name); err != nil {
+		t.Fatal(err)
+	}
+	return name
+}
+
+// A hard link is another name for the same file: one to a database a server
+// has open (in WAL mode, sidecars beside the live name only) is refused, and
+// the live database stays at its schema.
+func TestDryRunMigrateRefusesAHardLinkToALiveDatabase(t *testing.T) {
+	dir := t.TempDir()
+	live := filepath.Join(dir, "live.sqlite")
+	newUpgradeFixture(t, live, lastShippedMigration, nil).Close()
+	server, err := sql.Open("sqlite", live)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server.SetMaxOpenConns(1)
+	if _, err = server.Exec("PRAGMA journal_mode=WAL; INSERT INTO worlds(id,owner_id,seed,created_at) VALUES('w','alice','seed',1)"); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(dir, "copy.sqlite")
+	if err = os.Link(live, link); err != nil {
+		t.Skip("no hard links here:", err)
+	}
+	if _, err = DryRunMigrate(context.Background(), link); err == nil || !strings.Contains(err.Error(), "hard links") {
+		t.Fatal("ran on a hard link to a live database", err)
+	}
+	server.Close()
+	if got := newestMigration(t, live); got != lastShippedMigration {
+		t.Fatalf("the live database moved to %s", got)
+	}
+	// Even with the link gone and the live file closed, the original is
+	// only read: the rehearsal migrates its own snapshot.
+	if err = os.Remove(link); err != nil {
+		t.Fatal(err)
+	}
+	before := fileBytes(t, live)
+	if _, err = DryRunMigrate(context.Background(), live); err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(fileBytes(t, live), before) || newestMigration(t, live) != lastShippedMigration {
+		t.Fatal("the dry run wrote to the database it was given")
+	}
+}
+
+// A symlink is resolved before the sidecars are looked for: a -journal
+// beside its target refuses it, and the target is not migrated.
+func TestDryRunMigrateResolvesSymlinksFirst(t *testing.T) {
+	dir := t.TempDir()
+	target := filepath.Join(dir, "data", "game.sqlite")
+	if err := os.MkdirAll(filepath.Dir(target), 0700); err != nil {
+		t.Fatal(err)
+	}
+	newUpgradeFixture(t, target, lastShippedMigration, nil).Close()
+	link := filepath.Join(dir, "copy.sqlite")
+	if err := os.Symlink(target, link); err != nil {
+		t.Skip("no symlinks here:", err)
+	}
+	before := fileBytes(t, target)
+	// With nothing beside the target, the link is followed, read, and left alone.
+	if _, err := DryRunMigrate(context.Background(), link); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(target+"-journal", []byte("hot"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := DryRunMigrate(context.Background(), link); err == nil || !strings.Contains(err.Error(), "game.sqlite-journal exists") {
+		t.Fatal("ran past a sidecar beside the target", err)
+	}
+	if !bytes.Equal(fileBytes(t, target), before) {
+		t.Fatal("the target was written")
+	}
+	if err := os.Remove(target + "-journal"); err != nil {
+		t.Fatal(err)
+	}
+	if got := newestMigration(t, target); got != lastShippedMigration {
+		t.Fatalf("the target moved to %s", got)
 	}
 }

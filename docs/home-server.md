@@ -194,13 +194,15 @@ cp /var/lib/glimway-server/backups/<latest>.sqlite /tmp/rehearsal.sqlite
 ./result/bin/glimway-server migrate --dry-run /tmp/rehearsal.sqlite
 ```
 
-`migrate --dry-run COPY` runs the `verify-backup` checks, applies the
-migrations this version would apply on start (to the copy only), and checks it
-again. It prints the schema before and after, which migrations ran and how long
-they took, and the counts of accounts, worlds, homes, items, plants, holds,
-camps and Pell's crates before and after. It exits non-zero on any failure. It
-refuses the `-db` file and any database that looks open: a `-wal` or `-shm`
-file beside it, or, on Linux, a process holding it.
+`migrate --dry-run COPY` runs the `verify-backup` checks on `COPY`, applies the
+migrations this version would apply on start to a private snapshot of it in a
+temporary folder, and checks the snapshot again. `COPY` itself is only read,
+never written. It prints the schema before and after, which migrations ran and
+how long they took, and the counts of accounts, worlds, homes, items, plants,
+holds, camps and Pell's crates before and after. It exits non-zero on any
+failure. It refuses the `-db` file and any database that looks in use: a
+`-wal`, `-shm` or `-journal` file beside it (symlinks followed first), more
+than one hard link, or, on Linux, a process holding it.
 
 For contributors, from a source checkout:
 

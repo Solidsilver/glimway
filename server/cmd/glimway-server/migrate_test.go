@@ -42,6 +42,25 @@ func TestMigrateDryRunCommand(t *testing.T) {
 		t.Fatal(err)
 	}
 	s.Close()
+	// Another name for a database (a hard link), and a symlink to one with a
+	// sidecar beside it, are refused, so the command exits non-zero.
+	linked, hard := filepath.Join(dir, "linked.sqlite"), filepath.Join(dir, "hard.sqlite")
+	if err = run([]string{"-db", path, "backup", linked}); err != nil {
+		t.Fatal(err)
+	}
+	if err = os.Link(linked, hard); err != nil {
+		t.Fatal(err)
+	}
+	journaled, soft := filepath.Join(dir, "journaled.sqlite"), filepath.Join(dir, "soft.sqlite")
+	if err = run([]string{"-db", path, "backup", journaled}); err != nil {
+		t.Fatal(err)
+	}
+	if err = os.WriteFile(journaled+"-journal", []byte("hot"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err = os.Symlink(journaled, soft); err != nil {
+		t.Fatal(err)
+	}
 	for _, tt := range []struct {
 		cmd  []string
 		want string
@@ -53,6 +72,8 @@ func TestMigrateDryRunCommand(t *testing.T) {
 		{[]string{"migrate", "--dry-run", path}, "this server's -db"},
 		{[]string{"migrate", "--dry-run", broken}, "before:"},
 		{[]string{"migrate", "--dry-run", failing}, "migrate:"},
+		{[]string{"migrate", "--dry-run", hard}, "hard links"},
+		{[]string{"migrate", "--dry-run", soft}, "journaled.sqlite-journal exists"},
 	} {
 		if err := run(append([]string{"-db", path}, tt.cmd...)); err == nil || !strings.Contains(err.Error(), tt.want) {
 			t.Fatalf("%v: %v, want %q", tt.cmd, err, tt.want)
