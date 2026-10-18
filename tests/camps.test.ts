@@ -6,6 +6,8 @@ import { HOMESTEAD_DATA } from '../src/lib/homestead.ts';
 import { CAMP_PACK_WORDS, campAtTile, campFrame, campHasRoom, campLines, campLook, campPlantLines, campSpot, campTaken, collectedLine, crateLines } from '../src/lib/camps.ts';
 import { uprootedLine } from '../src/lib/trowel.ts';
 import { homeErrorText } from '../src/content/errors.ts';
+import { LAMP_OIL } from '../src/content/camps.ts';
+import { CAMP_ERRORS } from '../src/lib/camps.ts';
 
 const W = HOMESTEAD_DATA.wayLamp;
 
@@ -86,4 +88,12 @@ test('taking a camp apart: a plant dug up, the whole camp packed up (review B7)'
   assert.match(CAMP_PACK_WORDS.ask.join(' '), /Nothing is lost/);
   // The refusal to take a lamp down over a camp points at packing it up.
   assert.match(homeErrorText('camp-not-empty'), /pack up the whole camp/);
+});
+
+test('the oil note names both ways to come by it, and a full lamp says its cap from content', () => {
+  assert.match(LAMP_OIL.needOil, /chandler/);
+  assert.match(LAMP_OIL.needOil, /Wick Tree/);
+  assert.equal(CAMP_ERRORS['lantern-full'], `The lamp’s full. It takes ${W.maxWicks} wicks of oil at most.`);
+  assert.equal(homeErrorText('lantern-full'), `The lantern’s full. It takes ${HOMESTEAD_DATA.lotLantern.maxWicks} wicks of oil at most.`);
+  assert.equal(LAMP_OIL.full('The lamp', 1), 'The lamp’s full. It takes 1 wick of oil at most.');
 });

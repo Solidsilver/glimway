@@ -31,12 +31,14 @@ test('land words distinguish still/permanent and the two different empty-store o
   assert.equal(landLabel(s),'Built · held')
   s.reserve=0;s.nextTurning='dimming'
   assert.equal(turningLabel(s),'Last wick · gutters next turning unless tended')
+  assert.equal(turningLabel(s),MAP_LAMPS.lastWick)
   // The last wick is dimming already (owner, 2026-10-17): label, mark and hatch agree.
   assert.equal(landLabel(s),'Built · dimming')
   assert.ok(landDimming(s))
   assert.ok(mapLampMark({ land: s }).dimming)
   s.dimming=true;s.nextTurning='turns'
   assert.equal(turningLabel(s),'Turns next turning unless tended')
+  assert.equal(turningLabel(s),MAP_LAMPS.guttering)
   assert.ok(landDimming(s))
   s.reserve=1;s.dimming=false;s.nextTurning='held'
   assert.ok(!landDimming(s))
@@ -49,6 +51,8 @@ test('land words distinguish still/permanent and the two different empty-store o
   assert.equal(landLabel(s),'Common · visited this wick')
   s.tier='still';assert.match(landLabel(s),/no oil/)
   s.tier='permanent';assert.match(landLabel(s),/permanent/)
+  // Wild land in plain words: it changes at each Turning (owner, 2026-10-18).
+  s.tier='wild';assert.equal(landLabel(s),'Wild · changes each Turning')
 })
 test('map transport refuses unexplored extents and lamps while accepting a known lot stake alone', () => {
   const s=land(2,-4)

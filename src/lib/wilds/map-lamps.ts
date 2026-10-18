@@ -18,7 +18,7 @@ export function landLabel(land: ChunkLandStatus): string {
   return land.tier === 'permanent' ? MAP_LAMPS.permanent : land.tier === 'still' ? MAP_LAMPS.still : MAP_LAMPS.wild
 }
 export function turningLabel(land: ChunkLandStatus): string {
-  return ({ released: MAP_LAMPS.released, turns: MAP_LAMPS.dimming, dimming: MAP_LAMPS.dims, held: MAP_LAMPS.holds, carries: MAP_LAMPS.carries, 'paths-turn': MAP_LAMPS.pathsTurn, 'lamps-carry': MAP_LAMPS.lampsCarry, 'lamps-turn': MAP_LAMPS.lampsTurn } as Record<string, string>)[land.nextTurning] ?? ''
+  return ({ released: MAP_LAMPS.released, dimming: MAP_LAMPS.lastWick, turns: MAP_LAMPS.guttering, held: MAP_LAMPS.holds, carries: MAP_LAMPS.carries, 'paths-turn': MAP_LAMPS.pathsTurn, 'lamps-carry': MAP_LAMPS.lampsCarry, 'lamps-turn': MAP_LAMPS.lampsTurn } as Record<string, string>)[land.nextTurning] ?? ''
 }
 
 /** Straight-line distance from the Commons arch, in world tiles. */

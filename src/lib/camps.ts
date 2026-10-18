@@ -9,6 +9,10 @@
 import type { CampMember, CampView, RecoveryEntry } from './gen/glimway/v1/camps_pb.js'
 import { HOMESTEAD_DATA } from './homestead.ts'
 import { giftPhrase, itemName } from './items.ts'
+import { CAMP_ERRORS as CAMP_ERROR_WORDS, CAMP_PLANT_WORDS, CAMP_REFUSAL, CAMP_RULE_WORDS, CAMP_WORDS, CRATE_LINES, CRATE_WORDS, LAMP_OIL, listed, MOVE_OFF_WORDS } from '../content/camps.ts'
+
+// The words are content's (src/content/camps.ts); these are read from here too (CratePanel, the tests).
+export { CAMP_PACK_WORDS, CAMP_PLANT_CHOICES, CAMP_RULE_WORDS, CRATE_WORDS } from '../content/camps.ts'
 
 export type CampLook = 'lit' | 'dimming'
 
@@ -73,18 +77,18 @@ export function campHasRoom(c: Pick<CampView, 'oil'>): boolean {
 /** The readout at the lamp: whose it is, the wicks of oil left, and what the next turning brings. */
 export function campLines(c: Pick<CampView, 'oil' | 'dimming' | 'setterName' | 'setterId' | 'naming'>, me: string | null): string[] {
   const max = HOMESTEAD_DATA.wayLamp.maxWicks
-  const whose = c.setterId === me ? 'Your way-lamp.' : `${c.setterName || 'Someone'}’s way-lamp.`
-  const wicks = `${c.oil} of ${max} ${max === 1 ? 'wick' : 'wicks'} of oil`
+  const whose = c.setterId === me ? CAMP_WORDS.yours : CAMP_WORDS.whose(c.setterName)
+  const wicks = CAMP_WORDS.oil(c.oil, max)
   // Its Keeper's naming first, as a stone's is (lamps.md 2.8).
   const named = c.naming?.text ? [`“${c.naming.text}”`] : []
-  if (c.dimming) return [...named, `${whose} It’s guttering: ${wicks}. Unless it’s filled, it goes dark at the turning and the camp turns with it. Everything set out here would wait at Pell’s.`]
-  if (c.oil === 0) return [...named, `${whose} It’s dimming: the oil’s gone, and it’s on its last wick. Fill it to keep this camp; left empty, it gutters for a wick after the turning, then goes dark.`]
-  return [...named, `${whose} It burns, ${wicks} left. The woods it lights hold while it does.`]
+  if (c.dimming) return [...named, CAMP_WORDS.guttering(whose, wicks)]
+  if (c.oil === 0) return [...named, CAMP_WORDS.lastWick(whose)]
+  return [...named, CAMP_WORDS.burning(whose, wicks)]
 }
 
 /** A camp lamp's name in the world: its naming's short name, or plain way-lamp. */
 export function campLampName(c: Pick<CampView, 'naming'>): string {
-  return c.naming?.shortName || 'Way-lamp'
+  return c.naming?.shortName || CAMP_WORDS.lampName
 }
 
 /** What an entry is, in a list: "a wooden stool", "3 stone". */
@@ -92,20 +96,8 @@ function entryPhrase(e: Pick<RecoveryEntry, 'itemDef' | 'qty'>): string {
   return giftPhrase(e.itemDef, e.qty)
 }
 
-/** "a, b and c". */
-function listed(parts: string[]): string {
-  return parts.length <= 1 ? (parts[0] ?? '') : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`
-}
-
 /** Why an entry waits at Pell's (RecoveryEntry.reason; '' is a lapse). */
 export const RECOVERY_REASONS = { landChanged: 'land-changed', deedLost: 'deed-lost', packedUp: 'packed-up' } as const
-
-/** Pell's opening line for entries waiting for a reason other than a lapse. */
-const REASON_LINES: Record<string, [string, string]> = {
-  [RECOVERY_REASONS.landChanged]: ['The land changed out past the Commons, and your old paths went with it. What you paid for them didn’t.', 'Every tile you laid, counted'],
-  [RECOVERY_REASONS.deedLost]: ['Your lot went back to the deeds book. Before it did, I packed up everything on it.', 'Yours whenever you want it'],
-  [RECOVERY_REASONS.packedUp]: ['You packed up your camp. It’s all here, every piece of it.', 'All of it, as you left it'],
-}
 
 /**
  * Pell's words for a crate waiting: what a lapse packed (the woods turned),
@@ -114,19 +106,20 @@ const REASON_LINES: Record<string, [string, string]> = {
  */
 export function crateLines(entries: readonly (Pick<RecoveryEntry, 'itemDef' | 'qty'> & { movedBy?: string; reason?: string })[]): string[] {
   const lapsed = entries.filter((e) => !e.movedBy && !e.reason)
-  const lines = lapsed.length ? ['The woods turned. I have your things.', `In the crate: ${listed(lapsed.map(entryPhrase))}. Nothing’s missing. I counted.`] : []
-  for (const [reason, [why, tail]] of Object.entries(REASON_LINES)) {
+  const lines = lapsed.length ? [CRATE_LINES.lapsed, CRATE_LINES.inCrate(listed(lapsed.map(entryPhrase)), CRATE_LINES.lapsedTail)] : []
+  for (const reason of Object.values(RECOVERY_REASONS)) {
     const these = entries.filter((e) => !e.movedBy && e.reason === reason)
-    if (these.length) lines.push(why, `In the crate: ${listed(these.map(entryPhrase))}. ${tail}.`)
+    const [why, tail] = CRATE_LINES.reasons[reason]!
+    if (these.length) lines.push(why, CRATE_LINES.inCrate(listed(these.map(entryPhrase)), tail))
   }
   const keepers = [...new Set(entries.map((e) => e.movedBy).filter((k): k is string => !!k))]
-  for (const k of keepers) lines.push(`Moved off ${k}’s camp: ${listed(entries.filter((e) => e.movedBy === k).map(entryPhrase))}. I kept it safe for you.`)
+  for (const k of keepers) lines.push(CRATE_LINES.movedOff(k, listed(entries.filter((e) => e.movedBy === k).map(entryPhrase))))
   return lines
 }
 
 /** Pell's words once the crate is collected. */
 export function collectedLine(entries: readonly Pick<RecoveryEntry, 'itemDef' | 'qty'>[]): string {
-  return entries.length === 0 ? 'Nothing waiting for you. The book’s square.' : `Signed out to you: ${listed(entries.map(entryPhrase))}. The home pieces are in your pack.`
+  return entries.length === 0 ? CRATE_WORDS.empty : CRATE_LINES.collected(listed(entries.map(entryPhrase)))
 }
 
 // ------------------------------------------------------------ Pell's crate picker (lamps.md 2.7)
@@ -138,11 +131,10 @@ export interface CrateRow { id: number; label: string; note: string; plant: bool
 
 /** Why an entry waits, short: the note under it in the picker. */
 function crateNote(e: Pick<CrateEntry, 'movedBy' | 'reason'>): string {
-  if (e.movedBy) return `Moved off ${e.movedBy}’s camp`
-  if (e.reason === RECOVERY_REASONS.landChanged) return 'Your old paths, paid back'
-  if (e.reason === RECOVERY_REASONS.deedLost) return 'From your old lot'
-  if (e.reason === RECOVERY_REASONS.packedUp) return 'From the camp you packed up'
-  return 'From a camp the woods took back'
+  const notes = CRATE_LINES.notes
+  if (e.movedBy) return notes.movedOff(e.movedBy)
+  if (e.reason === RECOVERY_REASONS.landChanged || e.reason === RECOVERY_REASONS.deedLost || e.reason === RECOVERY_REASONS.packedUp) return notes[e.reason]
+  return notes.lapsed
 }
 
 /** The crate's entries as the picker lists them, in Pell's order (oldest first). */
@@ -158,31 +150,10 @@ export function cratePick(id: number | null, asSeed = false): { entries: number[
   return id === null ? { entries: [], asSeed: [] } : { entries: [id], asSeed: asSeed ? [id] : [] }
 }
 
-/** The picker's words. */
-export const CRATE_WORDS = {
-  title: 'Pell’s crate',
-  close: 'Close the crate',
-  lede: 'Everything here is yours, kept as you left it. Take what you want now. The rest waits here as long as you like.',
-  loading: 'Pell’s opening the book…',
-  empty: 'Nothing waiting for you. The book’s square.',
-  takeAll: 'Take everything',
-  take: 'Take',
-  takeWhole: 'Take it whole',
-  takeSeed: 'Take its seed',
-  taking: 'Taking…',
-  plantNote: 'Whole, it keeps its growth and goes back in the ground wherever you can plant. As a seed, it starts over.',
-  /** Pell's choices at the desk: everything at once, or the picker. */
-  takeYours: 'Take your things from the crate',
-  choose: 'Choose what to take',
-  chooseNote: 'Leave the rest with Pell'
-} as const
-
-/** A camp refusal in words: the lot lantern's shared codes, said of a way-lamp. */
+/** A camp refusal in words; a full lamp says its cap, from content. */
 export const CAMP_ERRORS: Record<string, string> = {
-  'cannot-hold': 'A way-lamp can’t hold this ground: it’s the town, the Tangle, a lot’s backland or someone else’s camp.',
-  'too-far-away': 'Stand closer to the way-lamp.',
-  'lantern-full': 'The lamp’s full. It takes three wicks of oil at most.',
-  'not-in-world': 'You can only name people who live in this world.'
+  ...CAMP_ERROR_WORDS,
+  'lantern-full': LAMP_OIL.full('The lamp', HOMESTEAD_DATA.wayLamp.maxWicks)
 }
 
 // ------------------------------------------------------------ who may build here
@@ -195,26 +166,6 @@ export const CAMP_ERRORS: Record<string, string> = {
 export type CampRule = 'household' | 'listed' | 'except' | 'everyone'
 
 export const CAMP_RULES: readonly CampRule[] = ['household', 'listed', 'except', 'everyone']
-
-/** The panel's words: its heading, and each rule as a choice and as a sentence. */
-export const CAMP_RULE_WORDS = {
-  heading: 'Who may build here',
-  rules: {
-    household: { pick: 'Just my household', line: 'You and your household build here.' },
-    listed: { pick: 'My household and people I name', line: 'You, your household and the people you name build here.' },
-    except: { pick: 'Everyone but people I name', line: 'Everyone in the world builds here, except the people you name.' },
-    everyone: { pick: 'Everyone in the world', line: 'Everyone in the world builds here.' }
-  } satisfies Record<CampRule, { pick: string; line: string }>,
-  now: 'As it is',
-  name: 'Name someone',
-  noneToName: 'Everyone’s on the list already',
-  unname: (name: string) => `Take ${name} off the list`,
-  named: (names: string[]) => `Named: ${listed(names)}.`,
-  noneNamed: 'No one named yet.',
-  open: 'Anyone may still walk here and add oil.',
-  pickWho: 'Who goes on the list?',
-  done: 'Done'
-} as const
 
 /** A camp's rule as its keeper reads it (household when unset). */
 export function campRule(c: Pick<CampView, 'rule'>): CampRule {
@@ -254,9 +205,7 @@ export function withoutMember(c: Pick<CampView, 'members'>, id: string): string[
 /** The refusal when you may not build at someone's camp: whose it is, and what you can still do. */
 export function campRefusal(c: Pick<CampView, 'setterName'> | null): string {
   const who = c?.setterName
-  return who
-    ? `This is ${who}’s camp, and ${who} says who builds here. You’re welcome to walk through and tend the lamp.`
-    : 'This camp’s keeper says who builds here. You’re welcome to walk through and tend the lamp.'
+  return who ? CAMP_REFUSAL.named(who) : CAMP_REFUSAL.unnamed
 }
 
 /** A world member's name from the keeper's read, or "someone". */
@@ -271,12 +220,12 @@ export function ownerName(people: readonly CampMember[], p: { ownerId: string; o
 
 /** Asked before the keeper moves someone's piece off: it goes to Pell's, still theirs. */
 export function moveOffLines(owner: string, piece: string): string[] {
-  return [`Move ${owner}’s ${piece.toLowerCase()} off your camp? Pell keeps it in a crate for ${owner}. Nothing is lost.`]
+  return [MOVE_OFF_WORDS.ask(owner, piece)]
 }
 
 /** Said once the keeper has moved it. */
 export function movedOffLine(owner: string, piece: string): string {
-  return `${owner}’s ${piece.toLowerCase()} is waiting at Pell’s for ${owner}.`
+  return MOVE_OFF_WORDS.done(owner, piece)
 }
 
 /** A piece's name at a camp. */
@@ -292,23 +241,6 @@ export function campPieceName(itemDef: string): string {
  * (./trowel.ts): the look never offers it, and says so to whoever may.
  */
 export function campPlantLines(plant: string, owner: string | null, mayDig = false): string[] {
-  const name = plant.toLowerCase()
-  const whose = owner ? `${owner}’s ${name}, growing in the lamp’s light.` : `Your ${name}, growing in the lamp’s light.`
-  return mayDig ? [whose, 'A trowel would dig it up.'] : [whose]
+  const whose = owner ? CAMP_PLANT_WORDS.theirs(owner, plant) : CAMP_PLANT_WORDS.yours(plant)
+  return mayDig ? [whose, CAMP_PLANT_WORDS.mayDig] : [whose]
 }
-
-/** A camp plant's look: its only choice is to leave it (digging up is the trowel's). */
-export const CAMP_PLANT_CHOICES = [{ text: 'Leave it', dismiss: true }] as const
-
-/** The keeper's "pack up the camp": everything to Pell's at once, as at a lapse. */
-export const CAMP_PACK_WORDS = {
-  pack: { text: 'Pack up the camp', note: 'Everything here goes to Pell’s' },
-  ask: [
-    'Pack up the whole camp?',
-    'Pell keeps every piece and plant in a crate for whoever it belongs to. The lamp and its oil wait there for you. Nothing is lost.',
-    'Any path laid here comes back at the turning.'
-  ],
-  confirm: 'Pack it all up',
-  keep: 'Leave it standing',
-  done: 'The camp’s packed up. Everything waits at Pell’s.'
-} as const

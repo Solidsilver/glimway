@@ -5,12 +5,12 @@ import { landDimming } from './map-lamps.ts'
 
 /**
  * The land underfoot as the HUD's chip (lamps.md 1.1): held (and whose),
- * dimming, common (kept by visits) or turning. Town and the still Tangle
+ * dimming, common (kept by visits), wild, or turning (released). Town and the still Tangle
  * sit outside upkeep and get no chip. Read from the near read's status of
  * the occupied chunk (store.ts), so it changes only when the chunk or its
  * status does.
  */
-export type LandChipState = 'held' | 'dimming' | 'common' | 'turning'
+export type LandChipState = 'held' | 'dimming' | 'common' | 'wild' | 'turning'
 
 export interface LandChip {
   state: LandChipState
@@ -48,7 +48,7 @@ export function landChip(land: LandFields | null | undefined): LandChip | null {
     case 'common':
       return chip('common', LAND_CHIP.common, why.common)
     case 'wild':
-      return chip('turning', LAND_CHIP.turning, why.turning)
+      return chip('wild', LAND_CHIP.wild, why.wild)
     default:
       return null
   }
