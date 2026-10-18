@@ -159,7 +159,14 @@ test('a second player watches the naming, sees the warden rest a moment, and kee
     .toEqual({ quest: 'new', seen: [expect.stringMatching(/^witness:warden:.+:Olive$/)] })
   await other.keyboard.press('j')
   const journal = other.getByRole('dialog', { name: 'Journal' })
-  await expect(journal).toContainText('You Were There')
+  // The server wrote the line; the tab has it with its next state read
+  // (presence-moments.ts), which may not have come yet (CI, 2026-10-18). Ask for it.
+  await expect
+    .poll(async () => {
+      await other.evaluate(() => (window as unknown as { __fsPurse: { reread: () => Promise<void> } }).__fsPurse.reread())
+      return (await journal.textContent()) ?? ''
+    }, { timeout: 15_000, message: 'the witness line reaches the tab' })
+    .toContain('You Were There')
   await expect(journal).toContainText('I stood on the shrine path while Olive spoke the naming.')
   await animationsDone(other)
   await shot(other, '06-witness-journal')
