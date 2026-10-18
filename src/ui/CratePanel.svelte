@@ -6,7 +6,7 @@
   import { homeErrorText } from '../content/errors'
   import type { RecoveryEntry } from '../lib/gen/glimway/v1/camps_pb.js'
   import { CRATE_WORDS, collectedLine, cratePick, crateRows } from '../lib/camps'
-  import { actionRunner } from './panel-state.svelte'
+  import { actionRunner, latestRead } from './panel-state.svelte'
   import Panel from './Panel.svelte'
 
   // Pell's crate (lamps.md 2.7), opened from his desk: everything waiting
@@ -16,20 +16,24 @@
   let { session, onClose }: { session: Session; onClose: () => void } = $props()
 
   const action = actionRunner()
-  let entries = $state<RecoveryEntry[] | null>(null)
-  let failed = $state<string | null>(null)
+  const crate = latestRead<RecoveryEntry[]>(async () => {
+    const r = await session.link?.recoveryRead()
+    if (!r) return { ok: false, code: 'offline' }
+    return r.ok ? { ok: true, value: r.value.entries } : r
+  })
+  const entries = $derived(crate.value)
   const rows = $derived(entries ? crateRows(entries) : [])
 
-  async function reread(): Promise<void> {
-    const r = await session.link?.recoveryRead()
-    if (r?.ok) entries = r.value.entries
-    else if (entries === null) failed = homeErrorText(r?.code ?? 'offline')
-  }
-
   onMount(() => {
-    void reread()
+    void crate.read()
+    return () => crate.stop()
   })
 
+  /**
+   * The buttons stay held until the crate is read again: the server takes
+   * each entry once, so a second press on a row still listed would come back
+   * with nothing taken. What was taken leaves the list as the answer lands.
+   */
   async function take(id: number | null, asSeed = false): Promise<void> {
     const link = session.link
     if (!link) return
@@ -38,21 +42,25 @@
       busy,
       async () => {
         const r = await link.recoveryCollect(cratePick(id, asSeed))
+        if (r.ok && entries) {
+          const taken = new Set(r.result.collected.map((e) => e.id))
+          crate.adopt(entries.filter((e) => !taken.has(e.id)))
+        }
+        void itemsFor(session).load()
+        void homesteadsFor(session).load()
+        await crate.read()
         if (!r.ok) return { ok: false as const, text: homeErrorText(r.code) }
         return { ok: true as const, collected: r.result.collected }
       },
       (d) => collectedLine(d.collected)
     )
-    void itemsFor(session).load()
-    void homesteadsFor(session).load()
-    await reread()
   }
 </script>
 
 <Panel id="crate" icon="home" title={CRATE_WORDS.title} closeLabel={CRATE_WORDS.close} {onClose} message={action.message} messageTestId="crate-message">
   <p class="lede">{CRATE_WORDS.lede}</p>
   {#if entries === null}
-    <p class="msg">{failed ?? CRATE_WORDS.loading}</p>
+    <p class="msg">{crate.error === null ? CRATE_WORDS.loading : homeErrorText(crate.error)}</p>
   {:else if rows.length === 0}
     <p class="msg" data-crate-empty>{CRATE_WORDS.empty}</p>
   {:else}

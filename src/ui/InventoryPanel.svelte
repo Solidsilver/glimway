@@ -95,6 +95,9 @@
   let pouchBinding = $state<WaysHomeBinding | null>(null)
 
   onMount(() => {
+    // Where the hero stands now: the frame loop writes it once a second, and
+    // the land, camp and plant buttons read it (step into a camp and press I).
+    bus.emit(EV.notePosition)
     inventory.syncPack(session.state.inventory)
     // In a world, ask for the item model and your home's pieces, both read
     // now (a home read already out may predate a change). Offline, what's

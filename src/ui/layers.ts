@@ -60,8 +60,11 @@ export const BLOCKS = {
    * App's own keys (J, C, I, G, the emote digits, Escape). A panel doesn't
    * block them: they open, switch and close panels. Placement mode keeps
    * its keys only while no panel is over it (see App.svelte onKeyGlobal).
+   * A naming does: a panel opened under it would take its focus, and the
+   * lamp naming's selects have no text field to keep the letters (each
+   * naming closes on its own Escape).
    */
-  appKeys: ['confirm', 'dialogue', 'cinematic', 'gate', 'lease', 'move', 'reloading', 'ending'],
+  appKeys: ['confirm', 'dialogue', 'cinematic', 'gate', 'lease', 'move', 'reloading', 'ending', 'naming'],
   /**
    * The one-time notices (the party prompt, "you were moved out", the
    * update notice): only on a clear screen, so they are really seen.
