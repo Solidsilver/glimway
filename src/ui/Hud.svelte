@@ -19,6 +19,7 @@
   import ContextButtons from './ContextButtons.svelte'
   import type { PromptAlt } from '../game/events'
   import { cooldownSeconds } from './cooldown'
+  import type { LandChipState } from '../lib/wilds/land-chip'
 
   let {
     onJournal,
@@ -120,6 +121,7 @@
 
   // ---- status chips: an icon and a word; the sentence on hover or tap
   type Chip = { id: string; icon: string; text: string; why: string; tone: string; testid?: string }
+  const LAND_ICONS: Record<LandChipState, string> = { held: 'lantern', dimming: 'ember', common: 'stone', turning: 'world' }
   const chips = $derived.by((): Chip[] => {
     const out: Chip[] = []
     if (ui.link?.busy) out.push({ id: 'pending', icon: 'clock', text: offlineCopy.pending, why: offlineCopy.pending, tone: 'busy', testid: 'net-pending' })
@@ -128,6 +130,9 @@
     else if (ui.link?.status === 'offline') out.push({ id: 'offline', icon: 'cloud', text: offlineCopy.chip, why: offlineCopy.chipTitle, tone: 'off', testid: 'net-offline' })
     if (presenceLive && ui.presence.here > 0) out.push({ id: 'here', icon: 'person', text: presenceCopy.here(ui.presence.here), why: presenceCopy.hereTitle, tone: 'here', testid: 'presence-here' })
     if (resting) out.push({ id: 'resting', icon: 'heart', text: 'Resting', why: `Resting in Hearthwick: heal on Habitica and sync, or rest by the lantern with ${GLIM_COSTS.rest} glims earned on Habitica.`, tone: 'trouble' })
+    // The land underfoot (lamps.md 1.1), last and quiet. A phone shows its one word; the whole line on tap.
+    const land = ui.landHere
+    if (land) out.push({ id: 'land', icon: LAND_ICONS[land.state], text: touch ? land.short : land.text, why: touch ? `${land.text}. ${land.why}` : land.why, tone: `land ${land.state}`, testid: 'land-chip' })
     return out
   })
   let openChip = $state<string | null>(null)
@@ -161,7 +166,8 @@
   const bagGain = $derived(touch ? (newest?.to === 'bag' ? newest : null) : gainOf('bag'))
   const journalGain = $derived(touch ? (newest?.to === 'journal' ? newest : null) : gainOf('journal'))
   /** What's new in the status chips, read out once (the chips themselves are buttons). */
-  const statusLine = $derived(chips.filter((c) => c.id !== 'here').map((c) => c.text).join('. '))
+  // The land chip changes at every chunk edge: only its dimming is read out (the chip stays a button to ask).
+  const statusLine = $derived(chips.filter((c) => c.id !== 'here' && (c.id !== 'land' || ui.landHere?.state === 'dimming')).map((c) => (c.id === 'land' ? ui.landHere!.text : c.text)).join('. '))
 </script>
 
 {#snippet placeName()}
@@ -627,6 +633,22 @@
   .chip.busy {
     color: #5a2410;
     background: linear-gradient(180deg, #fff2c9, #ffd98a);
+  }
+  /* The land chip: quiet, like the date. Held warms a little; dimming is
+     amber and dashed (not colour alone), and never moves. */
+  .chip.land {
+    color: var(--text-soft);
+    background: rgba(255, 249, 230, 0.55);
+    border-color: rgba(74, 50, 32, 0.3);
+  }
+  .chip.land.held {
+    color: var(--wood-dark);
+    border-color: rgba(176, 120, 40, 0.6);
+  }
+  .chip.land.dimming {
+    color: #5a2f0a;
+    background: rgba(255, 228, 170, 0.8);
+    border: 1.5px dashed #a8641c;
   }
   .chip.unmoored-hint {
     color: var(--wood-dark);

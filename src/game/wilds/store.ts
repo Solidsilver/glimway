@@ -406,7 +406,11 @@ export function applyNear(res: WildsNearResult, since: number = markNow(), link:
   }
   for (const land of res.land?.chunks ?? []) {
     const k = land.chunk;
-    if (k && !newer(readSeq.get(chunkKey(k.cx,k.cy)))) v.land.set(chunkKey(k.cx,k.cy), land);
+    const key = k ? chunkKey(k.cx,k.cy) : '';
+    if (k && !newer(readSeq.get(key)) && !newer(landSeq.get(key))) {
+      v.land.set(key, land);
+      landSeq.set(key, since);
+    }
   }
   // Adding what the read names: anywhere no later read spoke for (an id naming no chunk: wherever).
   const speaks = (key: string) => ours.has(key) || !newer(readSeq.get(key));
@@ -490,6 +494,8 @@ const lanternSeq = new Map<string, number>();
 const echoSeq = new Map<string, number>();
 const chunkSeq = new Map<string, number>();
 const waySeq = new Map<string, number>();
+/** The latest read that spoke for each chunk's land status (a near read, or refreshLand). */
+const landSeq = new Map<string, number>();
 let frontierSeq = 0;
 /** The mark of the read the view started over from: an older one can't start it over again. */
 let startedAt = 0;
@@ -498,6 +504,7 @@ let goodSeq = 0;
 
 function forgetOrder(): void {
   readSeq.clear();
+  landSeq.clear();
   entitySeq.clear();
   lanternSeq.clear();
   echoSeq.clear();
@@ -514,6 +521,32 @@ export function readMark(): number {
 
 /** A read is wanted: something the store held turned out wrong (a refusal, an answer for land that has turned). */
 let readWanted = false;
+
+/**
+ * The land status of the chunk the hero just stepped into (the HUD's land
+ * chip). A near read speaks only for the chunk the server last saw you in,
+ * which can lag a step behind, so this asks the map's status read for this
+ * one chunk: standing in it is exploring it. Kept unless a later read spoke
+ * for the chunk meanwhile; a failure keeps what was known.
+ */
+export async function refreshLand(session: Session, cx: number, cy: number): Promise<void> {
+  const link = session.link;
+  if (!link?.online || !view) return;
+  const gen = generation;
+  const since = readMark();
+  const key = chunkKey(cx, cy);
+  try {
+    const res = await link.api.operations.mapStatus([{ cx, cy }]);
+    const land = res.chunks[0];
+    if (generation !== gen || session.link !== link || !view || res.wick !== view.wick.id || !land) return;
+    if ((landSeq.get(key) ?? 0) > since) return;
+    landSeq.set(key, since);
+    view.land.set(key, land);
+    bump();
+  } catch {
+    /* the chip keeps what it knew */
+  }
+}
 
 /** Ask for a fresh near read: the scene takes the request (takeReadRequest), and no earlier read counts as recent. */
 export function requestRead(): void {

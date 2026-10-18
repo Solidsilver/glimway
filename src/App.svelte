@@ -46,6 +46,7 @@
   import NamePrompt from './ui/NamePrompt.svelte'
   import LampNamingPanel from './ui/LampNamingPanel.svelte'
   import type { LampNamingAsk } from './lib/lamp-naming'
+  import type { LandChip } from './lib/wilds/land-chip'
   import { HOMESTEAD_DATA } from './lib/homestead'
   import { home } from './ui/home.svelte'
   import YardPanel from './ui/YardPanel.svelte'
@@ -274,6 +275,9 @@
         .then((snap) => account.afterMove(snap, worldCopy.landed))
         .catch(() => ui.toast({ text: worldCopy.landed, icon: 'world' }))
     }
+    const onLandHere = (p: { chip: LandChip | null }) => {
+      ui.landHere = p.chip
+    }
     const onUnmoored = (p: { active: boolean }) => {
       ui.unmoored = p.active
     }
@@ -359,6 +363,7 @@
       [EV.presence]: onPresence,
       [EV.linkNotice]: onLinkNotice,
       [EV.unmoored]: onUnmoored,
+      [EV.landHere]: onLandHere,
       [EV.mutationResolved]: onResolved,
       [EV.wilds]: onWilds,
       [EV.libraryOpen]: onOpenLibrary,

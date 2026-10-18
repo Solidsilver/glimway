@@ -22,6 +22,7 @@ import { homesteadsFor } from './homestead.ts'
 import { adoptMaterials, mirrorMaterials, nextMark } from './materials-order.ts'
 import type { Session } from './session.ts'
 import { roadStep } from '../lib/quests.ts'
+import { lampNoticeText } from '../lib/wilds/land-chip.ts'
 
 export type VillagePanel = 'board' | 'chest' | 'bench' | 'mail' | 'hearth' | 'desk' | 'woodpile' | 'shelf' | 'crate'
 
@@ -145,6 +146,8 @@ export class Village {
 
   private async readCalendar(): Promise<CalendarDay> {
     const link = this.session.link
+    // The first read and each new day's: a turning falls at a day's start.
+    if (link) void this.tellLampNotices()
     if (link && !clockMoved()) {
       try {
         const served = await this.link.api.calendar()
@@ -164,6 +167,27 @@ export class Village {
     this.calendarSource = 'local'
     this.emit('calendar')
     return this.calendar
+  }
+
+  /**
+   * A light you keep that started dimming (lamps.md 2.5): said once, as a
+   * toast. The server records each as told when it answers, and leaves out
+   * one you're standing by.
+   */
+  async tellLampNotices(): Promise<void> {
+    const link = this.session.link
+    if (!link) return
+    let r: Awaited<ReturnType<typeof link.lampNotices>>
+    try {
+      r = await link.lampNotices()
+    } catch {
+      return // asked again with the next day's calendar
+    }
+    if (!r.ok || current?.village !== this) return
+    for (const n of r.value.notices) {
+      const text = lampNoticeText(n)
+      if (text) bus.emit(EV.toast, { text, icon: 'lantern' })
+    }
   }
 
   /** Seconds until the current calendar day ends (UTC midnight; also the Turning's notice window). */

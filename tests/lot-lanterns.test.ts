@@ -18,12 +18,13 @@ test('lantern states: dark, lit, dimming; their stake frames and readouts', () =
   assert.equal(lanternLook({ lit: false, oil: 0, dimming: false }), 'dark');
   assert.equal(lanternLook({ lit: true, oil: 2, dimming: false }), 'lit');
   assert.equal(lanternLook({ lit: true, oil: 0, dimming: true }), 'dimming');
+  assert.equal(lanternLook({ lit: true, oil: 0, dimming: false }), 'dimming', 'the last wick is dimming');
   assert.equal(lanternFrame('dark'), 'lantern-stake-0');
   assert.equal(lanternFrame('lit'), 'lantern-stake-1');
   assert.equal(lanternFrame('dimming'), 'lantern-stake-2');
   assert.match(lanternLines(null, 3, 'West Row 1')[0]!, /dark/);
   assert.match(lanternLines({ lit: true, oil: 2, dimming: false }, 3, 'West Row 1')[0]!, /2 of 3 wicks/);
-  assert.match(lanternLines({ lit: true, oil: 0, dimming: false }, 3, 'West Row 1')[0]!, /dims at the turning/);
+  assert.match(lanternLines({ lit: true, oil: 0, dimming: false }, 3, 'West Row 1')[0]!, /is dimming: .*last wick.*gutters for a wick/);
   assert.match(lanternLines({ lit: true, oil: 0, dimming: true }, 3, 'West Row 1')[0]!, /goes dark at the turning/);
 });
 

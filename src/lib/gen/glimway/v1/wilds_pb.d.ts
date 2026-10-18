@@ -1826,6 +1826,20 @@ export declare type ChunkLandStatus = Message<"glimway.v1.ChunkLandStatus"> & {
    * @generated from field: glimway.v1.GroundChanges ground = 10;
    */
   ground?: GroundChanges | undefined;
+
+  /**
+   * A Built claim's keeper, as the reader sees it (the in-world chip):
+   * keeper is a camp's setter's display name (empty for a lot lantern);
+   * yours: the reader set this camp, or lives on this lantern's lot.
+   *
+   * @generated from field: string keeper = 11;
+   */
+  keeper: string;
+
+  /**
+   * @generated from field: bool yours = 12;
+   */
+  yours: boolean;
 };
 
 export declare type ChunkLandStatusValid = ChunkLandStatus;

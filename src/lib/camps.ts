@@ -12,8 +12,9 @@ import { giftPhrase, itemName } from './items.ts'
 
 export type CampLook = 'lit' | 'dimming'
 
-export function campLook(c: Pick<CampView, 'dimming'>): CampLook {
-  return c.dimming ? 'dimming' : 'lit'
+/** Dimming once its oil is gone: on its last wick, or guttering (map-lamps.ts landDimming, owner 2026-10-17). */
+export function campLook(c: Pick<CampView, 'oil' | 'dimming'>): CampLook {
+  return c.dimming || c.oil === 0 ? 'dimming' : 'lit'
 }
 
 /**
@@ -77,7 +78,7 @@ export function campLines(c: Pick<CampView, 'oil' | 'dimming' | 'setterName' | '
   // Its Keeper's naming first, as a stone's is (lamps.md 2.8).
   const named = c.naming?.text ? [`“${c.naming.text}”`] : []
   if (c.dimming) return [...named, `${whose} It’s guttering: ${wicks}. Unless it’s filled, it goes dark at the turning and the camp turns with it. Everything set out here would wait at Pell’s.`]
-  if (c.oil === 0) return [...named, `${whose} It burns, ${wicks} left. It dims at the turning: fill it to keep this camp.`]
+  if (c.oil === 0) return [...named, `${whose} It’s dimming: the oil’s gone, and it’s on its last wick. Fill it to keep this camp; left empty, it gutters for a wick after the turning, then goes dark.`]
   return [...named, `${whose} It burns, ${wicks} left. The woods it lights hold while it does.`]
 }
 

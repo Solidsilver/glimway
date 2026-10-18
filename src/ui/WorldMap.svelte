@@ -29,7 +29,7 @@
   import { MapRenderer, backingSize, canvasImage } from './map-renderer'
   import { foundByText, placeName } from '../lib/wilds/paths'
   import { MAP_LAMPS } from '../content/map-lamps'
-  import { lampLedger, landLabel, turningLabel, distanceFromTown, mapLampMark, MAP_LAMP_ICON } from '../lib/wilds/map-lamps'
+  import { lampLedger, landDimming, landLabel, turningLabel, distanceFromTown, mapLampMark, MAP_LAMP_ICON } from '../lib/wilds/map-lamps'
   import { MAP_LABELS } from '../content/open-map'
   import { focusTrap } from './focus'
   import { ui } from './store.svelte'
@@ -431,7 +431,7 @@
   const tierChips = $derived.by(() => {
     if (!lampsOn || !view || !input) return []
     const known = new Set(input.chunks.map((c) => c.cx + ',' + c.cy))
-    return (input.land ?? []).filter((s) => s.chunk && known.has(s.chunk.cx + ',' + s.chunk.cy) && (s.tier === 'common' || s.dimming)).map((s) => {
+    return (input.land ?? []).filter((s) => s.chunk && known.has(s.chunk.cx + ',' + s.chunk.cy) && (s.tier === 'common' || landDimming(s))).map((s) => {
       const k = s.chunk!
       return { land: s, ...toScreen(view!,vp,(k.cx+0.5)*CHUNK_TILES,(k.cy+0.5)*CHUNK_TILES) }
     }).filter((p) => p.x >= 0 && p.x <= vp.w && p.y >= 0 && p.y <= vp.h && view!.scale * CHUNK_TILES >= 100)
@@ -504,7 +504,7 @@
         </span>
       {/each}
       {#each tierChips as p}
-        <span class:amber={p.land.dimming} class="tier-chip" style={`left:${p.x}px;top:${p.y}px`}>{p.land.dimming ? '⚠ ' + MAP_LAMPS.dimming : landLabel(p.land)}</span>
+        <span class:amber={landDimming(p.land)} class="tier-chip" style={`left:${p.x}px;top:${p.y}px`}>{landDimming(p.land) ? '⚠ ' + turningLabel(p.land) : landLabel(p.land)}</span>
       {/each}
       {#each lampMarks as m (m.id)}
         <span class="lamp-mark" class:dimming={m.dimming} style={`left:${m.x}px;top:${m.y}px`} data-lamp-mark={m.id}><ArtIcon art={m.art} name="lantern" size={16} /></span>
@@ -566,7 +566,7 @@
                 <span class="fine">{MAP_LAMPS.distance(row.distance)}{row.lamp.mageLit ? ' · ' + MAP_LAMPS.mageLit : ''}</span>
                 {#if row.lamp.land}
                   <span>{landLabel(row.lamp.land)}{row.lamp.land.tier === 'built' ? ' · ' + MAP_LAMPS.reserve(row.lamp.land.reserve) : ''}</span>
-                  <span class:amber={row.lamp.land.dimming || row.lamp.land.nextTurning === 'dimming'}>{turningLabel(row.lamp.land)}</span>
+                  <span class:amber={landDimming(row.lamp.land)}>{turningLabel(row.lamp.land)}</span>
                 {/if}
               </button>
             </li>
@@ -592,7 +592,7 @@
       {/if}
       <ul class="tier-key">
         <li>▣ {MAP_LAMPS.held}</li>
-        <li class="amber">▨ Dimming · {MAP_LAMPS.dimming}</li>
+        <li class="amber">▨ {MAP_LAMPS.dimmingKey}</li>
         <li>┄ Common · paths kept by a visit</li>
         <li>{MAP_LAMPS.wild}</li>
         <li>{MAP_LAMPS.permanent}</li>

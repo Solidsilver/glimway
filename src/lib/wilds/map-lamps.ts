@@ -2,8 +2,18 @@ import type { ChunkLandStatus, MapLamp } from '../gen/glimway/v1/wilds_pb.js'
 import { MAP_LAMPS } from '../../content/map-lamps.ts'
 import { gateTile } from './map-model.ts'
 
+/**
+ * Dimming, as every view says it (owner, 2026-10-17): a held claim out of
+ * oil, whether on its last wick (it gutters at the next turning) or already
+ * guttering (it turns at the next). The map hatch and mark, the ledger, the
+ * HUD chip and the lamps' own looks all use this.
+ */
+export function landDimming(land: Pick<ChunkLandStatus, 'tier' | 'nextTurning'> | null | undefined): boolean {
+  return !!land && land.tier === 'built' && (land.nextTurning === 'dimming' || land.nextTurning === 'turns')
+}
+
 export function landLabel(land: ChunkLandStatus): string {
-  if (land.tier === 'built') return land.dimming ? MAP_LAMPS.builtDimming : MAP_LAMPS.held
+  if (land.tier === 'built') return landDimming(land) ? MAP_LAMPS.builtDimming : MAP_LAMPS.held
   if (land.tier === 'common') return land.visited ? MAP_LAMPS.common : MAP_LAMPS.needsVisit
   return land.tier === 'permanent' ? MAP_LAMPS.permanent : land.tier === 'still' ? MAP_LAMPS.still : MAP_LAMPS.wild
 }
@@ -25,10 +35,10 @@ export function lampLedger(lamps: readonly MapLamp[]): { lamp: MapLamp; name: st
   }))
 }
 
-/** The Lamps layer's state-specific mark (ui.artIcons, src/ui/ArtIcon.svelte). */
+/** The Lamps layer's state-specific mark (ui.artIcons, src/ui/ArtIcon.svelte): dimming by landDimming, as the land chip says it. */
 export const MAP_LAMP_ICON = { lit: 'map-lamp-lit', dimming: 'map-lamp-dimming' } as const
 
 export function mapLampMark(lamp: Pick<MapLamp, 'land'>): { art: string; dimming: boolean } {
-  const dimming = lamp.land?.dimming ?? false
+  const dimming = landDimming(lamp.land)
   return { art: dimming ? MAP_LAMP_ICON.dimming : MAP_LAMP_ICON.lit, dimming }
 }

@@ -10,8 +10,9 @@ import type { LotLanternState } from './api/types.ts'
 
 export type LanternLook = 'dark' | 'lit' | 'dimming'
 
+/** Dimming once its oil is gone: on its last wick, or guttering (map-lamps.ts landDimming, owner 2026-10-17). */
 export function lanternLook(l: LotLanternState | null | undefined): LanternLook {
-  return !l?.lit ? 'dark' : l.dimming ? 'dimming' : 'lit'
+  return !l?.lit ? 'dark' : l.dimming || l.oil === 0 ? 'dimming' : 'lit'
 }
 
 /** The stake's frame for a look (the Hearthwick 2 pass: dark, lit, guttering). */
@@ -25,8 +26,8 @@ export function lanternLines(l: LotLanternState | null | undefined, maxWicks: nu
   if (look === 'dark') return [`The lantern is dark. Fill it with hearth oil and the woods behind ${lot} hold still through the turning.`]
   const oil = l!.oil
   const wicks = `${oil} of ${maxWicks} ${maxWicks === 1 ? 'wick' : 'wicks'} of oil`
-  if (look === 'dimming') return [`The lantern is guttering: ${wicks}. Unless it's filled, it goes dark at the turning and the woods behind ${lot} turn with it. Anything set out there goes home.`]
-  if (oil === 0) return [`The lantern burns, ${wicks} left. It dims at the turning: fill it to keep the woods behind ${lot}.`]
+  if (look === 'dimming' && l!.dimming) return [`The lantern is guttering: ${wicks}. Unless it's filled, it goes dark at the turning and the woods behind ${lot} turn with it. Anything set out there goes home.`]
+  if (look === 'dimming') return [`The lantern is dimming: the oil’s gone, and it’s on its last wick. Fill it to keep the woods behind ${lot}; left empty, it gutters for a wick after the turning, then goes dark.`]
   return [`The lantern burns, ${wicks} left. The woods behind ${lot} hold while it does.`]
 }
 

@@ -369,7 +369,7 @@ test('the renderer culls label boxes to the viewport before fitting, yours inclu
 test('Built shading and dimming hatches stay inside explored chunks; Common has only a dashed extent', async () => {
   const { create } = await import('@bufbuild/protobuf');
   const { ChunkLandStatusSchema } = await import('../src/lib/gen/glimway/v1/wilds_pb.js');
-  const land = (cx: number, tier: string, dimming = false) => create(ChunkLandStatusSchema, { chunk: { realm: 'wilds', cx, cy: -2 }, tier, dimming });
+  const land = (cx: number, tier: string, dimming = false) => create(ChunkLandStatusSchema, { chunk: { realm: 'wilds', cx, cy: -2 }, tier, dimming, nextTurning: dimming ? 'turns' : tier === 'built' ? 'held' : '' });
   const r = new MapRenderer(make);
   r.setInput(input({ chunks: [chunk(-1,-2),chunk(0,-2)], land: [land(-1,'built',true),land(0,'common'),land(1,'built',true)] }), 'tiers');
   const rec = recorder();

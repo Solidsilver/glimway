@@ -43,6 +43,7 @@ import {
   type MapMarks
 } from '../lib/wilds/map-model.ts'
 import { toScreen, visibleTiles, type MapView, type MapViewport, type TileRect } from '../lib/wilds/map-view.ts'
+import { landDimming } from '../lib/wilds/map-lamps.ts'
 
 /** Turns RGBA pixels into something the canvas can draw. */
 export type MakeImage = (rgba: Uint8ClampedArray, w: number, h: number) => CanvasImageSource
@@ -336,7 +337,7 @@ export class MapRenderer {
         }
         ctx.strokeRect(x+r/2,y+r/2,w-r,h-r)
         ctx.setLineDash([])
-        if (s.dimming && s.tier === 'built') {
+        if (landDimming(s)) {
           ctx.beginPath()
           const step = Math.max(12*r,w/24)
           for (let d = step; d < w+h; d += step) {

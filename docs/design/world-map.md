@@ -1,6 +1,6 @@
 # Full-screen world map
 
-Status: built on `exp/world-map`, 2026-10-11 (lanes A–E). Section 12 says where the build differs from this plan.
+Status: built on `exp/world-map`, 2026-10-11 (lanes A–E). Section 12 says where the build differs from this plan; section 13 covers the land tiers and dimming added in 0.13.
 
 The playtest problem is simple: the map helps, but its fixed Journal-sized view makes it hard to explore. Give it the whole screen and let the player zoom and drag it.
 
@@ -145,9 +145,9 @@ Add supersession notes to `open-map.md` §2.8 and its map decisions, and update 
 
 ## 6. Lamps and later map layers
 
-**Lamps in 0.9 belong to the world map.** Replace the planned Journal Lamps tab in [lamps.md §2.6](lamps.md#26-ui) with a Lamps layer control and a ledger in the map's details area. The existing map terrain provides the held/unheld land, frontier and player view; add lamp marks and warm held-land shading there rather than creating a second SVG grid. The ledger keeps the planned short name, naming sentence, namer, distance, mage-lit mark and newest-first ordering. Selecting a lamp centres its mark. Phone: open the ledger as a details sheet while retaining the map behind it.
+**Lamps belong to the world map** (planned here in 0.9, built in 0.13). There is no Journal Lamps tab ([lamps.md §2.6](lamps.md#26-ui)): the map has a Lamps layer control and a ledger in its details area. The map terrain provides the held/unheld land, frontier and player view; lamp marks and warm held-land shading are drawn on it, not on a second SVG grid. The ledger has the short name, naming sentence, namer, distance and newest-first ordering, with room for a mage-lit mark. Selecting a lamp centres its mark. On a phone the ledger opens as a details sheet with the map behind it. §13 describes it as built.
 
-The future lamps pass must amend `lamps.md` decision 9, §2.6, empty-state wording, tab-icon request, lane/test references and the old “no map panel” baseline. Lamp naming/confirm UI stays in its own operation flow; viewing the map grants no lamp capability. These are migration instructions, not implemented lamp behavior in this release.
+Lamp naming and setting stay in their own operation flows; viewing the map grants no lamp capability.
 
 Separate terrain, marks/labels and readable details so later pins, party marks and lamp holds share the same coordinate transform and clipping. [magic.md](magic.md)'s “Sense the turning” should eventually provide an authorized party-only forecast layer with wick/expiry metadata, visually distinct from explored current land. Do not expose future terrain by fetching it speculatively. The “carter's map” wording in that design must be reconciled with the owner's built-in-map decision; no craft gate is added here. Pins, party sharing, forecasts and layer toggles ship with their own feature, not as empty placeholders now.
 
@@ -266,3 +266,44 @@ Lanes A–E landed together. Where the build differs from the plan above:
   pinch, and an open map following the connection and expiring its wick on the game clock. Loads
   overtaken by another world or a turning, and the guest case, are unit tests
   (`tests/wilds-map-data.test.ts`).
+
+## 13. As built: three tiers and dimming (0.13)
+
+The tiers come from [lamps.md §1.1](lamps.md#11-three-kinds-of-land). The server reads a chunk's
+status in `api/map_tiers.go` (`ChunkLandStatus`): `tier` (wild, common, built, plus permanent
+town and still Tangle outside upkeep), `dimming`, `reserve`, `cost`, `visited` and
+`next_turning`, the predicted outcome of the next turning. The map's read
+(`POST /api/wilds/map`) is told only about explored chunks and never credits a visit. The near
+read carries the occupied chunk's status.
+
+| Tier | On the map (Lamps layer) | In the ledger | Underfoot (HUD chip) |
+|---|---|---|---|
+| **Held** (Built: a lot lantern's backland, a way-lamp camp, with oil left) | Warm fill and a double solid boundary, so it doesn't rely on colour | **Built · held**, reserve in wicks, **Holds at the next turning** | **Held · your camp**, *Ana's camp*, *a friend's camp*, *your lot* or *a lot* |
+| **Dimming** (a held claim out of oil: on its last wick, then guttering for its warning wick) | The held look plus diagonal hatching, a paler lamp mark, and an amber label: **⚠ Last wick · gutters next turning unless tended**, then **⚠ Turns next turning unless tended** | **Built · dimming**, amber, **0 wicks in reserve**, with the same two outcomes | **Dimming · …**, amber with a dashed edge, and no animation |
+| **Common** (laid paths and communal lamps, kept by visits) | Dashed outline only, never a fill: the woods around aren't held | Under *Common paths*: **Common · visited this wick** or **Common · needs a visit**, and whether paths or lamps carry | **Common** |
+| **Turning** (Wild; also a released claim) | Plain explored terrain | Not listed | **Turning** |
+
+**What dimming means** (owner, 2026-10-17): a held claim is dimming from the turning that burns its last flask, a wick before it starts guttering, so the warning comes a wick earlier. `landDimming` in `src/lib/wilds/map-lamps.ts` is the one rule: a Built status whose `next_turning` is `dimming` (last wick) or `turns` (guttering). The map hatch, the lamp mark, the ledger label and its amber, the HUD chip, and the lamps' own looks (`campLook`, `lanternLook`: frame `way-lamp-2` or `lantern-stake-2`, a smaller glow, the readout) all follow it. Before this, the map hatched only the guttering wick, the ledger was amber on the last wick, and the lamps looked lit until they guttered. The server's `dimming` flag still means the guttering (warning) wick, which the turning judges.
+
+Town and the still Tangle get no chip; the map's key names them (**Town · permanent**,
+**Still land · no oil needed**). Words are in `src/content/map-lamps.ts` and
+`src/content/land-chip.ts`.
+
+**The chip** (`src/lib/wilds/land-chip.ts`, `src/game/wilds/land-here.ts`, `Hud.svelte`) is the
+last of the HUD's status chips: icon, words, and the sentence on hover or tap (its `title`). It
+says whose a hold is from two status fields, `keeper` (a camp setter's name) and `yours` (you set
+the camp or live on the lot). A phone shows the one word, with the whole line on tap. Nothing
+about it runs per frame: the window compares the hero's chunk and the store's version, looks
+the status up only when one changes, and tells the HUD (`EV.landHere`) only when the words
+change. The server can see your position a step behind, so stepping into a chunk also asks the
+map read for that one chunk (standing there is exploring it), at most once in 10 s per chunk and
+wick. Setting, filling or packing a camp asks again. The screen-reader status line reads the
+chip only when it says dimming, not at every chunk edge. The chip stays a button anyone can
+focus and ask.
+
+**Dimming notices** ([lamps.md §2.5](lamps.md#25-built-claims-stores-and-tending)): a light you
+keep is told once per dimming, as a toast, by `GET /api/lamp-notices`, when its last wick starts.
+
+Tests: `tests/land-chip.test.ts` and `tests/map-lamps.test.ts` for words and states;
+`api/map_tiers_test.go` and `api/lamp_notices_test.go` on the server; `e2e/map-tiers.spec.ts`
+(the ledger) and `e2e/land-chip.spec.ts` (the chip and the notice) in the browser.

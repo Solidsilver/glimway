@@ -31,6 +31,8 @@ social paths and oil as a brake on sprawl. Their competing lapse clocks are now 
    persistent identities and seed split. After it, preserve world schemas, chunk keys and
    generator contracts ([roadmap rules 3, 4, 7](../roadmap.md#rules-every-release-keeps)).
    An upgrade must never erase a player's work or act as an unannounced lapse.
+8. **The lamp holds its own oil (2026-10-17).** A lot lantern or way-lamp is its claim's store,
+   three wicks deep. There is no separate linked oil store to place, link or move (§2.5).
 
 This narrows [world.md decision 10](world.md): the hearth plot and Hearthwick lot builds last
 for good. **Built land in the Wilds, including lot backland, lasts while lit.** On lapse its
@@ -53,6 +55,11 @@ work; a Built claim takes precedence over Common work inside its boundary.
 | **Wild** | Unclaimed generated land, its generated trails and living detail; clearing alone makes no claim | Nothing | Detail regenerates; large geography stays | No claim light; chip **Wild · detail turns**; neutral map terrain |
 | **Common** | Laid stone/plank paths and explicitly communal way-lamps outside Built claims | Any player standing anywhere in that chunk once during the wick | Visited work carries across; unvisited work turns, with paid path materials and placed lamps recovered | Worn path or communal lamp; chip **Common · visited this wick** or **Common · needs a visit**; ochre path marks and a labelled chunk boundary on the map |
 | **Built** | Oil-fed claims: lot backland (0.12), way-lamp camps (0.13), later chartered Wilds hearths | Oil in the linked store at the turning; anyone may supply it | Funded claims hold; shortage warns for a full wick, then lapses into recovery if still unfunded | Warm light/boundary; chip **Built · held**, reserve, or **Dimming · turns next turning**; matching map shading and warning mark |
+
+As built (0.13), the chip sits with the HUD's status chips: **Held · your camp** (or
+*Ana's camp*, *a friend's camp*, *your lot*, *a lot*), **Dimming · …**, **Common** or
+**Turning**, with the sentence on hover or tap. Town and the still Tangle get none. A phone shows
+the one word. See [world-map §13](world-map.md#13-as-built-three-tiers-and-dimming-013).
 
 A Common visit means **occupying any walkable tile of the chunk**, however briefly. Walking
 beside the path counts; touching every tile or pressing Tend is unnecessary. A path crossing
@@ -136,6 +143,7 @@ The first rows were added as 0.12 and 0.13 landed and describe the code as built
 | Camps and Pell's crate | [api/camps.go](../../server/internal/api/camps.go), [api/recovery.go](../../server/internal/api/recovery.go), migration 041: holder kind `way-lamp`, `camps`, `camp_plants`, `recovery_crates`/`recovery_entries`; `GET`/`POST /api/camps`, `GET /api/recovery`, `POST /api/recovery/collect` (picked entries, or everything). Migration 048: `carried_plants`, a crated plant taken whole. |
 | Wick Tree sap | [api/wick_sap.go](../../server/internal/api/wick_sap.go), no migration: `POST /api/items/tap` (one `wick-sap` a calendar wick, an `outcomes` row `wick-sap:<WickStart>`) and `POST /api/items/refine` (one sap → one `hearth-oil` at the chandler, free). Content `homestead.wickSap`. |
 | Ways home | [api/ways_home.go](../../server/internal/api/ways_home.go), migration 044: `GET`/`POST /api/ways-home` (`bind`, `turncap`, `pouch`), `ways_home_bindings` (one per player). Bench recipes with pages; the Keeper's-hand quest gives both pages. |
+| Land chip and dimming notices | [lib/wilds/land-chip.ts](../../src/lib/wilds/land-chip.ts), [game/wilds/land-here.ts](../../src/game/wilds/land-here.ts), [api/lamp_notices.go](../../server/internal/api/lamp_notices.go), no migration: `ChunkLandStatus.keeper`/`yours`, `GET /api/lamp-notices` (§2.5). |
 
 | Existing seam | Source and consequence |
 |---|---|
@@ -316,8 +324,9 @@ Proposed **tuning**:
 | Backland light | Five-tile radius, extra lanterns within connected light, usable tiles clipped to its one chunk |
 
 As built (0.12–0.13): the oil is `hearth-oil` at one flask a wick and three wicks a store, for
-lot lanterns and way-lamps alike (content `lotLantern`, `wayLamp`). The store is the lantern or
-lamp itself; no separate placeable store exists yet. The way-lamp is a home piece crafted at the
+lot lanterns and way-lamps alike (content `lotLantern`, `wayLamp`). **The store is the lantern or
+lamp itself, holding three wicks (owner decision 2026-10-17): there is no separate linked oil
+store.** The linked-store paragraph below is superseded. The way-lamp is a home piece crafted at the
 bench from six timber, four stone, a lamp head and a lamp wick, so the whole cost comes back
 with the lamp on recovery; setting it takes the first flask. Its setter keeps the camp and says
 who builds there (below); anyone fills it. Setting it needs no homestead (the pack read lists
@@ -363,7 +372,10 @@ naming has no world (migration 046): it follows the lamp into any world, named a
 once ever. A stone's id repeats between worlds, so its naming is its world's.
 
 Retire distance escalation and the automatic 3×3 hold. Extra lanterns in one funded chunk do
-not multiply upkeep. Each claim has one linked placeable store. Refuse unlinking/removing it
+not multiply upkeep.
+
+*Superseded (owner decision 2026-10-17, decided, not a deviation): the lamp holds the oil, so
+the rest of this paragraph does not apply.* Each claim has one linked placeable store. Refuse unlinking/removing it
 until its balance moves atomically to a replacement. No implicit shared drains between claims;
 a larger shared reservoir needs explicit allocation later. Place the store inside its claim
 within lantern light; install the first fitting/store atomically with the claim. The fixed lot
@@ -390,7 +402,7 @@ and camps need bought oil. The tree's spot, reach, yield and refiner are content
 The amber and tallow bench recipe stays: amber is already "sap the woods have let go of", set
 hard, so rendering it at home still fits the story. The first tap explains the free weekly sap
 and the chandler. Tapping again in the same wick says, in days, when the next wick brings more,
-with no countdown. There is no `wick-sap` icon yet; it uses the item fallback.
+with no countdown. Its icon is `item-wick-sap`, from the items pass.
 
 Anyone in the world, including guests and non-Keepers, may donate oil. A keyed operation checks
 world, range, inventory and capacity; debit only what fits, show overflow, and make retries safe.
@@ -401,6 +413,22 @@ Dimming retains services and lowers the flame. Show an amber warning chip and ma
 **Turns next turning unless tended**. Keep held shading; do not rely on colour alone. Show the
 store's reserve and next-boundary result without a ticking seconds-to-loss display. Cracks and
 repairs are not needed for warning.
+
+As built (0.13): dimming starts a wick earlier than the warning wick (owner, 2026-10-17). A lamp
+is dimming once its oil is gone: through its last wick, then through the warning wick it
+gutters in. Every view uses one rule ([world-map §13](world-map.md#13-as-built-three-tiers-and-dimming-013)):
+the map hatch and mark, the ledger, the lamp's frame and readout, and the HUD's land chip (§1.1),
+which turns amber with a dashed edge, **Dimming · your camp**, and doesn't animate. A light you
+keep (a camp you set, your household's lot lantern) is told once, when its last wick starts:
+"Your way-lamp is dimming. A flask of oil keeps the camp lit." or "The lantern behind your lot
+is dimming. A flask of oil keeps the woods out back." The client
+asks `GET /api/lamp-notices` with each session's first calendar read and at each new day. The
+server answers lit lights out of oil that haven't been told, and records each as an `outcomes`
+row `lamp-dimming:<kind>:<id>:<episode start>`. Oil only runs out at a turning, so the episode
+starts at this wick for a lamp on its last wick, or the wick before for a guttering one; filling
+it ends the episode. No migration. One you're standing by (its chunk, or a lot's stake) is recorded but not said,
+because the chip already shows it. Communal lamps run on visits, not oil, so they never dim and
+send no notice. Mail isn't used: its schema allows only player-to-player letters.
 
 ### 2.6 UI
 

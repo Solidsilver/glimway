@@ -3419,7 +3419,12 @@ type ChunkLandStatus struct {
 	// Built terrain stays pinned even when its mark is far outside the near window.
 	Epoch *WildsEpoch `protobuf:"bytes,9,opt,name=epoch,proto3" json:"epoch,omitempty"`
 	// Known Common paths, so a map read outside the near window keeps their line.
-	Ground        *GroundChanges `protobuf:"bytes,10,opt,name=ground,proto3" json:"ground,omitempty"`
+	Ground *GroundChanges `protobuf:"bytes,10,opt,name=ground,proto3" json:"ground,omitempty"`
+	// A Built claim's keeper, as the reader sees it (the in-world chip):
+	// keeper is a camp's setter's display name (empty for a lot lantern);
+	// yours: the reader set this camp, or lives on this lantern's lot.
+	Keeper        string `protobuf:"bytes,11,opt,name=keeper,proto3" json:"keeper,omitempty"`
+	Yours         bool   `protobuf:"varint,12,opt,name=yours,proto3" json:"yours,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3522,6 +3527,20 @@ func (x *ChunkLandStatus) GetGround() *GroundChanges {
 		return x.Ground
 	}
 	return nil
+}
+
+func (x *ChunkLandStatus) GetKeeper() string {
+	if x != nil {
+		return x.Keeper
+	}
+	return ""
+}
+
+func (x *ChunkLandStatus) GetYours() bool {
+	if x != nil {
+		return x.Yours
+	}
+	return false
 }
 
 type MapLamp struct {
@@ -3930,7 +3949,7 @@ const file_glimway_v1_wilds_proto_rawDesc = "" +
 	"\x0eWildsMapStatus\x12\x12\n" +
 	"\x04wick\x18\x01 \x01(\tR\x04wick\x123\n" +
 	"\x06chunks\x18\x02 \x03(\v2\x1b.glimway.v1.ChunkLandStatusR\x06chunks\x12)\n" +
-	"\x05lamps\x18\x03 \x03(\v2\x13.glimway.v1.MapLampR\x05lamps\"\xd7\x02\n" +
+	"\x05lamps\x18\x03 \x03(\v2\x13.glimway.v1.MapLampR\x05lamps\"\x85\x03\n" +
 	"\x0fChunkLandStatus\x12/\n" +
 	"\x05chunk\x18\x01 \x01(\v2\x19.glimway.v1.WildsChunkKeyR\x05chunk\x12\x12\n" +
 	"\x04tier\x18\x02 \x01(\tR\x04tier\x12\x18\n" +
@@ -3942,7 +3961,9 @@ const file_glimway_v1_wilds_proto_rawDesc = "" +
 	"\fnext_turning\x18\b \x01(\tR\vnextTurning\x12,\n" +
 	"\x05epoch\x18\t \x01(\v2\x16.glimway.v1.WildsEpochR\x05epoch\x121\n" +
 	"\x06ground\x18\n" +
-	" \x01(\v2\x19.glimway.v1.GroundChangesR\x06ground\"\xe7\x01\n" +
+	" \x01(\v2\x19.glimway.v1.GroundChangesR\x06ground\x12\x16\n" +
+	"\x06keeper\x18\v \x01(\tR\x06keeper\x12\x14\n" +
+	"\x05yours\x18\f \x01(\bR\x05yours\"\xe7\x01\n" +
 	"\aMapLamp\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\f\n" +

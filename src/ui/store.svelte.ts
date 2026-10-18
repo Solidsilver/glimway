@@ -1,4 +1,5 @@
 import type { PurseView } from '../lib/purse'
+import type { LandChip } from '../lib/wilds/land-chip'
 import type { AbilityPayload, AreaPayload, GoalDirPayload, MagicPayload, GoalLinePayload, LinkPayload, PresencePayload, PromptPayload, QuestPayload, StatsPayload, ToastPayload } from '../game/events'
 import type { HabiticaProfile, VitalsSource } from '../lib/habitica/types'
 import { bus, EV } from '../game/events'
@@ -114,6 +115,8 @@ class UiStore {
   residentsMet = $state<string[]>([])
   /** Unmoored status (light drift status from deep Tangle, turns, or stirs): the game's, via EV.unmoored. */
   unmoored = $state(false)
+  /** The land underfoot in the HUD's words (the land chip): the game's, via EV.landHere; null outside the Wilds. */
+  landHere = $state<LandChip | null>(null)
   /** Speaker -> portrait data URL. */
   portraits = $state<Record<string, string>>({})
   /** Delivered UI icons by frame key (`icon-timber`, …): src/ui/ArtIcon.svelte. */

@@ -126,7 +126,9 @@
       "cost": 0,
       "nextTurning": "",
       "epoch": null,
-      "ground": null
+      "ground": null,
+      "keeper": "",
+      "yours": false
     }
   },
   {
@@ -165,7 +167,9 @@
             "at": 1
           }
         ]
-      }
+      },
+      "keeper": "fixture",
+      "yours": true
     }
   },
   {
@@ -6278,7 +6282,9 @@
               "at": 1
             }
           ]
-        }
+        },
+        "keeper": "fixture",
+        "yours": true
       },
       "mageLit": true
     }
@@ -9960,7 +9966,9 @@
                 "at": 1
               }
             ]
-          }
+          },
+          "keeper": "fixture",
+          "yours": true
         }
       ],
       "lamps": [
@@ -10006,7 +10014,9 @@
                   "at": 1
                 }
               ]
-            }
+            },
+            "keeper": "fixture",
+            "yours": true
           },
           "mageLit": true
         }
@@ -10266,7 +10276,9 @@
                   "at": 1
                 }
               ]
-            }
+            },
+            "keeper": "fixture",
+            "yours": true
           }
         ],
         "lamps": [
@@ -10312,7 +10324,9 @@
                     "at": 1
                   }
                 ]
-              }
+              },
+              "keeper": "fixture",
+              "yours": true
             },
             "mageLit": true
           }

@@ -42,6 +42,7 @@ import { groundAt, solidAt } from './ground-view.ts'
 import { refreshNear } from './store.ts'
 import { wildsPoint } from './sites.ts'
 import { TERRAIN } from '../../lib/tile.ts'
+import { refreshLand } from './store.ts'
 
 export interface CampsDeps {
   session: Session
@@ -168,7 +169,7 @@ export class WildsCamps {
           return offer && { label: offer.label, verb: offer.verb, claim: () => (offer.dig ? this.uproot(p.id) : this.lookPlant(p.id, mayDig)) }
         }))
       }
-      // The lamp itself: lit, or guttering in its wick of warning.
+      // The lamp itself: lit, or dimming once its oil is gone (on its last wick, then guttering).
       const at = tileFeet(c.x, c.y)
       const key = omArt(campFrame(campLook(c)))
       if (this.scene.textures.exists(key)) {
@@ -176,7 +177,7 @@ export class WildsCamps {
         img.setData('camp', c.id)
         this.images.push(img)
       }
-      const glow = this.scene.add.image(at.x, at.y - 22, 'glow').setBlendMode(Phaser.BlendModes.ADD).setScale(c.dimming ? 0.35 : 0.6).setAlpha(c.dimming ? 0.45 : 0.8).setDepth(4001)
+      const glow = this.scene.add.image(at.x, at.y - 22, 'glow').setBlendMode(Phaser.BlendModes.ADD).setScale(campLook(c) === 'dimming' ? 0.35 : 0.6).setAlpha(campLook(c) === 'dimming' ? 0.45 : 0.8).setDepth(4001)
       this.images.push(glow)
       this.body(at.x, at.y - TILE / 2, TILE - 6, TILE - 6)
       points.push({ ...wildsPoint(`camp:${c.id}`, at, 30, () => ({ label: c.naming?.shortName ? `Look at ${c.naming.shortName}` : 'Look at the way-lamp', verb: 'Look', claim: () => this.look(c.id) })), rank: 0 })
@@ -380,6 +381,9 @@ export class WildsCamps {
       void itemsFor(this.deps.session).load()
       void homesteadsFor(this.deps.session).load()
       const c = r.result.camp ?? null
+      // Setting, filling or packing changes the land underfoot (the HUD's land chip).
+      const changed = c ?? (fields.action === 'pack' ? this.campOf(fields) : null)
+      if (changed && (fields.action === 'set' || fields.action === 'fill' || fields.action === 'pack')) void refreshLand(this.deps.session, changed.cx, changed.cy)
       const list = campsUi.list.filter((x) => x.id !== c?.id && !(fields.action === 'remove' && fields.itemId === x.id) && !(fields.action === 'pack' && fields.camp === x.id))
       this.adopt(c ? [...list, c] : list)
       // A way-lamp set pushes the frontier out (lamps.md 2.2): read it now, not at the next chunk.
