@@ -81,7 +81,7 @@ test('Pell’s words: what the crate holds, and what was signed out', () => {
 test('taking a camp apart: a plant dug up, the whole camp packed up (review B7)', () => {
   assert.deepEqual(campPlantLines('Turncap spawn', null), ['Your turncap spawn, growing in the lamp’s light.']);
   assert.deepEqual(campPlantLines('Turncap spawn', 'Bob'), ['Bob’s turncap spawn, growing in the lamp’s light.']);
-  assert.equal(uprootedLine('Turncap spawn'), 'You dig up the turncap spawn. It’s in your pack.');
+  assert.equal(uprootedLine('Turncap spawn'), 'You lift the turncap spawn whole, roots and all. It’s in your pack, ready to plant again.');
   assert.equal(CAMP_PACK_WORDS.pack.text, 'Pack up the camp');
   assert.match(CAMP_PACK_WORDS.ask.join(' '), /Nothing is lost/);
   // The refusal to take a lamp down over a camp points at packing it up.

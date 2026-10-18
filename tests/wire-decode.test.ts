@@ -53,6 +53,7 @@ const itemsView = {
   pickedUp: [],
   thanks: [],
   carried: [{ id: 'lamp', itemDef: 'way-lamp', scene: null, x: null, y: null, rotation: null, name: null, stalls: null }],
+  plants: [],
 };
 const itemsResult = {
   items: itemsView,

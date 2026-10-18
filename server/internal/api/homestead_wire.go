@@ -122,6 +122,10 @@ func itemsViewProto(v itemsView) *contract.ItemsView {
 	for _, i := range v.Carried {
 		out.Carried = append(out.Carried, homeInstanceProto(i))
 	}
+	out.Plants = make([]*contract.CarriedPlant, 0, len(v.Plants))
+	for _, p := range v.Plants {
+		out.Plants = append(out.Plants, &contract.CarriedPlant{Id: p.ID, ItemDef: p.ItemDef, PlantedAt: float64(p.PlantedAt)})
+	}
 	return out
 }
 

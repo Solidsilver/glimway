@@ -121,11 +121,11 @@ export class Items {
     }
     return r
   }
-  /** Plant a seed or sapling on your own land, at a tile beside you. */
-  plant(itemDef: string, tile: [number, number]) {
-    return this.run('plant', { itemDef, tile })
+  /** Plant a seed or sapling on your own land, at a tile beside you, or a carried plant (its id) set in again, its growth kept. */
+  plant(itemDef: string, tile: [number, number], carried?: string) {
+    return this.run('plant', { itemDef, tile, ...(carried ? { instance: carried } : {}) })
   }
-  /** Dig up a plant on your own land with the trowel: it comes back to the pack as its seed. */
+  /** Dig up a plant on your own land with the trowel: it comes up whole into the pack, its growth kept. */
   uproot(plantId: string) {
     return this.run('uproot', { target: plantId })
   }

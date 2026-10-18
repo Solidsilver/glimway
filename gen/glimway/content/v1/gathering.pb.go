@@ -34,8 +34,7 @@ type Gathering struct {
 	// The line when a visit runs into a cap.
 	SoftCapLine string `protobuf:"bytes,3,opt,name=soft_cap_line,json=softCapLine,proto3" json:"soft_cap_line,omitempty"`
 	// How many plants one home's land tends; past it the ground is full.
-	PlantsPerHome int32 `protobuf:"varint,4,opt,name=plants_per_home,json=plantsPerHome,proto3" json:"plants_per_home,omitempty"`
-	// The targets each kind of place has: wilds (the Tangle and the
+	PlantsPerHome int32 `protobuf:"varint,4,opt,name=plants_per_home,json=plantsPerHome,proto3" json:"plants_per_home,omitempty"` // The targets each kind of place has: wilds (the Tangle and the
 	// Whitequiet), woodland, home (any homestead's land), the village, the
 	// Commons. Which named targets exist is a code rule.
 	Areas map[string]*GatheringArea `protobuf:"bytes,5,rep,name=areas,proto3" json:"areas,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`

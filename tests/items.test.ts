@@ -270,6 +270,7 @@ function view(extra: Partial<ItemsView> = {}): ItemsView {
     pickedUp: [],
     thanks: [],
     carried: [],
+    plants: [],
     ...extra,
   };
 }
@@ -391,6 +392,7 @@ test('modelEntries formats warden-set descriptions across all dullness stages', 
     pickedUp: [],
     thanks: [],
     carried: [],
+    plants: [],
   };
 
   const entries = modelEntries(baseView, { pack: [], decorations: [] });

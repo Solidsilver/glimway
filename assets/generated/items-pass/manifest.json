@@ -115,6 +115,12 @@
       "file": "wick-sap-bench-trowel-generated.png",
       "width": 2172,
       "height": 724
+    },
+    {
+      "key": "items-carried-plant-icon",
+      "file": "carried-plant-art-only-source-v2.png",
+      "width": 1254,
+      "height": 1254
     }
   ],
   "frames": [
@@ -5680,6 +5686,36 @@
         "w": 16,
         "h": 16
       }
+    },
+    {
+      "key": "item-carried-plant",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "inventory-icon",
+      "source": "items-carried-plant-icon",
+      "sheet": "carried-plant-icon",
+      "sourceRect": {
+        "x": 49,
+        "y": 60,
+        "w": 1169,
+        "h": 1160
+      },
+      "itemId": "carried-plant",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Plant, lifted whole",
+      "state": null,
+      "look": "A whole lifted plant with its root ball, ready to plant again",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
     }
   ],
   "animations": [
@@ -6105,6 +6141,7 @@
     "homing-turncap": "item-homing-turncap",
     "wick-sap": "item-wick-sap",
     "bench-trowel": "item-bench-trowel-whole",
+    "carried-plant": "item-carried-plant",
     "timber": "commons:icon-timber",
     "woodpile": "commons:woodpile",
     "candle-hulls": "commons:candle-hull-0",

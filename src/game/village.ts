@@ -24,7 +24,7 @@ import type { Session } from './session.ts'
 import { roadStep } from '../lib/quests.ts'
 import { lampNoticeText } from '../lib/wilds/land-chip.ts'
 
-export type VillagePanel = 'board' | 'chest' | 'bench' | 'mail' | 'hearth' | 'desk' | 'woodpile' | 'shelf'
+export type VillagePanel = 'board' | 'chest' | 'bench' | 'mail' | 'hearth' | 'desk' | 'woodpile' | 'shelf' | 'crate'
 
 export type Status = 'idle' | 'loading' | 'ready' | 'offline'
 

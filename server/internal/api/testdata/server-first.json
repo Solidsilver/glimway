@@ -6500,6 +6500,13 @@
             "name": "fixture",
             "stalls": 1
           }
+        ],
+        "plants": [
+          {
+            "id": "fixture",
+            "itemDef": "fixture",
+            "plantedAt": 1
+          }
         ]
       }
     }
@@ -13659,7 +13666,8 @@
           },
           "pickedUp": [],
           "thanks": [],
-          "carried": []
+          "carried": [],
+          "plants": []
         }
       }
     }
@@ -14490,7 +14498,8 @@
           },
           "pickedUp": [],
           "thanks": [],
-          "carried": []
+          "carried": [],
+          "plants": []
         },
         "wear": null,
         "used": "",

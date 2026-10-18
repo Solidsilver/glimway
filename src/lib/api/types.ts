@@ -17,7 +17,7 @@ export type {
   WoodpileStack, WoodpileView, WoodpileResponse, WoodpileActionResponse,
 } from './homestead.ts';
 export type {
-  MakerView, FittingView, InstanceView, StackView, SlotView, ThanksView, ItemsView, ItemsResponse, ItemsOp, ItemsActionResponse,
+  MakerView, FittingView, InstanceView, StackView, SlotView, ThanksView, ItemsView, CarriedPlantView, ItemsResponse, ItemsOp, ItemsActionResponse,
 } from './items.ts';
 
 /** The client-writable progress document (`doc` / `progress`). */

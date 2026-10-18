@@ -61,8 +61,8 @@ message CampRequest {
 message CampResult { CampView camp = 1; map<string,double> materials = 2; repeated string given = 3; WearResult wear = 4; }
 
 // One thing waiting in a crate at Pell's: a piece, a tool, a stack (oil,
-// path stone) or a plant's seed, from the place at chunk (cx, cy) it left
-// at lapsed_at.
+// path stone) or a plant (its planting kept: it comes as a carried plant or
+// as its seed), from the place at chunk (cx, cy) it left at lapsed_at.
 // The id is int32: the HTTP JSON carries numbers, and protojson writes a
 // 64-bit integer as a string, which the client refuses.
 // moved_by: the camp keeper's name when they moved the piece off their camp
@@ -79,9 +79,14 @@ message RecoveryEntry {
 }
 // GET /api/recovery: what waits for the caller at Pell's, in this world.
 message RecoveryRead { repeated RecoveryEntry entries = 1; }
-// POST /api/recovery/collect: take everything waiting into the pack (pieces
-// to the carried home pieces), in Pell's office.
-message RecoveryCollectRequest { OpHeader op = 1; Where where = 2; }
+// POST /api/recovery/collect: take what waits into the pack (pieces to the
+// carried home pieces), in Pell's office. entries: the entry ids to take;
+// none means everything. A plant comes as a carried plant, its planting
+// kept, unless its id is in as_seed: then it comes as its seed.
+message RecoveryCollectRequest {
+  OpHeader op = 1; Where where = 2;
+  repeated int32 entries = 3; repeated int32 as_seed = 4;
+}
 message RecoveryCollectResult { repeated RecoveryEntry collected = 1; map<string,double> materials = 2; }
 
 // GET /api/lamp-notices: the lights the caller keeps (their camp's way-lamp,

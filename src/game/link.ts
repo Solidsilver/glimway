@@ -1987,15 +1987,18 @@ export class Link {
     return this.read(() => this.api.run(() => this.ops.recovery()))
   }
 
-  /** The lights you keep that started dimming this wick and you haven't been told of (GET /api/lamp-notices; the read records them). */
+  /** The lights you keep that are dimming (out of oil) and you haven't been told of this episode (GET /api/lamp-notices; the read records them). */
   async lampNotices(): Promise<HomeRead<LampNoticesRead>> {
     return this.read(() => this.api.run(() => this.ops.lampNotices()))
   }
 
-  /** Take everything waiting at Pell's into the pack, at his desk. */
-  async recoveryCollect(): Promise<WildsOutcome<RecoveryCollectResult>> {
+  /**
+   * Take what waits at Pell's into the pack, at his desk: the entries picked
+   * (none: everything), any plant among them as its seed if it's in asSeed.
+   */
+  async recoveryCollect(pick: { entries?: readonly number[]; asSeed?: readonly number[] } = {}): Promise<WildsOutcome<RecoveryCollectResult>> {
     if (!this.session) return { ok: false, code: 'unknown' }
-    return wildsOutcome(await this.operation('recovery-collect', {}))
+    return wildsOutcome(await this.operation('recovery-collect', { entries: [...(pick.entries ?? [])], asSeed: [...(pick.asSeed ?? [])] }))
   }
 
   // ------------------------------------------------------------ communal lamps (lamps.md 1.3, 2.4)

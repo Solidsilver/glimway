@@ -1,0 +1,31 @@
+{
+  "frames": {
+    "item-carried-plant": {
+      "frame": {
+        "x": 49,
+        "y": 60,
+        "w": 1169,
+        "h": 1160
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 1169,
+        "h": 1160
+      },
+      "sourceSize": {
+        "w": 1169,
+        "h": 1160
+      }
+    }
+  },
+  "meta": {
+    "image": "carried-plant-art-only-source-v2.png",
+    "size": {
+      "w": 1254,
+      "h": 1254
+    }
+  }
+}

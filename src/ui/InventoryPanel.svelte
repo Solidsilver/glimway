@@ -7,7 +7,7 @@
   import { itemErrorText } from '../content/errors'
   import { presence } from '../game/presence'
   import { bus, EV } from '../game/events'
-  import { assetOf, carriedPiece, fitTargets, homePieces, inventoryEntries, mendLabel, modelEntries, newestFirst, newTabs, wearWords, type InventoryEntry, type InventoryTab } from '../lib/inventory'
+  import { assetOf, CARRIED_PLANT_WORDS, carriedPiece, fitTargets, homePieces, inventoryEntries, mendLabel, modelEntries, newestFirst, newTabs, wearWords, type InventoryEntry, type InventoryTab } from '../lib/inventory'
   import { conditionFraction, fittingLine, itemDef, itemName, ITEM_RULES } from '../lib/items'
   import type { InstanceView } from '../lib/api/types'
   import { INVENTORY_FILTERS, inventoryCopy } from '../content/inventory'
@@ -407,14 +407,14 @@
   /** Seeds and saplings go into your own land, at your feet, or at a camp you build at. */
   function plantable(e: InventoryEntry): boolean {
     const gate = myLandGate()
-    return isPlantableSeed(e.id) && (gate !== null && homes.mine?.gate === gate || !!campHere()?.builder)
+    return (isPlantableSeed(e.id) || !!e.carriedPlant) && (gate !== null && homes.mine?.gate === gate || !!campHere()?.builder)
   }
 
   function plantIt(e: InventoryEntry): void {
     // Where the hero stands now (the server measures reach from the save).
     bus.emit(EV.notePosition)
     if (myLandGate() === null && campHere()?.builder) {
-      bus.emit(EV.campDo, { action: 'plant', itemDef: e.id })
+      bus.emit(EV.campDo, { action: 'plant', itemDef: e.id, ...(e.carriedPlant ? { itemId: e.carriedPlant.id } : {}) })
       onClose()
       return
     }
@@ -438,7 +438,7 @@
     void act(
       `plant:${e.key}`,
       () =>
-        items.plant(e.id, tile).then((r) => {
+        items.plant(e.id, tile, e.carriedPlant?.id).then((r) => {
           // The scene draws it now; the home's state keeps it for next time.
           if (r.ok && r.value.plant && session.link?.worldId === worldId) {
             bus.emit(EV.planted, { plant: r.value.plant, gate, worldId })
@@ -446,7 +446,7 @@
           }
           return r
         }),
-      `You planted ${giftPhrase(e.id, 1)}.`
+      e.carriedPlant ? CARRIED_PLANT_WORDS.planted(itemName(e.id)) : `You planted ${giftPhrase(e.id, 1)}.`
     )
   }
 
