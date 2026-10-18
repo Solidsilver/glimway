@@ -202,3 +202,18 @@ func TestEnvNames(t *testing.T) {
 	}
 	_ = noEnv
 }
+
+// Under NixOS a settings change only reloads, unless the module restarts for
+// it: every restart-only setting's table must be in its restartTriggers.
+func TestNixRestartsForRestartSettings(t *testing.T) {
+	nix, err := os.ReadFile("../../../deploy/nixos/instance.nix")
+	if err != nil {
+		t.Fatal(err)
+	}
+	line := regexp.MustCompile(`(?m)^\s*restartTriggers = .*$`).Find(nix)
+	for _, f := range Fields() {
+		if table := "cfg.settings." + strings.Join(f.Path[:len(f.Path)-1], "."); !f.Live && !strings.Contains(string(line), table) {
+			t.Errorf("%s is restart-only, but deploy/nixos/instance.nix's restartTriggers lacks %s", f.Name(), table)
+		}
+	}
+}

@@ -23,15 +23,32 @@ export interface WebSettings {
 const NONE: WebSettings = { dev: null }
 let current: WebSettings = NONE
 const listeners = new Set<(s: WebSettings) => void>()
+/** Bumped by each load and each reset: an answer to an older one is stale. */
+let generation = 0
 
 export function webSettings(): WebSettings {
   return current
 }
 
-/** Called with each new answer (not the current one). Returns the unsubscribe. */
+/** Called with each change (not the current settings). Returns the unsubscribe. */
 export function onWebSettings(fn: (s: WebSettings) => void): () => void {
   listeners.add(fn)
   return () => listeners.delete(fn)
+}
+
+function adopt(next: WebSettings): void {
+  current = next
+  for (const fn of listeners) fn(next)
+}
+
+/**
+ * Forget the settings now, before another account's are read (an account
+ * switch, signing out): its grants never carry over to the next account,
+ * and an answer still on its way for the last one is dropped.
+ */
+export function resetWebSettings(): void {
+  generation += 1
+  adopt(NONE)
 }
 
 /** The answer's shape checked: anything else reads as no settings. */
@@ -42,8 +59,13 @@ export function parseWebSettings(raw: unknown): WebSettings {
   return { dev: { grant: d.grant === true, hooks: d.hooks === true, clock: d.clock === true, fight_fall: d.fight_fall === true } }
 }
 
-/** Ask the server again. An older server (no route) or no answer: no settings. */
+/**
+ * Ask the server again. An older server (no route) or no answer: no
+ * settings. An answer that a newer load or a reset has overtaken changes
+ * nothing; the settings it gives are the current ones.
+ */
 export async function loadWebSettings(fetcher: typeof fetch = fetch): Promise<WebSettings> {
+  const mine = ++generation
   let next = NONE
   try {
     const res = await fetcher('/api/web-settings', { credentials: 'same-origin', cache: 'no-store', headers: { 'X-Glimway-Contract': String(CONTRACT_NUMBER) } })
@@ -51,7 +73,6 @@ export async function loadWebSettings(fetcher: typeof fetch = fetch): Promise<We
   } catch {
     next = NONE
   }
-  current = next
-  for (const fn of listeners) fn(next)
-  return next
+  if (mine === generation) adopt(next)
+  return current
 }

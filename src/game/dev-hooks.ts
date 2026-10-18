@@ -29,8 +29,8 @@ import type { LibraryOpenPayload } from './event-names.ts'
 import type { PerfReport } from './perf.ts'
 import type { InteractableView } from './entities/interactables.ts'
 import { onSceneEnd, type SceneEvents } from './scene-end.ts'
-import { DEV_TOOLS, devTools } from '../lib/dev-tools.ts'
-import { onWebSettings } from '../lib/web-settings.ts'
+import { DEV_LOCAL, DEV_TOOLS } from '../lib/dev-tools.ts'
+import { onWebSettings, webSettings } from '../lib/web-settings.ts'
 
 type Box = { x: number; y: number; w: number; h: number }
 type Insets = { top: number; right: number; bottom: number; left: number }
@@ -253,44 +253,73 @@ export interface FsHooks {
 
 /**
  * Put a playtest hook on `window` (builds with dev tools only; a no-op
- * otherwise). Under the Vite dev server it goes on at once; in a dev-tools
- * build, once the server says this player has the hooks (web.dev.hooks),
- * which may be after the hook is registered.
+ * otherwise). Under the Vite dev server it goes on at once. In a dev-tools
+ * build it follows this player's grant (web.dev.hooks): on while the server
+ * gives it, off again when the grant goes (another account, a revoke).
  * The returned disposer removes only this registration. With a scene, it is deleted when that scene shuts down or is destroyed, unless a
  * newer registration has taken the name meanwhile.
  */
 export function expose<K extends keyof FsHooks>(name: K, fn: FsHooks[K], scene?: { events: SceneEvents }): () => void {
   if (!DEV_TOOLS) return () => {}
-  if (devTools()?.hooks) return hook(window as unknown as Partial<FsHooks>, name, fn, scene)
-  return later(name, fn, scene)
+  if (DEV_LOCAL) return hook(window as unknown as Partial<FsHooks>, name, fn, scene)
+  if (!windowGate) {
+    const gate = gatedHooks(window as unknown as Partial<FsHooks>)
+    gate.set(!!webSettings().dev?.hooks)
+    onWebSettings((s) => gate.set(!!s.dev?.hooks))
+    windowGate = gate
+  }
+  return windowGate.expose(name, fn, scene)
 }
 
-/** Hooks registered before the server granted them, newest per name. */
-const waiting = new Map<string, () => void>()
-let watching = false
+let windowGate: HookGate | null = null
 
-/** expose's wait: the hook goes on when web settings grant hooks, unless disposed first. */
-function later<K extends keyof FsHooks>(name: K, fn: FsHooks[K], scene?: { events: SceneEvents }): () => void {
-  let dispose: (() => void) | null = null
-  const install = () => {
-    dispose = hook(window as unknown as Partial<FsHooks>, name, fn, scene)
+export interface HookGate {
+  /** Grant (true) or take away (false): every registration goes on or comes off at once. */
+  set(on: boolean): void
+  /** expose, under the gate. */
+  expose<K extends keyof FsHooks>(name: K, fn: FsHooks[K], scene?: { events: SceneEvents }): () => void
+}
+
+/**
+ * Hooks behind a grant, on `target`: each registration is on the target
+ * while the gate is on and off it otherwise, kept until it is disposed (or
+ * its scene ends), so a later grant puts it back.
+ */
+export function gatedHooks(target: Partial<FsHooks>): HookGate {
+  type Entry = { install: () => void; remove: () => void }
+  const entries = new Set<Entry>()
+  let on = false
+  return {
+    set(next) {
+      if (next === on) return
+      on = next
+      // Insertion order: the newest registration of a name goes on last, and wins.
+      for (const e of entries) {
+        if (on) e.install()
+        else e.remove()
+      }
+    },
+    expose(name, fn, scene) {
+      let dispose: (() => void) | null = null
+      const entry: Entry = {
+        install: () => {
+          if (!dispose) dispose = hook(target, name, fn)
+        },
+        remove: () => {
+          dispose?.()
+          dispose = null
+        }
+      }
+      entries.add(entry)
+      if (on) entry.install()
+      const cancel = () => {
+        entry.remove()
+        entries.delete(entry)
+      }
+      if (scene) onSceneEnd(scene, cancel)
+      return cancel
+    }
   }
-  waiting.set(name, install)
-  if (!watching) {
-    watching = true
-    onWebSettings((s) => {
-      if (!s.dev?.hooks) return
-      const now = [...waiting.values()]
-      waiting.clear()
-      for (const go of now) go()
-    })
-  }
-  const cancel = () => {
-    if (dispose) dispose()
-    else if (waiting.get(name) === install) waiting.delete(name)
-  }
-  if (scene) onSceneEnd(scene, cancel)
-  return cancel
 }
 
 /** Who registered each hook last, per target: the same function can be registered twice. */

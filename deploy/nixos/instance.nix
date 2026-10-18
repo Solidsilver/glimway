@@ -34,11 +34,17 @@ let
   '';
   settingsPath = "${name}/config.toml";
   option = type: default: description: mkOption { inherit type default description; };
-  args = [
-    "-login-concurrency" (toString cfg.login.concurrency)
-    "-login-rate" (toString cfg.login.rate)
-    "-login-global-rate" (toString cfg.login.globalRate)
-  ] ++ cfg.extraFlags;
+  # The login options are defaults for settings.server.login (config below),
+  # never flags: a flag would pin them over the settings file.
+  args = cfg.extraFlags;
+  isDev = p: p.passthru.devTools or false;
+  # What dev mode needs besides settings.dev.enable: a dev package, a dev
+  # variable (GLIMWAY_DEV_ENABLE, GLIMWAY_SERVER_DEV_*, GLIMWAY_WEB_DEV_*, or
+  # the old FINGERSNAP_ names) or a dev flag (-dev-clock). An instance that
+  # doesn't allow dev mode may have none of them.
+  devVars = lib.filter (n: builtins.match "(GLIMWAY|FINGERSNAP)_(DEV|SERVER_DEV|WEB_DEV)_.*" n != null) (lib.attrNames cfg.extraEnvironment);
+  devFlags = lib.filter (a: builtins.match "--?dev-.*" a != null) cfg.extraFlags;
+  devPackages = lib.filter isDev [ cfg.package cfg.webPackage ];
   writable = lib.unique [ (builtins.dirOf cfg.database) cfg.sprite.cacheDirectory ];
   hardening = {
     User = cfg.user;
@@ -144,9 +150,9 @@ in {
       xClient = option types.str "${cfg.habitica.creatorId}-${cfg.habitica.appName}" "Full backend X-Client override; defaults to creator-id-appname.";
     };
     login = {
-      concurrency = option types.ints.positive 4 "Maximum concurrent upstream identity proofs.";
-      rate = option types.ints.positive 10 "Eligible login attempts per IP/IPv6 /64 per minute.";
-      globalRate = option types.ints.positive 60 "Global upstream calls per minute, including retries.";
+      concurrency = option types.ints.positive 4 "Maximum concurrent upstream identity proofs. The default for `settings.server.login.concurrency`, which wins when set.";
+      rate = option types.ints.positive 10 "Eligible login attempts per IP/IPv6 /64 per minute. The default for `settings.server.login.rate`, which wins when set.";
+      globalRate = option types.ints.positive 60 "Global upstream calls per minute, including retries. The default for `settings.server.login.global_rate`, which wins when set.";
     };
     sprite = {
       assetsUrl = option types.str "https://habitica-assets.s3.amazonaws.com/mobileApp/images/" "Upstream Habitica outfit sprite proxy URL.";
@@ -189,9 +195,16 @@ in {
           message = "${title}'s managed Caddy proxy requires the static web listener."; }
         { assertion = !devMode || allowDevMode;
           message = "${opt}.settings.dev.enable: ${title} doesn't allow dev mode. Only the staging instance (services.glimway-dev) may run dev tools."; }
-        { assertion = !devMode || (cfg.package.passthru.devTools or false) && (cfg.webPackage.passthru.devTools or false);
+        { assertion = allowDevMode || devPackages == [ ] && devVars == [ ] && devFlags == [ ];
+          message = "${title} doesn't allow dev mode, but has a dev build in package or webPackage, or ${lib.concatStringsSep ", " (devVars ++ devFlags)} in extraEnvironment or extraFlags. Only the staging instance (services.glimway-dev) may run dev tools."; }
+        { assertion = !devMode || isDev cfg.package && isDev cfg.webPackage;
           message = "${opt}.settings.dev.enable needs the dev builds of package and webPackage (nix/server.nix and nix/web.nix with devTools = true), the defaults when it is on."; }
       ];
+      # The login options, as defaults the settings can override.
+      services.${name}.settings.server.login = lib.mapAttrs (_: lib.mkDefault) {
+        inherit (cfg.login) concurrency rate;
+        global_rate = cfg.login.globalRate;
+      };
       environment.etc.${settingsPath}.source = settingsFile;
       environment.systemPackages = if installPackage then [ cfg.package ] else [
         (pkgs.writeShellScriptBin serverUnit ''exec ${lib.getExe cfg.package} "$@"'')
@@ -215,7 +228,10 @@ in {
           GLIMWAY_CONFIG = "/etc/${settingsPath}";
         } // cfg.extraEnvironment;
         # A settings change reloads (SIGHUP): live settings apply, players stay.
+        # A change to a restart-only setting (deploy/glimway.example.toml marks
+        # them) restarts instead: list each restart-only table here.
         reloadTriggers = [ settingsFile ];
+        restartTriggers = [ (builtins.toJSON (cfg.settings.server.login or { })) ];
         serviceConfig = hardening // {
           ExecStart = utils.escapeSystemdExecArgs ([ (lib.getExe cfg.package) ] ++ args);
           ExecReload = "${pkgs.coreutils}/bin/kill -HUP $MAINPID";

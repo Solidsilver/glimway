@@ -100,7 +100,7 @@ in [deploy/nixos/instance.nix](../deploy/nixos/instance.nix).
 | `habitica.creatorId`, `habitica.appName` | Built-in public creator ID, `glimway`; configure your public application identity |
 | `habitica.xClient` | `<creatorId>-<appName>`; full backend header override |
 | `partyAdmission` | `true`; members of an existing open party world may join without a code |
-| `login.concurrency`, `login.rate`, `login.globalRate` | `4`, `10`, `60`; concurrent proofs, eligible attempts/IP/minute, actual upstream calls/minute |
+| `login.concurrency`, `login.rate`, `login.globalRate` | `4`, `10`, `60`; concurrent proofs, eligible attempts/IP/minute, actual upstream calls/minute. Defaults for `settings.server.login`, which wins when set |
 | `trustedProxies` | `[ "127.0.0.1" "::1" ]`; IPs allowed to supply the last X-Forwarded-For hop; `[]` trusts none |
 | `sprite.assetsUrl` | `https://habitica-assets.s3.amazonaws.com/mobileApp/images/`; sprite proxy upstream |
 | `sprite.cacheDirectory` | `habitica-sprites/` beside the database; absolute path |
@@ -528,7 +528,10 @@ Environment=GLIMWAY_LISTEN=127.0.0.1:8090
 Environment=GLIMWAY_DB=/var/lib/glimway-server/glimway.sqlite
 Environment=GLIMWAY_COOKIE_SECURE=true
 Environment=GLIMWAY_TRUSTED_PROXIES=127.0.0.1,::1
-ExecStart=/usr/local/bin/glimway-server -login-concurrency 4 -login-rate 10 -login-global-rate 60
+# Optional: a settings file (deploy/glimway.example.toml); reload with systemctl reload.
+# Environment=GLIMWAY_CONFIG=/etc/glimway/config.toml
+# ExecReload=/bin/kill -HUP $MAINPID
+ExecStart=/usr/local/bin/glimway-server
 Restart=on-failure
 UMask=0077
 NoNewPrivileges=true
@@ -602,7 +605,9 @@ and [.env.example](../.env.example): `GLIMWAY_LISTEN`, `GLIMWAY_DB`,
 `GLIMWAY_STATIC_DIR`, `GLIMWAY_HABITICA_URL`, `GLIMWAY_X_CLIENT`,
 `GLIMWAY_COOKIE_SECURE`, `GLIMWAY_PARTY_ADMISSION`, `GLIMWAY_TRUSTED_PROXIES`,
 `GLIMWAY_LOGIN_CONCURRENCY`, `GLIMWAY_LOGIN_RATE`, `GLIMWAY_LOGIN_GLOBAL_RATE`,
-`GLIMWAY_HABITICA_ASSETS_URL`, and `GLIMWAY_SPRITE_CACHE`. CLI flags override
+`GLIMWAY_HABITICA_ASSETS_URL`, and `GLIMWAY_SPRITE_CACHE`. The login limits are
+left unset by default, so `server.login` in a settings file applies; set them
+only to override it. CLI flags override
 these. Keep database/cache paths under `/data` so they persist. If changing the
 container's listening port, update `GLIMWAY_CONTAINER_PORT` and
 `GLIMWAY_HEALTHCHECK_URL` too. The host port is independently configured with

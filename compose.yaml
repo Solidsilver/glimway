@@ -28,9 +28,10 @@ services:
       GLIMWAY_X_CLIENT: ${GLIMWAY_X_CLIENT:-5abfd539-22eb-457f-8e2a-9fb3d66731f1-glimway}
       GLIMWAY_COOKIE_SECURE: ${GLIMWAY_COOKIE_SECURE:-false}
       GLIMWAY_PARTY_ADMISSION: ${GLIMWAY_PARTY_ADMISSION:-true}
-      GLIMWAY_LOGIN_CONCURRENCY: ${GLIMWAY_LOGIN_CONCURRENCY:-4}
-      GLIMWAY_LOGIN_RATE: ${GLIMWAY_LOGIN_RATE:-10}
-      GLIMWAY_LOGIN_GLOBAL_RATE: ${GLIMWAY_LOGIN_GLOBAL_RATE:-60}
+      # Set only to override server.login in the settings file (empty: the file, then the default).
+      GLIMWAY_LOGIN_CONCURRENCY: ${GLIMWAY_LOGIN_CONCURRENCY:-}
+      GLIMWAY_LOGIN_RATE: ${GLIMWAY_LOGIN_RATE:-}
+      GLIMWAY_LOGIN_GLOBAL_RATE: ${GLIMWAY_LOGIN_GLOBAL_RATE:-}
       # Trust the fixed optional Caddy IP, not the entire Docker subnet.
       GLIMWAY_TRUSTED_PROXIES: ${GLIMWAY_TRUSTED_PROXIES-127.0.0.1,::1,172.30.83.2}
       GLIMWAY_HABITICA_ASSETS_URL: ${GLIMWAY_HABITICA_ASSETS_URL:-https://habitica-assets.s3.amazonaws.com/mobileApp/images/}

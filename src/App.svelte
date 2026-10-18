@@ -1,7 +1,7 @@
 <script lang="ts">
   import { expose } from './game/dev-hooks'
   import { DEV_TOOLS, devPanelOn, devTools } from './lib/dev-tools'
-  import { loadWebSettings, onWebSettings, type DevTools } from './lib/web-settings'
+  import { loadWebSettings, onWebSettings, resetWebSettings, type DevTools } from './lib/web-settings'
   import { onMount } from 'svelte'
   import type Phaser from 'phaser'
   import {
@@ -511,6 +511,7 @@
         villageUi.waiting = 0
       },
       toTitle: () => {
+        resetWebSettings()
         stopPresence()
         stopGame(game)
         game = null
@@ -525,7 +526,9 @@
   async function enterSession(next: Session): Promise<void> {
     const prev = session
     session = next
-    void loadWebSettings() // its dev tools are its own
+    // Its dev tools are its own: the last account's go now, before a scene can use them.
+    if (prev !== next) resetWebSettings()
+    void loadWebSettings()
     ui.vitalsSource = next.vitalsSource
     ui.importedProfile = next.importedProfile
     ui.questKnown = false // a different journey: its first quest reading is not a change
@@ -552,6 +555,7 @@
 
   function logout(): void {
     confirmLogout = false
+    resetWebSettings()
     purseUi.reset()
     ui.showPurse(null)
     void account.logout()

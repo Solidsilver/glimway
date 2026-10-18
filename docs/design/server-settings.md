@@ -108,7 +108,10 @@ Every setting is marked `apply:"live"` or `apply:"restart"`.
 - **Under Nix,** `services.<name>.settings.dev.enable` picks the dev builds of
   the server and the web, and with it off the instance runs release code.
   Only an instance made with `allowDevMode` (the staging `glimway-dev`) may
-  turn it on; the live instance fails an assertion.
+  turn it on, or carry a dev build in `package` or `webPackage`, a dev
+  variable (`GLIMWAY_DEV_*`, `GLIMWAY_SERVER_DEV_*`, `GLIMWAY_WEB_DEV_*`) in
+  `extraEnvironment`, or a `-dev-*` flag in `extraFlags`. Any of them fails
+  an assertion on the live instance.
 - **In Docker,** build the image with `--build-arg GLIMWAY_DEV_TOOLS=1`. The
   release workflow doesn't publish a dev image.
 
@@ -127,10 +130,15 @@ Every setting is marked `apply:"live"` or `apply:"restart"`.
    - **A restart server setting:** read `conf` once in `run`
      (server/cmd/glimway-server/main.go) and pass it on, as
      `server.login` does. If it replaces an older flag, keep the flag
-     (`fromFlags`), and give the old variable name as an `env` tag.
+     (`fromFlags`), and give the old variable name as an `env` tag. In a new
+     restart-only table, add it to `restartTriggers` in
+     deploy/nixos/instance.nix, so a rebuild restarts for it rather than only
+     reloading. A test (`TestNixRestartsForRestartSettings`) checks this.
    - **A web setting:** add it to `Web` with its `toml` tag. It reaches the
      client in `/api/web-settings` under that name. Read it in
      `src/lib/web-settings.ts` (the `WebSettings` type and
      `parseWebSettings`).
-4. The NixOS option needs nothing: `settings` is freeform. Type it there only
-   if the module itself reads it, as `dev.enable` is.
+4. The NixOS option needs nothing more: `settings` is freeform. Type it there only
+   if the module itself reads it, as `dev.enable` is. An older NixOS option for
+   it (as `login.*`) becomes a `mkDefault` in `settings`, never a flag: a
+   flag would pin it over the file.

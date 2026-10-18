@@ -83,6 +83,27 @@ let
     settings.dev.enable = true;
     package = pkgs.callPackage ./server.nix { };
   }; };
+  # With settings.dev.enable off, dev builds or dev variables and flags still
+  # don't get past the live instance (review: they granted the tools).
+  devServer = pkgs.callPackage ./server.nix { devTools = true; };
+  devWeb = pkgs.callPackage ./web.nix { devTools = true; };
+  liveSneaks = map (extra: evaluate (liveSettings // extra)) [
+    { package = devServer; webPackage = devWeb; extraEnvironment.GLIMWAY_DEV_ENABLE = "true"; }
+    { package = devServer; }
+    { webPackage = devWeb; }
+    { extraEnvironment.GLIMWAY_DEV_ENABLE = "true"; }
+    { extraEnvironment.FINGERSNAP_SERVER_DEV_GRANT = "true"; }
+    { extraEnvironment.GLIMWAY_WEB_DEV_HOOKS = "true"; }
+    { extraFlags = [ "-dev-clock=now" ]; }
+    { extraFlags = [ "--dev-clock" "now" ]; }
+  ];
+  # Staging may have them; settings override the login options.
+  devExtras = evaluateBoth { glimway-dev = devSettings // {
+    package = devServer;
+    extraEnvironment.GLIMWAY_DEV_ENABLE = "true";
+    extraFlags = [ "-dev-clock=now" ];
+  }; };
+  loginBoth = evaluate (liveSettings // { login.rate = 5; settings.server.login.rate = 2; });
   disabled = evaluate { };
   invalidRootDB = evaluate { enable = true; database = "/game.sqlite"; };
   invalidState = evaluate { enable = true; stateDirectory = "../game"; };
@@ -123,6 +144,12 @@ assert !(assertionsPass invalidRootDB);
 assert !(assertionsPass invalidState);
 # The live instance can't be configured into dev mode, even with dev builds.
 assert !(assertionsPass liveDevMode) && !(assertionsPass liveDevPackages);
+assert lib.all (c: !(assertionsPass c)) liveSneaks;
+assert assertionsPass devExtras;
+# The login options are the settings' defaults, never flags (a flag would pin them).
+assert loginBoth.services.glimway.settings.server.login == { concurrency = 4; rate = 2; global_rate = 60; };
+assert !(lib.hasInfix "-login" (service live).ExecStart);
+assert (service live).ExecStart == ''"${lib.getExe live.services.glimway.package}"'';
 assert !(assertionsPass devReleasePackages);
 # Dev mode off: release builds, on every instance (staging runs release code).
 assert !(isDev live.services.glimway.package) && !(isDev live.services.glimway.webPackage);
@@ -135,9 +162,10 @@ assert (env live).GLIMWAY_CONFIG == "/etc/glimway/config.toml";
 assert lib.hasInfix "kill -HUP $MAINPID" devOnService.serviceConfig.ExecReload;
 assert devOnService.reloadTriggers != [ ];
 assert lib.hasInfix "X-Reload-Triggers" devOn.systemd.units."glimway-dev-server.service".text;
-assert devOnCfg.settings == { dev = { enable = true; accounts = [ devOwner ]; }; server.dev.clock = false; };
+assert devOnCfg.settings == { dev = { enable = true; accounts = [ devOwner ]; }; server = { dev.clock = false; login = { concurrency = 4; rate = 10; global_rate = 60; }; }; };
 assert lib.hasSuffix "glimway-dev-settings.toml" devOn.environment.etc."glimway-dev/config.toml".source.name;
-assert live.services.glimway.settings == { dev = { enable = false; accounts = [ ]; }; };
+assert live.services.glimway.settings == { dev = { enable = false; accounts = [ ]; }; server.login = { concurrency = 4; rate = 10; global_rate = 60; }; };
+assert live.systemd.services.glimway-server.restartTriggers != [ ];
 assert (env defaults).GLIMWAY_DB == "/var/lib/glimway-server/glimway.sqlite";
 assert (env defaults).GLIMWAY_HABITICA_ASSETS_URL == "https://habitica-assets.s3.amazonaws.com/mobileApp/images/";
 assert (service defaults).ProtectSystem == "strict";
@@ -152,7 +180,7 @@ assert (env custom).GLIMWAY_PARTY_ADMISSION == "false";
 assert (env custom).GLIMWAY_TRUSTED_PROXIES == "";
 assert (env custom).GLIMWAY_HABITICA_URL == "https://habitica.example.org";
 assert (service custom).User == "game" && (service custom).Group == "games";
-assert lib.hasInfix ''"-login-concurrency" "2"'' (service custom).ExecStart;
+assert custom.services.glimway.settings.server.login == { concurrency = 2; rate = 5; global_rate = 20; };
 assert lib.hasInfix ''"-listen" "[::1]:9091"'' (service custom).ExecStart;
 assert !(custom.systemd.timers ? glimway-server-backup);
 assert !(custom.systemd.services ? glimway-server-backup);
