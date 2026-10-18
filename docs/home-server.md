@@ -218,7 +218,8 @@ Detailed party/world behavior and earlier migration notes are preserved in
 The dev Glimway is a second instance on the same host as the live game. It
 runs the `dev` branch with its own, initially empty world, so playtests happen
 there before a release reaches the live server. On anaximander it is
-`https://glim-dev.solidsilver.dev`, beside the live `https://fsnap.solidsilver.dev`.
+`https://glim-dev.solidsilver.dev`, beside the live `https://glimway.solidsilver.dev`
+(also served as `fsnap.solidsilver.dev`, a Caddy `serverAliases` entry on the same site).
 
 The flake's `nixosModules.dev` defines `services.glimway-dev`, with the same
 options as `services.glimway` and different names, so the two never share
@@ -294,7 +295,7 @@ With `reverseProxy.enable = true` the module adds the same site itself instead.
 ### DNS
 
 Point `glim-dev.solidsilver.dev` at the host before switching, the same way as
-`fsnap.solidsilver.dev`: a DNS-only `CNAME glim-dev → solidsilver.dev` in the
+the live names: a DNS-only `CNAME glim-dev → solidsilver.dev` in the
 Cloudflare zone. Caddy obtains the certificate on first request once the name
 resolves.
 
@@ -303,9 +304,7 @@ resolves.
 The dev instance doesn't follow `dev` by itself. To deploy the latest `dev`:
 
 ```sh
-cd /etc/nixos
-nix flake update glimway-dev
-nh os switch
+nh os switch -U glimway-dev
 ```
 
 This only moves the `glimway-dev` input; the live input stays pinned. Check
