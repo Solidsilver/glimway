@@ -499,7 +499,13 @@ export class Link {
       answered: () => this.answered(),
       stalled: (err) => this.stalled(err),
       stopFor: (err) => this.stopFor(err),
-      adopt: (state, ctx) => this.adopt(state, ctx),
+      adopt: (state, ctx) => {
+        const before = this.placeSet()
+        // Only a place the world took and then moved (a reach settled around
+        // it); an ignored one is followServerPlace's.
+        const took = ctx.ack?.accepted && !ctx.ack.staleBasis && !ctx.ack.placeIgnored
+        if (this.adopt(state, ctx) && took) this.followPlaced(before, ctx.captured.place)
+      },
       adoptRead: (state) => {
         if (state && this.compare(state) !== 'older') this.adopt(state, { read: true })
       },
@@ -796,6 +802,39 @@ export class Link {
    */
   private basis(): number {
     return Math.max(this.server.vitals?.vitalsSetVersion ?? 0, this.server.place?.placeSetVersion ?? 0)
+  }
+
+  /** The place watermark of the state held. */
+  private placeSet(): number {
+    return this.server.place?.placeSetVersion ?? 0
+  }
+
+  /**
+   * A settled operation's answer: the hero goes where the world put them
+   * (`followPlaced`). A fall's place was predicted already, and a mutation
+   * that moves the hero (a world move) rebuilds the session itself.
+   */
+  private settledPlace(head: OutboxEntry, before: number): boolean {
+    return head.kind !== 'fall' && head.kind !== 'mutation' && this.followPlaced(before, whereIn(head))
+  }
+
+  /**
+   * The world chose the hero's place while answering (a ways-home arrival,
+   * a reach settled around them, a room it recovered): the place watermark
+   * rose past `before`, to a place other than the one the request named
+   * (`named`). The session moves there (the scene follows, EV.relocate) and
+   * the next report samples it, at once: an answer's watermark becomes the
+   * reports' basis as it is adopted, and a report must never carry that
+   * basis with the place the hero left, which the world would take (a reload
+   * would start there). True when it moved the hero.
+   */
+  private followPlaced(before: number, named: WhereJson | null): boolean {
+    const p = this.server.place
+    if (!p || p.placeSetVersion <= before) return false
+    if (named && named.area === p.area && Math.abs(named.x - p.x) <= 1 && Math.abs(named.y - p.y) <= 1) return false
+    this.refresh({ relocate: true })
+    this.noteLive()
+    return true
   }
 
   private noteLive(): void {
@@ -1231,13 +1270,14 @@ export class Link {
     }
     this.answered()
     if (!trusted) return this.stalled(untrusted())
+    const before = this.placeSet()
     // No state, or one that disagrees with ours at its version: a read must say first.
     const how = state ? this.compare(state) : 'conflict'
     if ((how === 'conflict' || how === 'older') && (await this.reconcile()) !== 'ok') return false
     this.entries = this.entries.filter((e) => e !== head)
     if (state && (how === 'newer' || how === 'equal')) this.adopt(state, head.kind === 'fall' ? { fall: head } : {})
     if (head.kind === 'fall') this.fallSettled(head, result)
-    else this.refresh()
+    else if (!this.settledPlace(head, before)) this.refresh()
     const stored = await this.dispositionSaved()
     // A step's gift (paid once, by the server): the toast follows its answer.
     const gift = head.kind === 'quest-step' && (result as { case?: string; value?: { glims?: number } })?.case === 'questStep' ? (result as { value: { glims: number } }).value.glims : 0
@@ -1265,6 +1305,7 @@ export class Link {
    * left to read (past retention) the queue pauses rather than guess.
    */
   private async resolveMismatch(head: OutboxEntry, err: ApiError): Promise<boolean> {
+    const before = this.placeSet()
     if (err.state && this.compare(err.state) === 'newer') this.adopt(err.state)
     let found: Awaited<ReturnType<RawApi['operationResult']>>
     try {
@@ -1294,7 +1335,7 @@ export class Link {
     }
     this.entries = this.entries.filter((e) => e !== head)
     if (head.kind === 'fall') this.fallSettled(head, result)
-    else this.refresh()
+    else if (!same || !this.settledPlace(head, before)) this.refresh()
     const stored = await this.dispositionSaved()
     if (!same) {
       console.warn('[glimway] a queued key committed a different request', head.kind)
@@ -2031,17 +2072,13 @@ export class Link {
 
   /**
    * Bind your lamp-ash pouch to the lamp beside you, or travel by turncap or
-   * pouch. Travel is the server's: it moves the hero, and the scene follows
-   * (EV.relocate) once the answer is in. Needs a connection.
+   * pouch. Travel is the server's: it moves the hero as its answer settles
+   * (`followPlaced`, before any report samples the place), and the scene
+   * follows (EV.relocate). Needs a connection.
    */
   async waysHome(fields: OperationFields<'ways-home'>): Promise<WildsOutcome<WaysHomeResult>> {
     if (!this.session) return { ok: false, code: 'unknown' }
-    const r = wildsOutcome(await this.operation('ways-home', fields))
-    if (r.ok && fields.action !== 'bind') {
-      this.refresh({ relocate: true })
-      this.noteLive()
-    }
-    return r
+    return wildsOutcome(await this.operation('ways-home', fields))
   }
 
   /** Your pouch's binding (GET /api/ways-home). */
