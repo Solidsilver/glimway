@@ -67,7 +67,7 @@ export class WildsCamps {
   private reading = false
   private version = 0
   private busy = false
-  /** The scene this controller was built for has shut down: an answer arriving later opens no panel and says nothing. */
+  /** The scene this controller was built for has shut down: an answer arriving later opens no panel and plays no sound (its toast is still told). */
   private gone = false
 
   constructor(private scene: Phaser.Scene, private deps: CampsDeps) {
@@ -301,7 +301,7 @@ export class WildsCamps {
 
   /** Send the rule and the list; the panel opens again on what the server kept. */
   private setRule(id: string, rule: CampRule, members: string[]): void {
-    void this.act({ action: 'rule', camp: id, rule, members }, (c) => { if (c) this.rules(c.id) })
+    void this.act({ action: 'rule', camp: id, rule, members }, (c) => { if (c && !this.gone) this.rules(c.id) })
   }
 
   /** Asked before the keeper moves someone's piece off to Pell's. */
@@ -331,7 +331,7 @@ export class WildsCamps {
     }
     if (what === 'pack') return this.askPack(id)
     if (what === 'packup') return void this.act({ action: 'pack', camp: id }, () => bus.emit(EV.toast, { text: CAMP_PACK_WORDS.done, icon: 'glim' }))
-    if (what === 'fill') void this.act({ action: 'fill', camp: id }, (c) => { if (c) openDialogue({ id: 'camp', speaker: campLampName(c), lines: campLines(c, this.me) }) })
+    if (what === 'fill') void this.act({ action: 'fill', camp: id }, (c) => { if (c && !this.gone) openDialogue({ id: 'camp', speaker: campLampName(c), lines: campLines(c, this.me) }) })
     else if (what === 'name') void this.beginNaming(id)
     else if (what === 'down') void this.act({ action: 'remove', itemId: id }, () => bus.emit(EV.toast, { text: 'You take the way-lamp down. Its oil is back in your pack.', icon: 'glim' }))
   }
@@ -386,9 +386,9 @@ export class WildsCamps {
     this.deps.notePosition()
     try {
       const r = await link.camp({ camp: '', itemId: '', itemDef: '', x: 0, y: 0, rotation: 0, parts: [], rule: '', members: [], ...fields })
+      // A refusal, or no answer yet (`pending`), is told even after a door: only the sound stays with the scene.
       if (!r.ok) {
-        if (this.gone) return
-        sfx('fizzle')
+        if (!this.gone) sfx('fizzle')
         const text = r.code === 'not-your-camp' ? campRefusal(this.campOf(fields)) : CAMP_ERRORS[r.code] ?? homeErrorText(r.code)
         bus.emit(EV.toast, { text, icon: 'glim', kind: 'error' })
         return
@@ -403,11 +403,12 @@ export class WildsCamps {
         const at = chunkOf(fields.x, fields.y)
         void refreshNear(this.deps.session, at.cx, at.cy).catch(() => false)
       }
-      // The scene it was asked in has gone: the next scene reads the camps itself, and no panel opens for this one.
-      if (this.gone) return
-      sfx(fields.action === 'set' || fields.action === 'fill' ? 'lantern' : 'pop')
-      const list = this.known.list.filter((x) => x.id !== c?.id && !(fields.action === 'remove' && fields.itemId === x.id) && !(fields.action === 'pack' && fields.camp === x.id))
-      this.adopt(ownerOf(link), c ? [...list, c] : list)
+      // The scene it was asked in has gone: the next scene reads the camps itself; the outcome's toast is still told, its panel isn't (`then` checks).
+      if (!this.gone) {
+        sfx(fields.action === 'set' || fields.action === 'fill' ? 'lantern' : 'pop')
+        const list = this.known.list.filter((x) => x.id !== c?.id && !(fields.action === 'remove' && fields.itemId === x.id) && !(fields.action === 'pack' && fields.camp === x.id))
+        this.adopt(ownerOf(link), c ? [...list, c] : list)
+      }
       then?.(c, r.result)
     } finally {
       this.busy = false

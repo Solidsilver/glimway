@@ -151,6 +151,51 @@ for (const kind of ['camp', 'communal'] as const) {
   })
 }
 
+// ------------------------------------------------------------ G2: an operation's outcome after the scene has gone
+
+for (const kind of ['camp', 'communal'] as const) {
+  test(`a ${kind} operation’s refusal or pending, answered after its scene shut down, is still told; its panel is not`, async () => {
+    const toasts: { text: string; kind?: string }[] = []
+    const panels: unknown[] = []
+    const onToast = (p: { text: string; kind?: string }) => toasts.push(p)
+    const onPanel = (p: unknown) => panels.push(p)
+    bus.on(EV.toast, onToast)
+    bus.on(EV.dialogue, onPanel)
+    try {
+      /** Start an operation, walk through a door, then answer it. */
+      const across = async (action: string, answer: unknown) => {
+        const held = deferred<unknown>()
+        const s = scene()
+        const { deps } = controllerDeps(link('w', 'acct', kind === 'camp' ? { camp: () => held.promise, readCommons: async () => ({ ok: false, code: 'offline' }) } : { communalLamp: () => held.promise }))
+        const c = kind === 'camp' ? new WildsCamps(s as never, deps) : new WildsCommunalLamps(s as never, deps)
+        c.onAction(action)
+        s.shutdown()
+        held.resolve(answer)
+        await flush()
+      }
+      await across(kind === 'camp' ? 'down:camp-1' : 'relight:stone-1', { ok: false, code: 'pending' })
+      assert.equal(toasts.length, 1)
+      assert.match(toasts[0]!.text, /may have gone through/)
+      assert.equal(toasts[0]!.kind, 'error')
+      await across(kind === 'camp' ? 'down:camp-1' : 'relight:stone-1', { ok: false, code: 'too-far-away' })
+      assert.equal(toasts.length, 2, 'a refusal is told too')
+      assert.equal(toasts[1]!.kind, 'error')
+      if (kind === 'camp') {
+        // A fill that went through: its toast-less panel is for the scene left behind.
+        await across('fill:camp-1', { ok: true, result: { camp: campAt('camp-1', 0, 0) } })
+        assert.deepEqual(panels, [])
+      } else {
+        // A relight that went through: its toast is told.
+        await across('relight:stone-1', { ok: true, result: { lamp: null } })
+        assert.equal(toasts.length, 3)
+      }
+    } finally {
+      bus.off(EV.toast, onToast)
+      bus.off(EV.dialogue, onPanel)
+    }
+  })
+}
+
 // ------------------------------------------------------------ G3: the land chip recovers and is told
 
 const fixtures = JSON.parse(readFileSync(new URL('../server/internal/api/testdata/server-first.json', import.meta.url), 'utf8')) as { case: string; json: JsonValue }[]

@@ -76,7 +76,7 @@ export class WildsCommunalLamps {
   private cutStone = ''
   /** The road stones drawn over the chunks' dark ones, for playtests. */
   private stones: { site: string; frame: string }[] = []
-  /** The scene this controller was built for has shut down: an answer arriving later opens no panel and says nothing. */
+  /** The scene this controller was built for has shut down: an answer arriving later opens no panel and plays no sound (its toast is still told). */
   private gone = false
 
   constructor(private scene: Phaser.Scene, private deps: CommunalLampsDeps) {
@@ -319,9 +319,9 @@ export class WildsCommunalLamps {
     this.deps.notePosition()
     try {
       const r = await link.communalLamp({ lamp: '', itemId: '', x: 0, y: 0, parts: [], ...fields })
+      // A refusal, or no answer yet (`pending`), is told even after a door: only the sound stays with the scene.
       if (!r.ok) {
-        if (this.gone) return
-        sfx('fizzle')
+        if (!this.gone) sfx('fizzle')
         bus.emit(EV.toast, { text: COMMUNAL_LAMP_ERRORS[r.code] ?? homeErrorText(r.code), icon: 'glim', kind: 'error' })
         return
       }
@@ -329,11 +329,13 @@ export class WildsCommunalLamps {
       if (fields.action === 'post' || fields.action === 'lift') void homesteadsFor(this.deps.session).load()
       // A lamp lit, posted, lifted or tended changes the land around it (its tier, or this wick's visit): the land chip asks again.
       if (LAND_ACTIONS.has(fields.action)) invalidateLand()
-      if (this.gone) return
-      sfx(fields.action === 'lift' || fields.action === 'copy' ? 'pop' : 'lantern')
-      const l = r.result.lamp ?? null
-      const gone = fields.action === 'lift' ? fields.lamp : undefined
-      this.adopt([...this.lamps.filter((x) => x.id !== l?.id && x.id !== gone), ...(l ? [l] : [])])
+      // The scene it was asked in has gone: its lamps aren't kept, but the outcome's toast is still told.
+      if (!this.gone) {
+        sfx(fields.action === 'lift' || fields.action === 'copy' ? 'pop' : 'lantern')
+        const l = r.result.lamp ?? null
+        const gone = fields.action === 'lift' ? fields.lamp : undefined
+        this.adopt([...this.lamps.filter((x) => x.id !== l?.id && x.id !== gone), ...(l ? [l] : [])])
+      }
       then?.()
     } finally {
       this.busy = false
