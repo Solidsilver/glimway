@@ -8,6 +8,7 @@
   import { HEARTH_RECIPES } from '../lib/workshop'
   import type { AssetView } from '../lib/api/types'
   import { itemName } from '../lib/items'
+  import { LOCKED_RECIPE } from '../content/crafting'
   import { actionRunner, busVersion } from './panel-state.svelte'
   import Panel from './Panel.svelte'
   import ArtIcon from './ArtIcon.svelte'
@@ -77,7 +78,7 @@
             <span class="cost">{costPhrase(recipeCost(r, n))}{n > 1 ? ` for ${n}` : ''}</span>
             <span class="can">{can > 0 ? `You can make ${can}` : 'Not enough materials'}</span>
           {:else}
-            <span class="can">You never learned this recipe — {r.found}.</span>
+            <span class="can">{LOCKED_RECIPE.line(r.found)}</span>
           {/if}
         </span>
         <span class="go">
@@ -93,7 +94,7 @@
               {action.busy === `craft:${r.id}` ? 'Making…' : 'Make'}
             </button>
           {:else}
-            <span class="locked-tag" data-testid="locked">page not found</span>
+            <span class="locked-tag" data-testid="locked">{LOCKED_RECIPE.tag}</span>
           {/if}
         </span>
       </li>

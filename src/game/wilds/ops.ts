@@ -25,7 +25,7 @@ import type { WildsWay } from '../../lib/gen/glimway/v1/wilds_pb.js'
 import { bus, EV } from '../events.ts'
 import type { WildsSettledPayload } from '../event-names.ts'
 import { sfx } from '../sfx.ts'
-import { applyBalances, applyDiscovery, applyPathAnswer, chunkEpoch, knownPlaces, lootName, requestRead, settlePrediction, wildsEpoch, wildsLive, wildsView, type LootDrop } from './store.ts'
+import { applyBalances, applyDiscovery, applyPathAnswer, chunkEpoch, invalidateLand, knownPlaces, lootName, requestRead, settlePrediction, wildsEpoch, wildsLive, wildsView, type LootDrop } from './store.ts'
 import { newKey } from '../../lib/api/client.ts'
 import type { Session } from '../session.ts'
 
@@ -152,7 +152,7 @@ function refused(op: WildsOp, code: string, world: string): void {
     return
   }
   // At a camp you may not build at: whose camp it is, and that you can still walk and tend (camps.ts).
-  const camp = code === 'not-your-camp' ? campsKnown.list.find((c) => c.cx === op.cx && c.cy === op.cy) ?? null : null
+  const camp = code === 'not-your-camp' ? campsKnown({ worldId: op.world, accountId: op.account ?? '' }).list.find((c) => c.cx === op.cx && c.cy === op.cy) ?? null : null
   say(code === 'not-your-camp' ? campRefusal(camp) : refusalText(code, { action: op.action, material: op.material, extra: PATH_REFUSALS }))
   if (!NOT_DISPROVING.has(code) && current(op, world)) requestRead()
 }
@@ -162,6 +162,8 @@ function landed(op: WildsOp, r: WildsClearResult | WildsLayResult | WildsLiftRes
   const broken = r.$typeName === 'glimway.v1.WildsLiftResult' ? r.waysBroken : []
   const rerouted = r.$typeName === 'glimway.v1.WildsLiftResult' ? r.waysRerouted : []
   const before = new Map(wildsView()?.ways ?? [])
+  // A path laid or lifted can turn its chunk common or wild again: the land chip asks again.
+  if (op.kind === 'lay' || op.kind === 'lift') invalidateLand()
   if (!applyPathAnswer(r.ground, r.materials, { made, broken, rerouted })) {
     requestRead()
     return

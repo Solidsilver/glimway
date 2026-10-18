@@ -102,6 +102,7 @@ export const MAP_LABELS = {
   wick: 'Walked this wick. The Beyond turns at the wick; the Tangle stays.',
   legend: 'Legend',
   keys: 'Arrow keys or WASD move the map (Shift for further), + and − zoom, Home centres on you, End shows it all. M or Escape closes it.',
+  controls: 'Map controls',
   zoomIn: 'Zoom in',
   zoomOut: 'Zoom out',
   centre: 'Centre on me',

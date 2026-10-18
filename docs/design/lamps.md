@@ -138,11 +138,11 @@ The first rows were added as 0.12 and 0.13 landed and describe the code as built
 
 | Built since the baseline | Source |
 |---|---|
-| Holds | [store/holds.go](../../server/internal/store/holds.go), migration 039: `Chunks.Hold`, `Release`, `HoldAt`, `HeldEpoch(s)`; one `Holder` per kind (`Keeps`, `Released`), registered in `api.New` and judged once when the new wick epoch is made. Fixed → held → generated. |
-| Lot lanterns | [api/lot_lanterns.go](../../server/internal/api/lot_lanterns.go), migration 040: holder kind `lot-lantern`. Fuel is `hearth-oil` (the chandler sells it at 4 glims, 3 a day), a 3-wick store in the lantern, one wick burned a turning, a wick of dimming, then lapse. |
-| Camps and Pell's crate | [api/camps.go](../../server/internal/api/camps.go), [api/recovery.go](../../server/internal/api/recovery.go), migration 041: holder kind `way-lamp`, `camps`, `camp_plants`, `recovery_crates`/`recovery_entries`; `GET`/`POST /api/camps`, `GET /api/recovery`, `POST /api/recovery/collect` (picked entries, or everything). Migration 048: `carried_plants`, a crated plant taken whole. |
+| Holds | [store/holds.go](../../server/internal/store/holds.go), migration 038: `Chunks.Hold`, `Release`, `HoldAt`, `HeldEpoch(s)`; one `Holder` per kind (`Keeps`, `Released`), registered in `api.New` and judged once when the new wick epoch is made. Fixed → held → generated. |
+| Lot lanterns | [api/lot_lanterns.go](../../server/internal/api/lot_lanterns.go), migration 038: holder kind `lot-lantern`. Fuel is `hearth-oil` (the chandler sells it at 4 glims, 3 a day), a 3-wick store in the lantern, one wick burned a turning, a wick of dimming, then lapse. |
+| Camps and Pell's crate | [api/camps.go](../../server/internal/api/camps.go), [api/recovery.go](../../server/internal/api/recovery.go), migration 038: holder kind `way-lamp`, `camps`, `camp_plants`, `recovery_crates`/`recovery_entries`; `GET`/`POST /api/camps`, `GET /api/recovery`, `POST /api/recovery/collect` (picked entries, or everything). `carried_plants` too, a crated plant taken whole. |
 | Wick Tree sap | [api/wick_sap.go](../../server/internal/api/wick_sap.go), no migration: `POST /api/items/tap` (one `wick-sap` a calendar wick, an `outcomes` row `wick-sap:<WickStart>`) and `POST /api/items/refine` (one sap → one `hearth-oil` at the chandler, free). Content `homestead.wickSap`. |
-| Ways home | [api/ways_home.go](../../server/internal/api/ways_home.go), migration 044: `GET`/`POST /api/ways-home` (`bind`, `turncap`, `pouch`), `ways_home_bindings` (one per player). Bench recipes with pages; the Keeper's-hand quest gives both pages. |
+| Ways home | [api/ways_home.go](../../server/internal/api/ways_home.go), migration 038: `GET`/`POST /api/ways-home` (`bind`, `turncap`, `pouch`), `ways_home_bindings` (one per player). Bench recipes with pages; the Keeper's-hand quest gives both pages. |
 | Land chip and dimming notices | [lib/wilds/land-chip.ts](../../src/lib/wilds/land-chip.ts), [game/wilds/land-here.ts](../../src/game/wilds/land-here.ts), [api/lamp_notices.go](../../server/internal/api/lamp_notices.go), no migration: `ChunkLandStatus.keeper`/`yours`, `GET /api/lamp-notices` (§2.5). |
 
 | Existing seam | Source and consequence |
@@ -351,7 +351,7 @@ holds it); at zero it gives out like any cheap tool and thanks its maker. The an
 wear (`ItemsResult.wear`, `CampResult.wear`). The plant comes up whole as a carried
 plant, its id and growth kept, to plant again (owner decision 2026-10-17; §2.7 `carryPlant`).
 
-Who may build (0.13, owner decision 2026-10-17; migration 045, `api/claim_rules.go`): a Built
+Who may build (0.13, owner decision 2026-10-17; migration 038, `api/claim_rules.go`): a Built
 claim's keeper sets one rule and one list of world members. The rules are `household` (the
 default), `listed` (household plus the list), `except` (every world member but the list) and
 `everyone`. The keeper always may. Building is placing pieces, planting, naming the lamp,
@@ -368,7 +368,7 @@ Communal lamps (0.13, content `communalLamp`): relighting a dark road stone burn
 not refunded when it goes dark (spent like oil); a communal post is the same `way-lamp` piece set
 with no oil, crated whole to its setter if its chunk goes a wick unvisited. Both keep their stable
 lamp id (stone site id, or piece id) and a `lamp_namings` row that outlives the light. A piece's
-naming has no world (migration 046): it follows the lamp into any world, named and its ash given
+naming has no world: it follows the lamp into any world, named and its ash given
 once ever. A stone's id repeats between worlds, so its naming is its world's.
 
 Retire distance escalation and the automatic 3×3 hold. Extra lanterns in one funded chunk do
@@ -514,7 +514,7 @@ beneficiary. A piece is the same instance at location `crate`; a plant waits wit
 (its id, tile, `plantedAt`) kept in the entry's state; unspent oil goes to the lamp's setter; a
 laid path tile's stone or plank goes to whoever laid it. A lapsed lot backland's paths, and Common
 paths that turn (an unvisited chunk, or a tile with nowhere safe to land), use the same crate:
-one per chunk and turning, a stack entry per layer and material (lane E, migration 042,
+one per chunk and turning, a stack entry per layer and material (lane E,
 `api/common_ways.go`). Crates are per world.
 
 **The crate picker (0.13, owner decision 2026-10-17).** In Pell's office the owner takes what
@@ -527,7 +527,7 @@ its seed" for a plant. The pack has no capacity limit (`item_stacks` holds any c
 carried plants have none either (owner decision 2026-10-17), so no destination is ever full.
 
 **Replanting from a crate, and the trowel.** A crated plant is taken whole by default: it becomes
-a carried plant (migration 048, `carried_plants`), keeping its own id and `planted_at` (its
+a carried plant (`carried_plants`), keeping its own id and `planted_at` (its
 growth; nothing grows into a crop yet, so its age is all the growth there is). Digging a plant up
 with the trowel lifts it the same way (`digUpPlant` → `carryPlant`), at home, in the lit backland
 and at camps, into the digger's pack; the dig still wears the trowel once. `ItemsView.plants`
@@ -656,10 +656,10 @@ No way-lamps, camps, Keeper gate or presence-kept Common land in this release.
 | C · Backland and recovery | Tree/chandler oil, bounded services, connected lanterns/store, weekly debit/warning, atomic packing and Pell collection for objects/plants/paths | A; B's resolver |
 | D · Drawing and acceptance | Lot/store flows, reserve/warning in world and existing map, final art; arrival long frame and two E2E flakes riding with the feature | A's view types; B/C integration |
 
-**As built in 0.12:** holds and lasting geography (migrations 038, 039) and lot lanterns (040)
+**As built in 0.12:** holds, lasting geography and lot lanterns
 shipped; the backland lapses to home storage, not Pell's crate, and its laid paths turn with it
 without a refund (§2.7). The tree/sap supply is the chandler's `hearth-oil`. Pell's crate came
-with camps in 0.13 (migration 041); common ways (042) then crated the backland's paths on lapse.
+with camps in 0.13; common ways then crated the backland's paths on lapse.
 
 A leads; B/C can build against that contract, D against its view types. Integrate recovery before
 real lapse. Warnings, buffer and safe backland collection cannot wait for 0.13. Common preservation

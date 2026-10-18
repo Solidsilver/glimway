@@ -6,8 +6,8 @@ import (
 )
 
 // A 0.11.2 database (through 037) with paths laid on the wick: 038 ends
-// that wick's land, and 047 refunds each laid tile's material to whoever
-// laid it, in a crate at Pell's marked "the land changed". Free clearing
+// that wick's land, and its backfill refunds each laid tile's material to
+// whoever laid it, in a crate at Pell's marked "the land changed". Free clearing
 // and a layer who has gone get nothing; the staging table goes.
 func TestUpgradeRefundsPaidPaths(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "upgrade.sqlite")

@@ -17,7 +17,7 @@
   import { backlandAtPixel, inBackland, lotOrigin, lotAtPixel } from '../lib/lots'
   import { campAtTile } from '../lib/camps'
   import { isKeeper } from '../lib/lamp-naming'
-  import { campsKnown as camps } from '../game/wilds/camps-state'
+  import { campsKnown } from '../game/wilds/camps-state'
   import { ui } from './store.svelte'
   import { home } from './home.svelte'
   import { inventory } from './inventory.svelte'
@@ -95,6 +95,9 @@
   let pouchBinding = $state<WaysHomeBinding | null>(null)
 
   onMount(() => {
+    // Where the hero stands now: the frame loop writes it once a second, and
+    // the land, camp and plant buttons read it (step into a camp and press I).
+    bus.emit(EV.notePosition)
     inventory.syncPack(session.state.inventory)
     // In a world, ask for the item model and your home's pieces, both read
     // now (a home read already out may predate a change). Offline, what's
@@ -368,7 +371,7 @@
   function campHere() {
     if (session.state.area !== 'outdoors' || myLandGate() !== null) return null
     const { x, y } = session.state.position
-    return campAtTile(camps.list, Math.floor(x / 16), Math.floor((y - 1) / 16))
+    return campAtTile(campsKnown(session.link).list, Math.floor(x / 16), Math.floor((y - 1) / 16))
   }
 
   /** A carried (not set out) home piece of this kind. */

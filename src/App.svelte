@@ -83,6 +83,7 @@
   import { accountName, api, connectedSession, probeServer } from './ui/account'
   import { AccountFlow } from './ui/account-flow.svelte'
   import { prepareWilds, resetWilds } from './game/wilds/store'
+  import { forgetCamps } from './game/wilds/camps-state'
   import { clearCache, loadCache, loadLatestCache, saveCache } from './lib/api/cache'
   import type { Snapshot, WorldChoice } from './lib/api/types'
   import type { HabiticaProfile } from './lib/habitica/types'
@@ -508,6 +509,7 @@
       closePanel: () => (panel = null),
       leaveWorld: () => {
         resetWilds()
+        forgetCamps()
         villageUi.waiting = 0
       },
       toTitle: () => {

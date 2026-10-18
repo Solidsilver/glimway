@@ -14,6 +14,8 @@
  */
 import { GATHERING_DATA } from '../lib/gathering.ts'
 import { MAIL } from '../lib/mail.ts'
+import { HOMESTEAD_DATA } from '../lib/homestead.ts'
+import { LAMP_OIL } from './camps.ts'
 
 type Table = Readonly<Record<string, string>>
 
@@ -173,7 +175,7 @@ export const HOME_ERRORS: Table = {
   'stable-full': 'One stable to a homestead, and six stalls to a stable.',
   'stalls-in-use': 'Empty the stalls first, and bring home any mount that’s out.',
   // Lot lanterns (roadmap 0.12).
-  'lantern-full': 'The lantern’s full. It takes three wicks of oil at most.',
+  'lantern-full': LAMP_OIL.full('The lantern', HOMESTEAD_DATA.lotLantern.maxWicks),
   'no-home': 'Nobody holds the deed to this lot. There’s no one to light it for.',
   'cannot-hold': 'The woods behind won’t hold just now. Try again after the turning.',
   'not-your-land': 'That’s someone else’s land. Leave it as you found it.',

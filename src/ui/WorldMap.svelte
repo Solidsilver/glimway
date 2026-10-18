@@ -534,7 +534,7 @@
     {/if}
   </div>
 
-  <div class="tools" role="group" aria-label="Map controls">
+  <div class="tools" role="group" aria-label={MAP_LABELS.controls}>
     <button type="button" onclick={() => zoom(1)} aria-label={MAP_LABELS.zoomIn} title={MAP_LABELS.zoomIn} data-testid="map-zoom-in">+</button>
     <span class="pct" aria-hidden="true">{view ? zoomPercent(view.scale, openScale) : 100}%</span>
     <button type="button" onclick={() => zoom(-1)} aria-label={MAP_LABELS.zoomOut} title={MAP_LABELS.zoomOut} data-testid="map-zoom-out">−</button>
@@ -594,7 +594,7 @@
       <ul class="tier-key">
         <li>▣ {MAP_LAMPS.held}</li>
         <li class="amber">▨ {MAP_LAMPS.dimmingKey}</li>
-        <li>┄ Common · paths kept by a visit</li>
+        <li>┄ {MAP_LAMPS.commonKey}</li>
         <li>{MAP_LAMPS.wild}</li>
         <li>{MAP_LAMPS.permanent}</li>
         <li>{MAP_LAMPS.still}</li>
