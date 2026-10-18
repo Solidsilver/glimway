@@ -9,10 +9,10 @@ import (
 	"time"
 )
 
-// lay047 is what each laid ground kind cost in 0.11.2 (content/wilds.json
+// lay038 is what each laid ground kind cost in 0.11.2 (content/wilds.json
 // paths.lay at v0.11.2): a frozen snapshot, so a later catalogue change
 // can't alter how an old database is refunded.
-var lay047 = map[string]struct {
+var lay038 = map[string]struct {
 	material string
 	cost     int
 }{
@@ -20,12 +20,12 @@ var lay047 = map[string]struct {
 	"plank": {"timber", 1},
 }
 
-// refundPaths047 crates the paths 038 set aside (lasting_geography_paths):
+// refundPaths038 crates the paths 038 set aside (lasting_geography_paths):
 // each laid tile's material goes to whoever laid it, in one crate a chunk at
 // Pell's, each entry's reason "land-changed" so Pell can say why. Free
 // clearing gave nothing, and an account that has gone gets no entry. Then
 // the staged rows go.
-func refundPaths047(tx *sql.Tx) error {
+func refundPaths038(tx *sql.Tx) error {
 	rows, err := tx.Query("SELECT world_id,chunk,state FROM lasting_geography_paths ORDER BY world_id,chunk,epoch")
 	if err != nil {
 		return err
@@ -50,7 +50,7 @@ func refundPaths047(tx *sql.Tx) error {
 			continue
 		}
 		for _, c := range g.Changes {
-			lay, ok := lay047[c.Change]
+			lay, ok := lay038[c.Change]
 			if !ok || c.By == "" {
 				continue
 			}

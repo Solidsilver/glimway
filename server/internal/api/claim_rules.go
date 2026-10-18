@@ -1,6 +1,6 @@
 package api
 
-// Who may build on a Built claim's land (lamps.md 2.5; migration 045). A
+// Who may build on a Built claim's land (lamps.md 2.5; migration 038). A
 // claim is its hold's holder, kind and id; its keeper sets one rule and one
 // list of world members:
 //

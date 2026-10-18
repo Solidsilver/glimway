@@ -13,13 +13,19 @@ import (
 
 // BackupSummary is what verify-backup reports about a snapshot.
 type BackupSummary struct {
-	Schema  string // newest applied migration
-	Pending int    // migrations this binary would still apply on restore
-	Counts  map[string]int64
+	Schema       string   // newest applied migration
+	Pending      int      // migrations this binary would still apply on restore
+	PendingNames []string // their names, oldest first
+	Counts       map[string]int64
 }
 
-// The tables verify-backup counts, in print order: accounts, worlds, homes.
-var backupCountTables = []string{"players", "worlds", "homesteads"}
+// The tables verify-backup counts, in print order: accounts, worlds, homes,
+// then what migrate --dry-run also prints: items, plants and the land kept
+// by lamps. A table the snapshot's schema lacks has no count.
+var backupCountTables = []string{"players", "worlds", "homesteads",
+	"item_stacks", "item_instances", "homestead_items",
+	"homestead_plants", "camp_plants", "carried_plants",
+	"holds", "lot_lanterns", "camps", "communal_lamps", "recovery_crates", "recovery_entries"}
 
 // VerifyBackup checks that a snapshot is a sound database this binary can
 // open, without writing to it: immutable read-only mode creates no -wal or
@@ -109,6 +115,7 @@ func VerifyBackup(ctx context.Context, path string) (BackupSummary, error) {
 			return sum, fmt.Errorf("schema: migration %s missing below %s", name, sum.Schema)
 		}
 		sum.Pending++
+		sum.PendingNames = append(sum.PendingNames, name)
 	}
 	sum.Counts = map[string]int64{}
 	for _, table := range backupCountTables {
@@ -127,3 +134,6 @@ func VerifyBackup(ctx context.Context, path string) (BackupSummary, error) {
 	}
 	return sum, nil
 }
+
+// BackupCountTables is the tables a BackupSummary counts, in print order.
+func BackupCountTables() []string { return slices.Clone(backupCountTables) }

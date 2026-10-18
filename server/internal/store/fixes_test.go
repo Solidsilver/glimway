@@ -78,6 +78,10 @@ func TestImmediateTransactionsWaitAcrossConnections(t *testing.T) {
 }
 func TestConcurrentFreshOpenMigrations(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "db.sqlite")
+	history, err := migrationHistory()
+	if err != nil {
+		t.Fatal(err)
+	}
 	start := make(chan struct{})
 	errs := make(chan error, 6)
 	var wg sync.WaitGroup
@@ -90,7 +94,7 @@ func TestConcurrentFreshOpenMigrations(t *testing.T) {
 			if err == nil {
 				var n int
 				err = s.DB.QueryRow("SELECT count(*) FROM schema_migrations").Scan(&n)
-				if err == nil && n != len(deployedMigrationHistory) {
+				if err == nil && n != len(history) {
 					err = sql.ErrNoRows
 				}
 				s.Close()
