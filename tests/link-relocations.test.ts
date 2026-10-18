@@ -37,7 +37,7 @@ function placed(version: number, at: At, opts: { moved?: boolean } = {}): Record
 const landed = (at: At = HOME) => env(placed(2, at, { moved: true }), { waysHome: { action: 'turncap', binding: null, ...at } });
 
 /** Link and real Session, online; a fresh page's hero has walked to (100, 100). */
-async function connected(t: TestContext, opts: { store?: ReturnType<typeof memoryOutboxStore>; record?: OutboxRecord | null; state?: Record<string, any>; play?: Record<string, any>; answers?: (server: ReturnType<typeof fakeServer>) => void } = {}) {
+async function connected(t: TestContext, opts: { store?: ReturnType<typeof memoryOutboxStore>; record?: OutboxRecord | null; state?: Record<string, any>; play?: Record<string, any>; answers?: (server: ReturnType<typeof fakeServer>) => void; playFails?: boolean } = {}) {
   const server = fakeServer();
   const store = opts.store ?? memoryOutboxStore();
   const events: Array<[string, unknown]> = [];
@@ -58,9 +58,9 @@ async function connected(t: TestContext, opts: { store?: ReturnType<typeof memor
   });
   await link.ready();
   opts.answers?.(server);
-  server.on('POST /api/play', play(opts.play ?? S()));
+  server.on('POST /api/play', opts.playFails ? 'network' : play(opts.play ?? S()));
   await link.reconnect(false);
-  assert.equal(link.status, 'online');
+  assert.equal(link.status, opts.playFails ? 'offline' : 'online');
   if (!opts.record) session.state.position = { x: 100, y: 100 };
   const toasts = () => events.filter(([e]) => e === EV.toast).map(([, p]) => (p as { text: string }).text);
   return { server, store, link, session, moves, toasts };
@@ -200,6 +200,30 @@ test('a ways-home whose reply was lost, across a reload: the page starts where t
   assert.equal(next.link.outbox.length, 0);
   reportsAt(next.server, 2, HOME);
   assert.deepEqual(next.toasts(), [late]);
+});
+
+test('a move followed at startup stays followed when the claim restores the saved reports and /play fails', async (t) => {
+  const store = memoryOutboxStore();
+  const first = await connected(t, { store });
+  first.server.on('POST /api/ways-home', 'network');
+  assert.deepEqual(await first.link.waysHome({ action: 'turncap', lamp: '' }), { ok: false, code: 'pending' });
+  first.session.state.position = { x: 600, y: 600 };
+  await first.link.persist();
+  first.link.stop();
+
+  // The sign-in read holds the landing; the saved reports followed no move. /play fails: offline play.
+  const record = await store.load('fixture-account', 'dev');
+  assert.equal(record?.reports?.moved, 0);
+  const next = await connected(t, { store, record, state: placed(2, HOME, { moved: true }), playFails: true });
+  assert.deepEqual(next.session.state.position, { x: 1000, y: 1000 }, 'the page starts at the landing');
+  assert.equal(next.link.reports.moved, 2, 'the claim kept the move followed at attach');
+  // Walking on and saving never follows the same move again.
+  next.session.state.position = { x: 1200, y: 1000 };
+  await next.link.persist();
+  assert.deepEqual(next.session.state.position, { x: 1200, y: 1000 });
+  assert.deepEqual(next.moves, []);
+  assert.deepEqual(next.link.reports.next.place, { area: 'outdoors', x: 1200, y: 1000 });
+  assert.equal((await store.load('fixture-account', 'dev'))?.reports?.moved, 2, 'and the record keeps it');
 });
 
 test('a ways-home answered idempotency-mismatch whose lookup fails: the refusal’s state still moves the hero', async (t) => {

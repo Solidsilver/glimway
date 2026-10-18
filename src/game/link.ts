@@ -962,7 +962,10 @@ export class Link {
     this.needsRead = this.entries.some((e) => e.sent)
     if (record.client === this.clientId && record.reports) {
       const live = this.reports.next
+      // A move this page already followed (attach, before the claim) stays followed.
+      const moved = this.reports.moved
       Object.assign(this.reports, new ReportBook(record.reports))
+      this.reports.moved = Math.max(this.reports.moved, moved)
       if (live.place) this.reports.note(live.place, live.hp, live.mana)
     }
     const state = record.server ? safeState(record.server) : null
