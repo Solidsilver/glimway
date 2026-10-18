@@ -48,10 +48,16 @@ func (a *Server) withTxClock(r *http.Request) (*http.Request, func() time.Time) 
 }
 
 // beginTx opens a transaction and restarts the request's clock: the next
-// requestTime reads after the store's lock is held.
+// requestTime reads after the store's lock is held. Reach an ended
+// transaction set is confirmed first, so no boundary check sees a hold
+// that rolled back (store/reach.go).
 func (a *Server) beginTx(ctx context.Context) (*sql.Tx, error) {
 	tx, err := a.Store.DB.BeginTx(ctx, nil)
 	if err != nil {
+		return nil, err
+	}
+	if err = store.ConfirmReach(ctx, tx); err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 	if c, ok := ctx.Value(txClockKey{}).(*txClock); ok {

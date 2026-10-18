@@ -151,10 +151,7 @@ func (a *Server) plant(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *
 	if err != nil {
 		return err
 	}
-	if err := a.settleTurning(ctx, tx, s.WorldID, now); err != nil {
-		return err
-	}
-	h, err := ownLand(ctx, tx, s, s.State.Area, now, "cannot-plant-here")
+	h, err := a.ownLand(ctx, tx, s, s.State.Area, now, "cannot-plant-here")
 	if err != nil {
 		return err
 	}
@@ -203,10 +200,10 @@ func (a *Server) plant(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *
 // uprootHomePlant digs a plant on your own land up with a trowel, from
 // beside where it stands today, into your pack whole, its growth kept
 // (camp_teardown.go digUpPlant). Whoever may plant there may dig: a
-// member, on the lot or in its lit backland (ownLand). The plant is
-// req.Target.
+// member, on the lot or in its lit backland (ownLand, which judges a
+// turning due first). The plant is req.Target.
 func (a *Server) uprootHomePlant(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contract.ItemsRequest, now int64, out *contract.ItemsResult) error {
-	h, err := ownLand(ctx, tx, s, s.State.Area, now, "not-your-land")
+	h, err := a.ownLand(ctx, tx, s, s.State.Area, now, "not-your-land")
 	if err != nil {
 		return err
 	}

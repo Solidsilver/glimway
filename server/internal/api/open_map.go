@@ -118,9 +118,6 @@ func (a *Server) nearRead(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	defer tx.Rollback()
-	if !location.OnGrid(s.WorldID, cx, cy) {
-		return fail(409, "beyond-frontier")
-	}
 	view, err := a.near(r.Context(), tx, s, cx, cy, a.requestTime(r.Context()).Unix())
 	if err != nil {
 		return chunkError(err)
@@ -136,6 +133,11 @@ func (a *Server) near(ctx context.Context, tx *sql.Tx, s store.Snapshot, cx, cy 
 	ep, err := a.openEpochs(ctx, tx, s.WorldID, now)
 	if err != nil {
 		return nil, err
+	}
+	// Only now, past a turning that may have let holds go, is the frontier
+	// this read's to check.
+	if !location.OnGrid(s.WorldID, cx, cy) {
+		return nil, fail(409, "beyond-frontier")
 	}
 	x0, y0, x1, y1 := frontier.Rect(s.WorldID)
 	held := frontier.Held(s.WorldID)

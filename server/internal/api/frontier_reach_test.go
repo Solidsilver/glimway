@@ -308,3 +308,69 @@ func TestLapsedReachRefusesReportAndMoves(t *testing.T) {
 		t.Fatal("the refusal's state isn't the moved one")
 	}
 }
+
+// A refused camp leaves no reach behind (step-back S1). The hold is taken
+// before the ground and the oil are checked, so each refusal here rolls one
+// back; straight after it, with no read between, neither the store's view
+// nor the presence socket's has the slack, and the next near read past the
+// edge is still refused.
+func TestRefusedCampLeavesNoReach(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	x.keeper(s.AccountID)
+	world := s.WorldID
+	ex, ey := reachColumn(t)
+	spots := x.campSpots(world, ex, ey)
+	open := map[[2]int]bool{}
+	for _, p := range spots {
+		open[p] = true
+	}
+	// blocked: a tile of the edge chunk a lamp can't stand on, and the open
+	// spot nearest it to stand.
+	var blocked, stand [2]int
+	for y := ey*24 + 3; y < ey*24+21 && blocked == ([2]int{}); y++ {
+		for lx := ex*24 + 3; lx < ex*24+21; lx++ {
+			if !open[[2]int{lx, y}] {
+				blocked = [2]int{lx, y}
+				break
+			}
+		}
+	}
+	if blocked == ([2]int{}) {
+		t.Fatal("no blocked tile on the edge")
+	}
+	best := -1
+	for _, p := range spots {
+		if d := max(abs(p[0]-blocked[0]), abs(p[1]-blocked[1])); best < 0 || d < best {
+			best, stand = d, p
+		}
+	}
+	noReach := func(why string) {
+		t.Helper()
+		var n int
+		if err := x.db.DB.QueryRow("SELECT count(*) FROM holds WHERE world_id=?", world).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		if n != 0 || frontier.Inside(world, ex, ey-1) || frontier.InsidePublished(world, ex, ey-1) {
+			t.Fatalf("%s: %d holds, reach past the edge %v, published %v", why, n, frontier.Inside(world, ex, ey-1), frontier.InsidePublished(world, ex, ey-1))
+		}
+		x.near(c, ex, ey-1, 409)
+	}
+	// No oil: refused after the hold.
+	lamp := x.carry(s.AccountID, "way-lamp")
+	if _, code := x.campOp(c, s, &contract.CampRequest{Action: "set", ItemId: lamp, X: int32(spots[0][0]), Y: int32(spots[0][1])}, spots[1][0], spots[1][1], 409); code != "insufficient-materials" {
+		t.Fatalf("set without oil: %s", code)
+	}
+	noReach("refused for oil")
+	// Blocked ground: refused after the hold.
+	x.stack(s.AccountID, "hearth-oil", "", 1)
+	if _, code := x.campOp(c, s, &contract.CampRequest{Action: "set", ItemId: lamp, X: int32(blocked[0]), Y: int32(blocked[1])}, stand[0], stand[1], 409); code != "land-blocked" {
+		t.Fatalf("set on blocked ground: %s", code)
+	}
+	noReach("refused for the ground")
+	// Set where it may stand, it pushes out at once.
+	x.campOp(c, s, &contract.CampRequest{Action: "set", ItemId: lamp, X: int32(spots[0][0]), Y: int32(spots[0][1])}, spots[1][0], spots[1][1], 200)
+	if !frontier.Inside(world, ex, ey-1) || !frontier.InsidePublished(world, ex, ey-1) {
+		t.Fatal("the set camp's reach")
+	}
+}

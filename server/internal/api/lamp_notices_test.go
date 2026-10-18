@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"net/http"
 	"testing"
 
@@ -156,5 +157,65 @@ func TestLandStatusKeeper(t *testing.T) {
 	}
 	if lot := theirs.Chunks[1]; lot.Yours || lot.Keeper != "" {
 		t.Fatal(lot)
+	}
+}
+
+// A lot lantern's notice is told once per home, not per gate (step-back
+// S3): every world has a gate 0. Alice is told of her gate-0 lantern's
+// dimming in her world, then moves to Carol's household at gate 0 in
+// another world within the same episode, and is told of that one too.
+func TestLampNoticeEachWorldsLantern(t *testing.T) {
+	x := newRig(t)
+	ac, as := x.ready("alice")
+	cc, cs := x.ready("carol")
+	if as.WorldID == cs.WorldID {
+		t.Fatal("one world")
+	}
+	sx, sy := atStake(0)
+	for _, p := range []struct {
+		c *http.Cookie
+		s *response
+	}{{ac, &as}, {cc, &cs}} {
+		x.claimGate(p.c, p.s, 0)
+		x.stack(p.s.AccountID, "hearth-oil", "", 1)
+		x.lanternOp(p.c, p.s, 0, sx, sy, 200)
+	}
+	// The turning burns both lanterns' one wick of oil: both are dimming.
+	x.turn()
+	ac, as = x.again("alice")
+	// Away from gate 0 (the same chunks in every world), so she is told.
+	ax, ay := local(2, -1, [2]int{13, 14})
+	as = x.standAt(ac, as, ax, ay)
+	if got := x.lampNotices(ac); len(got) != 1 || got[0].Kind != lotLanternKind || got[0].Id != "0" {
+		t.Fatal("alice's own:", noticeKinds(got), got)
+	}
+	var carolHome string
+	if err := x.db.DB.QueryRow("SELECT homestead_id FROM homestead_members WHERE account_id=?", cs.AccountID).Scan(&carolHome); err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	tx, err := x.db.DB.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+	if _, err = tx.Exec("UPDATE homestead_members SET homestead_id=? WHERE account_id=?", carolHome, as.AccountID); err != nil {
+		t.Fatal(err)
+	}
+	s, err := x.api.Config.State.Load(ctx, tx, as.AccountID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// As the read does: Carol's world turns, then the notices.
+	s.WorldID = cs.WorldID
+	if err = x.api.turnWick(ctx, tx, s.WorldID, x.now.Load()); err != nil {
+		t.Fatal(err)
+	}
+	out, err := lampNotices(ctx, tx, &s, x.now.Load())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := out.Notices; len(got) != 1 || got[0].Kind != lotLanternKind || got[0].Id != "0" {
+		t.Fatal("carol's, in the other world:", noticeKinds(got), got)
 	}
 }

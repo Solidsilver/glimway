@@ -4,21 +4,27 @@ package store
 // its held keys; package frontier keeps each world's, and this file keeps it
 // matching the holds table. Holds change in two places only: Hold takes one
 // (a camp or lot lantern set) and judgeHolds lets them go at the turning; a
-// release keeps its chunk, so its reach, until then. Each tells frontier the
-// world's keys as its transaction now sees them. That is right once the
-// transaction commits; if it rolls back instead, the next transaction to
-// read the world's current epoch (Current, which nearly every request does)
-// reads the keys again. The store has one connection, so a transaction
-// other than the one that set them means that one has ended.
+// release keeps its chunk, so its reach, until then. Each stages the world's
+// keys as its transaction now sees them (frontier.Stage): that transaction
+// reads its own reach from then on, and nobody else does. The store's
+// connection publishes what was staged when the transaction commits and
+// drops it when it rolls back (reachDriver); a rollback to a savepoint
+// stages the keys again (RefreshReach). As a backstop, the next transaction
+// reads again the keys of a world another transaction set (ConfirmReach,
+// and confirmReach before a world's epoch is read): the store has one
+// connection, so that transaction has ended, however it ended.
 
 import (
 	"context"
 	"database/sql"
+	"slices"
 	"sync"
 
 	"glimway/content"
 	"glimway/server/internal/frontier"
 	"glimway/server/internal/rules"
+
+	"modernc.org/sqlite"
 )
 
 var (
@@ -27,6 +33,23 @@ var (
 	// another transaction confirms them.
 	reachBy = map[string]*sql.Tx{}
 )
+
+// reachDriver is SQLite with the hooks that end a transaction's staged
+// reach. A commit hook runs as the commit starts; if the commit then fails,
+// SQLite rolls back and the next transaction's ConfirmReach reads the keys
+// again.
+const reachDriver = "sqlite-glimway"
+
+func init() {
+	d := &sqlite.Driver{}
+	d.RegisterConnectionHook(func(c sqlite.ExecQuerierContext, _ string) error {
+		h := c.(sqlite.HookRegisterer)
+		h.RegisterCommitHook(func() int32 { frontier.Publish(); return 0 })
+		h.RegisterRollbackHook(frontier.Discard)
+		return nil
+	})
+	sql.Register(reachDriver, d)
+}
 
 // heldKeys are the world's held chunks.
 func heldKeys(ctx context.Context, q interface {
@@ -48,8 +71,8 @@ func heldKeys(ctx context.Context, q interface {
 	return out, rows.Err()
 }
 
-// syncReach tells frontier the world's held keys as tx sees them, after tx
-// took or let go a hold.
+// syncReach stages the world's held keys as tx sees them, after tx took or
+// let go a hold.
 func syncReach(ctx context.Context, tx *sql.Tx, world string) error {
 	keys, err := heldKeys(ctx, tx, world)
 	if err != nil {
@@ -57,8 +80,47 @@ func syncReach(ctx context.Context, tx *sql.Tx, world string) error {
 	}
 	reachMu.Lock()
 	defer reachMu.Unlock()
-	frontier.Set(world, keys)
+	frontier.Stage(world, keys)
 	reachBy[world] = tx
+	return nil
+}
+
+// RefreshReach stages again the keys of every world tx set, after tx rolled
+// back to a savepoint: the holds it took or let go since may be undone.
+func RefreshReach(ctx context.Context, tx *sql.Tx) error {
+	reachMu.Lock()
+	var worlds []string
+	for w, by := range reachBy {
+		if by == tx {
+			worlds = append(worlds, w)
+		}
+	}
+	reachMu.Unlock()
+	for _, w := range worlds {
+		if err := syncReach(ctx, tx, w); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// ConfirmReach confirms every world's keys another transaction set; a
+// request runs it as it begins, before any boundary check.
+func ConfirmReach(ctx context.Context, tx *sql.Tx) error {
+	reachMu.Lock()
+	var worlds []string
+	for w, by := range reachBy {
+		if by != tx {
+			worlds = append(worlds, w)
+		}
+	}
+	reachMu.Unlock()
+	slices.Sort(worlds)
+	for _, w := range worlds {
+		if err := confirmReach(ctx, tx, w); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

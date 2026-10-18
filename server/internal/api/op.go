@@ -154,6 +154,10 @@ func (a *Server) keyedOpFinalized(w http.ResponseWriter, r *http.Request, op *co
 			if _, e := tx.ExecContext(ctx, "ROLLBACK TO gameplay"); e != nil {
 				return e
 			}
+			// A hold taken (or let go) since is undone; so is its reach.
+			if e := store.RefreshReach(ctx, tx); e != nil {
+				return e
+			}
 		}
 		s, errLoad := a.Config.State.Load(ctx, tx, s.AccountID)
 		if errLoad != nil {
