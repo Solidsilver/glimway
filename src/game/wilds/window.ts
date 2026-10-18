@@ -60,7 +60,7 @@ import { paintTable } from './ground-table.ts'
 import { chunkOrigin } from './terrain.ts'
 import { fnv1a32 } from '../../lib/hash.ts'
 import { TILE } from '../../lib/tile.ts'
-import { chunkTerrain, insideNamedFrontier, loadWildsChunk, NEAR_MAX_AGE_MS, placeKey, refreshLand, refreshNear, wildsEpoch, wildsFrontier, wildsView } from './store.ts'
+import { chunkTerrain, insideNamedFrontier, landRevision, loadWildsChunk, NEAR_MAX_AGE_MS, placeKey, refreshLand, refreshNear, wildsEpoch, wildsFrontier, wildsView } from './store.ts'
 import { markSeen, markWalked } from './walked.ts'
 import { LandHere } from './land-here.ts'
 import { perfSpan, perfTime, perfWithout } from '../perf.ts'
@@ -182,7 +182,7 @@ export class WildsWindow {
   private readonly id = Math.random().toString(36).slice(2, 10)
   /** The HUD's land chip: the occupied chunk's status, told on change. */
   private readonly landHere = new LandHere((cx, cy) => {
-    if (!fixedPlaceOf(cx, cy)) void refreshLand(this.deps.session, cx, cy)
+    if (!fixedPlaceOf(cx, cy)) return refreshLand(this.deps.session, cx, cy)
   })
 
   constructor(private deps: WindowDeps) {
@@ -243,13 +243,14 @@ export class WildsWindow {
     }
     const hero = this.deps.hero()
     const at = chunkOfPixel(hero.x, hero.y)
+    // Before the frontier: a forgotten view (a world move) takes the old land's chip down.
+    const view = wildsView()
+    this.landHere.update(at.cx, at.cy, view, landRevision())
     // Nothing to place a window on until the Wilds have been read once (the
     // entities say so on screen, and try again).
     if (!wildsFrontier()) return
     if (crossed(this.plan?.center ?? null, at)) this.recentre(at.cx, at.cy)
     else this.dropBehind()
-    const view = wildsView()
-    this.landHere.update(at.cx, at.cy, view)
     if (view && view.version !== this.lastVersion) {
       this.lastVersion = view.version
       this.refreshChanged()

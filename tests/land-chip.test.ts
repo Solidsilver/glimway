@@ -5,7 +5,7 @@ import { ChunkLandStatusSchema } from '../src/lib/gen/glimway/v1/wilds_pb.js'
 import { LampNoticeSchema } from '../src/lib/gen/glimway/v1/camps_pb.js'
 import { lampNoticeText, landChip, landWhose, sameChip } from '../src/lib/wilds/land-chip.ts'
 import { LAMP_NOTICE, LAND_CHIP } from '../src/content/land-chip.ts'
-import { ASK_AGAIN_MS, LandHere } from '../src/game/wilds/land-here.ts'
+import { ASK_AGAIN_MS, LandHere, RETRY_MAX_MS, RETRY_MS } from '../src/game/wilds/land-here.ts'
 import { bus, EV } from '../src/game/events.ts'
 import type { WildsView } from '../src/game/wilds/store.ts'
 
@@ -91,7 +91,9 @@ test('the tracker tells the HUD only of a change, and asks once per chunk and wi
   try {
     const view = { version: 1, wick: { id: 'w1' }, land: new Map([['2,-4', camp({ yours: true })], ['3,-4', land({ tier: 'wild', nextTurning: 'detail-turns' })]]) } as unknown as WildsView
     let clock = 0
-    const here = new LandHere((cx, cy) => asked.push(`${cx},${cy}`), () => clock)
+    const here = new LandHere((cx, cy) => {
+      asked.push(`${cx},${cy}`)
+    }, () => clock)
     here.update(2, -4, view)
     here.update(2, -4, view) // the same frame again: nothing
     assert.deepEqual(told, ['Held · your camp'])
@@ -121,4 +123,24 @@ test('the tracker tells the HUD only of a change, and asks once per chunk and wi
   } finally {
     bus.off(EV.landHere, listen)
   }
+})
+
+test('a failed read is asked again while standing still, each wait longer, never longer than the cap', async () => {
+  const asks: number[] = []
+  let clock = 0
+  const here = new LandHere(() => {
+    asks.push(clock)
+    return Promise.resolve(false)
+  }, () => clock)
+  const view = { version: 1, wick: { id: 'w1' }, land: new Map() } as unknown as WildsView
+  for (let i = 0; i < 4000; i++) {
+    here.update(2, -4, view)
+    await Promise.resolve()
+    clock += 250
+  }
+  const waits = asks.slice(1).map((t, i) => t - asks[i]!)
+  assert.equal(waits[0], RETRY_MS)
+  for (let i = 1; i < waits.length; i++) assert.ok(waits[i]! >= waits[i - 1]!)
+  assert.equal(Math.max(...waits), RETRY_MAX_MS)
+  here.clear()
 })

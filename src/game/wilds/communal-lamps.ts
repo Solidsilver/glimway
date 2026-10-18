@@ -40,7 +40,7 @@ import { omArt } from './open-map-art.ts'
 import { itemsFor } from '../items.ts'
 import { homesteadsFor } from '../homestead.ts'
 import { groundAt, solidAt } from './ground-view.ts'
-import { chunkTerrain } from './store.ts'
+import { chunkTerrain, invalidateLand } from './store.ts'
 import { chunkOrigin } from './terrain.ts'
 import { wildsPoint } from './sites.ts'
 
@@ -55,6 +55,8 @@ export interface CommunalLampsDeps {
 
 /** How often the lamps are read again while you stand still (ms). */
 const READ_EVERY_MS = 30_000
+/** Lamp operations that change the land around the lamp. */
+const LAND_ACTIONS = new Set(['relight', 'tend', 'post', 'lift'])
 /** The warm light of a lit lamp. */
 const LAMPLIGHT = 0xffb054
 /** A lamp stone's niche, world px above its foot (the relit wick fills texel rows 44..63 of 128). */
@@ -74,6 +76,8 @@ export class WildsCommunalLamps {
   private cutStone = ''
   /** The road stones drawn over the chunks' dark ones, for playtests. */
   private stones: { site: string; frame: string }[] = []
+  /** The scene this controller was built for has shut down: an answer arriving later opens no panel and plays no sound (its toast is still told). */
+  private gone = false
 
   constructor(private scene: Phaser.Scene, private deps: CommunalLampsDeps) {
     const onPost = (d: { itemId: string }) => void this.post(d.itemId)
@@ -85,6 +89,7 @@ export class WildsCommunalLamps {
     bus.on(EV.lampStoneLook, onStone)
     bus.on(EV.lampNamed, onNamed)
     scene.events.once('shutdown', () => {
+      this.gone = true
       bus.off(EV.communalPost, onPost)
       bus.off(EV.lampStoneLook, onStone)
       bus.off(EV.lampNamed, onNamed)
@@ -278,6 +283,8 @@ export class WildsCommunalLamps {
     const link = this.deps.session.link
     if (!link) return
     const r = await link.lampLandmarksRead(id)
+    // Walked off (a door, a world move) while it was read: the panel would be for a lamp left behind.
+    if (this.gone || this.deps.session.link !== link) return
     if (!r.ok) {
       bus.emit(EV.toast, { text: COMMUNAL_LAMP_ERRORS[r.code] ?? homeErrorText(r.code), icon: 'glim', kind: 'error' })
       return
@@ -312,17 +319,23 @@ export class WildsCommunalLamps {
     this.deps.notePosition()
     try {
       const r = await link.communalLamp({ lamp: '', itemId: '', x: 0, y: 0, parts: [], ...fields })
+      // A refusal, or no answer yet (`pending`), is told even after a door: only the sound stays with the scene.
       if (!r.ok) {
-        sfx('fizzle')
+        if (!this.gone) sfx('fizzle')
         bus.emit(EV.toast, { text: COMMUNAL_LAMP_ERRORS[r.code] ?? homeErrorText(r.code), icon: 'glim', kind: 'error' })
         return
       }
-      sfx(fields.action === 'lift' || fields.action === 'copy' ? 'pop' : 'lantern')
       void itemsFor(this.deps.session).load()
       if (fields.action === 'post' || fields.action === 'lift') void homesteadsFor(this.deps.session).load()
-      const l = r.result.lamp ?? null
-      const gone = fields.action === 'lift' ? fields.lamp : undefined
-      this.adopt([...this.lamps.filter((x) => x.id !== l?.id && x.id !== gone), ...(l ? [l] : [])])
+      // A lamp lit, posted, lifted or tended changes the land around it (its tier, or this wick's visit): the land chip asks again.
+      if (LAND_ACTIONS.has(fields.action)) invalidateLand()
+      // The scene it was asked in has gone: its lamps aren't kept, but the outcome's toast is still told.
+      if (!this.gone) {
+        sfx(fields.action === 'lift' || fields.action === 'copy' ? 'pop' : 'lantern')
+        const l = r.result.lamp ?? null
+        const gone = fields.action === 'lift' ? fields.lamp : undefined
+        this.adopt([...this.lamps.filter((x) => x.id !== l?.id && x.id !== gone), ...(l ? [l] : [])])
+      }
       then?.()
     } finally {
       this.busy = false
