@@ -71,6 +71,7 @@ Generated frames are listed by canonical item or world-sprite ID. Native dimensi
 - `hearth-oil`: `item-hearth-oil` (default)
 - `wick-sap`: `item-wick-sap` (default)
 - `storm-oil`: `item-storm-oil` (default)
+- `carried-plant`: `item-carried-plant` (default; any plant lifted whole, not an item definition)
 
 ## Keepsakes
 

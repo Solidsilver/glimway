@@ -20,10 +20,10 @@
       "method": "Generated and revised with built-in image_gen. Source retained; build_manifest.py measures each cell and records source rectangles; the items atlas builder scales each crop to its 16x16 inventory canvas."
     },
     {
-      "key": "carried-plant-art-only",
+      "key": "item-carried-plant",
       "source": "carried-plant-art-only-source-v2.png",
       "prompt": "A compact freshly lifted young plant with an intact root ball. Make a broad, squat leafy crown and a clearly visible round, chunky soil-and-root ball directly beneath, together as one centered icon. Fill most of a square and read at 16x16 pixels; avoid a tall thin seedling silhouette. Crisp pixel art, dark warm-brown outline, muted greens, warm brown roots, dark soil, upper-left light, transparent background; no pot, bag, shovel, hands, label or text.",
-      "method": "Generated with built-in image_gen. build_manifest.py produces a 16x16 art-only candidate; no gameplay item or runtime alias exists on this branch."
+      "method": "Generated with built-in image_gen. Source retained; build_manifest.py measures it as one cell (job carried-plant-icon) and records its source rectangle; the items atlas builder scales the crop to its 16x16 inventory canvas."
     }
   ]
 }

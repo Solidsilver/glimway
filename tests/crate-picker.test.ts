@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CRATE_WORDS, collectedLine, cratePick, crateRows } from '../src/lib/camps.ts';
-import { CARRIED_PLANT_WORDS, modelEntries } from '../src/lib/inventory.ts';
+import { CARRIED_PLANT_ART, CARRIED_PLANT_WORDS, modelEntries } from '../src/lib/inventory.ts';
 import type { ItemsView } from '../src/lib/api/types.ts';
 
 const entry = (id: number, kind: string, itemDef: string, qty = 1, o: { movedBy?: string; reason?: string } = {}) => ({ id, kind, itemDef, qty, ...o });
@@ -64,5 +64,7 @@ test('a carried plant is its own row in the pack, named whole, plantable, never 
   assert.equal(p.giveable, false);
   assert.equal(p.usable, false);
   assert.equal(p.pocketable, false);
+  assert.equal(p.art, CARRIED_PLANT_ART, 'the lifted-whole icon, not the seed’s');
+  assert.notEqual(seeds.art, CARRIED_PLANT_ART);
   assert.match(CARRIED_PLANT_WORDS.planted('Birch sapling'), /^Your birch sapling is back in the ground/);
 });

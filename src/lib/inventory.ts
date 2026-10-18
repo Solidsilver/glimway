@@ -334,6 +334,9 @@ export function modelEntries(view: ItemsView, src: Pick<InventorySource, 'pack' 
   return out;
 }
 
+/** A carried plant's icon (items pass `item-carried-plant`): a plant lifted with its root ball, for every kind of plant. */
+export const CARRIED_PLANT_ART = 'item-carried-plant';
+
 /** A carried plant's words (lamps.md 2.7): it is the plant itself, lifted whole, not its seed. */
 export const CARRIED_PLANT_WORDS = {
   name: (seed: string) => `${seed}, lifted whole`,
@@ -341,9 +344,9 @@ export const CARRIED_PLANT_WORDS = {
   planted: (seed: string) => `Your ${seed.toLowerCase()} is back in the ground, growing on from where it was.`,
 } as const;
 
-/** A carried plant's row: its own key, one of it, nothing to give, use or pocket. */
+/** A carried plant's row: its own key and icon, one of it, nothing to give, use or pocket. */
 export function carriedPlantEntry(d: ItemDef, p: CarriedPlantView): Partial<InventoryEntry> & { key: string; qty: number } {
-  return { key: `plant:${p.id}`, qty: 1, carriedPlant: p, name: CARRIED_PLANT_WORDS.name(d.name), blurb: CARRIED_PLANT_WORDS.blurb, usable: false, pocketable: false, carryable: false, giveable: false };
+  return { key: `plant:${p.id}`, qty: 1, carriedPlant: p, name: CARRIED_PLANT_WORDS.name(d.name), blurb: CARRIED_PLANT_WORDS.blurb, art: CARRIED_PLANT_ART, stateArt: null, usable: false, pocketable: false, carryable: false, giveable: false };
 }
 
 /** Which instances could take this fitting (tools in the pack with a free slot and no fitting of its kind). */

@@ -503,7 +503,8 @@ a carried plant (migration 048, `carried_plants`), keeping its own id and `plant
 growth; nothing grows into a crop yet, so its age is all the growth there is). Digging a plant up
 with the trowel lifts it the same way (`digUpPlant` → `carryPlant`), at home, in the lit backland
 and at camps, into the digger's pack; the dig still wears the trowel once. `ItemsView.plants`
-lists carried plants, and the pack shows each as its own row ("Birch sapling, lifted whole") with
+lists carried plants, and the pack shows each as its own row ("Birch sapling, lifted whole",
+drawn with the items pass's `item-carried-plant` icon rather than its seed's) with
 Plant wherever its seed could go. Planting one is the seed's own operation with the same rules:
 `POST /api/items/plant` with `instance` on the lot and in its lit backland (`ownLand`), and the
 camp's `plant` with `item_id` where the planter may build (`mayBuild`). It goes back in with the
