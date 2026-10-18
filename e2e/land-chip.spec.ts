@@ -32,7 +32,7 @@ const DIMMING_NOTICE = /Your way-lamp is dimming\. A flask of oil keeps the camp
 /** The next lamp-notices answer (a new session asks with its first calendar): kind and id of each light told. */
 const noticesAnswer = (page: Page) =>
   page.waitForResponse((r) => new URL(r.url()).pathname === '/api/lamp-notices' && r.status() === 200, { timeout: 60_000 })
-    .then(async (r) => ((await r.json()) as { result: { notices: { kind: string; id: string }[] } }).result.notices.map((n) => ({ kind: n.kind, id: n.id })))
+    .then(async (r) => ((await r.json()) as { notices: { kind: string; id: string }[] }).notices.map((n) => ({ kind: n.kind, id: n.id })))
 
 /** Open land with open land above it in a wick chunk past the Whitequiet, where a lamp could stand (camps.spec.ts). */
 async function standInTheWilds(page: Page): Promise<{ tx: number; ty: number }> {

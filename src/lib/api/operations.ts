@@ -140,7 +140,7 @@ export function createOperationsApi(send: Transport): OperationsApi {
     async camps() { return decodeMixed(await send('GET', '/api/camps'), (r) => decodeWire(CampsReadSchema, r)).result; },
     async recovery() { return decodeMixed(await send('GET', '/api/recovery'), (r) => decodeWire(RecoveryReadSchema, r)).result; },
     async recoveryCollect(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['recovery-collect'], req)); },
-    async lampNotices() { return decodeMixed(await send('GET', '/api/lamp-notices'), (r) => decodeWire(LampNoticesReadSchema, r)).result; },
+    async lampNotices() { const raw = await send('GET', '/api/lamp-notices'); return validated(() => decodeWire(LampNoticesReadSchema, raw)); },
     async communalLamp(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['communal-lamp'], req)); },
     async communalLamps() { return decodeMixed(await send('GET', '/api/communal-lamps'), (r) => decodeWire(CommunalLampsReadSchema, r)).result; },
     async lampLandmarks(lamp) { return decodeMixed(await send('GET', `/api/lamp-landmarks/${encodeURIComponent(lamp)}`), (r) => decodeWire(LampLandmarksReadSchema, r)).result; },

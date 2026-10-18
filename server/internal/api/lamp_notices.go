@@ -39,7 +39,13 @@ func (a *Server) lampNoticesRead(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return a.finishRead(w, r, tx, s, out)
+	// A plain read, like the map's: no player state rides on it, so it never
+	// maintains or re-saves the reader's state beside their own saves.
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+	writeProto(w, 200, out)
+	return nil
 }
 
 // dimmingLight is one light the caller keeps that is dimming: its notice,

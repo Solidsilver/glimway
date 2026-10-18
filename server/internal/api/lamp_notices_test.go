@@ -6,12 +6,19 @@ import (
 
 	"glimway/server/internal/chunks"
 	contract "glimway/server/internal/gen/glimway/v1"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 func (x *rig) lampNotices(c *http.Cookie) []*contract.LampNotice {
 	x.t.Helper()
+	w := x.rawHTTP("GET", "/api/lamp-notices", nil, c)
+	if w.Code != 200 {
+		x.t.Fatalf("lamp notices: %d %s", w.Code, w.Body.String())
+	}
 	v := &contract.LampNoticesRead{}
-	x.mixedRead("/api/lamp-notices", c, v)
+	if err := protojson.Unmarshal(w.Body.Bytes(), v); err != nil {
+		x.t.Fatal(err)
+	}
 	return v.Notices
 }
 
