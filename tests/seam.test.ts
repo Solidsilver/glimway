@@ -14,6 +14,7 @@ import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import { readFileSync } from 'node:fs';
 import { registerHooks } from 'node:module';
+import { TravelHold } from '../src/game/scenes/travel-hold.ts';
 
 // Phaser is a stub in node tests: give it what a fixed chunk's collision and glows touch.
 const Phaser = (await import('phaser')).default as Record<string, unknown>;
@@ -836,7 +837,7 @@ test('zero HP mouth slide and safeSpot stay on attached fixed ground', async () 
     setVelocity(x: number, y: number) { this.velocity = { x, y }; } };
   h.body = body;
   Object.assign(s, { hero: { sprite: h, halt() {} }, session: { zeroHpLocked: true, state: { position: {} } },
-    world: { areaId: 'outdoors' }, window: { hasFixed: (cx: number, cy: number) => cx === 0 && cy === 1 }, safeSpot: null });
+    world: { areaId: 'outdoors' }, window: { hasFixed: (cx: number, cy: number) => cx === 0 && cy === 1 }, safeSpot: null, travel: new TravelHold() });
   s['holdSafe'](1 / 60);
   s['holdFixed'](1 / 60);
   assert.deepEqual({ x: h.x, y: h.y }, { x: 382, y: 386 });

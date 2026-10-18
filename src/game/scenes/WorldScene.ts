@@ -85,6 +85,7 @@ import { onSceneEnd } from '../scene-end'
 import { exposeWorldHooks } from './world-dev-hooks'
 import { playHold, runFrame, type WorldFrame } from './world-frame'
 import { FadeHold } from './fade-hold'
+import { TravelHold } from './travel-hold'
 import { perfWatch } from '../perf'
 import { Unmoored } from '../entities/unmoored'
 import { WorldActions } from './world-actions'
@@ -174,7 +175,11 @@ export class WorldScene extends Phaser.Scene {
   private offHand: OffHandVisual | null = null
   /** Keys, the belt and the mouse (./world-controls.ts). */
   private controls!: WorldControls
-  private transitioning = false
+  /** Leaving this build, or a Turning holding play (./travel-hold.ts): a relocation waits out the hold. */
+  private readonly travel = new TravelHold<RelocatePayload>()
+  private get transitioning(): boolean {
+    return this.travel.still
+  }
   /** Dark while the ground's transitions are painted (a first visit; see create). */
   private readonly fadeHold = new FadeHold()
   private reducedMotion = false
@@ -206,7 +211,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   init(data: SceneData): void {
-    this.transitioning = false
+    this.travel.reset()
     this.fadeHold.cancel()
     this.pendingEntry = data?.entry ?? null
     this.pendingDefeatToast = data?.fromDefeat === true
@@ -680,9 +685,11 @@ export class WorldScene extends Phaser.Scene {
       unmoored: this.unmoored,
       window: () => this.window,
       wilds: () => this.wilds,
-      moving: () => this.transitioning,
+      moving: () => this.travel.leaving,
       hold: (on) => {
-        this.transitioning = on
+        // Letting go takes the server's relocation kept meanwhile, before any position sample.
+        const kept = this.travel.hold(on)
+        if (kept) this.onRelocate(kept)
       }
     })
     if (this.pendingTurned) {
@@ -979,10 +986,11 @@ export class WorldScene extends Phaser.Scene {
    * measures reach from where the hero really is).
    */
   private notePosition(): void {
-    if (this.transitioning || !this.fixedReady(this.hero.sprite.x, this.hero.sprite.y)) return
+    if (!this.fixedReady(this.hero.sprite.x, this.hero.sprite.y)) return
     // Positions are the scene's pixels everywhere; on the open map those are
     // world pixels (one convention for saves, reloads, claims and reports).
-    this.session.state.position = { x: Math.round(this.hero.sprite.x), y: Math.round(this.hero.sprite.y) }
+    // Not while leaving or held: the save may name a destination this sprite hasn't reached.
+    this.travel.note(this.session.state, this.hero.sprite)
   }
 
   /** Tell the presence feed where the hero is (it paces the wire itself). */
@@ -1106,10 +1114,11 @@ export class WorldScene extends Phaser.Scene {
    * another device played). Same area: step there (on the open map, only
    * where the window can stand you; else the scene rebuilds around the new
    * spot). Another area: rebuild the scene, which places the hero from the
-   * session state.
+   * session state. While a Turning holds play it waits for the hold to lift;
+   * while leaving, the next build reads it from the save.
    */
   private onRelocate(p: RelocatePayload): void {
-    if (this.transitioning) return
+    if (!this.travel.relocate(p)) return
     this.safeSpot = null
     if (isWildsArea(p.area) && this.world.open) {
       const at = this.world.open.standAt(p.x, p.y)
@@ -1356,7 +1365,7 @@ export class WorldScene extends Phaser.Scene {
     data: SceneData,
     opts: { fadeMs?: number | null; inDark?: () => unknown } = {}
   ): void {
-    this.transitioning = true
+    this.travel.leave()
     this.fadeHold.cancel()
     // Where this scene's hero stood is no longer where you are: the map falls back to the save until the next scene says.
     clearMapPosition(this)
