@@ -175,6 +175,10 @@ export declare const VitalsSchema: GenMessage<Vitals, {validType: VitalsValid}>;
  * wick_epoch: the wick epoch this player's place was last recorded in ('' before
  * any); a place left in an ended epoch is moved to the entrance.
  * (outer_epoch, the 3x3 regions' name for it, was 5.)
+ * moved_version: the version at which the server last chose this place
+ * itself (a way home's landing, a reach settled around the player, a room
+ * it recovered; 0: never). Never an echo of a place the client sent: the
+ * client follows a move newer than the last it applied, and only then.
  *
  * @generated from message glimway.v1.Place
  */
@@ -203,6 +207,11 @@ export declare type Place = Message<"glimway.v1.Place"> & {
    * @generated from field: string wick_epoch = 6;
    */
   wickEpoch: string;
+
+  /**
+   * @generated from field: double moved_version = 7;
+   */
+  movedVersion: number;
 };
 
 export declare type PlaceValid = Place;

@@ -333,6 +333,10 @@ func (x *Vitals) GetAbilityReadyAt() map[string]float64 {
 // wick_epoch: the wick epoch this player's place was last recorded in (” before
 // any); a place left in an ended epoch is moved to the entrance.
 // (outer_epoch, the 3x3 regions' name for it, was 5.)
+// moved_version: the version at which the server last chose this place
+// itself (a way home's landing, a reach settled around the player, a room
+// it recovered; 0: never). Never an echo of a place the client sent: the
+// client follows a move newer than the last it applied, and only then.
 type Place struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	Area            string                 `protobuf:"bytes,1,opt,name=area,proto3" json:"area,omitempty"`
@@ -340,6 +344,7 @@ type Place struct {
 	Y               float64                `protobuf:"fixed64,3,opt,name=y,proto3" json:"y,omitempty"`
 	PlaceSetVersion float64                `protobuf:"fixed64,4,opt,name=place_set_version,json=placeSetVersion,proto3" json:"place_set_version,omitempty"`
 	WickEpoch       string                 `protobuf:"bytes,6,opt,name=wick_epoch,json=wickEpoch,proto3" json:"wick_epoch,omitempty"`
+	MovedVersion    float64                `protobuf:"fixed64,7,opt,name=moved_version,json=movedVersion,proto3" json:"moved_version,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -409,6 +414,13 @@ func (x *Place) GetWickEpoch() string {
 	return ""
 }
 
+func (x *Place) GetMovedVersion() float64 {
+	if x != nil {
+		return x.MovedVersion
+	}
+	return 0
+}
+
 var File_glimway_v1_op_proto protoreflect.FileDescriptor
 
 const file_glimway_v1_op_proto_rawDesc = "" +
@@ -445,14 +457,15 @@ const file_glimway_v1_op_proto_rawDesc = "" +
 	"\x10ability_ready_at\x18\v \x03(\v2&.glimway.v1.Vitals.AbilityReadyAtEntryR\x0eabilityReadyAt\x1aA\n" +
 	"\x13AbilityReadyAtEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"\x95\x01\n" +
+	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"\xba\x01\n" +
 	"\x05Place\x12\x12\n" +
 	"\x04area\x18\x01 \x01(\tR\x04area\x12\f\n" +
 	"\x01x\x18\x02 \x01(\x01R\x01x\x12\f\n" +
 	"\x01y\x18\x03 \x01(\x01R\x01y\x12*\n" +
 	"\x11place_set_version\x18\x04 \x01(\x01R\x0fplaceSetVersion\x12\x1d\n" +
 	"\n" +
-	"wick_epoch\x18\x06 \x01(\tR\twickEpochJ\x04\b\x05\x10\x06R\vouter_epochB1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
+	"wick_epoch\x18\x06 \x01(\tR\twickEpoch\x12#\n" +
+	"\rmoved_version\x18\a \x01(\x01R\fmovedVersionJ\x04\b\x05\x10\x06R\vouter_epochB1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
 
 var (
 	file_glimway_v1_op_proto_rawDescOnce sync.Once

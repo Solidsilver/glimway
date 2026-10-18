@@ -87,6 +87,8 @@ export const WAYS_HOME_LINES = {
   fight: 'Not in a fight. Get clear first.',
   arrived: { turncap: 'Back at the north arch. The turncap’s spent.' } as Record<'turncap', string>,
   arrivedBeside: (b: Pick<WaysHomeBinding, 'lampName' | 'kind'>) => `Beside ${spoken(b)}. The ash is spent.`,
+  /** A way home that answered after its caller heard `pending` (or after a reload). */
+  late: (arrived: string) => `Your way home went through after all. ${arrived}`,
   bound: (b: Pick<WaysHomeBinding, 'lampName' | 'kind'>) => `Your pouch is bound to ${spoken(b)}.`,
   bind: 'Bind it to the lamp here',
   unbound: 'Not bound to a lamp yet. Stand by one and bind it.',
