@@ -63,6 +63,7 @@ var deployedMigrationHistory = []struct{ name, sha256 string }{
 	{"045_claim_rules.sql", "cda781eef55b72d2090bf5d08b76707a7dae9475de6f9be16da31bfd86e39e8c"},
 	{"046_lamp_naming_follows_lamp.sql", "f96dfa5d71a4126ddbc7a0c3d1b68b1efaf105891dc2025b256a77042d288369"},
 	{"047_turnings_and_crates.sql", "5cfad6a954f87ca9e43e8b2c51366c60a058923a7d75ce75fc847ed60185f13d"},
+	{"048_carried_plants.sql", "3ce63beec22ecfdae503951b1ea6d0c5c7f6d705a2d1d7a0bc19e801965ab696"},
 }
 
 func checkDeployedHistory(history []migrationRecord) error {

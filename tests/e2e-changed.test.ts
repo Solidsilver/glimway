@@ -133,7 +133,7 @@ test('a content schema with no family rule runs only the smoke tier', () => {
 
 test('the server catch-all applies only to files with no rule of their own', () => {
   const signIn = ['connected.spec.ts', 'connected-screens.spec.ts', 'onboarding.spec.ts', 'polish.spec.ts']
-  assert.deepEqual(specsOf(list('server/internal/api/recovery.go')), [...signIn].sort())
+  assert.deepEqual(specsOf(list('server/internal/api/recovery.go')), ['camps.spec.ts'])
   assert.deepEqual(specsOf(list('server/internal/api/login.go')), [...signIn].sort())
   assert.deepEqual(specsOf(list('server/internal/api/camps.go')), ['camps.spec.ts'])
   assert.deepEqual(specsOf(list('src/lib/api/client.ts')), [...signIn, 'party-worlds.spec.ts', 'party-worlds-screens.spec.ts', 'presence.spec.ts', 'coop.spec.ts'].sort())

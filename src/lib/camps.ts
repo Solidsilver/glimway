@@ -128,6 +128,54 @@ export function collectedLine(entries: readonly Pick<RecoveryEntry, 'itemDef' | 
   return entries.length === 0 ? 'Nothing waiting for you. The book’s square.' : `Signed out to you: ${listed(entries.map(entryPhrase))}. The home pieces are in your pack.`
 }
 
+// ------------------------------------------------------------ Pell's crate picker (lamps.md 2.7)
+
+type CrateEntry = Pick<RecoveryEntry, 'id' | 'kind' | 'itemDef' | 'qty'> & { movedBy?: string; reason?: string }
+
+/** An entry as the picker lists it: what it is, why it's here, and whether it's a plant (taken whole or as its seed). */
+export interface CrateRow { id: number; label: string; note: string; plant: boolean }
+
+/** Why an entry waits, short: the note under it in the picker. */
+function crateNote(e: Pick<CrateEntry, 'movedBy' | 'reason'>): string {
+  if (e.movedBy) return `Moved off ${e.movedBy}’s camp`
+  if (e.reason === RECOVERY_REASONS.landChanged) return 'Your old paths, paid back'
+  if (e.reason === RECOVERY_REASONS.deedLost) return 'From your old lot'
+  if (e.reason === RECOVERY_REASONS.packedUp) return 'From the camp you packed up'
+  return 'From a camp the woods took back'
+}
+
+/** The crate's entries as the picker lists them, in Pell's order (oldest first). */
+export function crateRows(entries: readonly CrateEntry[]): CrateRow[] {
+  return entries.map((e) => {
+    const what = entryPhrase(e)
+    return { id: e.id, label: what.charAt(0).toUpperCase() + what.slice(1), note: crateNote(e), plant: e.kind === 'plant' }
+  })
+}
+
+/** The collect request for one entry (a plant whole, or as its seed), or for everything. */
+export function cratePick(id: number | null, asSeed = false): { entries: number[]; asSeed: number[] } {
+  return id === null ? { entries: [], asSeed: [] } : { entries: [id], asSeed: asSeed ? [id] : [] }
+}
+
+/** The picker's words. */
+export const CRATE_WORDS = {
+  title: 'Pell’s crate',
+  close: 'Close the crate',
+  lede: 'Everything here is yours, kept as you left it. Take what you want now. The rest waits here as long as you like.',
+  loading: 'Pell’s opening the book…',
+  empty: 'Nothing waiting for you. The book’s square.',
+  takeAll: 'Take everything',
+  take: 'Take',
+  takeWhole: 'Take it whole',
+  takeSeed: 'Take its seed',
+  taking: 'Taking…',
+  plantNote: 'Whole, it keeps its growth and goes back in the ground wherever you can plant. As a seed, it starts over.',
+  /** Pell's choices at the desk: everything at once, or the picker. */
+  takeYours: 'Take your things from the crate',
+  choose: 'Choose what to take',
+  chooseNote: 'Leave the rest with Pell'
+} as const
+
 /** A camp refusal in words: the lot lantern's shared codes, said of a way-lamp. */
 export const CAMP_ERRORS: Record<string, string> = {
   'cannot-hold': 'A way-lamp can’t hold this ground: it’s the town, the Tangle, a lot’s backland or someone else’s camp.',

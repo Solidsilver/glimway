@@ -65,7 +65,7 @@ test('trowel: any visitor at a camp may look at a plant; only those who may dig 
 
 test('trowel: each dig says what it did to the trowel when it gives out', () => {
   const wear = (broke: boolean, usesLeft: number) => ({ broke, state: broke ? 'broken' : 'whole', wornOut: [], returned: [], itemDef: 'bench-trowel', usesLeft });
-  assert.equal(dugUpLine('Wild thyme', wear(false, 29)), 'You dig up the wild thyme. It’s in your pack.');
-  assert.equal(dugUpLine('Wild thyme', undefined), 'You dig up the wild thyme. It’s in your pack.');
-  assert.match(dugUpLine('Wild thyme', wear(true, 0)), /^You dig up the wild thyme\. It’s in your pack\. .*trowel gave out\.$/i);
+  assert.equal(dugUpLine('Wild thyme', wear(false, 29)), 'You lift the wild thyme whole, roots and all. It’s in your pack, ready to plant again.');
+  assert.equal(dugUpLine('Wild thyme', undefined), 'You lift the wild thyme whole, roots and all. It’s in your pack, ready to plant again.');
+  assert.match(dugUpLine('Wild thyme', wear(true, 0)), /^You lift the wild thyme whole, roots and all\. It’s in your pack, ready to plant again\. .*trowel gave out\.$/i);
 });

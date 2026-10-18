@@ -3724,5 +3724,17 @@
     ],
     "prompt": "Use case: stylized-concept. Asset type: transparent pixel-art inventory icon source sheet for a 16x16 game UI. Use the existing items-pass bench-spade and hearth-oil icons as references. Create exactly three separate icons arranged left-to-right in three equal square cells: a squat glass or clay jar of pale translucent warm gold Wick Tree sap with a cork stopper; a whole hand trowel with iron-oak handle and grey iron blade; and the same trowel with a chipped, dulled blade and scuffed handle. Keep the whole and worn trowels the same silhouette, angle, scale and palette. Crisp chunky pixel clusters, dark warm-brown outlines, upper-left light, earthy palette, straight-on view, generous transparent margin. True transparent background; no scenery, props, text, cell borders, shadows, smoothing, antialiasing or watermark.",
     "refinement": "Preserve the first sap-jar cell and middle whole-trowel cell. In the rightmost cell only, make the trowel's worn state unmistakable at 16x16 with a clear small notch chipped from one blade edge, lower-contrast dulled grey blade, and several darker scuff marks on the same wood handle. Preserve the transparent three-cell layout and warm-brown outline style."
+  },
+  {
+    "id": "carried-plant-icon",
+    "file": "carried-plant-art-only-source-v2.png",
+    "columns": 1,
+    "rows": 1,
+    "frames": [
+      {"key":"item-carried-plant","width":16,"height":16,"origin":[0.5,1],"role":"inventory-icon"}
+    ],
+    "frameNotes": [
+      {"itemId":"carried-plant","category":"Supplies","priority":"P1","name":"Plant, lifted whole","state":null,"look":"A whole lifted plant with its root ball, ready to plant again"}
+    ]
   }
 ]

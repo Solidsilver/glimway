@@ -9,9 +9,9 @@ import (
 	"glimway/server/internal/location"
 )
 
-// A camp plant comes up into the digger's pack as its seed: anyone the
-// keeper's rule lets build there, or whoever planted it, from beside it,
-// with a trowel. Then the lamp can come down (review B7).
+// A camp plant comes up whole into the digger's pack (a carried plant):
+// anyone the keeper's rule lets build there, or whoever planted it, from
+// beside it, with a trowel. Then the lamp can come down (review B7).
 func TestCampPlantUproot(t *testing.T) {
 	x := newClaimRig(t)
 	seed := "turncap-spawn"
@@ -39,8 +39,8 @@ func TestCampPlantUproot(t *testing.T) {
 		t.Fatalf("dug from another world: %s", code)
 	}
 	v, _ = x.op(x.bob, &contract.CampRequest{Action: "uproot", ItemId: plant}, 200)
-	if len(v.Camp.Plants) != 0 || x.packQty(x.bob.s.AccountID, seed) != 1 || x.packQty(x.alice.s.AccountID, seed) != 0 {
-		t.Fatalf("the seed: %+v bob=%d", v.Camp.Plants, x.packQty(x.bob.s.AccountID, seed))
+	if got := x.carriedPlantsOf(x.bob.s.AccountID); len(v.Camp.Plants) != 0 || len(got) != 1 || got[plant] == 0 || x.packQty(x.bob.s.AccountID, seed) != 0 {
+		t.Fatalf("the plant: %+v bob carries %v", v.Camp.Plants, got)
 	}
 	// The dig is one use of bob's trowel, as any tool use.
 	if v.Wear == nil || v.Wear.ItemDef != "bench-trowel" || v.Wear.UsesLeft != 29 || v.Wear.Broke {
@@ -49,12 +49,16 @@ func TestCampPlantUproot(t *testing.T) {
 	if _, code := x.op(x.bob, &contract.CampRequest{Action: "uproot", ItemId: plant}, 409); code != "not-placed" {
 		t.Fatalf("dug twice: %s", code)
 	}
-	// Whoever planted it takes it back whatever the rule.
-	v, _ = x.op(x.bob, &contract.CampRequest{Action: "plant", ItemDef: seed, X: int32(x.spots[2][0]), Y: int32(x.spots[2][1])}, 200)
+	// Bob sets it in again, the same plant, and whoever planted it takes it
+	// back whatever the rule.
+	v, _ = x.op(x.bob, &contract.CampRequest{Action: "plant", ItemId: plant, X: int32(x.spots[2][0]), Y: int32(x.spots[2][1])}, 200)
+	if v.Camp.Plants[0].Id != plant {
+		t.Fatalf("replanted as another plant: %+v", v.Camp.Plants)
+	}
 	x.rule(x.alice, "household", nil, 200)
 	x.op(x.bob, &contract.CampRequest{Action: "uproot", ItemId: v.Camp.Plants[0].Id}, 200)
-	if x.packQty(x.bob.s.AccountID, seed) != 1 {
-		t.Fatal("bob's own seed")
+	if len(x.carriedPlantsOf(x.bob.s.AccountID)) != 1 {
+		t.Fatal("bob's own plant")
 	}
 	if v, _ := x.op(x.alice, &contract.CampRequest{Action: "remove", ItemId: x.lamp}, 200); v.Camp != nil {
 		t.Fatalf("the lamp stayed: %+v", v.Camp)
@@ -141,7 +145,7 @@ func TestCampPackUp(t *testing.T) {
 		t.Fatalf("bob's path stone: %d", stone)
 	}
 	x.collect(bc, bs, "bob-collect", true, 200)
-	if x.packQty(bob, "stone") != stoneLeft+stone || x.packQty(bob, "birch-sapling") != 1 {
+	if x.packQty(bob, "stone") != stoneLeft+stone || len(x.carriedPlantsOf(bob)) != 1 {
 		t.Fatal("bob's collection")
 	}
 	if loc, _ := x.itemAt(bobs); loc != "inventory" {

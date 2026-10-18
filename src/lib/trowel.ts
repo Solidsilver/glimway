@@ -3,7 +3,8 @@
  * dig up something planted, on your own land, in its lit backland or at a
  * camp. With the trowel in hand, a plant you may dig answers with "Dig up";
  * without it no plant offers digging, so plants' prompts stay plain. It
- * comes up into your pack as its seed. The server decides who may
+ * comes up whole, roots and all, into your pack, its growth kept, to plant
+ * again (src/lib/inventory.ts carriedPlantEntry). The server decides who may
  * (api/camp_teardown.go digUpPlant). No Phaser, no network.
  */
 import type { BeltKind } from './belt.ts'
@@ -30,9 +31,9 @@ export function plantOffer(plant: string, held: BeltKind, mayDig: boolean, mayLo
   return mayLook ? { label: `Look at the ${name}`, verb: 'Look', dig: false } : null
 }
 
-/** Said once it's dug up. */
+/** Said once it's dug up: lifted whole, into the pack as the plant itself. */
 export function uprootedLine(plant: string): string {
-  return `You dig up the ${plant.toLowerCase()}. It’s in your pack.`
+  return `You lift the ${plant.toLowerCase()} whole, roots and all. It’s in your pack, ready to plant again.`
 }
 
 /**

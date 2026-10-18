@@ -33,7 +33,7 @@ func TestTrowelIsCraftedAtTheBench(t *testing.T) {
 }
 
 // At home, only the trowel digs a plant up, and only for whoever may plant
-// there (a member, ownLand): the plant goes, its seed comes back.
+// there (a member, ownLand): the plant comes up whole, its id and growth kept.
 func TestTrowelDigsUpAtHome(t *testing.T) {
 	x := newRig(t)
 	c, s, h := x.homePlayer("alice")
@@ -75,8 +75,8 @@ func TestTrowelDigsUpAtHome(t *testing.T) {
 	}
 
 	r := dig(c, &s, tile, 200)
-	if stackQty(r.Result.Items, "birch-sapling") != 1 || len(x.home(c).Plants) != 0 {
-		t.Fatalf("after: sapling %d, plants %v", stackQty(r.Result.Items, "birch-sapling"), x.home(c).Plants)
+	if got := r.Result.Items.Plants; stackQty(r.Result.Items, "birch-sapling") != 0 || len(got) != 1 || got[0].ID != p.ID || got[0].PlantedAt != p.PlantedAt || len(x.home(c).Plants) != 0 {
+		t.Fatalf("after: sapling %d, carried %+v, plants %v", stackQty(r.Result.Items, "birch-sapling"), r.Result.Items.Plants, x.home(c).Plants)
 	}
 	// One dig, one use of the trowel's thirty.
 	if w := r.Result.Wear; w == nil || w.ItemDef != "bench-trowel" || w.UsesLeft != 29 || w.Broke {
@@ -121,8 +121,8 @@ func TestTrowelDigsUpInTheBackland(t *testing.T) {
 		t.Fatal("a visitor dug the backland")
 	}
 	r := x.opRefreshing(c, &s, "uproot", map[string]any{"target": p.ID, "progress": stand}, 200)
-	if stackQty(r.Result.Items, "birch-sapling") != 1 || len(x.home(c).Plants) != 0 {
-		t.Fatalf("after: sapling %d, plants %v", stackQty(r.Result.Items, "birch-sapling"), x.home(c).Plants)
+	if got := r.Result.Items.Plants; len(got) != 1 || got[0].ID != p.ID || got[0].PlantedAt != p.PlantedAt || len(x.home(c).Plants) != 0 {
+		t.Fatalf("after: carried %+v, plants %v", r.Result.Items.Plants, x.home(c).Plants)
 	}
 	x.conserved(s.AccountID)
 }
@@ -175,8 +175,8 @@ func TestTrowelWearsAndBreaks(t *testing.T) {
 		t.Fatal(err)
 	}
 	r := dig(plantAt(tiles[1]), tiles[1], 200)
-	if w = r.Result.Wear; w == nil || !w.Broke || w.ItemDef != "bench-trowel" || stackQty(r.Result.Items, "wild-thyme") != 3 {
-		t.Fatalf("last dig: %+v thyme %d", w, stackQty(r.Result.Items, "wild-thyme"))
+	if w = r.Result.Wear; w == nil || !w.Broke || w.ItemDef != "bench-trowel" || stackQty(r.Result.Items, "wild-thyme") != 1 || len(r.Result.Items.Plants) != 2 {
+		t.Fatalf("last dig: %+v thyme %d carried %d", w, stackQty(r.Result.Items, "wild-thyme"), len(r.Result.Items.Plants))
 	}
 	if findInstance(x.items("GET", "/api/items", nil, c, 200).Items, worn) != nil {
 		t.Fatal("the broken trowel is still in the pack")

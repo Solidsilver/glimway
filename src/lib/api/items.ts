@@ -83,6 +83,14 @@ export interface ItemsView {
   thanks: ThanksView[];
   /** Home pieces in the pack (a way-lamp, a stool), deed or no deed. */
   carried: { id: string; itemDef: string }[];
+  /** Plants in the pack, lifted whole (from Pell’s crate or with the trowel), their planting kept: each plants again where its seed could. */
+  plants: CarriedPlantView[];
+}
+/** A carried plant (lamps.md 2.7): its own id, its seed and when it was first planted. */
+export interface CarriedPlantView {
+  id: string;
+  itemDef: string;
+  plantedAt: number;
 }
 export interface ItemsResponse extends Snapshot {
   items: ItemsView;
@@ -194,6 +202,7 @@ export function projectItemsView(v: GeneratedItemsView): ItemsView {
     pickedUp: v.pickedUp.filter((p): p is string => typeof p === 'string'),
     thanks: v.thanks.map((t): ThanksView => ({ fromName: t.fromName.slice(0, 64), itemDef: t.itemDef, at: num(t.at) })),
     carried: v.carried.map((p) => ({ id: p.id, itemDef: p.itemDef })),
+    plants: v.plants.map((p): CarriedPlantView => ({ id: p.id, itemDef: p.itemDef, plantedAt: num(p.plantedAt) })),
   };
 }
 

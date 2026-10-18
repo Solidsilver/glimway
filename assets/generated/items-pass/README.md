@@ -20,4 +20,4 @@ The wheel is authored as four frames per condition. The running waterwheel uses 
 
 The way-lamp inventory icon is the generated `item-way-lamp` frame (16×16) and resolves from the `way-lamp` item id. Its source image and prompt are retained in this pass. The Wick Tree sap jar and bench trowel icons are also generated source art retained with their prompts; the trowel's whole and worn states are separate 16×16 frames.
 
-`carried-plant-art-only-source-v2.png` is a 16×16 candidate icon of a whole lifted plant with its root ball. The crate-picker lane has no carried whole-plant item on this branch, so the builder lists its source for rebuild and hash tracking and writes `frames/art-only/carried-plant-16.png`. It has no runtime frame or item alias.
+The lifted-whole plant icon is the generated `item-carried-plant` frame (16×16), measured from `carried-plant-art-only-source-v2.png` as one cell (job `carried-plant-icon`). It resolves from the `carried-plant` alias; the pack draws it for a plant carried whole (lifted with the trowel or taken whole from Pell's crate), in place of its seed's icon.

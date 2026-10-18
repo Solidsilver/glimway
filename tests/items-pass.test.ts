@@ -22,6 +22,8 @@ import {
 import { COMMONS_DECORATION_IDS } from '../src/game/atlas-plan.ts'
 import { HOMESTEAD_DATA } from '../src/lib/homestead.ts'
 import { FISHING_FRAMES, FISHING_LOOPS } from '../src/game/fishing-art.ts'
+import { CARRIED_PLANT_ART, carriedPlantEntry } from '../src/lib/inventory.ts'
+import { itemDef } from '../src/lib/items.ts'
 
 const PUBLIC_DIR = fileURLToPath(new URL('../public/assets/fingersnap/items-pass/', import.meta.url))
 const SOURCE_DIR = fileURLToPath(new URL('../assets/generated/items-pass/', import.meta.url))
@@ -62,7 +64,7 @@ test('the manifest’s 16 generated source sheets and 4 crafts-pass fishing icon
 })
 
 test('every frame has a measured source rect inside its sheet and a destination inside its native canvas', () => {
-  assert.equal(manifest.frames.length, 181)
+  assert.equal(manifest.frames.length, 182)
   assert.equal(frameByKey.size, manifest.frames.length, 'frame keys are unique')
   const sources = new Map(manifest.sources.map((s) => [s.key, s]))
   const rects = new Set<string>()
@@ -81,7 +83,7 @@ test('every frame has a measured source rect inside its sheet and a destination 
 
 test('inventory icons have role inventory-icon and native dimensions', () => {
   const icons = manifest.frames.filter((f) => f.role === 'inventory-icon')
-  assert.equal(icons.length, 121)
+  assert.equal(icons.length, 122)
   for (const icon of icons) {
     assert.ok(icon.key.startsWith('item-'), `${icon.key} has item- prefix`)
     assert.ok(icon.width > 0 && icon.height > 0)
@@ -247,4 +249,25 @@ test('fishing: the rod, the roach, the fry and the card are item icons here; the
   const crafts = (JSON.parse(readFileSync(new URL('../public/assets/fingersnap/packed/atlases.json', import.meta.url), 'utf8')) as { crafts: { frames: Record<string, unknown> } }).crafts.frames
   for (const frame of FISHING_FRAMES) assert.ok(crafts[frame], `${frame} is in the crafts pack`)
   assert.deepEqual(FISHING_LOOPS.map((l) => l.key), ['fish-bob', 'fish-bite', 'fish-rings', 'fish-splash'])
+})
+
+test('a plant carried whole draws the pass’s carried-plant icon, whatever plant it is', () => {
+  const frame = frameByKey.get(CARRIED_PLANT_ART)
+  assert.ok(frame, `${CARRIED_PLANT_ART} is a frame`)
+  assert.equal(frame.role, 'inventory-icon')
+  assert.deepEqual([frame.width, frame.height], [16, 16])
+  assert.equal(frame.itemId, 'carried-plant')
+  assert.equal(manifest.aliases['carried-plant'], CARRIED_PLANT_ART)
+  assert.equal(itemIcon('carried-plant'), itemsArtKey(CARRIED_PLANT_ART))
+  const source = manifest.sources.find((s) => s.key === frame.source)
+  assert.equal(source?.file, 'carried-plant-art-only-source-v2.png')
+  assert.equal(pngHeader(`${SOURCE_DIR}${source!.file}`).colorType, 6, 'RGBA source')
+  const items = (JSON.parse(readFileSync(new URL('../public/assets/fingersnap/packed/atlases.json', import.meta.url), 'utf8')) as { items: { frames: Record<string, unknown> } }).items.frames
+  assert.ok(items[CARRIED_PLANT_ART], `${CARRIED_PLANT_ART} is in the items pack`)
+  for (const seed of ['birch-sapling', 'wild-thyme']) {
+    const row = carriedPlantEntry(itemDef(seed)!, { id: `p-${seed}`, itemDef: seed, plantedAt: 1 })
+    assert.equal(row.art, CARRIED_PLANT_ART, `${seed} carried whole`)
+    assert.equal(row.stateArt, null)
+    assert.notEqual(itemIcon(seed), itemsArtKey(CARRIED_PLANT_ART), `${seed}'s seed keeps its own icon`)
+  }
 })
