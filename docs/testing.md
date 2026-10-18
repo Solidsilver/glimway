@@ -19,7 +19,12 @@ plus a few programs that aren't npm packages:
 
 `npx knip` lists these as "unlisted binaries": that's expected.
 
-### On the NixOS dev host (agent sandboxes)
+### On the NixOS dev host (owner only)
+
+**Agents never run Playwright or Vite on the host.** Paseo agents can't start
+Vite (the service lacks `AF_NETLINK`), and the suite bogs down the machine the
+live game runs on. Agents push their `exp/<lane>` branch and watch its CI run
+instead ([CI](#ci) below). This recipe is for the owner, by hand.
 
 Two things fail there, and each has a fix:
 
@@ -45,9 +50,9 @@ npx playwright test e2e/camps.spec.ts --workers=1
 | `npm test` | unit tests | while working |
 | `go test ./...` | server, shared content, parity vectors | server or shared-data changes |
 | `cd server && go test -race -timeout 30m ./...` | the server with the race detector | server changes, before handing back |
-| `npm run test:smoke` | the `@smoke` playtests (5 tests, a few minutes at most) | while working, often |
-| `npm run test:changed` | the playtests mapped to what this branch changed | at the end of a work session |
-| `npm run test:e2e` | the full Playwright suite | CI on the self-hosted GPU runner, on pushes to `main`, `dev` and `exp/**`, or manual dispatch ([ci-runner.md](ci-runner.md)) |
+| `npm run test:smoke` | the `@smoke` playtests (5 tests, a few minutes at most) | CI on every push; locally, the owner only |
+| `npm run test:changed` | the playtests mapped to what this branch changed | CI on pushes to `exp/**`; locally, the owner only |
+| `npm run test:e2e` | the full Playwright suite | CI on the self-hosted GPU runner, on pushes to `main` and `dev`, or a manual run with `full` ([ci-runner.md](ci-runner.md)) |
 | `npm run test:screens` | everything, saving screenshots to `.agent/screens/` (the `*-screens` specs only run with it) | visual reviews |
 
 Under `-race`, `internal/api` alone takes about 7–8 minutes, so on a busy
@@ -65,25 +70,7 @@ the unit tests fail when the committed output has drifted from its inputs:
 | `npm run atlases` | the packed art in `public/assets/fingersnap/packed/` (needs `cwebp`/`dwebp`) |
 
 While working, run `npm test` (or `npm run verify` when the change warrants
-it). At the end, run `npm run test:changed`. In CI, every push and pull
-request runs `verify`, the Go tests, the Docker smoke test and the smoke tier
-on GitHub's runners. The full suite runs on a self-hosted runner with an
-NVIDIA GPU, for pushes to `main`, `dev` and `exp/**` and for manual
-dispatch, never for pull requests ([ci-runner.md](ci-runner.md)). A push
-that changes only docs (`docs/**` and Markdown files, except `CHANGELOG.md`,
-which the build reads) skips both E2E jobs; `verify` still runs. Each E2E
-job writes its health to the run's step summary: passed, flaky (failed, then
-passed on the retry) and failed tests by name, and the ten slowest tests. It
-also uploads a JSON attempt summary (a lane run's two passes, its specs and
-then the smoke tier, each keep their own report and traces); up to three retry
-traces are retained within a 50 MiB cap. The first retry is traced, so it can
-show a successful attempt while the JSON summary preserves the original
-failure. To keep the failing attempts' traces instead, set the repository
-variable `E2E_TRACE=retain-on-first-failure` (every test is traced then, which
-slows the run), with `E2E_TRACE_FILES` and `E2E_TRACE_MB` to keep more. A separate
-manual browser-performance job measures first paint and sparse-map rendering.
-Push an
-`exp/` branch to run it before main moves.
+it), and `go test ./...` for server changes. Playtests run in CI.
 
 Unit tests can load rune modules (`*.svelte.ts`, such as
 `src/ui/account-flow.svelte.ts`): import `tests/helpers/svelte-runes.ts`
@@ -91,9 +78,50 @@ first, then the module with `await import(…)`. Keep such modules free of
 Phaser and of imports without a `.ts` extension, and hand them their
 collaborators (an API, a session) so a test can pass fakes.
 
-**Agents:** run `test:smoke` and `test:changed` while you work. The full suite
-runs once per merge batch, not once per agent. `test:changed` itself runs the
-full suite when shared test code changed (see below).
+**Agents:** run `npm test`, `npm run verify` and the Go tests locally, never
+the playtests. Commit, push your `exp/<lane>` branch, and watch its run in the
+foreground (`gh run watch <id> --exit-status`): it runs the specs your changes
+touch, and the full suite when shared test code changed (see
+[Changed](#changed)). The full suite runs on `dev` once per merge batch, not
+once per agent.
+
+### CI
+
+Every push and pull request runs `verify`, the Go tests, the Docker smoke test
+and the smoke tier on GitHub's runners. The `e2e full` job runs on a
+self-hosted runner with an NVIDIA GPU, never for pull requests
+([ci-runner.md](ci-runner.md)):
+
+| Trigger | `e2e full` runs |
+|---|---|
+| push to `dev` or `main` | the full suite |
+| push to `exp/**` | `test:changed` against `origin/dev` ([Changed](#changed)) |
+| manual run with `full` | the full suite, on any branch: `gh workflow run ci.yml --ref <branch> -f full=true` |
+| manual run without `full` | as a push to that branch would |
+
+`e2e full` has a 60-minute timeout. A full dev run takes about 25 minutes, with
+outliers near 41. A newer push to the same branch cancels the older run's `e2e full`, except
+on `main`, where `tag-release.yml` needs every run to finish.
+
+A push that changes only docs (`docs/**` and Markdown files, except
+`CHANGELOG.md`, which the build reads) skips both E2E jobs; `verify` still
+runs. Each E2E job writes its health to the run's step summary: passed, flaky
+(failed, then passed on the retry) and failed tests by name, and the ten
+slowest tests. It also uploads a JSON attempt summary (a lane run's two
+passes, its specs and then the smoke tier, each keep their own report and
+traces); up to three retry traces are retained within a 50 MiB cap. The first
+retry is traced, so it can show a successful attempt while the JSON summary
+preserves the original failure. To keep the failing attempts' traces instead,
+set the repository variable `E2E_TRACE=retain-on-first-failure` (every test is
+traced then, which slows the run), with `E2E_TRACE_FILES` and `E2E_TRACE_MB` to
+keep more.
+
+Any manual run (`workflow_dispatch`) also starts two opt-in measured jobs:
+"measured generator budgets" and "measured browser budget" (first paint and
+the sparse-map renderer; [Performance](#performance)). **Known issue:** the
+browser budget job fails today, because the sparse-map drag p95 is about
+240 ms against its 16 ms target, so every manual run ends red. That red is the measurement, not the
+correctness gate: read the `e2e full` job's result on its own.
 
 ### Smoke
 
@@ -279,6 +307,9 @@ nothing in smoke covers. Screenshot-only specs skip themselves without
 
 ## Debugging a flake
 
+Agents work from the CI run: its step summary, the uploaded attempt summary
+and traces, and a re-run of the branch. The local steps below are the owner's.
+
 1. Re-run just the test, several times, in parallel with itself:
    `E2E_PORT=5231 npx playwright test e2e/x.spec.ts -g "title" --repeat-each=5 --workers=5`.
    Add `--workers=1` to see whether it only fails under load.
@@ -302,7 +333,8 @@ nothing in smoke covers. Screenshot-only specs skip themselves without
 
 Walking the open map is the game's heaviest work on the main thread: every
 chunk edge attaches a row of chunks and drops one. Three tools keep it
-measurable. None of them runs in CI.
+measurable. None of them runs in CI, and like every Playwright run they are
+the owner's to run on the dev host, not an agent's.
 
 **`?perf=1`** (src/game/perf.ts) turns on the instruments in any build: a
 small overlay (top right: frame times, long frames, display list, tweens,
@@ -390,6 +422,8 @@ The sparse-map renderer unit fixture always checks output correctness, cache
 bounds and overview dimensions. Its drag and zoom p95 budget is opt-in with
 `MAP_PERF=1`; the manual browser-performance job records it with the browser
 measurement. Set `MAP_RENDER_P95_BUDGET_MS` to override the 16 ms target.
+The drag p95 measures about 240 ms on the CI runner today, so that job
+fails ([CI](#ci), known issue).
 
 **Fight load tools:** `sh scripts/fight-load.sh` measures multi-client server
 fight load; `docs/shared-fights-testing.md` records its settings and output.

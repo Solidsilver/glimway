@@ -23,7 +23,10 @@ CI lints, regenerates, rejects changed/untracked generated files, and enforces
 `buf breaking` against two baselines with full Git history (the
 `scripts/buf-breaking.sh` step): `origin/main`, the branch's own contract, and
 the latest release tag — the contract the last release shipped, which is what
-players actually run. The initial migration bootstrapped that check when main
+players actually run. Pre-release tags (`v*-*`, such as `v0.12.0-alpha.1`)
+are skipped (`git describe --tags --match 'v*' --exclude 'v*-*'`): an alpha
+cut on dev isn't a shipped contract, so a break it already carried must still
+fail against the last real release. The initial migration bootstrapped that check when main
 had no Buf schema yet; later runs require both contracts.
 
 ### Compatibility: what may move
