@@ -6,10 +6,14 @@ Paseo on the development server.
 ## Roles
 
 - **The owner** decides direction, playtests `dev`, and runs every deploy.
-- **The orchestrator** writes briefs, starts and checks agents, reviews their work, commits, and
-  merges. **Agents don't commit.**
+- **The orchestrator** writes briefs, starts and checks agents, reviews their work, and merges
+  each lane into `dev` with `git merge --no-ff`. Only the orchestrator pushes `dev`; only a
+  release moves `main`.
 - **Agents** work one lane each, in their own git worktree on an `exp/<lane>` branch, and write
-  their notes into `.agent/` (git-ignored) in that worktree.
+  their notes into `.agent/` (git-ignored) in that worktree. They commit their work in small,
+  clear commits (no `Signed-off-by`: that's the owner's statement) and push their own
+  `exp/<lane>` branch, so CI runs the specs it touches. They never push `dev` or `main`, and
+  never merge.
 
 ## Lanes
 
@@ -24,10 +28,11 @@ Paseo on the development server.
    - CLI: `paseo run --provider <provider/model> --workspace <id> "<prompt>"`.
 4. Leave `notifyOnFinish` on. The orchestrator is told when the agent finishes, errors or needs
    permission, so don't poll. Send follow-ups with `send_agent_prompt` (CLI: `paseo send <id>`).
-5. Review the diff, commit, and merge to `dev`. See [releasing.md](releasing.md).
-6. Archive the agent and workspace once the lane has merged.
-
-Keep `exp/*` branches local. Don't push them.
+5. The agent commits and pushes `exp/<lane>`, and watches that push's CI run to the end.
+6. Review the branch's diff and its CI run, then merge it into `dev` (`git merge --no-ff
+   exp/<lane>`, the lane's player-facing line in the merge message) and push `dev`. Stage any
+   edits made during the merge before committing it. See [releasing.md](releasing.md).
+7. Archive the agent and workspace once the lane has merged.
 
 Two things Paseo needs on this machine:
 
