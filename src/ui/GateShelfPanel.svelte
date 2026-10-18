@@ -8,8 +8,8 @@
   import { bus, EV } from '../game/events'
   import { assetKind, itemDef, giveable } from '../lib/items'
   import { homeItem } from '../lib/homestead'
-  import type { Asset, ShelfSlotView, ShelfView } from '../lib/api/types'
-  import { actionRunner, busVersion } from './panel-state.svelte'
+  import type { Asset, ShelfSlotView } from '../lib/api/types'
+  import { actionRunner, busVersion, latestRead } from './panel-state.svelte'
   import Icon from './Icon.svelte'
   import Panel from './Panel.svelte'
   import ArtIcon from './ArtIcon.svelte'
@@ -25,8 +25,14 @@
   const homes = $derived(homesteadsFor(session))
 
   const action = actionRunner()
-  let loaded = $state<'loading' | 'ready' | string>('loading')
-  let view = $state<ShelfView | null>(null)
+  /**
+   * The shelf as last read: a take (or stock) fires several reads at once
+   * (the answer's own view, then the pack's and the lane's change events),
+   * and a slower, older one landing last must not put a taken gift back on
+   * the shelf or un-say "taken today".
+   */
+  const shelf = latestRead(() => village.loadShelf(gate))
+  const view = $derived(shelf.value)
   let pickingSlot = $state<number | null>(null)
   /** The stock sheet's price field (glims; empty: a free gift). */
   let priceText = $state('')
@@ -40,47 +46,18 @@
   }
   /** Bumped when the pack or the homestead changes: the sources below are plain store fields. */
   const changed = busVersion(bus, EV.itemsChanged, EV.homeChanged)
-  /**
-   * Which read is the newest: a take (or stock) fires several reads at once
-   * (the answer's own view, then the pack's and the lane's change events), and
-   * a slower, older one landing last must not put a taken gift back on the
-   * shelf or un-say "taken today". Only the newest answer is shown.
-   */
-  let readSeq = 0
-  /** False once the panel is gone: a failing read stops retrying. */
-  let open = true
-
-  async function reread(): Promise<void> {
-    const mine = ++readSeq
-    const r = await village.loadShelf(gate)
-    // Before anything is shown, any good read is: right after arriving the
-    // reads queue behind the page's others and each change event asks again,
-    // so every answer was older than the newest ask, and the panel said
-    // "Looking at the shelf…" until the last landed (CI, 2026-10-18).
-    if (r.ok && (mine === readSeq || loaded !== 'ready')) {
-      view = r.value
-      loaded = 'ready'
-      return
-    }
-    if (mine !== readSeq || r.ok) return
-    if (loaded === 'loading') loaded = r.code
-    // A read that failed (a link still coming online, a busy server) is
-    // tried again rather than leaving the panel without its buttons.
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    if (open && mine === readSeq) void reread()
-  }
 
   onMount(() => {
     // The pack arriving (the read above, or another answer carrying it)
     // re-reads the shelf as well as re-opening the choice list.
-    bus.on(EV.villageChanged, reread)
-    bus.on(EV.itemsChanged, reread)
-    void reread()
+    bus.on(EV.villageChanged, shelf.read)
+    bus.on(EV.itemsChanged, shelf.read)
+    void shelf.read()
     if (session.link) void items.load()
     return () => {
-      open = false
-      bus.off(EV.villageChanged, reread)
-      bus.off(EV.itemsChanged, reread)
+      shelf.stop()
+      bus.off(EV.villageChanged, shelf.read)
+      bus.off(EV.itemsChanged, shelf.read)
     }
   })
 
@@ -159,7 +136,7 @@
   async function take(slot: number): Promise<void> {
     const r = await action.run(`take-${slot}`, () => village.shelfAction({ op: 'take', gate, slot }), (done) => done.value.line ?? 'You took a gift from the shelf.')
     if (!r?.ok) return
-    view = r.value.shelf
+    shelf.adopt(r.value.shelf)
     bus.emit(EV.toast, { text: r.value.line ?? 'You took a gift from the shelf.', icon: 'gift' })
     bus.emit(EV.villageChanged)
     bus.emit(EV.itemsChanged)
@@ -170,7 +147,7 @@
     const i = slot.slot
     const r = await action.run(`buy-${i}`, () => village.shelfAction({ op: 'buy', gate, slot: i, pay: slot.price }), (done) => done.value.line ?? shelfCopy.bought(itemNameDisplay(slot), slot.price))
     if (!r?.ok) return
-    view = r.value.shelf
+    shelf.adopt(r.value.shelf)
     bus.emit(EV.toast, { text: r.value.line ?? shelfCopy.bought(itemNameDisplay(slot), slot.price), icon: 'glim', art: 'glims-few' })
     bus.emit(EV.villageChanged)
     bus.emit(EV.itemsChanged)
@@ -184,7 +161,7 @@
     pickingSlot = null
     priceText = ''
     if (!r.ok) return
-    view = r.value.shelf
+    shelf.adopt(r.value.shelf)
     bus.emit(EV.villageChanged)
     bus.emit(EV.itemsChanged)
   }
@@ -218,9 +195,9 @@
   {/if}
   {#if action.message}<p class="msg {action.message.kind}" role="status">{action.message.text}</p>{/if}
 
-  {#if loaded !== 'ready'}
-    <p class="msg">{loaded === 'loading' ? 'Looking at the shelf…' : villageErrorText(loaded)}</p>
-  {:else if view}
+  {#if !view}
+    <p class="msg">{shelf.error === null ? 'Looking at the shelf…' : villageErrorText(shelf.error)}</p>
+  {:else}
     {#if !view.hasShelf}<p class="none">No shelf is set out at this gate.</p>{/if}
     <ul class="slots" aria-label="Shelf slots">
       {#each slots as slot, i}
