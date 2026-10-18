@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"glimway/server/internal/api"
 	"glimway/server/internal/habitica"
+	"glimway/server/internal/settings"
 	"glimway/server/internal/store"
 	"log"
 	"net"
@@ -58,17 +59,10 @@ func defaultDB() string {
 	return path
 }
 
-func envInt(name string, fallback int) (int, error) {
-	v, err := strconv.Atoi(env(name, strconv.Itoa(fallback)))
-	if err != nil || v < 1 {
-		return 0, fmt.Errorf("invalid GLIMWAY_%s", name)
-	}
-	return v, nil
-}
-
 func run(args []string) error {
 	f := flag.NewFlagSet("glimway-server", flag.ContinueOnError)
 	startClock := devClock(f)
+	configPath := f.String("config", env("CONFIG", ""), "Settings file (TOML; deploy/glimway.example.toml). Flags and GLIMWAY_* variables win over it")
 	adminAddr := f.String("admin-listen", env("ADMIN_LISTEN", ""), "Optional loopback-only profiling/metrics listener, e.g. 127.0.0.1:8091")
 	staticDir := f.String("static-dir", env("STATIC_DIR", ""), "Optional built web directory (empty disables static serving)")
 	addr := f.String("listen", env("LISTEN", "127.0.0.1:8090"), "HTTP listener")
@@ -82,25 +76,15 @@ func run(args []string) error {
 		trustedDefault = v
 	}
 	trusted := f.String("trusted-proxies", trustedDefault, "Comma-separated trusted proxy IPs (empty disables forwarded headers)")
-	concurrencyDefault, err := envInt("LOGIN_CONCURRENCY", 4)
-	if err != nil {
-		return err
-	}
-	rateDefault, err := envInt("LOGIN_RATE", 10)
-	if err != nil {
-		return err
-	}
-	globalRateDefault, err := envInt("LOGIN_GLOBAL_RATE", 60)
-	if err != nil {
-		return err
-	}
 	flushDefault, err := strconv.Atoi(env("PRESENCE_FLUSH_MS", "0"))
 	if err != nil || (flushDefault != 0 && flushDefault != 50 && flushDefault != 100) {
 		return fmt.Errorf("invalid GLIMWAY_PRESENCE_FLUSH_MS (want 0, 50, or 100)")
 	}
-	concurrency := f.Int("login-concurrency", concurrencyDefault, "Maximum simultaneous upstream login proofs")
-	rate := f.Int("login-rate", rateDefault, "Login attempts per IP or IPv6 /64 per minute")
-	globalRate := f.Int("login-global-rate", globalRateDefault, "Maximum upstream login calls per minute, including retries")
+	// Settings with a flag: the flag is the top layer (settings.go, fromFlags).
+	defaults := settings.Default().Server.Login
+	f.Int("login-concurrency", defaults.Concurrency, "Maximum simultaneous upstream login proofs (server.login.concurrency)")
+	f.Int("login-rate", defaults.Rate, "Login attempts per IP or IPv6 /64 per minute (server.login.rate)")
+	f.Int("login-global-rate", defaults.GlobalRate, "Maximum upstream login calls per minute, including retries (server.login.global_rate)")
 	presenceFlush := f.Int("presence-flush-ms", flushDefault, "Presence output flush interval in ms (0, 50, or 100; default 0)")
 	secureDefault, err := strconv.ParseBool(env("COOKIE_SECURE", "true"))
 	if err != nil {
@@ -118,8 +102,35 @@ func run(args []string) error {
 	if *presenceFlush != 0 && *presenceFlush != 50 && *presenceFlush != 100 {
 		return fmt.Errorf("invalid -presence-flush-ms (want 0, 50, or 100)")
 	}
+	// The settings: defaults, the file, GLIMWAY_* variables, then flags.
+	conf, err := settings.Load(*configPath, envLookup, devBuild)
+	if err != nil {
+		return err
+	}
+	fromFlags(f, map[string]*int{
+		"login-concurrency": &conf.Server.Login.Concurrency,
+		"login-rate":        &conf.Server.Login.Rate,
+		"login-global-rate": &conf.Server.Login.GlobalRate,
+	})
+	if err = conf.Check(devBuild); err != nil {
+		return err
+	}
+	live := &liveSettings{path: *configPath}
+	live.cur.Store(&conf)
+	if cmd := f.Args(); len(cmd) > 0 && cmd[0] == "check-config" {
+		if len(cmd) != 1 || *configPath == "" {
+			return fmt.Errorf("usage: -config FILE check-config")
+		}
+		fmt.Printf("ok %s\n", *configPath)
+		return nil
+	}
+	login := conf.Server.Login
+	// The settings decide dev mode once there is a file, or GLIMWAY_DEV_ENABLE
+	// alone; with neither a dev build serves this machine (local dev, e2e).
+	_, devEnv := envLookup("DEV_ENABLE")
+	configured := *configPath != "" || devEnv
 
-	clock, err := startClock()
+	clock, err := startClock(configured)
 	if err != nil {
 		return err
 	}
@@ -133,9 +144,6 @@ func run(args []string) error {
 			return fmt.Errorf("invalid trusted proxy IP")
 		}
 		proxies = append(proxies, v)
-	}
-	if *concurrency < 1 || *rate < 1 || *globalRate < 1 {
-		return fmt.Errorf("invalid login limits")
 	}
 	if *spriteDir == "" {
 		*spriteDir = filepath.Join(filepath.Dir(*path), "habitica-sprites")
@@ -343,14 +351,17 @@ func run(args []string) error {
 		return err
 	}
 	logger := log.New(os.Stdout, "glimway ", log.LstdFlags|log.LUTC)
-	handler := api.New(s, habitica.New(*base, *tag), api.Config{Now: clock.now, SecureCookie: *secure, Logger: logger, TrustedProxies: proxies, LoginConcurrency: *concurrency, LoginRate: *rate, LoginGlobalRate: *globalRate, SpriteCacheDir: *spriteDir, SpriteBaseURL: *spriteBase, PartyAdmissionOff: !*partyAdmission, PresenceFlushMs: *presenceFlush, Version: version, Build: build})
+	// The dev build's gate (nil in a release build), set once the API exists.
+	var caller devCaller
+	handler := api.New(s, habitica.New(*base, *tag), api.Config{Now: clock.now, SecureCookie: *secure, Logger: logger, TrustedProxies: proxies, LoginConcurrency: login.Concurrency, LoginRate: login.Rate, LoginGlobalRate: login.GlobalRate, SpriteCacheDir: *spriteDir, SpriteBaseURL: *spriteBase, PartyAdmissionOff: !*partyAdmission, PresenceFlushMs: *presenceFlush, Version: version, Build: build, WebSettings: func(r *http.Request) any { return webSettings(live, caller, clock.movable)(r) }})
 	defer handler.ClosePresence()
 	closeAdmin, err := startAdmin(*adminAddr, handler, logger)
 	if err != nil {
 		return err
 	}
 	defer closeAdmin()
-	httpHandler, closeStatic, err := withStatic(clock.mount(devRoutes(handler)(handler)), *staticDir)
+	caller = devCallerFor(handler, devAccess{configured: configured, settings: live.get})
+	httpHandler, closeStatic, err := withStatic(clock.mount(devRoutes(handler, caller)(handler), caller), *staticDir)
 	if err != nil {
 		return err
 	}
@@ -359,6 +370,20 @@ func run(args []string) error {
 	stop, done := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer done()
 	go handler.RunMailMaintenance(stop)
+	// SIGHUP (systemctl reload, docker kill -s HUP) reads the settings file again.
+	hup := make(chan os.Signal, 1)
+	signal.Notify(hup, syscall.SIGHUP)
+	defer signal.Stop(hup)
+	go func() {
+		for {
+			select {
+			case <-hup:
+				live.reload(logger)
+			case <-stop.Done():
+				return
+			}
+		}
+	}()
 	go func() {
 		<-stop.Done()
 		shutdown, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -370,7 +395,7 @@ func run(args []string) error {
 		// closed under it otherwise.
 		handler.Close(shutdown)
 	}()
-	logger.Printf("listening addr=%s version=%s build=%s", *addr, version, cmp.Or(build, "unknown"))
+	logger.Printf("listening addr=%s version=%s build=%s config=%s dev_build=%t dev=%t", *addr, version, cmp.Or(build, "unknown"), cmp.Or(*configPath, "none"), devBuild, conf.Dev.Enable)
 	err = server.ListenAndServe()
 	if err == http.ErrServerClosed {
 		return nil

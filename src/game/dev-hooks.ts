@@ -1,8 +1,9 @@
 /**
  * Playtest hooks: the `window.__fs*` handles the e2e suite reads and drives
- * the game through (docs/playtest.md). They exist in dev builds only (e2e
- * runs the Vite dev server), so a production bundle carries none of them,
- * and a hook tied to a scene is deleted when that scene ends (shuts down or
+ * the game through (docs/playtest.md). They exist only in builds with dev
+ * tools (the Vite dev server, which e2e runs, and a staging server's
+ * dev-tools build for players its dev mode allows; src/lib/dev-tools.ts), so
+ * a release bundle installs none of them, and a hook tied to a scene is deleted when that scene ends (shuts down or
  * is destroyed), so it never keeps a dead scene alive.
  *
  * FsHooks is the one list of them, typed; `e2e/` can import it
@@ -28,6 +29,8 @@ import type { LibraryOpenPayload } from './event-names.ts'
 import type { PerfReport } from './perf.ts'
 import type { InteractableView } from './entities/interactables.ts'
 import { onSceneEnd, type SceneEvents } from './scene-end.ts'
+import { DEV_LOCAL, DEV_TOOLS } from '../lib/dev-tools.ts'
+import { onWebSettings, webSettings } from '../lib/web-settings.ts'
 
 type Box = { x: number; y: number; w: number; h: number }
 type Insets = { top: number; right: number; bottom: number; left: number }
@@ -249,14 +252,74 @@ export interface FsHooks {
 }
 
 /**
- * Put a playtest hook on `window` (dev builds only; a no-op otherwise).
+ * Put a playtest hook on `window` (builds with dev tools only; a no-op
+ * otherwise). Under the Vite dev server it goes on at once. In a dev-tools
+ * build it follows this player's grant (web.dev.hooks): on while the server
+ * gives it, off again when the grant goes (another account, a revoke).
  * The returned disposer removes only this registration. With a scene, it is deleted when that scene shuts down or is destroyed, unless a
  * newer registration has taken the name meanwhile.
  */
 export function expose<K extends keyof FsHooks>(name: K, fn: FsHooks[K], scene?: { events: SceneEvents }): () => void {
-  // `?.`: Node tests load modules that expose hooks, and have no import.meta.env.
-  if (import.meta.env?.DEV) return hook(window as unknown as Partial<FsHooks>, name, fn, scene)
-  return () => {}
+  if (!DEV_TOOLS) return () => {}
+  if (DEV_LOCAL) return hook(window as unknown as Partial<FsHooks>, name, fn, scene)
+  if (!windowGate) {
+    const gate = gatedHooks(window as unknown as Partial<FsHooks>)
+    gate.set(!!webSettings().dev?.hooks)
+    onWebSettings((s) => gate.set(!!s.dev?.hooks))
+    windowGate = gate
+  }
+  return windowGate.expose(name, fn, scene)
+}
+
+let windowGate: HookGate | null = null
+
+export interface HookGate {
+  /** Grant (true) or take away (false): every registration goes on or comes off at once. */
+  set(on: boolean): void
+  /** expose, under the gate. */
+  expose<K extends keyof FsHooks>(name: K, fn: FsHooks[K], scene?: { events: SceneEvents }): () => void
+}
+
+/**
+ * Hooks behind a grant, on `target`: each registration is on the target
+ * while the gate is on and off it otherwise, kept until it is disposed (or
+ * its scene ends), so a later grant puts it back.
+ */
+export function gatedHooks(target: Partial<FsHooks>): HookGate {
+  type Entry = { install: () => void; remove: () => void }
+  const entries = new Set<Entry>()
+  let on = false
+  return {
+    set(next) {
+      if (next === on) return
+      on = next
+      // Insertion order: the newest registration of a name goes on last, and wins.
+      for (const e of entries) {
+        if (on) e.install()
+        else e.remove()
+      }
+    },
+    expose(name, fn, scene) {
+      let dispose: (() => void) | null = null
+      const entry: Entry = {
+        install: () => {
+          if (!dispose) dispose = hook(target, name, fn)
+        },
+        remove: () => {
+          dispose?.()
+          dispose = null
+        }
+      }
+      entries.add(entry)
+      if (on) entry.install()
+      const cancel = () => {
+        entry.remove()
+        entries.delete(entry)
+      }
+      if (scene) onSceneEnd(scene, cancel)
+      return cancel
+    }
+  }
 }
 
 /** Who registered each hook last, per target: the same function can be registered twice. */

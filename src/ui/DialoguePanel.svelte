@@ -1,5 +1,6 @@
 <script lang="ts">
   import { expose } from '../game/dev-hooks'
+  import { DEV_TOOLS } from '../lib/dev-tools'
   import { onMount } from 'svelte'
   import { bus, EV, type DialogueChoice, type DialoguePayload } from '../game/events'
   import { uiState } from '../game/input'
@@ -216,7 +217,7 @@
     // may come and go between two checks).
     let offSeen = () => {}
     let disposeHook = () => {}
-    if (import.meta.env.DEV) {
+    if (DEV_TOOLS) {
       const seen: { speaker: string; text: string }[] = []
       let opened = 0
       const onSeen = (p: DialoguePayload) => {

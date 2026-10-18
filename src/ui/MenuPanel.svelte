@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Session } from '../game/session'
   import { sfx } from '../game/sfx'
+  import { DEV_TOOLS } from '../lib/dev-tools'
   import { soundSettings, type SoundPrefs } from '../game/sound-settings'
   import { ui } from './store.svelte'
   import Icon from './Icon.svelte'
@@ -165,10 +166,10 @@
     </div>
   {/if}
 
-  {#if import.meta.env.DEV && onDev}
+  {#if DEV_TOOLS && onDev}
     <section class="card dev-row" data-testid="menu-dev">
       <h3 class="section-title"><Icon name="key" size={14} /> Dev</h3>
-      <p class="fine">Local playtesting: give yourself glims, materials and items. Only in dev builds. Key: <span class="kbd">`</span></p>
+      <p class="fine">Playtesting tools: give yourself glims, materials and items, or move the clock. Only in dev builds. Key: <span class="kbd">`</span></p>
       <button type="button" onclick={onDev}>Open dev mode</button>
     </section>
   {/if}

@@ -17,6 +17,9 @@
         in rec {
           glimway-server = pkgs.callPackage ./nix/server.nix { inherit build; };
           glimway-web = pkgs.callPackage ./nix/web.nix { inherit build; };
+          # Dev builds (dev mode's tools), for a staging instance only.
+          glimway-server-dev = pkgs.callPackage ./nix/server.nix { inherit build; devTools = true; };
+          glimway-web-dev = pkgs.callPackage ./nix/web.nix { inherit build; devTools = true; };
           default = glimway-server;
         });
 

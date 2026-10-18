@@ -1,4 +1,5 @@
 import { expose } from '../game/dev-hooks'
+import { DEV_TOOLS } from '../lib/dev-tools'
 import { createUpdateCheck, RUNNING, type UpdateCheck, type VersionInfo } from '../lib/version'
 
 /** Checks while the tab is visible run on this tick (the check spaces them out). */
@@ -69,6 +70,8 @@ export function watchForUpdates(): () => void {
   if (import.meta.env.DEV) {
     return expose('__fsDevVersionCheck', () => check.checkNow())
   }
+  // A dev-tools build (staging) watches as a release does, and has the hook too.
+  const disposeHook = DEV_TOOLS ? expose('__fsDevVersionCheck', () => check.checkNow()) : () => {}
   const visible = () => document.visibilityState === 'visible'
   const onVisibility = () => {
     if (visible()) void check.onVisible()
@@ -78,6 +81,7 @@ export function watchForUpdates(): () => void {
     if (visible()) void check.onTick()
   }, TICK_MS)
   return () => {
+    disposeHook()
     document.removeEventListener('visibilitychange', onVisibility)
     window.clearInterval(tick)
   }

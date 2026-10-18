@@ -65,13 +65,55 @@ let
       randomizedDelaySec = "1m";
     };
   };
+  # Dev mode: the staging instance may, with its dev builds; the live one never.
+  devOwner = "0f9d6d9e-7c55-4b8e-9d3a-2a1c3b4d5e6f";
+  devOn = evaluateBoth {
+    glimway = liveSettings;
+    glimway-dev = devSettings // { settings = { dev = { enable = true; accounts = [ devOwner ]; }; server.dev.clock = false; }; };
+  };
+  liveDevMode = evaluate (liveSettings // { settings.dev.enable = true; });
+  # Its own package swapped for a dev build still doesn't let it.
+  liveDevPackages = evaluate (liveSettings // {
+    settings.dev.enable = true;
+    package = pkgs.callPackage ./server.nix { devTools = true; };
+    webPackage = pkgs.callPackage ./web.nix { devTools = true; };
+  });
+  # Dev mode with release builds: refused.
+  devReleasePackages = evaluateBoth { glimway-dev = devSettings // {
+    settings.dev.enable = true;
+    package = pkgs.callPackage ./server.nix { };
+  }; };
+  # With settings.dev.enable off, dev builds or dev variables and flags still
+  # don't get past the live instance (review: they granted the tools).
+  devServer = pkgs.callPackage ./server.nix { devTools = true; };
+  devWeb = pkgs.callPackage ./web.nix { devTools = true; };
+  liveSneaks = map (extra: evaluate (liveSettings // extra)) [
+    { package = devServer; webPackage = devWeb; extraEnvironment.GLIMWAY_DEV_ENABLE = "true"; }
+    { package = devServer; }
+    { webPackage = devWeb; }
+    { extraEnvironment.GLIMWAY_DEV_ENABLE = "true"; }
+    { extraEnvironment.FINGERSNAP_SERVER_DEV_GRANT = "true"; }
+    { extraEnvironment.GLIMWAY_WEB_DEV_HOOKS = "true"; }
+    { extraFlags = [ "-dev-clock=now" ]; }
+    { extraFlags = [ "--dev-clock" "now" ]; }
+  ];
+  # Staging may have them; settings override the login options.
+  devExtras = evaluateBoth { glimway-dev = devSettings // {
+    package = devServer;
+    extraEnvironment.GLIMWAY_DEV_ENABLE = "true";
+    extraFlags = [ "-dev-clock=now" ];
+  }; };
+  loginBoth = evaluate (liveSettings // { login.rate = 5; settings.server.login.rate = 2; });
   disabled = evaluate { };
   invalidRootDB = evaluate { enable = true; database = "/game.sqlite"; };
   invalidState = evaluate { enable = true; stateDirectory = "../game"; };
   env = cfg: cfg.systemd.services.glimway-server.environment;
   service = cfg: cfg.systemd.services.glimway-server.serviceConfig;
   assertionsPass = cfg: lib.all (a: a.assertion) cfg.assertions;
-  configs = [ defaults legacy custom scheduled disabled live dev both proxied ];
+  configs = [ defaults legacy custom scheduled disabled live dev both proxied devOn ];
+  isDev = p: p.passthru.devTools or false;
+  devOnCfg = devOn.services.glimway-dev;
+  devOnService = devOn.systemd.services.glimway-dev-server;
   # What an enabled instance adds to a host with none: its units, accounts,
   # tmpfiles paths, commands on PATH and Caddy sites. Sorted for comparing.
   sorted = lib.sort lib.lessThan;
@@ -100,6 +142,30 @@ in
 assert lib.all assertionsPass configs;
 assert !(assertionsPass invalidRootDB);
 assert !(assertionsPass invalidState);
+# The live instance can't be configured into dev mode, even with dev builds.
+assert !(assertionsPass liveDevMode) && !(assertionsPass liveDevPackages);
+assert lib.all (c: !(assertionsPass c)) liveSneaks;
+assert assertionsPass devExtras;
+# The login options are the settings' defaults, never flags (a flag would pin them).
+assert loginBoth.services.glimway.settings.server.login == { concurrency = 4; rate = 2; global_rate = 60; };
+assert !(lib.hasInfix "-login" (service live).ExecStart);
+assert (service live).ExecStart == ''"${lib.getExe live.services.glimway.package}"'';
+assert !(assertionsPass devReleasePackages);
+# Dev mode off: release builds, on every instance (staging runs release code).
+assert !(isDev live.services.glimway.package) && !(isDev live.services.glimway.webPackage);
+assert !(isDev dev.services.glimway-dev.package) && !(isDev dev.services.glimway-dev.webPackage);
+assert !(isDev devOn.services.glimway.package) && !(isDev devOn.services.glimway.webPackage);
+# Dev mode on: the dev builds, its settings in the file, reload on a change.
+assert isDev devOnCfg.package && isDev devOnCfg.webPackage;
+assert devOnService.environment.GLIMWAY_CONFIG == "/etc/glimway-dev/config.toml";
+assert (env live).GLIMWAY_CONFIG == "/etc/glimway/config.toml";
+assert lib.hasInfix "kill -HUP $MAINPID" devOnService.serviceConfig.ExecReload;
+assert devOnService.reloadTriggers != [ ];
+assert lib.hasInfix "X-Reload-Triggers" devOn.systemd.units."glimway-dev-server.service".text;
+assert devOnCfg.settings == { dev = { enable = true; accounts = [ devOwner ]; }; server = { dev.clock = false; login = { concurrency = 4; rate = 10; global_rate = 60; }; }; };
+assert lib.hasSuffix "glimway-dev-settings.toml" devOn.environment.etc."glimway-dev/config.toml".source.name;
+assert live.services.glimway.settings == { dev = { enable = false; accounts = [ ]; }; server.login = { concurrency = 4; rate = 10; global_rate = 60; }; };
+assert live.systemd.services.glimway-server.restartTriggers != [ ];
 assert (env defaults).GLIMWAY_DB == "/var/lib/glimway-server/glimway.sqlite";
 assert (env defaults).GLIMWAY_HABITICA_ASSETS_URL == "https://habitica-assets.s3.amazonaws.com/mobileApp/images/";
 assert (service defaults).ProtectSystem == "strict";
@@ -114,7 +180,7 @@ assert (env custom).GLIMWAY_PARTY_ADMISSION == "false";
 assert (env custom).GLIMWAY_TRUSTED_PROXIES == "";
 assert (env custom).GLIMWAY_HABITICA_URL == "https://habitica.example.org";
 assert (service custom).User == "game" && (service custom).Group == "games";
-assert lib.hasInfix ''"-login-concurrency" "2"'' (service custom).ExecStart;
+assert custom.services.glimway.settings.server.login == { concurrency = 2; rate = 5; global_rate = 20; };
 assert lib.hasInfix ''"-listen" "[::1]:9091"'' (service custom).ExecStart;
 assert !(custom.systemd.timers ? glimway-server-backup);
 assert !(custom.systemd.services ? glimway-server-backup);
@@ -162,9 +228,18 @@ pkgs.runCommand "glimway-nixos-module-evaluation" {
     devUnit = both.systemd.units."glimway-dev-server.service".text;
     devWebUnit = both.systemd.units."glimway-dev.service".text;
     devBackupUnit = both.systemd.units."glimway-dev-server-backup.service".text;
+    devModeUnit = devOn.systemd.units."glimway-dev-server.service".text;
   });
   passAsFile = [ "report" ];
+  # On an x86_64-linux builder, also build both rendered settings files: each
+  # build runs its own server's check-config (the dev file through the dev
+  # build, the live one through the release build).
+  settingsFiles = lib.optionals (pkgs.stdenv.buildPlatform.system == "x86_64-linux") [
+    devOn.environment.etc."glimway-dev/config.toml".source
+    devOn.environment.etc."glimway/config.toml".source
+  ];
 } ''
   mkdir -p "$out"
   cp "$reportPath" "$out/module-evaluation.json"
+  for f in $settingsFiles; do cat "$f" >> "$out/settings.toml"; done
 ''

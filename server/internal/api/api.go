@@ -14,6 +14,7 @@ import (
 	"glimway/server/internal/wildsgen"
 	"io"
 	"log"
+	"net/http"
 	"sync"
 	"time"
 )
@@ -74,6 +75,9 @@ type Config struct {
 	// PurseAnswerWait is how long a top-up's POST waits for its worker
 	// before answering "working" (design 2.2: 8 seconds).
 	PurseAnswerWait time.Duration
+	// WebSettings is GET /api/web-settings' answer for a request (the
+	// server command's settings, per account). Nil: no settings, no dev tools.
+	WebSettings func(*http.Request) any
 }
 
 type Server struct {

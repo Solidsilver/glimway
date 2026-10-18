@@ -11,7 +11,7 @@ import (
 	"strconv"
 )
 
-// Dev mode (local playtesting only): POST /api/dev/grant gives the
+// Dev mode (local playtesting and staging): POST /api/dev/grant gives the
 // signed-in account Glimway's own things — glims, materials, items,
 // tools, recipe pages, home goods — through the same store paths as real
 // grants, each with its ledger row ("dev-grant"). Nothing from Habitica:
@@ -19,7 +19,7 @@ import (
 // are grantable; anything else is refused. This file is compiled only into
 // `-tags dev` builds, and the route is mounted by the dev build of the
 // server command (server/cmd/glimway-server/dev_routes.go), for callers on
-// the same machine only.
+// this machine, or for the accounts a settings file's [dev] table allows.
 
 // DevGrantPath is the route's path.
 const DevGrantPath = "/api/dev/grant"

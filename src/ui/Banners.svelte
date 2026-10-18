@@ -1,5 +1,6 @@
 <script lang="ts">
   import { expose } from '../game/dev-hooks'
+  import { DEV_TOOLS } from '../lib/dev-tools'
   import { ui } from './store.svelte'
   import { home } from './home.svelte'
   import { sfx } from '../game/sfx'
@@ -115,7 +116,7 @@
       if (shownId !== b.id) return
       spot = place(b.kind)
       showing = b.id
-      if (import.meta.env.DEV) shownLog.push({ kind: b.kind, title: b.title })
+      if (DEV_TOOLS) shownLog.push({ kind: b.kind, title: b.title })
       sfx(b.kind === 'quest' ? 'quest' : 'step-area')
       if (timer !== null) window.clearTimeout(timer)
       timer = window.setTimeout(() => dismiss(b.id), b.kind === 'quest' ? 4200 : 2600)

@@ -1,5 +1,7 @@
 <script lang="ts">
   import { expose } from './game/dev-hooks'
+  import { DEV_TOOLS, devPanelOn, devTools } from './lib/dev-tools'
+  import { loadWebSettings, onWebSettings, resetWebSettings, type DevTools } from './lib/web-settings'
   import { onMount } from 'svelte'
   import type Phaser from 'phaser'
   import {
@@ -108,11 +110,16 @@
   type Phase = 'loading' | 'title' | 'playing'
   type Panel = 'journal' | 'map' | 'character' | 'inventory' | 'menu' | 'library' | 'shop' | 'deed' | 'dev' | VillagePanel | null
 
-  // Dev mode (local playtesting only): the panel exists in Vite dev mode and
-  // nowhere else. A production build replaces import.meta.env.DEV with false,
-  // so this import (and the panel's code and words) never reaches its bundle.
+  // Dev mode: the panel exists only in builds with dev tools (the Vite dev
+  // server, or a staging server's dev-tools build; src/lib/dev-tools.ts). A
+  // release build replaces DEV_TOOLS with false, so this import (and the
+  // panel's code and words) never reaches its bundle. In a dev-tools build it
+  // shows only for a player the server's dev mode gives a panel tool.
   let DevPanel = $state<typeof import('./ui/dev/DevPanel.svelte').default | null>(null)
-  if (import.meta.env.DEV) void import('./ui/dev/DevPanel.svelte').then((m) => (DevPanel = m.default))
+  if (DEV_TOOLS) void import('./ui/dev/DevPanel.svelte').then((m) => (DevPanel = m.default))
+  /** This player's dev tools (null: none, or a release build), from the web settings. */
+  let dev = $state<DevTools | null>(devTools())
+  const devPanel = $derived(DEV_TOOLS && devPanelOn(dev))
 
   let phase = $state<Phase>('loading')
   let panel = $state<Panel>(null)
@@ -413,6 +420,9 @@
   onMount(() => {
     const cleanupBus = wireBus()
     const stopUpdates = watchForUpdates()
+    // The web settings (the server's [web] table): read now, and again on sign-in.
+    const stopWebSettings = onWebSettings(() => (dev = devTools()))
+    void loadWebSettings()
 
     // Hidden: save now, in queue order. Leaving (pagehide): the last upload
     // may skip a busy queue, since the page won't wait for it.
@@ -446,6 +456,7 @@
       stopPresence()
       cleanupBus()
       stopUpdates()
+      stopWebSettings()
       document.removeEventListener('visibilitychange', onVisibility)
       window.removeEventListener('pagehide', onHide)
       session?.destroy()
@@ -475,6 +486,7 @@
       /* fall back to monospace */
     }
     phase = 'playing'
+    void loadWebSettings()
     game = startGame(stageEl, session)
     whatsNew.start()
   }
@@ -499,6 +511,7 @@
         villageUi.waiting = 0
       },
       toTitle: () => {
+        resetWebSettings()
         stopPresence()
         stopGame(game)
         game = null
@@ -513,6 +526,9 @@
   async function enterSession(next: Session): Promise<void> {
     const prev = session
     session = next
+    // Its dev tools are its own: the last account's go now, before a scene can use them.
+    if (prev !== next) resetWebSettings()
+    void loadWebSettings()
     ui.vitalsSource = next.vitalsSource
     ui.importedProfile = next.importedProfile
     ui.questKnown = false // a different journey: its first quest reading is not a change
@@ -539,6 +555,7 @@
 
   function logout(): void {
     confirmLogout = false
+    resetWebSettings()
     purseUi.reset()
     ui.showPurse(null)
     void account.logout()
@@ -636,8 +653,8 @@
     if (['KeyJ', 'KeyC', 'KeyI', 'KeyM', 'Escape'].includes(e.code)) (e as KeyboardEvent & { fsConsumed?: boolean }).fsConsumed = true
     // A held Escape closes one thing: its repeats don't go on to open the Menu behind it.
     if (e.code === 'Escape' && e.repeat) return
-    // Dev mode (Vite dev only): ` opens and closes the dev panel.
-    if (import.meta.env.DEV && e.code === 'Backquote') {
+    // Dev mode: ` opens and closes the dev panel.
+    if (devPanel && e.code === 'Backquote') {
       ;(e as KeyboardEvent & { fsConsumed?: boolean }).fsConsumed = true
       toggle('dev')
       return
@@ -923,8 +940,8 @@
             }
           : undefined}
       />
-    {:else if import.meta.env.DEV && panel === 'dev' && DevPanel}
-      <DevPanel {session} onClose={() => toggle('dev')} />
+    {:else if devPanel && panel === 'dev' && DevPanel}
+      <DevPanel {session} tools={dev} onClose={() => toggle('dev')} />
     {:else if panel === 'menu'}
       <MenuPanel
         {session}
@@ -937,7 +954,7 @@
           panel = null
           whatsNew.openLatest()
         }}
-        onDev={import.meta.env.DEV ? () => (panel = 'dev') : undefined}
+        onDev={devPanel ? () => (panel = 'dev') : undefined}
       />
     {/if}
   {/if}

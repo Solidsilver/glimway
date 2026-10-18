@@ -25,7 +25,7 @@ func devSetup(t *testing.T, args ...string) clockSetup {
 	if err := f.Parse(args); err != nil {
 		t.Fatal(err)
 	}
-	c, err := start()
+	c, err := start(false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,7 +58,7 @@ func post(h http.Handler, body, remote string) *httptest.ResponseRecorder {
 
 func TestDevClockRouteMovesTheClockForwardOnly(t *testing.T) {
 	c := devSetup(t, "-dev-clock=1000")
-	h := c.mount(inner)
+	h := c.mount(inner, localCaller)
 	local := "127.0.0.1:5000"
 	if w := post(h, `{"advance_seconds": 3600}`, local); w.Code != http.StatusOK || !strings.Contains(w.Body.String(), `"moved":true`) {
 		t.Fatal(w.Code, w.Body.String())
@@ -120,7 +120,7 @@ func TestDevClockNowKeepsRealTimeAndMoves(t *testing.T) {
 	if d := time.Since(c.now()); d < 0 || d > 50*time.Millisecond {
 		t.Fatal("behind or ahead of real time by", d)
 	}
-	if w := post(c.mount(inner), `{"advance_seconds": 86400}`, "127.0.0.1:5000"); w.Code != http.StatusOK {
+	if w := post(c.mount(inner, localCaller), `{"advance_seconds": 86400}`, "127.0.0.1:5000"); w.Code != http.StatusOK {
 		t.Fatal(w.Code, w.Body.String())
 	}
 	if d := time.Until(c.now()); d < 86399*time.Second {
@@ -130,7 +130,7 @@ func TestDevClockNowKeepsRealTimeAndMoves(t *testing.T) {
 
 func TestDevBuildWithoutDevClockHasNoRoute(t *testing.T) {
 	c := devSetup(t)
-	if w := post(c.mount(inner), `{"advance_seconds": 60}`, "127.0.0.1:5000"); w.Code != http.StatusTeapot {
+	if w := post(c.mount(inner, localCaller), `{"advance_seconds": 60}`, "127.0.0.1:5000"); w.Code != http.StatusTeapot {
 		t.Fatal("the route answered without -dev-clock:", w.Code)
 	}
 	if d := time.Since(c.now()); d < 0 || d > time.Second {
@@ -142,7 +142,7 @@ func TestDevAPIAnswersFollowMovableClock(t *testing.T) {
 	c := devSetup(t, "-dev-clock=1000")
 	a := api.New(nil, nil, api.Config{Now: c.now})
 	defer a.ClosePresence()
-	h := c.mount(devRoutes(a)(a))
+	h := c.mount(devRoutes(a, localCaller)(a), localCaller)
 	check := func(path string, status int, want int64) {
 		t.Helper()
 		r := httptest.NewRequest(http.MethodGet, path, nil)

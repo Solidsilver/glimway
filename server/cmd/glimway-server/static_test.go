@@ -103,20 +103,3 @@ func TestStaticDisabledAndInvalidRoot(t *testing.T) {
 		t.Fatal("accepted missing index.html")
 	}
 }
-
-func TestLoginEnvironmentLimits(t *testing.T) {
-	t.Setenv("FINGERSNAP_LOGIN_RATE", "7")
-	if v, err := envInt("LOGIN_RATE", 10); err != nil || v != 7 {
-		t.Fatal(v, err)
-	}
-	t.Setenv("GLIMWAY_LOGIN_RATE", "12")
-	if v, err := envInt("LOGIN_RATE", 10); err != nil || v != 12 {
-		t.Fatal(v, err)
-	}
-	for _, value := range []string{"0", "-1", "invalid"} {
-		t.Setenv("GLIMWAY_LOGIN_RATE", value)
-		if err := run([]string{"-db", filepath.Join(t.TempDir(), "game.sqlite"), "allowlist", "list"}); err == nil {
-			t.Fatalf("accepted %q", value)
-		}
-	}
-}

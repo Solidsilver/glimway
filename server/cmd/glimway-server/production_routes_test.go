@@ -17,7 +17,7 @@ func TestProductionBuildHasNoDevRoutes(t *testing.T) {
 		r := httptest.NewRequest(http.MethodPost, path, strings.NewReader(body))
 		r.RemoteAddr = "127.0.0.1:5000"
 		w := httptest.NewRecorder()
-		devRoutes(nil)(inner).ServeHTTP(w, r)
+		devRoutes(nil, nil)(inner).ServeHTTP(w, r)
 		if w.Code != http.StatusTeapot {
 			t.Fatal("a dev route answered in a production build:", path, w.Code)
 		}

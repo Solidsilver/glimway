@@ -7,4 +7,5 @@ import ./instance.nix {
   title = "Glimway dev";
   port = 8091;
   webPort = 4174;
+  allowDevMode = true;
 }

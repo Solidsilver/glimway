@@ -82,6 +82,7 @@ type routeMetadata struct {
 
 var routes = []routeMetadata{
 	{method: "GET", path: "/api/health", label: "/api/health", handler: (*Server).health},
+	{method: "GET", path: webSettingsPath, label: webSettingsPath, handler: (*Server).webSettings},
 	{method: "HEAD", path: "/api/health", label: "/api/health", handler: (*Server).health},
 	{method: "POST", path: "/api/report", label: "/api/report", handler: (*Server).report},
 	{method: "POST", path: "/api/quest/step", label: "/api/quest/step", handler: (*Server).questStep},
