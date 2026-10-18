@@ -152,49 +152,9 @@
     "backfillSha256": "43d6aacda852c33b0db4ea6f603646d240d07685f80938d59cffb3dd31b2d304"
   },
   {
-    "name": "038_lasting_geography.sql",
-    "sha256": "d771e68b382de21eb5b984854285e58ed7e1b6c0028488901889fac172bbe444"
-  },
-  {
-    "name": "039_holds.sql",
-    "sha256": "967b01dd8a672256716b582afbf49f8522cb2f5d04f6a13b4f66cfa03e103404"
-  },
-  {
-    "name": "040_lot_lanterns.sql",
-    "sha256": "32a7a7968a51733e0e7d3b4ef7861315a2b742a6ab2cc6c141931e9f3eaf536c"
-  },
-  {
-    "name": "041_camps.sql",
-    "sha256": "39e14d032a335a9bbed2d682d7971e83224798e4972dcb86ea89322018425dc5"
-  },
-  {
-    "name": "042_common_ways.sql",
-    "sha256": "0909fe60498fa6fda5bce7be0fa77983f34cfc6b62c609c540398312e0ba72da"
-  },
-  {
-    "name": "043_communal_lamps.sql",
-    "sha256": "44d3740bb27aad27923e0a5e3198ffab832b0fdb52af141367e6fdc4e005a3af"
-  },
-  {
-    "name": "044_ways_home.sql",
-    "sha256": "96a0552af9903f834ba5c7c2468c20bef9716fc52d96fb12f3d214c6a5363791"
-  },
-  {
-    "name": "045_claim_rules.sql",
-    "sha256": "cda781eef55b72d2090bf5d08b76707a7dae9475de6f9be16da31bfd86e39e8c"
-  },
-  {
-    "name": "046_lamp_naming_follows_lamp.sql",
-    "sha256": "f96dfa5d71a4126ddbc7a0c3d1b68b1efaf105891dc2025b256a77042d288369"
-  },
-  {
-    "name": "047_turnings_and_crates.sql",
-    "sha256": "5cfad6a954f87ca9e43e8b2c51366c60a058923a7d75ce75fc847ed60185f13d",
-    "backfill": "migration_047_backfill.go",
-    "backfillSha256": "d2173c0e16195b4263c5f77403ec492b971c45b65671f665919f6bf697d9738d"
-  },
-  {
-    "name": "048_carried_plants.sql",
-    "sha256": "3ce63beec22ecfdae503951b1ea6d0c5c7f6d705a2d1d7a0bc19e801965ab696"
+    "name": "038_lamps.sql",
+    "sha256": "4f5384d33382a381c70b4dab6a89c572a07c02555809e22c738a0be4a8ca479f",
+    "backfill": "migration_038_backfill.go",
+    "backfillSha256": "3b62aa9b337e2722f8d5eb67c18abbf2e977e6373a8e8d6c41df3eaab255ab16"
   }
 ]

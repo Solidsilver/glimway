@@ -185,6 +185,25 @@ with real players that has not applied it needs a preserving migration before
 this version is used. Rolling back NixOS switches binaries, not the database;
 restore a compatible backup if the old binary cannot read the upgraded schema.
 
+To rehearse an upgrade, run the new version's binary on a copy of a recent
+backup before switching:
+
+```sh
+nix build github:Solidsilver/glimway/<tag>#glimway-server
+cp /var/lib/glimway-server/backups/<latest>.sqlite /tmp/rehearsal.sqlite
+./result/bin/glimway-server migrate --dry-run /tmp/rehearsal.sqlite
+```
+
+`migrate --dry-run COPY` runs the `verify-backup` checks on `COPY`, applies the
+migrations this version would apply on start to a private snapshot of it in a
+temporary folder, and checks the snapshot again. `COPY` itself is only read,
+never written. It prints the schema before and after, which migrations ran and
+how long they took, and the counts of accounts, worlds, homes, items, plants,
+holds, camps and Pell's crates before and after. It exits non-zero on any
+failure. It refuses the `-db` file and any database that looks in use: a
+`-wal`, `-shm` or `-journal` file beside it (symlinks followed first), more
+than one hard link, or, on Linux, a process holding it.
+
 For contributors, from a source checkout:
 
 ```sh

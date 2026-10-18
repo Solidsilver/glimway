@@ -157,6 +157,10 @@ func run(args []string) error {
 		}
 		return verifyBackup(ctx, cmd[1])
 	}
+	// Also before store.Open: the rehearsal migrates its copy, never -db.
+	if len(cmd) > 0 && cmd[0] == "migrate" {
+		return migrateDryRun(ctx, cmd[1:], *path)
+	}
 	s, err := store.Open(*path)
 	if err != nil {
 		return fmt.Errorf("open database: %w", err)

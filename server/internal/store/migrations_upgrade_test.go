@@ -59,17 +59,6 @@ INSERT INTO player_ability_ready VALUES('alice','mend',17);`, []string{
 			"SELECT count(*) FROM sync_baselines WHERE account_id='alice' AND level_mark=43 AND verified_high_level=42",
 			"SELECT count(*) FROM player_ability_ready WHERE account_id='alice' AND ability='mend' AND ready_at=17",
 		}},
-		{"046", "045_claim_rules.sql", `INSERT INTO worlds(id,owner_id,seed,created_at) VALUES('w2','alice','seed2',10);
-INSERT INTO homestead_items(id,item_def,location,account_id) VALUES('piece','way-lamp','inventory','alice');
-INSERT INTO lamp_namings(world_id,lamp_id,text,short_name,namer,named_at) VALUES('w2','piece','Again','Again',NULL,20),('w','piece','First','First','alice',15),('w','lamp-stone:1:2','Here','Here',NULL,16),('w2','lamp-stone:1:2','There','There',NULL,17);`, `INSERT INTO lamp_namings(world_id,lamp_id,text,short_name,named_at) VALUES(NULL,'another','Later','Later',30);`, []string{
-			// A piece's naming follows it out of its world: the first stands.
-			"SELECT count(*) FROM lamp_namings WHERE lamp_id='piece'",
-			"SELECT count(*) FROM lamp_namings WHERE lamp_id='piece' AND world_id IS NULL AND text='First' AND namer='alice' AND named_at=15",
-			// A road stone's naming stays its world's.
-			"SELECT count(*) FROM lamp_namings WHERE lamp_id='lamp-stone:1:2' AND world_id='w' AND text='Here'",
-			"SELECT count(*) FROM lamp_namings WHERE lamp_id='lamp-stone:1:2' AND world_id='w2' AND text='There'",
-			"SELECT count(*) FROM lamp_namings WHERE lamp_id='another' AND world_id IS NULL",
-		}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.migration, func(t *testing.T) {
