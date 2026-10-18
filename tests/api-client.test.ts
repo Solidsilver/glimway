@@ -294,6 +294,18 @@ test('client id: a reload with no other live page keeps its stored id', async ()
   assert.equal(claim.id, 'stored-id');
 });
 
+test('client id: a new tab (nothing stored) takes a fresh id at once, without waiting for an answer', async () => {
+  const channelName = freshChannel();
+  const storage = memoryStorage();
+  const t0 = Date.now();
+  const claim = track(await claimClientId({ storage, channelName, waitMs: 2_000 }));
+  assert.ok(Date.now() - t0 < 1_000, 'no wait for a fresh id');
+  assert.equal(storage.store.get('fingersnap:client-id'), claim.id);
+  // It still answers for its id: a copy of this tab takes another.
+  const copy = track(await claimClientId({ storage: memoryStorage(claim.id), channelName, waitMs: 300 }));
+  assert.notEqual(copy.id, claim.id);
+});
+
 test('client id: a duplicated tab (same stored id, original still open) gets its own id', async () => {
   const channelName = freshChannel();
   const original = track(await claimClientId({ storage: memoryStorage('dup-id'), channelName, waitMs: 30 }));

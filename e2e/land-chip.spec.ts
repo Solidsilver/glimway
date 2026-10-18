@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { expect, test, type Page } from './fixtures'
-import { accountOf, pinWorld, reenter, seedMarks, sql, wickSlack } from './connected'
+import { accountOf, pinWorld, PLACE_REPORTED_MS, reenter, seedMarks, serverState, sql, wickSlack } from './connected'
 import { claimDeed, freshPlayer, fund, homes, shot } from './home-helpers'
 import { atTile, parkCreatures, waitForWilds, warp, windowWhole } from './helpers'
 import { anchorPoint } from './positions'
@@ -101,6 +101,13 @@ test('the land chip: turning, held and yours, none in town, dimming; the dimming
   // The oil runs out while you're away: the next session says so, once.
   // Its last wick (the oil gone at a turning, not yet guttering) is dimming already.
   sql(`UPDATE camps SET oil=0,dimming=0 WHERE id='${lamp}';`)
+  // The notice leaves out a light the saved place stands by, and the walk to
+  // town (one area) is reported on the link's deadline: until it lands, the
+  // world still has you at the camp (CI, 2026-10-18).
+  await expect.poll(async () => {
+    const { area, position } = (await serverState(page)).body.state as { area: string; position: { x: number; y: number } }
+    return area !== 'outdoors' || Math.floor(position.x / 16 / S) !== Math.floor(at.tx / S) || Math.floor(position.y / 16 / S) !== Math.floor(at.ty / S)
+  }, { timeout: PLACE_REPORTED_MS, message: 'the saved place has left the camp’s chunk' }).toBe(true)
   let told = noticesAnswer(page)
   await reenter(page)
   expect(await told).toEqual([{ kind: 'way-lamp', id: lamp }])

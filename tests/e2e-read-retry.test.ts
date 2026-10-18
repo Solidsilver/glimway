@@ -30,5 +30,7 @@ test('safe reads do not retry other failures or a second reset', async () => {
 test('connection reset detection recognizes node transport errors only', () => {
   assert.equal(isConnectionReset(Object.assign(new Error('read failed'), { cause: { code: 'ECONNRESET' } })), true)
   assert.equal(isConnectionReset(new Error('connection reset by peer')), true)
+  // Playwright's request context names a reset before any answer only this way.
+  assert.equal(isConnectionReset(new Error('apiRequestContext.get: socket hang up')), true)
   assert.equal(isConnectionReset(new Error('server returned 500')), false)
 })

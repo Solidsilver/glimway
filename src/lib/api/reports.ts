@@ -149,6 +149,15 @@ export class ReportBook {
     this.next = { ...this.next, abilityCasts: addCasts(this.next.abilityCasts, { [id]: n }), changed: true };
   }
 
+  /**
+   * The world ignored the last report's place but kept the hero where the
+   * screen has them: the place goes again, on the newest basis, even if the
+   * hero hasn't moved since.
+   */
+  again(): void {
+    if (this.next.place) this.next = { ...this.next, changed: true };
+  }
+
   get due(): boolean {
     return !!this.captured || (this.next.changed && this.next.boundary === null && !!this.next.place);
   }

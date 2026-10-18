@@ -335,9 +335,18 @@ test('two players in neighbouring chunks see each other; two chunks apart they d
   await waitForWorld(other)
 
   // Ash by the east edge of the Tangle's middle chunk (0, -1); Rowan just over it in (1, -1).
+  // The Tangle is the wick's land: a warp onto a tree or rock stands the hero
+  // on the nearest open tile, which can be over the edge (CI, 2026-10-18), so
+  // both spots are open tiles on their own side of it.
   await warp(page, 'outdoors', 22, -12)
   await waitForWilds(page)
-  await warp(other, 'outdoors', 25, -12)
+  await windowWhole(page)
+  const ashAt = await openNear(page, 22, -12, { minTx: 0, maxTx: S - 1, minTy: -S, maxTy: -1 })
+  const rowanAt = await openNear(page, 25, -12, { minTx: S, maxTx: 2 * S - 1, minTy: -S, maxTy: -1 })
+  if (!ashAt || !rowanAt) throw new Error(`no open ground by the edge: ${JSON.stringify({ ashAt, rowanAt })}`)
+  await warp(page, 'outdoors', ashAt.tx, ashAt.ty)
+  await waitForWilds(page)
+  await warp(other, 'outdoors', rowanAt.tx, rowanAt.ty)
   await waitForWilds(other)
   expect((await wilds(page)).chunk).toEqual({ cx: 0, cy: -1 })
   expect((await wilds(other)).chunk).toEqual({ cx: 1, cy: -1 })
@@ -372,10 +381,14 @@ async function sceneResources(p: Page) {
   return { tweens: z.tweens, transientTweens: z.transientTweens, statics: z.statics, textures: z.textures, listeners: z.listeners, drawn: Object.fromEntries(Object.entries(drawn).sort(([a], [b]) => a.localeCompare(b))) }
 }
 
-/** Only the motes and their tween lifetime matter to a site redraw. */
+/**
+ * Only the motes and their tweens matter to a site redraw: the looping ones
+ * (a mote drifts for as long as it lives). A short tween that starts beside
+ * the redraw (a toast, a hint) isn't a mote's (CI, 2026-10-18: 9 more).
+ */
 async function moteResources(p: Page) {
   const z = await sceneSize(p)
-  return { motes: z.kinds['Image:site-mote'] ?? 0, tweens: z.tweens }
+  return { motes: z.kinds['Image:site-mote'] ?? 0, tweens: z.tweens - z.transientTweens }
 }
 
 /** A stable empty scene can precede the presence join: wait for every camp's sprites. */
@@ -557,7 +570,7 @@ test('the Whitequiet’s motes drift with each outer chunk, stay through its sit
   await standAt(page, (await openNear(page, 12, 12))!)
   const left = (await steady(page, () => wildsWindow(page), { frames: 4, seconds: 20, message: 'outer chunks after returning to the Tangle' }))!.outer
   expect(await motes(page), `only the outer chunks still attached (${left.join(' ') || 'none'}) keep theirs`).toBe(MOTES * left.length)
-  expect((await sceneSize(page)).tweens).toBeLessThan(before.tweens - MOTES * (outer.length - left.length) + 1)
+  expect((await moteResources(page)).tweens).toBeLessThan(before.tweens - MOTES * (outer.length - left.length) + 1)
 })
 
 test.describe('with reduced motion', () => {

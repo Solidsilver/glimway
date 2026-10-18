@@ -2,7 +2,7 @@ import { expect, test, type Page } from './fixtures'
 import type { BrowserContext } from '@playwright/test'
 import { CONTRACT, calendarOnServer, wickSlack } from './connected'
 import { freshPlayer } from './home-helpers'
-import { dialogueState, expectToast, openTalk, settled, untilChoices, untilLine, waitForLive, waitForWilds, warp, wilds } from './helpers'
+import { diagnose, dialogueState, expectToast, openTalk, settled, untilChoices, untilLine, waitForLive, waitForWilds, warp, wilds } from './helpers'
 import { goIn, setHour } from './room-helpers'
 import { rumourSentence } from '../src/lib/wilds/rumour.ts'
 
@@ -57,7 +57,10 @@ test('Elara tells the rumour; the place is found first and the bundle opens once
   expect(r.site).toMatch(/^rumour:-?\d+:-?\d+$/)
   // On a wick's last day wickSlack moves past its turning, and the Turning holds play while the
   // new land loads: a warp in that hold is dropped. Wait until the Wilds hold this wick and play is back.
-  await expect.poll(async () => (await wilds(page)).wickEpoch, { timeout: 15_000, message: 'the Wilds hold this wick' }).toBe(told!.epoch)
+  const held = () => page.evaluate(() => window.__fsWilds?.()?.wickEpoch ?? null)
+  await expect.poll(held, { timeout: 15_000, message: 'the Wilds hold this wick' }).toBe(told!.epoch).catch(async (e: Error) => {
+    throw new Error(`${e.message}\n${await diagnose(page)}\nsafety: ${JSON.stringify(await page.evaluate(() => window.__fsSafety?.() ?? null))}`)
+  })
   await settled(page, { area: 'outdoors' })
 
   // Elara, in the library: "Heard anything from the drift?"

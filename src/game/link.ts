@@ -1516,11 +1516,16 @@ export class Link {
    * The hero arrived in a scene. A place in another area (or another Wilds
    * region) than the last report named is reported now, from where the
    * hero really stands after the arrival (a fresh region read included).
+   * Forced: after a reload the restored book already holds this place, so
+   * it isn't new, but the world records a turning only from a report
+   * (story.Record), and this page has named no place yet.
    */
   arrived(): void {
     this.noteLive()
     const area = this.reports.next.place?.area
-    if (area && area !== this.reports.reportedArea) this.reportSoon()
+    if (!area || area === this.reports.reportedArea) return
+    this.reportForced = true
+    this.reportSoon()
   }
 
   /** A signature cast happened on screen (counted against the server's cast budget). */
@@ -1538,12 +1543,15 @@ export class Link {
    * stands there, they're moved to the world's place (the scene follows,
    * EV.relocate), and the next report names it, so a reload starts there too.
    * `otherArea`: only when the world holds them in another area (an ignored
-   * place: within one area it's a stale sample, and the next report settles it).
+   * place: within one area it's a stale sample, and the next report settles it,
+   * so the place is due again even if the hero hasn't moved: otherwise the
+   * world keeps the older spot, and a reload's upload sends nothing new).
    */
   private followServerPlace(refused: WhereJson, opts: { otherArea?: boolean } = {}): void {
     const s = this.session
     const held = this.server.place
     if (!s || !held) return
+    if (held.area === refused.area && opts.otherArea && (held.x !== refused.x || held.y !== refused.y)) this.reports.again()
     if (held.area === refused.area && (opts.otherArea || (held.x === refused.x && held.y === refused.y))) return
     if (whereOf(s.state).area !== refused.area) return
     this.refresh({ relocate: true })

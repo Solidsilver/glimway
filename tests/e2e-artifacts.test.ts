@@ -58,6 +58,20 @@ test('retry-assisted green evidence keeps original errors, annotations and lifec
   assert.match(summary.tracePolicy.note, /successful retry/)
 })
 
+test('a lane run’s smoke pass adds its own report to the first pass’s, not over it', (t) => {
+  const spec = (title: string, status: string) => ({ title, specs: [{ title, file: `e2e/${title}.spec.ts`, tests: [{ projectName: 'chromium', status, expectedStatus: 'passed', results: [{ status: status === 'expected' ? 'passed' : 'failed', retry: 0, duration: 5 }] }] }] })
+  const f = fixture(t, { stats: { expected: 1, unexpected: 1, duration: 100, startTime: 'first' }, suites: [spec('lane', 'expected'), spec('wilds', 'unexpected')] })
+  mkdirSync(join(f.dir, 'test-results/smoke'))
+  const smoke = { stats: { expected: 5, unexpected: 0, duration: 30, startTime: 'second' }, suites: [spec('smoke', 'expected')] }
+  writeFileSync(join(f.dir, 'test-results/smoke/e2e-results.json'), JSON.stringify(smoke))
+  const summary = f.collect()
+  assert.deepEqual(summary.report.tests.map((e: { title: string; status: string }) => `${e.title}:${e.status}`), ['lane › lane:expected', 'wilds › wilds:unexpected', 'smoke › smoke:expected'])
+  assert.deepEqual(summary.report.stats, { expected: 6, unexpected: 1, duration: 130, startTime: 'first' })
+  assert.equal(summary.report.passes, 2)
+  assert.deepEqual(summary.reportPolicy.copiedPaths, ['e2e-results.json', 'smoke-e2e-results.json'])
+  assert.deepEqual(JSON.parse(readFileSync(join(f.dir, '.e2e-artifacts/smoke-e2e-results.json'), 'utf8')), smoke)
+})
+
 test('setup failure with no tests retains report-level errors', (t) => {
   const errors = [{ message: 'web server failed to start', stack: 'setup stack' }]
   const summary = fixture(t, { suites: [], errors }).collect()

@@ -7,6 +7,7 @@ import { backendDiagnostics, BIN, moveBackendClock, requireBackend } from './ser
 import { FAKE_TOKEN } from './server/fake-habitica.ts'
 import { SERVER_ANSWER_MS } from './helpers'
 import { retryConnectionResetRead } from './read-retry.ts'
+import { REPORT_INTERVAL_MS } from '../src/lib/api/reports.ts'
 
 /**
  * Helpers for the connected playtests: this worker's own Go server (through
@@ -62,7 +63,7 @@ export async function moveServerClock(page: Page, unix: number): Promise<number>
   let now = await moveBackendClock({ advance_seconds: 0 })
   while (now < unix) {
     now = await moveBackendClock({ unix: Math.min(unix, now + step) })
-    expect((await page.request.get('/api/state', CONTRACT)).ok()).toBe(true)
+    expect((await readApiGet(page, '/api/state')).ok()).toBe(true)
   }
   return now
 }
@@ -82,6 +83,14 @@ export async function pinWorld(page: Page, seed: string): Promise<string> {
 }
 
 const DAY = 86400
+
+/**
+ * How long the world can take to hear of a move within one area: the link
+ * sends the place on its report deadline (REPORT_INTERVAL_MS, 10 s), and only
+ * an arrival in another area goes at once. `__fsDevSaveSoon` stores the
+ * outbox record; it sends no report. Poll a saved place for this long.
+ */
+export const PLACE_REPORTED_MS = REPORT_INTERVAL_MS + 5_000
 
 /** The screen's calendar (the dev hook) on the world's clock: what the server reads now. */
 export async function calendarOnServer(page: Page): Promise<number> {

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
 import { sql, accountOf, CONTRACT } from './connected'
-import { waitForLive, expectToast } from './helpers'
+import { waitForLive, expectToast, SERVER_ANSWER_MS } from './helpers'
 import { claimDeed, earnGlims, freshPlayer, fund, homes, myHome, place, go, atMyMailbox, hurt, type HomesView, yardBuild } from './home-helpers'
 
 /**
@@ -13,10 +13,13 @@ async function openShelfPanel(page: Page): Promise<void> {
   for (let i = 0; i < 6; i++) {
     await waitForLive(page)
     await page.keyboard.press('e')
-    if (await dlg.isVisible().catch(() => false)) return
+    if (await dlg.isVisible().catch(() => false)) break
     await page.waitForTimeout(120)
   }
   await expect(dlg).toBeVisible()
+  // Its read queues behind every read a fresh arrival makes (the client's
+  // calls go one at a time): over 4 s on a busy runner (CI, 2026-10-18).
+  await expect(dlg.getByText('Looking at the shelf…')).toHaveCount(0, { timeout: SERVER_ANSWER_MS })
 }
 
 /**

@@ -12,5 +12,5 @@ export async function retryConnectionResetRead<T>(read: () => Promise<T>, onRetr
 export function isConnectionReset(error: unknown): boolean {
   const cause = (error as { cause?: { code?: string } } | null)?.cause
   const message = error instanceof Error ? error.message : String(error)
-  return cause?.code === 'ECONNRESET' || /ECONNRESET|connection reset/i.test(message)
+  return cause?.code === 'ECONNRESET' || /ECONNRESET|connection reset|socket hang up/i.test(message)
 }

@@ -132,8 +132,12 @@ if (full) {
 }
 if (listOnly) process.exit(0)
 
-const run = (extra: string[]) => spawnSync('npx', ['playwright', 'test', ...extra, ...passThrough], { stdio: 'inherit' }).status ?? 1
+const run = (extra: string[], env: Record<string, string> = {}) => spawnSync('npx', ['playwright', 'test', ...extra, ...passThrough], { stdio: 'inherit', env: { ...process.env, ...env } }).status ?? 1
 let status = 0
 if (full || pw.length) status = run(pw)
-if (!full && smoke) status = run(['--grep', '@smoke']) || status
+// A second pass has its own output folder and report: Playwright empties its
+// output folder as it starts, which took the first pass's traces and JSON
+// report with it (scripts/e2e-artifacts.mjs reads both).
+const smokeOut = pw.length ? ['--output', 'test-results/smoke'] : []
+if (!full && smoke) status = run(['--grep', '@smoke', ...smokeOut], pw.length ? { E2E_RESULTS: 'test-results/smoke/e2e-results.json' } : {}) || status
 process.exit(status)

@@ -24,6 +24,12 @@ export default function e2eRouting() {
   return {
     name: 'glimway-e2e-routing',
     configureServer(server) {
+      // Node closes a keep-alive socket after 5 idle seconds, and a test's
+      // own requests (page.request, Node's agent) can reuse it just as it
+      // goes: "socket hang up" on a read or a write, no response at all (CI,
+      // 2026-10-18: a state read, a seed pack). Browsers retry that by
+      // themselves; Node's agent doesn't. The playtest Vite keeps them open.
+      if (server.httpServer && 'keepAliveTimeout' in server.httpServer) server.httpServer.keepAliveTimeout = 0
       server.middlewares.use((req, res, next) => {
         const url = req.url ?? ''
         if (url !== '/api' && !url.startsWith('/api/') && !url.startsWith('/api?')) return next()

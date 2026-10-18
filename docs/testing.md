@@ -70,9 +70,13 @@ request runs `verify`, the Go tests, the Docker smoke test and the smoke tier
 on GitHub's runners. The full suite runs on a self-hosted runner with an
 NVIDIA GPU, for pushes to `main`, `dev` and `exp/**` and for manual
 dispatch, never for pull requests ([ci-runner.md](ci-runner.md)). Each E2E
-job uploads a JSON attempt summary; up to three retry traces are retained
-within a 50 MiB cap. The first retry is traced, so it can show a successful
-attempt while the JSON summary preserves the original failure. A separate
+job uploads a JSON attempt summary (a lane run's two passes, its specs and
+then the smoke tier, each keep their own report and traces); up to three retry
+traces are retained within a 50 MiB cap. The first retry is traced, so it can
+show a successful attempt while the JSON summary preserves the original
+failure. To keep the failing attempts' traces instead, set the repository
+variable `E2E_TRACE=retain-on-first-failure` (every test is traced then, which
+slows the run), with `E2E_TRACE_FILES` and `E2E_TRACE_MB` to keep more. A separate
 manual browser-performance job measures first paint and sparse-map rendering.
 Push an
 `exp/` branch to run it before main moves.
@@ -131,7 +135,8 @@ its `about` says which spec covers which branch.
 
 CI does the same on lane branches: a push to `exp/*` runs `test:changed`
 against `origin/dev` on the self-hosted GPU runner, so lanes don't queue behind
-each other's full runs. Pushes to `dev` and `main` run the full suite.
+each other's full runs. Pushes to `dev` and `main` run the full suite, and
+so does a manual run with `full`: `gh workflow run ci.yml --ref exp/<lane> -f full=true`.
 
 The fight selector maps server fight/fall code, v2 presence protobuf output,
 interpolation, the server enemy renderer, camp outcome polling and fight
@@ -244,6 +249,7 @@ it at most 50 ms). A fixed pause is either too short (flaky) or too long
 | a pause for a banner to clear | poll `__fsBanners().current` until it is `null` (see `coop.spec.ts`) |
 | a pause before a screenshot | `animationsDone(page)` (running transitions and fades finished, then two frames) |
 | a reload that must carry the tab's writes (the old `savedToDisk` wait) | `reenter(page)` (e2e/connected.ts): the server's revision matches the tab's, then reload and Continue |
+| a poll of the server's saved place after a move within one area (`__fsDevSaveSoon` sends no report) | `{ timeout: PLACE_REPORTED_MS }` (e2e/connected.ts): the link reports the place on a 10 s deadline; only an arrival in another area goes at once |
 
 **Proving something does *not* happen.** Wait for an observable state that
 rules it out, and record what the page does in the meantime:

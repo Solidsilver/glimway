@@ -3,6 +3,11 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+    inputs:
+      full:
+        description: Run the whole E2E suite, even on an exp/* branch
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -184,6 +189,13 @@ jobs:
       # variable E2E_RUNNER_WORKERS changes it without a commit.
       E2E_WORKERS: ${{ vars.E2E_RUNNER_WORKERS || '4' }}
       SCREENS: ''
+      # Traces, by repository variable: the first retry's by default;
+      # E2E_TRACE=retain-on-first-failure keeps each failing attempt's instead
+      # (every test is traced then, which slows the run). E2E_TRACE_FILES and
+      # E2E_TRACE_MB cap what is uploaded (scripts/e2e-artifacts.mjs: 3, 50 MiB).
+      E2E_TRACE: ${{ vars.E2E_TRACE || '' }}
+      E2E_TRACE_FILES: ${{ vars.E2E_TRACE_FILES || '' }}
+      E2E_TRACE_MB: ${{ vars.E2E_TRACE_MB || '' }}
     steps:
       - name: Install Git, Git LFS and sqlite3
         run: |
@@ -221,11 +233,14 @@ jobs:
         run: npx playwright install chromium && node scripts/webgl-renderer.ts
       # Lane branches (exp/*) run only the specs their changes touch
       # (scripts/e2e-changed.ts, e2e/changed-map.json), so lanes don't queue
-      # behind each other's full runs. dev and main run the full suite.
+      # behind each other's full runs. dev and main run the full suite, and so
+      # does a manual run with `full` (gh workflow run ci.yml --ref <branch> -f full=true).
       - name: Run the E2E suite
+        env:
+          FULL: ${{ inputs.full && 'full' || '' }}
         run: |
-          case "$GITHUB_REF" in
-            refs/heads/exp/*) E2E_BASE=origin/dev nice -n 10 node scripts/e2e-changed.ts ;;
+          case "$FULL:$GITHUB_REF" in
+            :refs/heads/exp/*) E2E_BASE=origin/dev nice -n 10 node scripts/e2e-changed.ts ;;
             *) nice -n 10 npx playwright test ;;
           esac
       - name: Prepare bounded E2E evidence

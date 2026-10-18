@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
 import type { Browser, BrowserContext } from '@playwright/test'
-import { allow, CONTRACT, newUser, openTitleGuide, pasteAndConnect, reenter, routeHabitica, serverState, setHabitica, syncFromMenu, waitForWorld } from './connected'
+import { allow, CONTRACT, newUser, openTitleGuide, pasteAndConnect, PLACE_REPORTED_MS, reenter, routeHabitica, serverState, setHabitica, syncFromMenu, waitForWorld } from './connected'
 import { exitTo, frames, holdUntil, inCommons, parkCreatures, player, waitForWilds, waitGame, warp, wildsWindow, windowWhole } from './helpers'
 import { setHour } from './room-helpers'
 import { go, goLot, homes, throughGate } from './home-helpers'
@@ -159,7 +159,7 @@ test('a reload on either side of the mouth comes back where it was', async ({ pa
     await warp(page, 'outdoors', at.tx, at.ty)
     await parkCreatures(page)
     await page.evaluate(() => (window as unknown as { __fsDevSaveSoon: () => void }).__fsDevSaveSoon())
-    await expect.poll(async () => (await serverState(page)).body.state.position).toEqual({ x: at.tx * TILE + 8, y: at.ty * TILE + 8 })
+    await expect.poll(async () => (await serverState(page)).body.state.position, { timeout: PLACE_REPORTED_MS }).toEqual({ x: at.tx * TILE + 8, y: at.ty * TILE + 8 })
     await reenter(page, 'outdoors')
     await waitForWilds(page)
     await parkCreatures(page)
@@ -177,7 +177,7 @@ test('a slow fixed-chunk read preserves a Commons save beyond the boot wait', as
   const position = { x: tile.tx * TILE + 8, y: tile.ty * TILE + 8 };
   await warp(page, 'outdoors', tile.tx, tile.ty);
   await page.evaluate(() => (window as unknown as { __fsDevSaveSoon: () => void }).__fsDevSaveSoon());
-  await expect.poll(async () => (await serverState(page)).body.state.position).toEqual(position);
+  await expect.poll(async () => (await serverState(page)).body.state.position, { timeout: PLACE_REPORTED_MS }).toEqual(position);
   // Force the next page to fetch the immutable chunks instead of using IndexedDB.
   await page.evaluate(() => new Promise<void>((resolve, reject) => {
     const request = indexedDB.open('glimway-chunks');
@@ -337,7 +337,7 @@ test('walking from the Tangle waits for fixed collision before crossing or savin
   await connected(page, context)
   await warp(page, 'outdoors', 2, 22)
   await page.evaluate(() => window.__fsDevSaveSoon!())
-  await expect.poll(async () => (await serverState(page)).body.state.position).toEqual({ x: 40, y: 360 })
+  await expect.poll(async () => (await serverState(page)).body.state.position, { timeout: PLACE_REPORTED_MS }).toEqual({ x: 40, y: 360 })
   await page.goto('/')
   await page.evaluate(() => new Promise<void>((resolve, reject) => {
     const request = indexedDB.open('glimway-chunks')

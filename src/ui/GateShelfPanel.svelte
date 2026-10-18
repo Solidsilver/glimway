@@ -53,17 +53,21 @@
   async function reread(): Promise<void> {
     const mine = ++readSeq
     const r = await village.loadShelf(gate)
-    if (mine !== readSeq) return
-    if (r.ok) {
+    // Before anything is shown, any good read is: right after arriving the
+    // reads queue behind the page's others and each change event asks again,
+    // so every answer was older than the newest ask, and the panel said
+    // "Looking at the shelf…" until the last landed (CI, 2026-10-18).
+    if (r.ok && (mine === readSeq || loaded !== 'ready')) {
       view = r.value
       loaded = 'ready'
-    } else {
-      if (loaded === 'loading') loaded = r.code
-      // A read that failed (a link still coming online, a busy server) is
-      // tried again rather than leaving the panel without its buttons.
-      await new Promise((resolve) => setTimeout(resolve, 500))
-      if (open && mine === readSeq) void reread()
+      return
     }
+    if (mine !== readSeq || r.ok) return
+    if (loaded === 'loading') loaded = r.code
+    // A read that failed (a link still coming online, a busy server) is
+    // tried again rather than leaving the panel without its buttons.
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    if (open && mine === readSeq) void reread()
   }
 
   onMount(() => {

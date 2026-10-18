@@ -1,16 +1,18 @@
 import { copyFileSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { basename, join, relative } from 'node:path'
 
-const reportPath = 'test-results/e2e-results.json'
+// The run's report, and a second pass's (scripts/e2e-changed.ts: the smoke
+// tier after a lane's specs) in its own folder.
+const reportPaths = [['test-results/e2e-results.json', 'e2e-results.json'], ['test-results/smoke/e2e-results.json', 'smoke-e2e-results.json']]
 const outDir = '.e2e-artifacts'
 const traceDir = join(outDir, 'traces')
-const traceMaxCount = 3
-const traceMaxBytes = 50 * 1024 * 1024
+const traceMaxCount = Number(process.env.E2E_TRACE_FILES) || 3
+const traceMaxBytes = (Number(process.env.E2E_TRACE_MB) || 50) * 1024 * 1024
 const reportMaxBytes = 10 * 1024 * 1024
 const diagnosticsMaxBytes = 2 * 1024 * 1024
 const diagnosticStringMaxBytes = 16 * 1024
 const diagnosticMaxItems = 50
-const reportPolicy = { maximumBytes: reportMaxBytes, copiedPath: null, note: '' }
+const reportPolicy = { maximumBytes: reportMaxBytes, copiedPath: null, copiedPaths: [], note: '' }
 
 // Keep structured errors and output even when the original report is too large.
 // Bound individual values and the combined diagnostic payload; say when cut.
@@ -66,19 +68,47 @@ function walk(dir) {
   }
 }
 
+/** Each pass's report that exists, copied when within the cap; the first is required. */
+function readReports() {
+  const reports = []
+  const notes = []
+  for (const [i, [path, copy]] of reportPaths.entries()) {
+    let raw
+    try {
+      raw = readFileSync(path)
+    } catch (error) {
+      if (i === 0) throw error
+      continue
+    }
+    reports.push(JSON.parse(raw.toString('utf8')))
+    if (raw.length <= reportMaxBytes) {
+      reportPolicy.copiedPaths.push(copy)
+      writeFileSync(join(outDir, copy), raw)
+      notes.push(`${copy}: the original Playwright JSON report, including every attempt and diagnostic.`)
+    } else {
+      notes.push(`${path} (${raw.length} bytes) exceeds the byte cap; bounded diagnostics remain in the summary.`)
+    }
+  }
+  reportPolicy.copiedPath = reportPolicy.copiedPaths[0] ?? null
+  reportPolicy.note = notes.join(' ')
+  return reports
+}
+
+/** Stats of several passes: counts and duration added, the first start. */
+function mergeStats(all) {
+  const stats = all.filter(Boolean)
+  if (stats.length <= 1) return stats[0] ?? null
+  const out = { ...stats[0] }
+  for (const s of stats.slice(1))
+    for (const [k, v] of Object.entries(s)) if (typeof v === 'number' && typeof out[k] === 'number') out[k] += v
+  return out
+}
+
 function summarizeReport() {
   try {
-    const raw = readFileSync(reportPath)
-    const report = JSON.parse(raw.toString('utf8'))
-    if (raw.length <= reportMaxBytes) {
-      reportPolicy.copiedPath = 'e2e-results.json'
-      writeFileSync(join(outDir, reportPolicy.copiedPath), raw)
-      reportPolicy.note = 'Original Playwright JSON report, including every attempt and diagnostic.'
-    } else {
-      reportPolicy.note = `Original report (${raw.length} bytes) exceeds the byte cap; bounded diagnostics remain in the summary.`
-    }
+    const reports = readReports()
     const diagnostics = diagnosticCollector()
-    const errors = diagnostics.bounded(report.errors ?? [])
+    const errors = diagnostics.bounded(reports.flatMap((r) => r.errors ?? []))
     const tests = []
     const visit = (suite, parent = []) => {
       const titles = [...parent, suite.title].filter(Boolean)
@@ -105,9 +135,9 @@ function summarizeReport() {
       }
       for (const child of suite.suites ?? []) visit(child, titles)
     }
-    for (const suite of report.suites ?? []) visit(suite)
+    for (const report of reports) for (const suite of report.suites ?? []) visit(suite)
     return {
-      available: true, stats: report.stats ?? null, errors, tests,
+      available: true, stats: mergeStats(reports.map((r) => r.stats)), passes: reports.length, errors, tests,
       diagnosticsTruncated: diagnostics.wasTruncated(),
       diagnosticPolicy: { maximumBytes: diagnosticsMaxBytes, maximumStringBytes: diagnosticStringMaxBytes, maximumItems: diagnosticMaxItems },
     }
@@ -140,6 +170,6 @@ writeFileSync(join(outDir, 'summary.json'), JSON.stringify({
     maximumFiles: traceMaxCount,
     maximumBytes: traceMaxBytes,
     copiedFiles: traces,
-    note: 'CI traces are recorded on the first retry. A retained trace can show the successful retry; the summary retains bounded original failure diagnostics and the original JSON report is included when within its byte cap.'
+    note: 'CI traces are recorded on the first retry (unless E2E_TRACE says otherwise). A retained trace can show the successful retry; the summary retains bounded original failure diagnostics and the original JSON report is included when within its byte cap.'
   }
 }, null, 2))
