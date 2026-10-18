@@ -1,7 +1,7 @@
-import type { Route } from '@playwright/test'
+import type { APIResponse, Route } from '@playwright/test'
 import { expect, test, type Page } from './fixtures'
 import { accountOf, moveServerClock, pinWorld, reenter, serverState, sql, wickSlack } from './connected'
-import { expectToast, parkCreatures, player, settled, waitForArea, waitForWilds, warp, wilds, type WildsDump } from './helpers'
+import { expectToast, parkCreatures, player, settled, waitForArea, waitForWilds, warp, wilds, windowWhole, worldTileOf, type WildsDump } from './helpers'
 import { freshPlayer, fund } from './home-helpers'
 import { WAYS_HOME_LINES } from '../src/lib/ways-home.ts'
 
@@ -37,10 +37,35 @@ async function inTheBeyond(page: Page): Promise<{ id: string; before: WildsDump 
   await warp(page, 'outdoors', WHITEQUIET.tx, WHITEQUIET.ty)
   await waitForWilds(page)
   await parkCreatures(page)
+  await windowWhole(page)
+  // The world's enemies aim at a hero near their camps, and a way home
+  // refuses in a fight: stand on the open ground furthest from every camp
+  // in the window (as wilds-outer.spec.ts does).
+  const camps = (await wilds(page)).entities.filter((e) => e.kind === 'camp').map(worldTileOf)
+  const quiet = await page.evaluate((camps) => {
+    const solid = (window as unknown as { __fsTileSolid(tx: number, ty: number): boolean }).__fsTileSolid
+    let best: { tx: number; ty: number; gap: number } | null = null
+    const margin = Math.ceil(200 / 16)
+    for (let ty = -5 * 24 + margin; ty < -3 * 24 - margin; ty++)
+      for (let tx = -24 + margin; tx < 2 * 24 - margin; tx++) {
+        if (solid(tx, ty)) continue
+        const gap = Math.min(Infinity, ...camps.map((c) => Math.hypot(tx - c.tx, ty - c.ty)))
+        if (!best || gap > best.gap) best = { tx, ty, gap }
+      }
+    return best
+  }, camps)
+  expect(quiet, 'open ground in the Whitequiet').not.toBeNull()
+  await warp(page, 'outdoors', quiet!.tx, quiet!.ty)
+  await waitForWilds(page)
+  await parkCreatures(page)
   const dump = await wilds(page)
-  expect(dump.chunk, 'in the Whitequiet').toEqual({ cx: 0, cy: -4 })
+  expect(dump.chunk.cy, 'in the Whitequiet').toBeGreaterThanOrEqual(-5)
+  expect(dump.chunk.cy, 'in the Whitequiet').toBeLessThanOrEqual(-3)
   return { id, before: dump }
 }
+
+/** The fight-quiet a way home waits for after an enemy last aimed at you (api/ways_home.go fightQuiet), with a margin. */
+const FIGHT_QUIET_MS = 9_000
 
 /**
  * Use the turncap, and hold its answer until the Turning holds play: the
@@ -49,15 +74,27 @@ async function inTheBeyond(page: Page): Promise<{ id: string; before: WildsDump 
  * the answer the page gets (the place the world chose). Returns that place.
  */
 async function turncapDuringTurning(page: Page, before: WildsDump, rewrite?: (place: Place) => Place): Promise<Place> {
-  let asked!: (r: Route) => void
-  const held = new Promise<Route>((resolve) => (asked = resolve))
-  await page.route('**/api/ways-home', (route) => (route.request().method() === 'POST' ? asked(route) : route.continue()))
-  await parkCreatures(page)
-  await page.evaluate(() => (window as unknown as { __fsEmit: (e: string, p: unknown) => void }).__fsEmit('game:ways-home', { way: 'turncap' }))
-  // The pause (three seconds, standing still) passes, and the way home is asked for.
-  const route = await held
-  const res = await route.fetch()
-  expect(res.ok(), `the world answered the turncap: ${res.status()} ${res.ok() ? "" : await res.text()}`).toBe(true)
+  let route!: Route
+  let res!: APIResponse
+  for (let attempt = 1; ; attempt++) {
+    let asked!: (r: Route) => void
+    const held = new Promise<Route>((resolve) => (asked = resolve))
+    await page.route('**/api/ways-home', (r) => (r.request().method() === 'POST' ? asked(r) : r.continue()))
+    await parkCreatures(page)
+    await page.evaluate(() => (window as unknown as { __fsEmit: (e: string, p: unknown) => void }).__fsEmit('game:ways-home', { way: 'turncap' }))
+    // The pause (three seconds, standing still) passes, and the way home is asked for.
+    route = await held
+    res = await route.fetch()
+    const text = res.ok() ? '' : await res.text()
+    if (res.ok() || !text.includes('"in-a-fight"') || attempt >= 4) {
+      expect(res.ok(), `the world answered the turncap: ${res.status()} ${text}`).toBe(true)
+      break
+    }
+    // An enemy aimed at the hero lately (the server's clock, not the game's): the page hears the refusal, keeps its turncap, and asks again once it is quiet.
+    await route.fulfill({ response: res })
+    await page.unroute('**/api/ways-home')
+    await page.waitForTimeout(FIGHT_QUIET_MS)
+  }
   const body = await res.json()
   const chose = { area: body.state.place.area, x: body.state.place.x, y: body.state.place.y } as Place
   expect(chose.area).toBe('outdoors')

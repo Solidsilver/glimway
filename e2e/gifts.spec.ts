@@ -283,6 +283,24 @@ test('maker thank-you mail: when item made by someone else is used, maker receiv
 })
 
 /**
+ * The shelf's reads stop: none for 1.5 s, within 15 s. A change event asks
+ * once; the old retry asked every half second for ever, so it never went quiet.
+ */
+async function readsStop(reads: () => number, why: string): Promise<void> {
+  let last = reads()
+  let since = Date.now()
+  await expect
+    .poll(() => {
+      if (reads() !== last) {
+        last = reads()
+        since = Date.now()
+      }
+      return Date.now() - since >= 1_500
+    }, { timeout: 15_000, intervals: [250], message: why })
+    .toBe(true)
+}
+
+/**
  * The gift shelf after the homestead behind its gate is lost (step-back
  * 2026-10-18, U2, A4): the refusal is shown, and the panel doesn't ask
  * again every half second (it used to retry any failure, even a 404 that
@@ -302,26 +320,22 @@ test('the gift shelf shows a refusal once the homestead is lost, and stops re-re
   await waitForLive(page)
   await open()
   await expect(shelf.getByText('No shelf is set out at this gate.')).toBeVisible({ timeout: SERVER_ANSWER_MS })
+  // A new arrival's pack and lane changes each ask once: let them pass.
+  await readsStop(() => reads, 'the open shelf settles')
 
   // Lost while the panel is open: the next read is refused and kept as it is, not asked again.
   sql(`DELETE FROM homestead_members WHERE homestead_id='${home}'; DELETE FROM homesteads WHERE id='${home}';`)
   const refused = page.waitForResponse((r) => r.url().includes('/api/homestead/shelf') && r.status() === 404)
   await page.evaluate(() => (window as unknown as { __fsEmit: (e: string) => void }).__fsEmit('items:changed'))
   await refused
-  const after = reads
-  // Nothing observable marks a retry that never comes: give the old half-second retry four chances.
-  await page.waitForTimeout(2_000)
-  expect(reads - after, 'no retries after the refusal (at most one late change event read)').toBeLessThanOrEqual(1)
+  await readsStop(() => reads, 'no retries after the refusal')
   await shelf.getByLabel('Close the gift shelf').click()
   await expect(shelf).toBeHidden()
 
-  // Opened again: the refusal in words, and no read after it.
+  // Opened again: the refusal in words, and no retries after it.
   await waitForLive(page)
   await open()
   await expect(shelf.getByText('There is no deed behind that gate.')).toBeVisible({ timeout: SERVER_ANSWER_MS })
-  const shown = reads
-  await page.waitForTimeout(2_000)
-  // At most the read a late change event asks for (the pack's read as the panel opened); a retry loop would be four.
-  expect(reads - shown, 'no retries after the refusal').toBeLessThanOrEqual(1)
+  await readsStop(() => reads, 'no retries after the refusal, opened again')
   await expect(shelf.getByText('There is no deed behind that gate.')).toBeVisible()
 })
