@@ -83,6 +83,7 @@ import { enemiesNearForSync, setSyncSafety } from '../sync-safety'
 import { onSceneEnd } from '../scene-end'
 import { exposeWorldHooks } from './world-dev-hooks'
 import { playHold, runFrame, type WorldFrame } from './world-frame'
+import { FadeHold } from './fade-hold'
 import { perfWatch } from '../perf'
 import { Unmoored } from '../entities/unmoored'
 import { WorldActions } from './world-actions'
@@ -174,9 +175,7 @@ export class WorldScene extends Phaser.Scene {
   private controls!: WorldControls
   private transitioning = false
   /** Dark while the ground's transitions are painted (a first visit; see create). */
-  private holdingFade = false
-  /** Which scene build's hold is current (a restart starts a new one). */
-  private fadeHold = 0
+  private readonly fadeHold = new FadeHold()
   private reducedMotion = false
   private captureReleased = false
   private cinematic = false
@@ -207,8 +206,7 @@ export class WorldScene extends Phaser.Scene {
 
   init(data: SceneData): void {
     this.transitioning = false
-    this.holdingFade = false
-    this.fadeHold++
+    this.fadeHold.cancel()
     this.pendingEntry = data?.entry ?? null
     this.pendingDefeatToast = data?.fromDefeat === true
     this.pendingFacing = data?.facing ?? null
@@ -526,15 +524,12 @@ export class WorldScene extends Phaser.Scene {
     if (holding) {
       const cam = this.cameras.main
       cam.fadeOut(1, 12, 12, 20)
-      this.holdingFade = true
-      // Only a newer scene build cancels this hold (a paused scene still lifts it).
-      const token = ++this.fadeHold
+      // Only a newer scene build or a move away cancels this hold (a paused
+      // scene, or a Turning holding play, still lifts it): a move's fade-out
+      // must finish, or the scene never restarts (fadeIn always forces).
+      const lift = this.fadeHold.start()
       const show = () => {
-        if (token !== this.fadeHold || !this.holdingFade) return
-        this.holdingFade = false
-        // Already leaving (a warp or an exit during the hold): its fade-out
-        // must finish, or the scene never restarts (fadeIn always forces).
-        if (!this.transitioning) cam.fadeIn(280, 12, 12, 20)
+        if (lift()) cam.fadeIn(280, 12, 12, 20)
       }
       void holding.then(show, show)
       this.time.delayedCall(1200, show)
@@ -1361,6 +1356,7 @@ export class WorldScene extends Phaser.Scene {
     opts: { fadeMs?: number | null; inDark?: () => unknown } = {}
   ): void {
     this.transitioning = true
+    this.fadeHold.cancel()
     // Where this scene's hero stood is no longer where you are: the map falls back to the save until the next scene says.
     clearMapPosition(this)
     const state = this.session.state
