@@ -24,7 +24,7 @@ import { chunkOf } from '../../lib/wilds/coords.ts'
 import { homeErrorText } from '../../content/errors.ts'
 import { LAMP_NAMING } from '../../content/lamp-naming.ts'
 import { isKeeper } from '../../lib/lamp-naming.ts'
-import { campsKnown as campsUi } from './camps-state.ts'
+import { adoptCamps, campsKnown, type CampsKnown, type CampsOwner } from './camps-state.ts'
 import { bus, EV } from '../events.ts'
 import { openDialogue } from '../dialogue.ts'
 import { sfx } from '../sfx.ts'
@@ -39,10 +39,9 @@ import { omArt } from './open-map-art.ts'
 import { itemsFor } from '../items.ts'
 import { homesteadsFor } from '../homestead.ts'
 import { groundAt, solidAt } from './ground-view.ts'
-import { refreshNear } from './store.ts'
+import { invalidateLand, refreshNear } from './store.ts'
 import { wildsPoint } from './sites.ts'
 import { TERRAIN } from '../../lib/tile.ts'
-import { refreshLand } from './store.ts'
 
 export interface CampsDeps {
   session: Session
@@ -54,6 +53,11 @@ export interface CampsDeps {
 
 /** How often the camps are read again while you stand still (ms). */
 const READ_EVERY_MS = 30_000
+/** Camp operations that can change a chunk's hold (a piece picked up is a `remove` too: asking again costs one status read). */
+const LAND_ACTIONS = new Set(['set', 'fill', 'pack', 'remove'])
+
+/** Whose camps a read through `link` is: its world and account as it was asked (a move changes the link's world). */
+const ownerOf = (link: CampsOwner): CampsOwner => ({ worldId: link.worldId, accountId: link.accountId })
 
 export class WildsCamps {
   private images: Phaser.GameObjects.GameObject[] = []
@@ -63,6 +67,8 @@ export class WildsCamps {
   private reading = false
   private version = 0
   private busy = false
+  /** The scene this controller was built for has shut down: an answer arriving later opens no panel and says nothing. */
+  private gone = false
 
   constructor(private scene: Phaser.Scene, private deps: CampsDeps) {
     const onDo = (d: { action: 'set' | 'place' | 'plant'; itemId?: string; itemDef?: string }) => void this.fromPack(d)
@@ -73,6 +79,7 @@ export class WildsCamps {
     bus.on(EV.campDo, onDo)
     bus.on(EV.lampNamed, onNamed)
     scene.events.once('shutdown', () => {
+      this.gone = true
       bus.off(EV.campDo, onDo)
       bus.off(EV.lampNamed, onNamed)
       this.clear()
@@ -82,6 +89,11 @@ export class WildsCamps {
 
   private get me(): string | null {
     return this.deps.session.link?.accountId ?? null
+  }
+
+  /** The camps as read in this session's world (none before its first read). */
+  private get known() {
+    return campsKnown(this.deps.session.link)
   }
 
   update(): void {
@@ -105,20 +117,21 @@ export class WildsCamps {
   async read(): Promise<void> {
     const link = this.deps.session.link
     if (!link) return
+    const owner = ownerOf(link)
     this.reading = true
     try {
       const r = await link.campsRead()
-      if (!r.ok) return
-      this.adopt(r.value.camps)
-      campsUi.people = r.value.people
+      // A departed scene's read could land after the next world's: it keeps nothing.
+      if (!r.ok || this.gone) return
+      this.adopt(owner, r.value.camps, r.value.people)
     } finally {
       this.reading = false
     }
   }
 
-  private adopt(list: CampView[]): void {
-    campsUi.list = list
-    campsUi.me = this.me
+  /** Keep a list read (or answered) for `owner`'s world; the drawing follows. */
+  private adopt(owner: CampsOwner, list: CampView[], people?: CampsKnown['people']): void {
+    adoptCamps(owner, { list, me: owner.accountId, ...(people ? { people } : {}) })
     this.version++
   }
 
@@ -144,7 +157,7 @@ export class WildsCamps {
   private draw(cx: number, cy: number): void {
     this.clear()
     const points = []
-    for (const c of campsUi.list) {
+    for (const c of this.known.list) {
       if (Math.abs(c.cx - cx) > 1 || Math.abs(c.cy - cy) > 1) continue
       for (const p of c.pieces) {
         if (p.id === c.id) continue
@@ -155,7 +168,7 @@ export class WildsCamps {
         } else if (c.setterId === this.me) {
           // The keeper may move someone's piece off: it waits at Pell's, still theirs.
           const at = tileFeet(p.x, p.y)
-          points.push(wildsPoint(`camp-piece:${p.id}`, at, 20, () => ({ label: `Move ${ownerName(campsUi.people, p)}’s ${campPieceName(p.itemDef).toLowerCase()} off`, verb: 'Move off', claim: () => this.askMoveOff(p.id) })))
+          points.push(wildsPoint(`camp-piece:${p.id}`, at, 20, () => ({ label: `Move ${ownerName(this.known.people, p)}’s ${campPieceName(p.itemDef).toLowerCase()} off`, verb: 'Move off', claim: () => this.askMoveOff(p.id) })))
         }
       }
       for (const p of c.plants) {
@@ -213,7 +226,7 @@ export class WildsCamps {
   // ------------------------------------------------------------ talking
 
   private camp(id: string): CampView | null {
-    return campsUi.list.find((c) => c.id === id) ?? null
+    return this.known.list.find((c) => c.id === id) ?? null
   }
 
   private oilCarried(): number {
@@ -246,17 +259,17 @@ export class WildsCamps {
 
   /** A plant at the camp: whose it is (digging it up is the trowel's, never a choice here). */
   private lookPlant(plantId: string, mayDig: boolean): void {
-    const c = campsUi.list.find((x) => x.plants.some((p) => p.id === plantId))
+    const c = this.known.list.find((x) => x.plants.some((p) => p.id === plantId))
     const p = c?.plants.find((x) => x.id === plantId)
     if (!c || !p) return
     const name = campPieceName(p.itemDef)
-    const owner = p.ownerId === this.me ? null : ownerName(campsUi.people, p)
+    const owner = p.ownerId === this.me ? null : ownerName(this.known.people, p)
     openDialogue({ id: 'camp', speaker: name, lines: campPlantLines(name, owner, mayDig), choices: [...CAMP_PLANT_CHOICES] })
   }
 
   /** The trowel at a camp plant: up it comes whole, into your pack to plant again. */
   private uproot(plantId: string): void {
-    const p = campsUi.list.flatMap((x) => x.plants).find((x) => x.id === plantId)
+    const p = this.known.list.flatMap((x) => x.plants).find((x) => x.id === plantId)
     const name = p ? campPieceName(p.itemDef) : ''
     void this.act({ action: 'uproot', itemId: plantId }, (_c, res) => { if (name) bus.emit(EV.toast, { text: dugUpLine(name, res.wear), icon: 'glim' }) })
   }
@@ -269,7 +282,7 @@ export class WildsCamps {
     const choices: DialogueChoice[] = CAMP_RULES.map((r) =>
       r === rule ? { text: CAMP_RULE_WORDS.rules[r].pick, note: CAMP_RULE_WORDS.now, disabled: true } : { text: CAMP_RULE_WORDS.rules[r].pick, action: `camp:rule:${c.id}:${r}` })
     if (ruleNames(rule)) {
-      const more = campNameable(c, campsUi.people).length > 0
+      const more = campNameable(c, this.known.people).length > 0
       choices.push({ text: CAMP_RULE_WORDS.name, action: `camp:pick:${c.id}`, disabled: !more, ...(more ? {} : { note: CAMP_RULE_WORDS.noneToName }) })
       for (const m of c.members) choices.push({ text: CAMP_RULE_WORDS.unname(m.name), action: `camp:unname:${c.id}:${m.accountId}` })
     }
@@ -281,7 +294,7 @@ export class WildsCamps {
   private pickWho(id: string): void {
     const c = this.camp(id)
     if (!c) return
-    const choices: DialogueChoice[] = campNameable(c, campsUi.people).map((p) => ({ text: p.name, action: `camp:add:${c.id}:${p.accountId}` }))
+    const choices: DialogueChoice[] = campNameable(c, this.known.people).map((p) => ({ text: p.name, action: `camp:add:${c.id}:${p.accountId}` }))
     choices.push({ text: 'Never mind', action: `camp:rules:${c.id}` })
     openDialogue({ id: 'camp-rules', speaker: CAMP_RULE_WORDS.heading, lines: [CAMP_RULE_WORDS.pickWho], choices })
   }
@@ -293,10 +306,10 @@ export class WildsCamps {
 
   /** Asked before the keeper moves someone's piece off to Pell's. */
   private askMoveOff(pieceId: string): void {
-    const c = campsUi.list.find((x) => x.pieces.some((p) => p.id === pieceId))
+    const c = this.known.list.find((x) => x.pieces.some((p) => p.id === pieceId))
     const p = c?.pieces.find((x) => x.id === pieceId)
     if (!c || !p) return
-    const owner = ownerName(campsUi.people, p)
+    const owner = ownerName(this.known.people, p)
     openDialogue({ id: 'camp', speaker: campLampName(c), lines: moveOffLines(owner, campPieceName(p.itemDef)), choices: [{ text: 'Send it to Pell’s', action: `camp:moveoff:${pieceId}` }, { text: 'Leave it', dismiss: true }] })
   }
 
@@ -311,9 +324,9 @@ export class WildsCamps {
     if (what === 'add' && c && arg) return this.setRule(id, campRule(c), withMember(c, arg))
     if (what === 'unname' && c && arg) return this.setRule(id, campRule(c), withoutMember(c, arg))
     if (what === 'moveoff') {
-      const camp = campsUi.list.find((x) => x.pieces.some((p) => p.id === id))
+      const camp = this.known.list.find((x) => x.pieces.some((p) => p.id === id))
       const p = camp?.pieces.find((x) => x.id === id)
-      const said = p ? movedOffLine(ownerName(campsUi.people, p), campPieceName(p.itemDef)) : ''
+      const said = p ? movedOffLine(ownerName(this.known.people, p), campPieceName(p.itemDef)) : ''
       return void this.act({ action: 'remove', itemId: id }, () => { if (said) bus.emit(EV.toast, { text: said, icon: 'glim' }) })
     }
     if (what === 'pack') return this.askPack(id)
@@ -328,6 +341,8 @@ export class WildsCamps {
     const link = this.deps.session.link
     if (!link) return
     const r = await link.lampLandmarksRead(id)
+    // Walked off (a door, a world move) while it was read: the panel would be for a lamp left behind.
+    if (this.gone || this.deps.session.link !== link) return
     if (!r.ok) {
       bus.emit(EV.toast, { text: CAMP_ERRORS[r.code] ?? homeErrorText(r.code), icon: 'glim', kind: 'error' })
       return
@@ -347,7 +362,7 @@ export class WildsCamps {
   private async fromPack(d: { action: 'set' | 'place' | 'plant'; itemId?: string; itemDef?: string }): Promise<void> {
     const hero = this.deps.hero()
     const feet = { tx: Math.floor(hero.x / TILE), ty: Math.floor((hero.y - 1) / TILE) }
-    const here = campAtTile(campsUi.list, feet.tx, feet.ty)
+    const here = campAtTile(this.known.list, feet.tx, feet.ty)
     const spot = campSpot(feet, (x, y) => this.open(x, y), here ? campTaken(here) : new Set())
     if (!spot) {
       bus.emit(EV.toast, { text: homeErrorText('land-blocked'), icon: 'glim', kind: 'error' })
@@ -360,8 +375,8 @@ export class WildsCamps {
   /** The camp an operation was about: named, holding its piece, or at its tile. */
   private campOf(fields: { camp?: string; itemId?: string; x?: number; y?: number }): CampView | null {
     return (fields.camp ? this.camp(fields.camp) : null)
-      ?? campsUi.list.find((c) => c.pieces.some((p) => p.id === fields.itemId) || c.plants.some((p) => p.id === fields.itemId))
-      ?? (fields.x !== undefined && fields.y !== undefined ? campAtTile(campsUi.list, fields.x, fields.y) : null)
+      ?? this.known.list.find((c) => c.pieces.some((p) => p.id === fields.itemId) || c.plants.some((p) => p.id === fields.itemId))
+      ?? (fields.x !== undefined && fields.y !== undefined ? campAtTile(this.known.list, fields.x, fields.y) : null)
   }
 
   private async act(fields: { action: string; camp?: string; itemId?: string; itemDef?: string; x?: number; y?: number; rotation?: number; parts?: string[]; rule?: string; members?: string[] }, then?: (c: CampView | null, res: CampResult) => void): Promise<void> {
@@ -372,25 +387,27 @@ export class WildsCamps {
     try {
       const r = await link.camp({ camp: '', itemId: '', itemDef: '', x: 0, y: 0, rotation: 0, parts: [], rule: '', members: [], ...fields })
       if (!r.ok) {
+        if (this.gone) return
         sfx('fizzle')
         const text = r.code === 'not-your-camp' ? campRefusal(this.campOf(fields)) : CAMP_ERRORS[r.code] ?? homeErrorText(r.code)
         bus.emit(EV.toast, { text, icon: 'glim', kind: 'error' })
         return
       }
-      sfx(fields.action === 'set' || fields.action === 'fill' ? 'lantern' : 'pop')
       void itemsFor(this.deps.session).load()
       void homesteadsFor(this.deps.session).load()
       const c = r.result.camp ?? null
-      // Setting, filling or packing changes the land underfoot (the HUD's land chip).
-      const changed = c ?? (fields.action === 'pack' ? this.campOf(fields) : null)
-      if (changed && (fields.action === 'set' || fields.action === 'fill' || fields.action === 'pack')) void refreshLand(this.deps.session, changed.cx, changed.cy)
-      const list = campsUi.list.filter((x) => x.id !== c?.id && !(fields.action === 'remove' && fields.itemId === x.id) && !(fields.action === 'pack' && fields.camp === x.id))
-      this.adopt(c ? [...list, c] : list)
+      // Setting, filling, packing or taking down a lamp changes the land around it (the HUD's land chip).
+      if (LAND_ACTIONS.has(fields.action)) invalidateLand()
       // A way-lamp set pushes the frontier out (lamps.md 2.2): read it now, not at the next chunk.
       if (fields.action === 'set' && fields.x !== undefined && fields.y !== undefined) {
         const at = chunkOf(fields.x, fields.y)
         void refreshNear(this.deps.session, at.cx, at.cy).catch(() => false)
       }
+      // The scene it was asked in has gone: the next scene reads the camps itself, and no panel opens for this one.
+      if (this.gone) return
+      sfx(fields.action === 'set' || fields.action === 'fill' ? 'lantern' : 'pop')
+      const list = this.known.list.filter((x) => x.id !== c?.id && !(fields.action === 'remove' && fields.itemId === x.id) && !(fields.action === 'pack' && fields.camp === x.id))
+      this.adopt(ownerOf(link), c ? [...list, c] : list)
       then?.(c, r.result)
     } finally {
       this.busy = false
@@ -402,7 +419,7 @@ export class WildsCamps {
   debug(): { camps: CampView[]; spot: { tx: number; ty: number } | null } {
     const hero = this.deps.hero()
     const feet = { tx: Math.floor(hero.x / TILE), ty: Math.floor((hero.y - 1) / TILE) }
-    const here = campAtTile(campsUi.list, feet.tx, feet.ty)
-    return { camps: campsUi.list, spot: campSpot(feet, (x, y) => this.open(x, y), here ? campTaken(here) : new Set()) }
+    const here = campAtTile(this.known.list, feet.tx, feet.ty)
+    return { camps: this.known.list, spot: campSpot(feet, (x, y) => this.open(x, y), here ? campTaken(here) : new Set()) }
   }
 }

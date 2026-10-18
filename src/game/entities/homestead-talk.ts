@@ -47,6 +47,7 @@ import { PELL, PELL_DEED } from '../../content/pell'
 import { MANAGE_DEED, SEE_THE_YARD, isYardRoom, pellTalk, silasTalk } from '../yard-talk'
 import { standsAtTable } from '../deed-table'
 import { pinned, setPinned } from '../guide-pin'
+import { invalidateLand } from '../wilds/store'
 
 /** Story marks (src/game/heard.ts): you've met Pell, and heard Pell's pitch for a first deed. */
 const PELL_MET = 'met'
@@ -399,6 +400,8 @@ export class HomesteadTalk {
   private async fillLantern(gate: number): Promise<void> {
     const r = await this.home.homes.act({ op: 'lantern', gate })
     if (!r.ok) return this.say({ speaker: 'Lot Lantern', lines: [r.text] })
+    // Its backland holds again (or longer): the land chip asks again.
+    invalidateLand()
     void itemsFor(this.deps.session).load()
     const home = await this.home.homes.fetchHome(gate)
     sfx('settle')

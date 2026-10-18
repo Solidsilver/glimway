@@ -527,25 +527,47 @@ let readWanted = false;
  * chip). A near read speaks only for the chunk the server last saw you in,
  * which can lag a step behind, so this asks the map's status read for this
  * one chunk: standing in it is exploring it. Kept unless a later read spoke
- * for the chunk meanwhile; a failure keeps what was known.
+ * for the chunk meanwhile; a failure keeps what was known. False when no
+ * answer came (offline, or the read failed): the chip asks again later.
  */
-export async function refreshLand(session: Session, cx: number, cy: number): Promise<void> {
+export async function refreshLand(session: Session, cx: number, cy: number): Promise<boolean> {
   const link = session.link;
-  if (!link?.online || !view) return;
+  if (!link?.online || !view) return false;
   const gen = generation;
   const since = readMark();
   const key = chunkKey(cx, cy);
   try {
     const res = await link.api.operations.mapStatus([{ cx, cy }]);
     const land = res.chunks[0];
-    if (generation !== gen || session.link !== link || !view || res.wick !== view.wick.id || !land) return;
-    if ((landSeq.get(key) ?? 0) > since) return;
+    // Answered: dropped only because the land it spoke for is gone, or a later read spoke first.
+    if (generation !== gen || session.link !== link || !view || res.wick !== view.wick.id || !land) return true;
+    if ((landSeq.get(key) ?? 0) > since) return true;
     landSeq.set(key, since);
     view.land.set(key, land);
     bump();
+    return true;
   } catch {
-    /* the chip keeps what it knew */
+    // The chip keeps what it knew.
+    return false;
   }
+}
+
+/**
+ * Bumps when one of your operations changed the land's holds or visits (a
+ * lamp set, filled, lit, tended, lifted or taken down; a path laid or
+ * lifted). Every status the chip holds may be out of date then: it asks for
+ * the chunk underfoot again (./land-here.ts), and for others as you step in.
+ */
+let landRev = 0;
+
+/** The land-change count (./land-here.ts compares it). */
+export function landRevision(): number {
+  return landRev;
+}
+
+/** One of your operations changed the land: the chip's statuses are out of date. */
+export function invalidateLand(): void {
+  landRev += 1;
 }
 
 /** Ask for a fresh near read: the scene takes the request (takeReadRequest), and no earlier read counts as recent. */

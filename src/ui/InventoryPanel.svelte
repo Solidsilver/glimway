@@ -17,7 +17,7 @@
   import { backlandAtPixel, inBackland, lotOrigin, lotAtPixel } from '../lib/lots'
   import { campAtTile } from '../lib/camps'
   import { isKeeper } from '../lib/lamp-naming'
-  import { campsKnown as camps } from '../game/wilds/camps-state'
+  import { campsKnown } from '../game/wilds/camps-state'
   import { ui } from './store.svelte'
   import { home } from './home.svelte'
   import { inventory } from './inventory.svelte'
@@ -368,7 +368,7 @@
   function campHere() {
     if (session.state.area !== 'outdoors' || myLandGate() !== null) return null
     const { x, y } = session.state.position
-    return campAtTile(camps.list, Math.floor(x / 16), Math.floor((y - 1) / 16))
+    return campAtTile(campsKnown(session.link).list, Math.floor(x / 16), Math.floor((y - 1) / 16))
   }
 
   /** A carried (not set out) home piece of this kind. */
