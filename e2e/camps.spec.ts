@@ -1,8 +1,9 @@
 import { randomUUID } from 'node:crypto'
+import type { Locator, Request } from '@playwright/test'
 import { expect, test, type Page } from './fixtures'
-import { accountOf, moveServerClock, pinWorld, reenter, seedMarks, sql, wickSlack } from './connected'
+import { accountOf, moveServerClock, pinWorld, reenter, seedMarks, serverState, sql, wickSlack } from './connected'
 import { AT_PELL, DEEDS, freshPlayer, fund, go, homes, pellSays, readOn, seedDeed, shot, talk } from './home-helpers'
-import { parkCreatures, spotsAround, standFor, waitForWilds, warp, windowWhole } from './helpers'
+import { frames, parkCreatures, player, spotsAround, standFor, waitForLive, waitForWilds, warp, windowWhole } from './helpers'
 import { calendarAt } from '../src/lib/calendar.ts'
 
 /**
@@ -159,4 +160,130 @@ test('a communal post in view comes through leaving the Wilds and coming back', 
   await waitForWilds(page)
   await expect.poll(posts).toEqual([lamp])
   await expect.poll(drawn).toBe(1)
+})
+
+/**
+ * Take from Pell's crate with a quick second press (step-back 2026-10-18,
+ * U2, A4): the first answer is in and the crate is being read again. What
+ * was taken has already left the list and the buttons wait for that read,
+ * so the second press can't come back "Nothing waiting for you" with rows
+ * still listed. The re-read is held here to keep that window open.
+ */
+async function takeTwice(page: Page, crate: Locator, button: Locator, row: number | null): Promise<void> {
+  let release!: () => void
+  const reread = new Promise<void>((resolve) => (release = resolve))
+  let collects = 0
+  const count = (r: Request) => {
+    if (r.method() === 'POST' && r.url().includes('/api/recovery/collect')) collects++
+  }
+  page.on('request', count)
+  await page.route('**/api/recovery', async (route) => {
+    await reread
+    await route.continue()
+  })
+  try {
+    const answered = page.waitForResponse((r) => r.request().method() === 'POST' && r.url().includes('/api/recovery/collect'))
+    await button.dblclick()
+    await answered
+    if (row !== null) await expect(crate.locator(`[data-crate-row="${row}"]`), 'what was taken leaves the list as the answer lands').toHaveCount(0)
+    // The quick second press, if anything is still there to press.
+    if (await button.count()) await button.click({ force: true, timeout: 2_000 }).catch(() => {})
+    const takeAll = crate.locator('[data-take-all]')
+    if (await takeAll.count()) await expect(takeAll, 'the buttons wait for the crate to be read again').toBeDisabled()
+  } finally {
+    release()
+    await page.unroute('**/api/recovery')
+  }
+  await expect(crate.getByTestId('crate-message')).toContainText(/Signed out to you: /)
+  await expect(crate.getByTestId('crate-message')).not.toContainText('Nothing waiting')
+  page.off('request', count)
+  expect(collects, 'one take sent').toBe(1)
+}
+
+test('a quick double Take at Pell’s crate takes once: a piece, a plant as its seed, then everything', async ({ page }) => {
+  test.setTimeout(120_000)
+  const id = await freshPlayer(page, 'Wren')
+  await seedDeed(page, id)
+  const account = accountOf(id)
+  const world = (await serverState(page)).body.worldId as string
+  const crateId = randomUUID(), stool = randomUUID(), plant = randomUUID()
+  const now = Math.floor(Date.now() / 1000)
+  sql(`INSERT INTO recovery_crates(id,world_id,source,cx,cy,lapsed_at) VALUES('${crateId}','${world}','camp:${crateId}',2,-4,${now});
+INSERT INTO homestead_items(id,item_def,location,account_id) VALUES('${stool}','wooden-stool','crate','${account}');
+INSERT INTO recovery_entries(crate_id,account_id,kind,item_def,qty,instance_id) VALUES('${crateId}','${account}','piece','wooden-stool',1,'${stool}');
+INSERT INTO recovery_entries(crate_id,account_id,kind,item_def,qty,state) VALUES('${crateId}','${account}','plant','birch-sapling',1,'{"id":"${plant}","plantedAt":${now}}');
+INSERT INTO recovery_entries(crate_id,account_id,kind,item_def,qty) VALUES('${crateId}','${account}','stack','hearth-oil',2);`)
+  const entry = (kind: string) => Number(sql(`SELECT id FROM recovery_entries WHERE crate_id='${crateId}' AND kind='${kind}';`))
+  const piece = entry('piece'), seed = entry('plant')
+
+  await pellSays(page, /Choose what to take/)
+  const crate = page.getByRole('dialog', { name: 'Pell’s crate' })
+  await expect(crate.locator('[data-crate-row]')).toHaveCount(3)
+
+  await takeTwice(page, crate, crate.locator(`[data-take="${piece}"]`), piece)
+  await expect(crate.getByTestId('crate-message')).toContainText('a wooden stool')
+  expect(sql(`SELECT location FROM homestead_items WHERE id='${stool}';`)).toBe('inventory')
+
+  // A plant taken as its seed: into the pack as a seed, not carried whole.
+  await takeTwice(page, crate, crate.locator(`[data-take-seed="${seed}"]`), seed)
+  expect(sql(`SELECT coalesce(sum(qty),0) FROM item_stacks WHERE location='pack' AND owner='${account}' AND item_def='birch-sapling';`)).toBe('1')
+  expect(sql(`SELECT count(*) FROM carried_plants WHERE account_id='${account}';`)).toBe('0')
+
+  // Take everything: the oil, once.
+  await takeTwice(page, crate, crate.locator('[data-take-all]'), null)
+  await expect(crate.locator('[data-crate-empty]')).toBeVisible()
+  expect(sql(`SELECT coalesce(sum(qty),0) FROM item_stacks WHERE location='pack' AND owner='${account}' AND item_def='hearth-oil';`)).toBe('2')
+  expect(sql(`SELECT count(*) FROM recovery_entries WHERE account_id='${account}' AND collected_at IS NULL;`)).toBe('0')
+})
+
+test('the lamp naming holds I, J and C and Escape cancels it; the bag’s camp buttons follow you into the camp', async ({ page }) => {
+  test.setTimeout(150_000)
+  const id = await freshPlayer(page, 'Wren')
+  await wickSlack(page)
+  await pinWorld(page, SEED)
+  await seedDeed(page, id)
+  seedMarks(id, 'keeper:hand')
+  await reenter(page)
+  const lamp = randomUUID(), stool = randomUUID()
+  sql(`INSERT INTO homestead_items(id,item_def,location,account_id) VALUES('${lamp}','way-lamp','inventory','${accountOf(id)}'),('${stool}','wooden-stool','inventory','${accountOf(id)}');`)
+  await page.evaluate(() => (window as unknown as Hooks).__fsHomes.fresh())
+  await expect.poll(async () => (await homes(page)).mine?.items?.length ?? 0).toBeGreaterThanOrEqual(2)
+  await standInTheWilds(page)
+  await (await homeCard(page, 'way-lamp')).locator('[data-act="set-lamp"]').click()
+  await expect.poll(async () => (await camps(page))?.camps.find((c) => c.id === lamp)?.oil ?? null).toBe(1)
+  const set = (await camps(page))!.camps.find((c) => c.id === lamp)!
+  const bag = page.getByRole('dialog', { name: 'Inventory' })
+  await expect(bag).toBeHidden()
+
+  // The bag (step-back U6): standing in the camp, with the save's copy of
+  // the hero's place still outside it (the once-a-second sample hasn't run),
+  // the bag reads where you stand as it opens and offers the camp's buttons.
+  const hero = await player(page)
+  await page.evaluate(([x, y]) => (window as unknown as { __fsDevStalePosition: (x: number, y: number) => void }).__fsDevStalePosition(x, y), [hero.x - 20 * 16, hero.y] as const)
+  const stoolCard = await homeCard(page, 'wooden-stool')
+  await expect(stoolCard.locator('[data-act="set-out"]')).toBeVisible()
+  await page.keyboard.press('i')
+  await expect(bag).toBeHidden()
+
+  // The naming (step-back U1): its selects keep no letters, so I, J and C
+  // open nothing beneath it, and Escape is its own: it cancels the naming.
+  const why: string[] = []
+  if (!(await standFor(page, `wilds:camp:${lamp}`, await spotsAround(page, { tx: set.x, ty: set.y }), why)))
+    throw new Error(`no spot elects the way-lamp at ${set.x},${set.y} (seed ${SEED}): ${why.join(' ')}`)
+  await talk(page, /Look at the way-lamp/, /Give it a naming/)
+  const naming = page.getByTestId('lamp-naming')
+  await expect(naming).toBeVisible()
+  const dialogs = page.getByRole('dialog')
+  for (const key of ['i', 'j', 'c']) {
+    await page.keyboard.press(key)
+    // Nothing observable marks a panel that didn't open: let the press be handled, then look.
+    await frames(page, 10)
+    await expect(naming, `after ${key}`).toBeVisible()
+    await expect(dialogs, `after ${key}: only the naming is up`).toHaveCount(1)
+  }
+  await page.keyboard.press('Escape')
+  await expect(naming).toBeHidden()
+  await frames(page, 10)
+  await expect(dialogs, 'Escape cancelled the naming and opened nothing').toHaveCount(0)
+  await waitForLive(page)
 })

@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import { sql, accountOf, CONTRACT } from './connected'
 import { waitForLive, expectToast, SERVER_ANSWER_MS } from './helpers'
-import { claimDeed, earnGlims, freshPlayer, fund, homes, myHome, place, go, atMyMailbox, hurt, type HomesView, yardBuild } from './home-helpers'
+import { claimDeed, earnGlims, freshPlayer, fund, homes, myHome, place, go, atMyMailbox, hurt, seedDeed, type HomesView, yardBuild } from './home-helpers'
 
 /**
  * Open the gift-shelf panel. The prompt is up but the action key can land
@@ -280,4 +280,48 @@ test('maker thank-you mail: when item made by someone else is used, maker receiv
   // The thank-you mail appears in the mailbox
   await expect(mailPanel).toContainText("Finn used Keeper's Twists you made.")
   await mailPanel.locator('button', { hasText: 'Read' }).click()
+})
+
+/**
+ * The gift shelf after the homestead behind its gate is lost (step-back
+ * 2026-10-18, U2, A4): the refusal is shown, and the panel doesn't ask
+ * again every half second (it used to retry any failure, even a 404 that
+ * answers the same each time).
+ */
+test('the gift shelf shows a refusal once the homestead is lost, and stops re-reading', async ({ page }) => {
+  test.setTimeout(90_000)
+  const id = await freshPlayer(page, 'Wren')
+  await seedDeed(page, id, 2)
+  const home = `home-${accountOf(id)}`
+  let reads = 0
+  page.on('request', (r) => {
+    if (r.method() === 'GET' && r.url().includes('/api/homestead/shelf')) reads++
+  })
+  const shelf = page.getByRole('dialog', { name: /Gift Shelf/ })
+  const open = () => page.evaluate(() => (window as unknown as { __fsEmit: (e: string, p: unknown) => void }).__fsEmit('ui:village-open', { panel: 'shelf', gate: 2 }))
+  await waitForLive(page)
+  await open()
+  await expect(shelf.getByText('No shelf is set out at this gate.')).toBeVisible({ timeout: SERVER_ANSWER_MS })
+
+  // Lost while the panel is open: the next read is refused and kept as it is, not asked again.
+  sql(`DELETE FROM homestead_members WHERE homestead_id='${home}'; DELETE FROM homesteads WHERE id='${home}';`)
+  const refused = page.waitForResponse((r) => r.url().includes('/api/homestead/shelf') && r.status() === 404)
+  await page.evaluate(() => (window as unknown as { __fsEmit: (e: string) => void }).__fsEmit('items:changed'))
+  await refused
+  const after = reads
+  // Nothing observable marks a retry that never comes: give the old half-second retry four chances.
+  await page.waitForTimeout(2_000)
+  expect(reads - after, 'no retries after the refusal (at most one late change event read)').toBeLessThanOrEqual(1)
+  await shelf.getByLabel('Close the gift shelf').click()
+  await expect(shelf).toBeHidden()
+
+  // Opened again: the refusal in words, and no read after it.
+  await waitForLive(page)
+  await open()
+  await expect(shelf.getByText('There is no deed behind that gate.')).toBeVisible({ timeout: SERVER_ANSWER_MS })
+  const shown = reads
+  await page.waitForTimeout(2_000)
+  // At most the read a late change event asks for (the pack's read as the panel opened); a retry loop would be four.
+  expect(reads - shown, 'no retries after the refusal').toBeLessThanOrEqual(1)
+  await expect(shelf.getByText('There is no deed behind that gate.')).toBeVisible()
 })
