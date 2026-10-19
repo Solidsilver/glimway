@@ -83,7 +83,7 @@ import { WildsEntities } from '../wilds/entities'
 import { enemiesNearForSync, setSyncSafety } from '../sync-safety'
 import { onSceneEnd } from '../scene-end'
 import { exposeWorldHooks } from './world-dev-hooks'
-import { playHold, runFrame, type WorldFrame } from './world-frame'
+import { playHold, runFrame, type PlayHold, type WorldFrame } from './world-frame'
 import { FadeHold } from './fade-hold'
 import { TravelHold } from './travel-hold'
 import { perfWatch } from '../perf'
@@ -734,7 +734,7 @@ export class WorldScene extends Phaser.Scene {
         persisting: this.session.persistenceInFlight,
         placing: !!this.homesteads?.placing
       }),
-    still: (time, dt) => this.holdStill(time, dt),
+    still: (time, dt, hold) => this.holdStill(time, dt, hold),
     play: (time, dt) => this.play(time, dt)
   }
 
@@ -801,8 +801,11 @@ export class WorldScene extends Phaser.Scene {
    * Play held (a panel, a conversation, a transition, a cinematic, a sync's
    * write, placing a piece): the hero stands still, the screen stays alive.
    */
-  private holdStill(time: number, dt: number): void {
+  private holdStill(time: number, dt: number, hold: PlayHold): void {
     this.hero.halt()
+    // Something else took the screen: a way home's pause lets go. A sync's
+    // write is no doing of the player's, and leaves it be.
+    if (hold !== 'persisting') this.waysHome.letGo()
     // Still breathing while a conversation or panel holds the screen.
     this.avatar.update(time)
     this.interactables.hideKeyHint()

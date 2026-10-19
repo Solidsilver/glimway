@@ -29,12 +29,13 @@ export interface WorldFrame {
   /** Asked after observing (observation can start or end a hold). */
   hold(): PlayHold | null
   /** Play held: stand still, keep the screen alive. */
-  still(time: number, dt: number): void
+  still(time: number, dt: number, hold: PlayHold): void
   play(time: number, dt: number): void
 }
 
 export function runFrame(frame: WorldFrame, time: number, dt: number): void {
   frame.observe(time, dt)
-  if (frame.hold() !== null) frame.still(time, dt)
+  const hold = frame.hold()
+  if (hold !== null) frame.still(time, dt, hold)
   else frame.play(time, dt)
 }

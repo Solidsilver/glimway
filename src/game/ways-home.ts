@@ -2,7 +2,8 @@
  * Ways home in the world (roadmap 0.13; docs/design/lamps.md §1.4). From the
  * pack (EV.waysHome): hold still for the item's pause, a ring filling over
  * the hero, then ask the server to take you (api/ways_home.go). Moving lets
- * go of it, and so does a fight closing in; either way nothing is spent.
+ * go of it, and so do a fight closing in and anything else taking the screen
+ * (a panel, a scene change, the tab hidden); either way nothing is spent.
  * The server moves the hero and the scene follows (EV.relocate). Binding a
  * pouch to the lamp beside you (EV.waysHomeBind) needs no pause.
  */
@@ -26,14 +27,11 @@ export interface WaysHomeDeps {
   reducedMotion: boolean
 }
 
-/** A gap in play this long (ms) means something else took the screen. */
-const HELD_GAP_MS = 500
-
 /** The ring's warm light. */
 const RING = 0xffb054
 
 export class WaysHome {
-  private pause: { way: WayHome; p: WayPause; seen: number } | null = null
+  private pause: { way: WayHome; p: WayPause } | null = null
   private ring: Phaser.GameObjects.Graphics
   private busy = false
 
@@ -41,11 +39,15 @@ export class WaysHome {
     this.ring = scene.add.graphics().setDepth(4002).setVisible(false)
     const onUse = (d: { way: WayHome }) => this.start(d.way)
     const onBind = () => void this.bind()
+    const onHidden = () => void (document.visibilityState === 'hidden' && this.letGo())
+    const page = typeof document === 'undefined' ? null : document
     bus.on(EV.waysHome, onUse)
     bus.on(EV.waysHomeBind, onBind)
+    page?.addEventListener('visibilitychange', onHidden)
     onSceneEnd(scene, () => {
       bus.off(EV.waysHome, onUse)
       bus.off(EV.waysHomeBind, onBind)
+      page?.removeEventListener('visibilitychange', onHidden)
       this.pause?.p.cancel()
       this.pause = null
     })
@@ -63,7 +65,7 @@ export class WaysHome {
       this.say(WAYS_HOME_LINES.fight, 'error')
       return
     }
-    this.pause = { way, p: new WayPause(this.scene.time.now, this.deps.hero(), pauseMs(way)), seen: this.scene.time.now }
+    this.pause = { way, p: new WayPause(this.scene.time.now, this.deps.hero(), pauseMs(way)) }
     sfx('glim')
     this.say(WAYS_HOME_LINES.start[way], 'thought')
   }
@@ -73,9 +75,6 @@ export class WaysHome {
     if (!held) return
     const now = this.scene.time.now
     const hero = this.deps.hero()
-    // Play stopped a while (a panel took the screen): that lets go of it too.
-    if (now - held.seen > HELD_GAP_MS) held.p.cancel()
-    held.seen = now
     const state = held.p.tick(now, hero, this.deps.threatened())
     if (state === 'holding') {
       this.draw(hero, held.p.progress(now))
@@ -89,6 +88,17 @@ export class WaysHome {
       return
     }
     void this.travel(held.way)
+  }
+
+  /**
+   * Something else took the screen (the scene holds play for a panel, a
+   * scene change or a cinematic, or the tab was hidden): the pause lets go,
+   * said on the next play frame. A slow frame is not that: the hero stood
+   * still through it (CI, 2026-10-19: a 2.2 s frame let go of a turncap with
+   * "You moved").
+   */
+  letGo(): void {
+    this.pause?.p.cancel()
   }
 
   private draw(hero: { x: number; y: number }, f: number): void {
