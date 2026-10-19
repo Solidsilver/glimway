@@ -24,16 +24,20 @@ export const loadingLines: Record<LoadStage, string> = {
 }
 
 export const loadingCopy = {
-  /** A world move, while the old world is let go (before the stages above). */
-  moving: 'Crossing over…',
   /** Under the stage line once one stage has taken 8 seconds. */
   slow: 'This is taking longer than usual. The road is still there.',
   /** A stage that hasn't moved in 30 seconds. */
   stuck: 'The way has gone quiet. You can try again, or step back to the title.',
   /** A stage that failed outright. */
   failed: 'Something stopped the way from lighting. You can try again, or step back to the title.',
+  /** The title's line when Continue failed and there was no loading screen to say it. */
+  titleError: 'The way into your world didn’t open. Continue to try again.',
   retry: 'Try again',
   back: 'Back to the title',
+  /** The Menu's button that copies the last loads' timings, for the owner to paste into a chat. */
+  copyTimings: 'Copy load timings',
+  copied: 'Load timings copied.',
+  copyFailed: 'This browser wouldn’t copy them. The dev panel lists them too.',
   /** The screen reader's name for the loading screen. */
   label: 'Entering the world'
 }
