@@ -1,3 +1,5 @@
+> **Superseded by [`canon.md`](canon.md)** (2026-10-19). Kept for history; where the two disagree, the canon wins.
+
 # The Chronicle of the Lantern Road
 ## The Comprehensive History of Hearthwick, the Drift, and the Last Cart
 

@@ -4,7 +4,7 @@ import { contentPosition } from '../lib/location.ts';
  *
  * The words live in docs/lore/texts (generated into papers-text.ts). This
  * file is the design layer on top: how each paper looks when you read it,
- * and where it is found. The reveal order follows docs/lore/chronicle.md —
+ * and where it is found. The reveal order follows docs/lore/canon.md —
  * early finds build the world and the Closure; nothing before the road is
  * lit says the Six survived; Aldo's linseed-box note, Joss's letter, the
  * Count House scrap and Nan's journal wait for systems that come later.
@@ -124,7 +124,7 @@ const DESIGN: Record<string, Design> = {
   },
   // ---- The Liar's Art
   'failed-grid-of-sector-4': { style: 'notebook', source: { kind: 'wilds-poi', hook: 'A surveyor’s abandoned camp beside a tight-ringed stump' } },
-  'joss-penhallow-field-notes-pencil-map': { style: 'notebook', source: { kind: 'wilds-poi', hook: 'A roofed shrine deep east whose turncap leans toward Sallow Ford (late)' } },
+  'joss-penhallow-field-notes-pencil-map': { style: 'notebook', source: { kind: 'wilds-poi', hook: 'A roofed shrine deep east whose cowl leans toward Sallow Ford (late)' } },
   'log-of-the-bark-wind-hewn': { style: 'ledger', source: { kind: 'library-start' } },
   'guild-of-cartographers-invoice': { style: 'record', source: { kind: 'library-start' } },
   // ---- Blood, Ink, and Timber
@@ -339,7 +339,7 @@ const HANDOVER: Record<string, { lines: string[]; laterLines?: string[] }> = {
   },
   'keepers-twists-recipe-card': {
     lines: [
-      'Here. Take the card off my wall: Keeper’s Twists. I know it by heart, and it’s about time someone else used it.',
+      'Here. Take the card off my wall: Keeper’s twists. I know it by heart, and it’s about time someone else used it.',
       'There’s a note on the back about my brother. Pip has read it eleven times when they think I’m not looking. You may as well read it once.',
     ],
   },

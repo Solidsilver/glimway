@@ -1,7 +1,7 @@
 # Glimway
 
 A cozy pixel RPG for [Habitica](https://habitica.com) players. Walk the old
-lantern road, relight it, and let the progress you make on Habitica light the
+Lantern Road, relight it, and let the progress you make on Habitica light the
 way: every 10 XP you earn there becomes a glim to spend in the world.
 "Glim" is an old word for a candle, so a glimway is a road of little lights.
 
@@ -99,7 +99,7 @@ What comes from Habitica and what only from the game:
 tools like this one, and how Glimway follows them:
 [docs/habitica-policy.md](docs/habitica-policy.md).
 
-## The lantern road
+## The Lantern Road
 
 Meet **Mara** in the village of Hearthwick, accept the lantern quest, follow
 the **Brackenwood Path** east (mind the wisps), copy the naming cut on the
@@ -202,11 +202,16 @@ change the village for a day: candle hulls on the pond at the Breaking,
 bunting for Carting Day, a lamp in every window at Amberwake, and every
 lantern lit on Closure Night.
 
-The **Turning** happens at the end of each wick: the **outer Wilds** reset to
-new land, while the Tangle stays as it is. The notice board posts when the next
-Turning is due. The server already runs the outer region and its Turnings; the
-client doesn't walk you into the outer Wilds yet, so for now they appear on
-the notice board and in papers.
+The **Turning** happens at the end of each wick. The Tangle never turns: the
+Wick Tree's reach holds it in its torn shape, like the town and the lots.
+**The Whitequiet** north of it, and the land beyond, turn every wick: trees,
+forage, camps, chests, places and paths nobody walked come up new, while
+the Wend keeps its bed and woods and meadows stay where they are. Land held
+by a lit lamp stays. The notice board posts when the next Turning is due.
+
+The way out ends at **the Whitequiet's edge**: you can see a little of the
+land past it, pale through the veil, but you can't walk in. Only a lit camp
+pushes the edge back, and it draws in again when the camp goes dark.
 
 ### Papers and the Hearthwick Library
 

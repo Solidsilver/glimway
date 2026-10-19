@@ -1,7 +1,7 @@
 # An Invoice from the Guild of Cartographers
 
 **Author:** Master Cartographer Hemlock
-**Date:** Last Autumn.
+**Date:** Thirty-three years ago, in Leaf-wick.
 **Material:** A stiff, formal invoice sent to the Count House in Tarrow.
 
 **BILL TO:** The Magistrates of the Oak Hall

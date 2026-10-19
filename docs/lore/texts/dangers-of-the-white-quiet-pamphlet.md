@@ -1,11 +1,11 @@
-# "On the Dangers of the White Quiet" (Survival Pamphlet)
+# "On the Dangers of the Quiet" (Survival Pamphlet)
 
 **Author:** The Tarrow Magistrates (Drafted by the Oak Hall Wardens)
 **Date:** Issued annually every Smoke-wick.
 **Material:** Cheap broadside paper, usually nailed to tavern doors and toll posts.
 
 **WARNING TO ALL WINTER TRAVELERS:**
-The season of the White Quiet is approaching. While the Fast Drift slows, the deep cold presents a unique geographical hazard. 
+The season of the Quiet is approaching. While the Fast Drift slows, the deep cold presents a unique geographical hazard. 
 
 As the ground freezes, the Wilds enter a state of deep preservation. The land will attempt to "keep" whatever rests upon it for too long. 
 

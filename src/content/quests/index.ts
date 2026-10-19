@@ -80,7 +80,7 @@ export interface QuestTalkContext {
 
 const ROAD_DONE = {
   short: 'The road is lit. Wander as you like',
-  objective: 'The lantern road glows again. Explore Hearthwick, Brackenwood, and the ruin at your own pace.',
+  objective: 'The Lantern Road glows again. Explore Hearthwick, Brackenwood, and the ruin at your own pace.',
 };
 
 /** The road's current goal (the HUD with nothing pinned; the title screen's Continue card). */

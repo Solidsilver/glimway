@@ -1,8 +1,8 @@
 /**
  * The words of the loading screen (src/ui/LoadingScreen.svelte): one calm
  * line for each stage of entering the world (src/lib/loading.ts), and what
- * it says when a stage is slow or stuck. Placeholders for the lore pass:
- * reword freely, the stages stay the same.
+ * it says when a stage is slow or stuck. The stage lines are the settled
+ * set (docs/lore/apply-map.md, P3); the stages stay the same.
  */
 import type { LoadStage } from '../lib/loading.ts'
 
@@ -12,15 +12,15 @@ export const loadingLines: Record<LoadStage, string> = {
   /** The land around you: the open map's near read and the homestead lane, from the server. */
   land: 'Reading the lie of the land…',
   /** Fetching the art (the packed atlases; a return visit mostly checks them against the cache). */
-  fetch: 'Gathering the lanterns…',
+  fetch: 'Trimming the wicks…',
   /** Unpacking the fetched art into pictures. */
-  decode: 'Unwrapping the lanterns…',
+  decode: 'Filling the lamps…',
   /** Cutting the art into the world's pieces, a little each frame. */
-  build: 'Lighting the lamps…',
+  build: 'Speaking the namings…',
   /** The Commons' fixed ground, if you stand on it, and the world's scene being put together. */
-  arrive: 'Lighting the way…',
+  arrive: 'Parting the Whitequiet…',
   /** The first chunks painted behind a dark screen, then the first frame. */
-  paint: 'Lighting the way…'
+  paint: 'The land remembers you…'
 }
 
 export const loadingCopy = {

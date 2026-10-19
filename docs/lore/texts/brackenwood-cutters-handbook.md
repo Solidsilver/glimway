@@ -3,9 +3,9 @@
 **Issued By:** The Oak Hall, Tarrow-on-the-Reed
 **Material:** Thick, wax-coated canvas pages designed to survive rain and sap. Found in the pockets of most licensed logging crews.
 
-**Section IV: On the Felling of Quercus ferrum (Iron-Oak)**
+**Section IV: On the Felling of Quercus ferrum (iron-oak)**
 
-It cannot be stressed enough to new crews that cutting Iron-Oak is not akin to harvesting common pine. Iron-Oak achieves its density by growing in places where the land has been heavily anchored by human memory. When you cut an old-growth Iron-Oak, you are not just felling timber; you are severing a taproot of held memory.
+It cannot be stressed enough to new crews that cutting iron-oak is not akin to harvesting common pine. Iron-oak achieves its density by growing in places where the land has been heavily anchored by human memory. When you cut an old-growth iron-oak, you are not just felling timber; you are severing a taproot of held memory.
 
 **The Memory Wake:**
 When the trunk finally snaps, the sudden release of the tree’s grip on the earth will trigger a localized, violent Fast Drift (a "Stir" or "Wake").

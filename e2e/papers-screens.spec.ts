@@ -84,7 +84,7 @@ test('desktop screens', async ({ page }) => {
   await expect(library.getByText(`of ${ALL_PAPERS}`)).toBeVisible()
   await page.waitForTimeout(500)
   await page.screenshot({ path: `${OUT}/desktop-library.png` })
-  await library.getByRole('button', { name: /Dangers of the White Quiet/ }).click()
+  await library.getByRole('button', { name: /Dangers of the Quiet/ }).click()
   await page.screenshot({ path: `${OUT}/desktop-library-read-broadside.png` })
   await library.getByRole('button', { name: /The shelves/ }).click()
   await library.getByRole('button', { name: /Mudrise Fleet/ }).click()

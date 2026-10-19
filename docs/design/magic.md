@@ -2,6 +2,13 @@
 
 Status: direction and rules agreed with the owner 2026-10-07; numbers await a playtest. Topic from [ideas.md](../ideas.md) ("A bigger magic system").
 
+> **Superseded in part (2026-10-19).** The four class-locked crafts below are replaced by
+> the five **Practices** (Handcraft, Waycraft, Songcraft, Hearthcraft, Wildcraft) in
+> [`../lore/canon.md`](../lore/canon.md) §5, which are *[later]*: canon, not built. A Habitica
+> class is a **lean**, a head start in one Practice (Warrior, Handcraft; Mage, Songcraft;
+> Healer, Hearthcraft; Rogue, Waycraft), not a lock. Anyone may learn the Keeper's hand. The
+> rest of this doc stands as a starting point for that later systems design.
+
 ## Where we are today
 
 - One spell exists: **Fingersnap**, the mage's signature and the classless starter's

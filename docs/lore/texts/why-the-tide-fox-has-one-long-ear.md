@@ -6,7 +6,7 @@ Long before the Carters brought their heavy wheels, the animals of the woods had
 
 But the Fox was clever. The Fox knew you cannot fight the Drift; you can only trick it.
 
-One autumn, the Fox caught three fat rabbits. He ate one, but he wanted to save the other two for the White Quiet of winter. He knew if he buried them by a rock, the rock would wander off. 
+One autumn, the Fox caught three fat rabbits. He ate one, but he wanted to save the other two for the Quiet of winter. He knew if he buried them by a rock, the rock would wander off. 
 
 So, the Fox found the fastest, angriest patch of Drift in the woods. He dropped the rabbits into the churning earth and let the ground swallow them. 
 
@@ -14,7 +14,7 @@ Then, the Fox sat down to wait for winter. But the Fox made a mistake. He watche
 
 The Fox yelped and pulled, and pulled and yelped, stretching his left ear long and thin until he popped free. 
 
-When winter finally came, the White Quiet settled in. The ground froze and gave back what it had swallowed, pushing the two fat rabbits right up through the frost, directly between the Fox's paws. 
+When winter finally came, the Quiet settled in. The ground froze and gave back what it had swallowed, pushing the two fat rabbits right up through the frost, directly between the Fox's paws. 
 
 The Fox learned his lesson. To this day, a Tide-Fox never looks straight ahead to see where it is going. It keeps one short ear pointed forward, but it swivels its long, stretched ear backward, listening to the ground it just left—because in the Wilds, what is behind you is always trying to catch up.
 

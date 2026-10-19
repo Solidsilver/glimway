@@ -42,7 +42,7 @@ for (const v of vectors.placements) test(`shared canPlace: ${v.name}`, () => {
 test('homestead reads its items through the catalogue', () => {
   const stool = furnishingFor('wooden-stool')!;
   assert.deepEqual([HOMESTEAD_DATA.items[0]!.id, HOMESTEAD_DATA.items[0]!.name, HOMESTEAD_DATA.items[0]!.footprint], ['wooden-stool', stool.name, stool.footprint]);
-  assert.equal(homeItem('wooden-stool')!.name, 'Wooden Stool');
+  assert.equal(homeItem('wooden-stool')!.name, 'Wooden stool');
   for (const good of HOMESTEAD_DATA.items) assert.ok(furnishingFor(good.id), `${good.id} unresolved`);
   const broken: unknown = { ...structuredClone(HOMESTEAD_DATA), items: [{ ...structuredClone(HOMESTEAD_DATA.items[0]), id: 'no-such-piece' }] };
   assert.throws(() => validateHomesteadData(broken));
