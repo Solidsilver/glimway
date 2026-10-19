@@ -55,6 +55,12 @@ called **the Deep Measure**. Stone and deep water are heavy enough and old enoug
 their own shape. They do not turn.
 
 *In the game:* lasting geography. Lakes, rivers and ridges keep their place; living detail turns.
+The Wend keeps its bed every wick; the land along it turns.
+
+It was not always this calm. Before the Two Storms the drift ran all the time, and harder in the
+Weir Years: rivers wandered across their valley floors, outcrops sank, and stirs folded ravines.
+The old texts that say so are true for their time. Since the road broke and the pressure bled
+off, the drift moves only at the Turning, and the Measure shows through.
 
 ### 2.2 The Unyoking and the Crack [later, as story]
 
@@ -78,26 +84,30 @@ evil and not angry. The world is hurting, not wicked.
 
 - **The Turning.** Every wick (seven days) the drift's judgment falls. Wild land turns: its
   trees, undergrowth, generated trails and ruins slip back into what might have been, and come
-  up different. What is held stays. *In the game:* the weekly wick turning; the Keeper posts it
-  on the notice board a day ahead ("Dark of Amber-wick — the outer Wilds will turn.").
+  up different. What is held stays, and so does everything within the Wick Tree's reach (2.8).
+  *In the game:* the weekly wick turning; the Keeper posts it on the notice board a day ahead
+  ("Dark of Amber-wick — the outer Wilds will turn."). The Tangle never turns.
 - **A stir.** In storms the drift runs fast, and unheld land moves in minutes. A stir grew a root
   through a cart axle in one night and tore the Tangle crossing in the Winter of Two Storms.
   Stirs are history and story; the game has no stirs [later, if ever].
 - **Watching and walking.** Attention slows the drift; feet keep a way open; light holds it.
   The saying is "watching buys you an hour; light buys you a road."
 
-The chronicle's "slow drift" (paths wandering a few feet a season) is retired: between turnings,
-land stays put.
+The chronicle's "slow drift" (paths wandering a few feet a season) is history, not the present:
+it ended with the Two Storms (2.1). Today, between turnings, land stays put. Seasons change how
+the land looks and feels, not how fast it moves.
 
 ### 2.4 The Whitequiet [shipped]
 
-The pale, silent land at the edge of what anyone has walked. It waits as unremembered
-possibility; walking into it or lighting a lamp parts the veil and the land beyond comes into
-being. The Whitequiet keeps what it is given: lost objects and impressions of people surface
-there as **trinkets** and **Echoes** (2.7).
+The pale, silent land at the edge of what anyone holds. Inside its edge, land nobody has walked
+yet comes into view as you walk it. The edge itself cannot be walked through: only a lit camp,
+fed with oil, pushes it back, and the edge draws in again when the camp goes dark. Relighting a
+lamp stone or walking a path doesn't move it. The Whitequiet keeps what it is given: lost
+objects and impressions of people surface there as **trinkets** and **Echoes** (2.7).
 
-*In the game:* the frontier veil, and the Whitequiet region north of the Tangle, past the Tangle
-crossing. The winter mark is called **Quiet**; "the White Quiet" as a name for winter or for the
+*In the game:* the frontier (reach is the static frontier plus slack around live holds), drawn
+as the veil; and the Whitequiet region north of the Tangle, past the Tangle crossing, which turns
+every wick. Player text calls the frontier "the Whitequiet's edge", not "the drift". The winter mark is called **Quiet**; "the White Quiet" as a name for winter or for the
 drift's preserving state is retired in favour of the Whitequiet.
 
 ### 2.5 The Dark [later, mostly]
@@ -120,16 +130,16 @@ not the forgetting.
 - **Frets** [later]. Where the Dark festers unchecked, it drinks the colour, warmth and sound out
   of a valley or marsh: a **fret**. Frets can be pushed back with light, song and restoration.
   The corruption is plain to see there, unlike in the hurting but innocent Wild.
-- **Unmoored** [shipped for the player, later for beasts]. The Dark's first touch. A hero too
-  long in unheld land, or caught in a Turning, comes **unmoored**: the world sways and pales at
-  the edges until they rest in lamplight or take a remedy (a jar of turncaps, a salve). Beasts
-  the Dark has fevered are unmoored too (5.4).
+- **Unmoored** [shipped for the player, later for beasts]. The Dark's first touch. A hero who
+  stays too long deep in the Tangle, where the Wick Tree's reach thins (2.8), or who is caught
+  in a Turning, comes **unmoored**: the world sways and pales at the edges. It passes with rest
+  on safe ground in town or at home, or at once with a remedy (a jar of turncaps; a salve eases
+  it). Wilds lamps are not safe ground. Beasts the Dark has fevered are unmoored too (5.4).
 
 ### 2.6 Care, wear and the anchored [shipped as framing]
 
-Care is strong, and light makes it stronger. A road stays a road because friends walk it. A town
-loved long enough wears down to the Measure: Hearthwick has been lived in, walked and tended for
-so long that its ground no longer turns. A new path needs feet every wick.
+Care is strong, and light makes it stronger. A road stays a road because friends walk it. Care
+wears in slowly: a new path needs feet every wick.
 
 People who love their neighbours, take pride in honest craft, tend their hearths and make music
 or art are **anchored**: the Dark finds them heavy and almost impossible to twist. The Dark gets
@@ -152,9 +162,27 @@ The drift does not destroy what was made with care and is owed to someone; it gi
 - **Echoes.** Phantom camps of the Six: not ghosts, but the woods replaying a mundane, waiting
   moment. Lighting the **owed lamp** (with glims) lets the kettle boil and the tune finish, and
   the moment files itself away kindly.
-- **Pell's crate.** Everything a player made or placed comes back when its land turns: the
-  lamp, its oil, the pieces, the plants, packed into a crate at Pell's deeds office for the
-  person it belongs to. Nothing a player made is ever lost (the game's first rule).
+- **What players made.** Everything a player made or placed comes back when its land turns.
+  Nothing a player made is ever lost (the game's first rule). Where it comes back depends on the
+  land (3.8): a camp's lamp, oil, pieces and plants (still growing) and unwalked paths go to
+  Pell's crate; a lot's backland comes home, its pieces to home storage and its plants as seeds
+  in the shared chest.
+
+### 2.8 The Wick Tree's reach [shipped]
+
+The Wick Tree's roots drink from the Deep Measure, and around the tree the land does not change:
+it is held by the tree's reach. The tree is why a town could be built here at all; the company
+came for the iron-oak and the amber, and stayed because of the tree. Everything inside the
+reach stays as it is from wick to wick: Hearthwick, its lots and hearths, and the Tangle to the
+north.
+
+The Tangle is the scar of the stir that broke the road (4.3). The tree's reach holds it in its
+torn shape: it never turns, whoever walks it and whatever lamps burn there. Deep in the Tangle,
+toward the edge of the reach, the hold thins, and a traveller who lingers there comes unmoored
+(2.5). Past the reach (the Whitequiet and the land beyond it) the land turns every wick.
+
+*In the game:* town and lot ground are permanent; the Tangle is a still region (its `still`
+epoch never ends); the Whitequiet and the generated Wilds turn at each wick.
 
 ---
 
@@ -179,7 +207,7 @@ The **Wick Tree** grows at the heart of Hearthwick, and its roots drink from the
 Its golden sap, refined into **hearth oil**, doesn't only burn: it **witnesses**. While a lamp
 burns, the land around it is seen, remembered and held in the present. The hearth-stone at its
 foot keeps a lamp that is named and tended every dusk. The village is named for
-the tree: a hearth at a wick.
+the tree: a hearth at a wick. Around it, the land holds still (2.8).
 
 - **Weekly sap.** Once a wick, anyone may tap the tree; the chandler refines the jar free into
   one flask of hearth oil, enough to keep one lot lantern for a wick. More oil is the chandler's,
@@ -214,8 +242,11 @@ spoken:
 
 - a **lot lantern**'s naming is the lot's deed in Pell's ledger ("we do not deed the coordinates
   of the earth; we deed the anchor");
-- a **way-lamp** is named in the setting, by someone with the Keeper's hand; the naming from
-  parts is its lasting name;
+- a **way-lamp**'s setting is itself a short working that only a Keeper can do; that is why
+  setting a camp needs the Keeper's hand, and why the lamp holds its chunk from the first night.
+  Its **naming from parts** is its *lasting* name, the one strangers find their way by, given
+  when its builders choose (or never): it goes in the ledger and leaves lamp ash. A camp holds
+  land the same with or without it;
 - a **communal lamp** is held by footsteps, not oil, and burns hollow until a Keeper names it.
 
 ### 3.5 Lamps in the world [shipped]
@@ -256,8 +287,8 @@ now Mara. **A Keeper** is anyone with the Keeper's hand.
 |---|---|---|
 | **Wild** | Unwalked, unheld land | Nothing. Its detail turns every wick; its earth's shape stays |
 | **Common** | Laid paths and communal lamps | One visit to that stretch each wick. Unvisited work turns; its stone and timber go to Pell's |
-| **Built** | Lot backland and camps, held by a named lamp's oil | Oil at the turning. An empty lamp **dims** for one wick (a warning in the world and on the map), then turns; everything goes to Pell's |
-| **Permanent** | Hearthwick town and each lot and hearth | Worn down to the Measure (2.6). *[later]* a chartered Wilds hearth's core plot, by a co-signed promise |
+| **Built** | Lot backland and camps, held by a lamp's oil | Oil at the turning. An empty lamp **dims** for one wick (a warning in the world and on the map), then turns; everything comes back (3.8) |
+| **Permanent** | Hearthwick town, each lot and hearth, and the Tangle | The Wick Tree's reach (2.8). *[later]* a chartered Wilds hearth's core plot, by a co-signed promise |
 
 Never promise "for good" for any land in the Wilds.
 
@@ -269,16 +300,22 @@ generations. Nobody knows whether an ancestor made it or was given it. The Pells
 generations trying to understand the land and the way it gives things back; that is how a family
 of clerks came to keep deeds.
 
-When a lamp goes dark, a path goes unwalked or a camp is packed up, the drift gives the made
-things back to the crate, for the person they belong to: "The woods turned. Pell has your
-things." The Pell family ledgers also record things that did **not** come back: only the old
+When a camp's lamp goes dark, a camp is packed up, a path goes unwalked or an unvisited
+communal post turns, the drift gives the made things back to the crate, for the person they
+belong to: "The woods turned. Pell has your things." Camp plants come back still growing.
+
+A **lot's backland** is the exception: it comes home rather than to Pell's. When a lot lantern
+goes dark, the backland's pieces go to the household's home storage and its plants come back as
+seeds in the shared chest; only paths laid there go to Pell's crate. The Pell family ledgers also record things that did **not** come back: only the old
 world's things, never a player's. Some of them are the trinkets the Whitequiet gives back, so Pell
 reads the same mystery as the Six from the other end. A player's own things always come back.
 
 ### 3.9 Ways home [shipped]
 
 - **Turncaps** are grey mushrooms whose caps lean toward the nearest held light (a biological
-  compass). A **jar of turncaps** steadies the unmoored. A **homing turncap** is one set in amber
+  compass). They are named after the old chimney **cowls** on roofs: a cowl spins with the wind
+  all its life, but after twenty winters it settles leaning toward the nearest light that held,
+  and the mushrooms lean the same way. "Turncap" means the mushroom; the roof fitting is a cowl. A **jar of turncaps** steadies the unmoored. A **homing turncap** is one set in amber
   while it still leans toward town: hold still a moment and it takes you back to the north arch.
 - **Lamp ash** from a first naming, sewn into a **lamp-ash pouch**, remembers its lamp: hold still
   and it takes you to that lamp, if it still burns.
@@ -311,8 +348,8 @@ safest season; growth is itself a remembering), **Amberfall** (Haze–Amber: the
 | ~155 years ago | The Settling | Hearthwick founded as a company town between the Sapping Grounds' amber and the iron-oak woods |
 | ~110 years ago | The Lantern Road | The Carters' Compact and the Oak Hall fund the chain of named lamps to Sallow Ford |
 | ~36–31 years ago | **The Weir Years** | Peak trade (the Great Carting). The road is held rigid all year; pressure builds at its edges. Keeper Hesper |
-| 31 years ago | **The Winter of Two Storms** | The closure, the Lull Run, the Tangle crossing breaks (4.3) |
-| 30 years ago | The Warden | Wenna and Orrin build the Stone Warden at Ashwatch |
+| 31 years ago | **The Winter of Two Storms** | The closure (Quiet-wick 7th), the Lull Run, the Tangle crossing breaks (Thaw-wick 7th) (4.3) |
+| 31 years ago, that spring | The Warden | Wenna and Orrin build the Stone Warden at Ashwatch |
 | 30–1 years ago | The lean years | Trade shrinks to the hill road; foxes come down the Wend every autumn |
 | 8 years ago | | Wenna dies; Mara inherits the ledger |
 | 2 years ago | | Aldo Tolley dies; Finn inherits the linseed box. Elara arrives on a flood-drift |
@@ -343,29 +380,35 @@ reminding it. Orrin carved it; Hesper bound it.
 
 Keeper **Wenna Hale**, Hesper's successor, kept the road when the pressure broke.
 
-1. **The first storm.** A white-out; the road burned through its oil ("Oil, 3 casks short").
-   Wenna closed the road: she cut the closure mark, *two weaves and a break*, into the route
-   stones and snuffed the chain from the hilltop shrine downward. Dark on purpose, like a fence.
+1. **The first storm (Quiet-wick 7th).** A white-out; the road burned through its oil ("Oil, 3
+   casks short"). Wenna closed the road: she cut the closure mark, *two weaves and a break*, into
+   the route stones and snuffed the chain from the hilltop shrine downward. Dark on purpose, like
+   a fence. Closure Night keeps the date.
 2. **Hesper walks out.** Hesper, old and long retired, would not accept the
    closure. On the first night of the lull she walked out alone to the Tangle crossing to hold
    it herself. She did not come back. The village believes the white-out took her; only Wenna
    suspected. Orrin learns what his joint did when the player does.
-3. **The lull and the Lull Run.** Nine days of slack calm. Hollis Brack wanted to run a train to
-   Sallow Ford for oil; Wenna refused. At dawn on the sixth day **the Six** went *under the mark*
-   anyway, on Maren Brack's wheels, carrying storm-grade amber. Silas turned back at the
-   Brackenwood fork.
-4. **The second storm.** It came three days early, and it was a **stir**. Hesper's bound joint
+3. **The lull and the Lull Run.** A calm came over the turn of the year, and nine calm days were
+   *forecast*. Hollis Brack wanted to run a train to Sallow Ford for oil; Wenna refused ("the
+   ninth day is not a promise; it is a guess"). After five calm days, at dawn on the sixth
+   (Thaw-wick 6th), **the Six** went *under the mark* anyway, on Maren Brack's wheels, carrying
+   storm-grade amber. Silas turned back at the Brackenwood fork. That first day out, Tam crushed
+   two fingers in the yoke-chain, and Nan cast them in storm-grade amber.
+4. **The second storm (Thaw-wick 7th).** It came on the seventh day of the lull, three days
+   before the forecast ran out, and it was a **stir**. Hesper's bound joint
    would not flex; the ground tore around it, and the bridge broke in half, as Dorrit had
    warned. **Bett Cooley** and **Dorrit Venn** fell with the carts. The other four pushed on and
    reached **Sallow Ford**. Behind them the road forgot its shape and the chain went dark. The
    Tangle is the scar of that night. Hesper's binding cost Bett and Dorrit their lives.
+
+The found texts' dates follow this timeline (seven-day wicks: day 1 to 7, never higher).
 
 ### 4.4 The Six [shipped]
 
 | | Then | Fate |
 |---|---|---|
 | **Hollis Brack** (41) | Lead carter; laughed with his whole back; carved wooden foxes, long ear on the **right** | Lives at Sallow Ford; has kept a lamp lit for thirty years |
-| **Tam Cooley** (34) | Ox-driver; talked to the oxen more than to people. Crushed two fingers in the yoke-chain on the run | Lives at Sallow Ford |
+| **Tam Cooley** (34) | Ox-driver; talked to the oxen more than to people. Crushed two fingers in the yoke-chain on the first day out | Lives at Sallow Ford |
 | **Bett Cooley** (34) | Tam's twin; sang flat on purpose to annoy him | Died at the Tangle crossing |
 | **Dorrit Venn** (20) | Orrin's bridge apprentice; set the village signpost crooked on her first day | Died at the Tangle crossing |
 | **Joss Penhallow** (16) | Runner; dented his tin whistle to one note; kept a pencil map | Lives at Sallow Ford; a mapmaker |
@@ -377,7 +420,7 @@ good knee ever since.
 
 ### 4.5 After [shipped]
 
-- **The Stone Warden.** The spring after, searchers wanted to go in. In eleven days Wenna and
+- **The Stone Warden.** That spring, searchers wanted to go in. In eleven days Wenna and
   Orrin built the Warden at Ashwatch: an iron-oak frame from Dorrit's ruined span, a coat of
   drift-stone, a heart-lamp of storm-grade amber. They kept watch a whole night so the stone
   learned its pose. Wenna gave it one naming, cut beside the closure mark on the Ashwatch route
@@ -405,7 +448,7 @@ good knee ever since.
   binding the way the Warden is settled. The rebuilt span is Dorrit's: it steps with the hill.
   The stakes are Orrin's (he carved the joint), Ada's (Bett fell there) and Mara's (Hesper
   taught Wenna).
-- **The far light.** When the eastern lamps are relit, a second point of gold blinks back from
+- **The far light.** When the road's far lamps are relit, a second point of gold blinks back from
   the horizon: the Sallow Ford lamp. The account is still open, and the last cart is coming home.
 
 ---
@@ -494,10 +537,11 @@ One fixed town around the Wick Tree, with roads into the Wilds on every side.
 
 - **The Square**: the Wick Tree, the hearth-stone and its lantern, the town's one well and one
   notice board.
-- **The Carters' Apron**: the old staging ground of the Lantern Road (the Commons, merged into
-  town). Every Carting Day a polished hame hangs on its gate for the cart that never came home.
-  Elara's camp.
-- **The Tangle Arch** (the north arch): the way north into the Tangle. Homing turncaps lead here.
+- **The Commons**: the old staging ground of the Lantern Road, now part of town. Players always
+  see "the Commons". Old carters call it **the Carters' Apron**; the name lives only in their
+  speech and in old texts. Every Carting Day a polished hame hangs on its gate for the cart that
+  never came home. Elara camps there.
+- **The north arch** (the Tangle Arch): the way north into the Tangle. Homing turncaps lead here.
 - **The East Gate**: the Lantern Road's way out, to Brackenwood, Ashwatch and the shrine.
 - **The West Road** to the Tops and Tarrow; **the Low Road**, by which the player arrives.
 - Hazel's bakery, Finn's mill on the Wend, Ada's house with its window lamp, the library (the
@@ -515,13 +559,14 @@ now, and route stones lean in the moss.
 
 ### 6.3 The wider world [story]
 
-- **Sallow Ford**: north-east, where oil was pressed and the four survivors live. The Sallow
+- **Sallow Ford**: north-east, where oil was pressed. The four survivors reached it; Hollis, Tam
+  and Joss live there now (Nan died there). The Sallow
   Ford Institute of Cartography; the ferry ruins.
 - **Tarrow-on-the-Reed**: west over the Tops; the river market. The **Count House** (tolls,
   tallies and Pell's employer) and the **Oak Hall** (iron-oak charters; the oak-mark, a wheel and
   a wave).
-- **Sennick's Ferry**: a chain-ferry on the Reed; the Sennicks cut the chain and move the ferry
-  when the river drifts.
+- **Sennick's Ferry**: a chain-ferry on the Reed. In the old days of the running drift the Sennicks
+  cut the chain and moved the ferry whenever the river wandered (2.1).
 - **The Tops and the Oaker Hills**: charcoal burners and smallholdings over the ridge.
 - **The Sapping Grounds** and **the Amberwash**: amber country; pale gravel scars.
 - **The Merrow Saltings**: fen country far south-west, where people ride the drift like a tide.
@@ -623,7 +668,7 @@ Night** (Quiet-wick the 7th: every village lantern lit, the road beyond the last
 
 From older drafts, no longer canon: the survivors settling at Tarrow; Finn's Count House tokens
 (it's foxes); "rubbing" (you copy and speak the naming); "embers" as currency (it's glims); the
-slow drift between turnings; "the White Quiet" as a name; the Dark-free "the Wilds aren't evil"
+slow drift *in the present* (it is history now, 2.1); "the White Quiet" as a name; the Dark-free "the Wilds aren't evil"
 tone line (now: the Wild is hurt, the Dark is evil); Elara's mother at Sallow Ford; the Breaking
 of the Measure (now the Unyoking); the Old Ways as the Dark's temptation (now the Short Way).
 
@@ -643,13 +688,16 @@ of the Measure (now the Unyoking); the Old Ways as the Dark's temptation (now th
 | the Dark, the Draught | "the Draught" only in Keepers' writing |
 | fret, frets | Lower case |
 | unmoored | Lower case, for players and beasts |
-| the Whitequiet | One word, always |
+| the Whitequiet, the Whitequiet's edge | One word, always. The frontier is "the Whitequiet's edge" in player text, never "the drift" |
 | the Tangle, the Tangle crossing, Dorrit's Span | |
+| the Commons | The name players see. "The Carters' Apron" only in old carters' speech and old texts |
+| the north arch | Lower case in prose; "the Tangle Arch" is the same arch |
+| turncap, cowl | A turncap is the mushroom; a cowl is the roof fitting |
 | the Lantern Road | Capitalised, always |
 | iron-oak | Lower case, hyphenated |
 | glim, glims | Lower case |
 | wick | Time, oil measure and the item (3.3); "Amber-wick" for a named wick |
-| hearth oil, Wick Tree sap, lamp wick, lamp head, lamp ash, lamp-ash pouch, way-lamp, lot lantern, communal lamp, lamp stone (two words, no hyphen), route stone, homing turncap, jar of turncaps | Item and thing names in sentence case: "Lamp wick", not "Lamp Wick" |
+| hearth oil, Wick Tree sap, lamp wick, lamp head, lamp ash, lamp-ash pouch, way-lamp, lot lantern, communal lamp, lamp stone (two words, no hyphen), route stone, homing turncap, jar of turncaps | Item, furniture and recipe display names in sentence case ("Lamp wick", "Wooden stool"). Kept as they are: proper names and titles inside a name ("the Empty Chair", "Keeper's twists", "Wick Tree sap", "Ada's …") and the **Ember Charm**. Ids never change |
 | naming, to name | Lower case |
 | the Keeper's hand | |
 | the Keeper / a Keeper / a camp's keeper | The title / anyone with the Keeper's hand (3.6) / the Keeper who set a camp, lower case. Setting a camp needs the Keeper's hand, so the three agree |
@@ -683,7 +731,24 @@ Nothing is open for 0.13.0. Settled at review (2026-10-19):
 - The rogue ability **Echo** keeps its name until the Practices replace the class abilities.
 - **New found texts** (a Pell ledger page, a folk telling of the Unyoking, Orrin on Hesper's
   joint) are parked: not for 0.13.0.
-- The **loading lines** are the set in `apply-map.md` (package F).
+- The **loading lines** are the set in `apply-map.md` (package P3).
 - **Parked for 0.15:** new dialogue that only adds lore (Pell on his family crate, Elara as the
   sceptic, the hollow-until-named lamp, the deed as a lot lantern's naming, the sap that
   witnesses). These are canon; they reach players with the story release.
+
+Settled after Sol's second-pass review (`docs/reviews/2026-10-19-lore-review.md`, 2026-10-19):
+
+- **L13** The old texts' moving rivers, sinking outcrops and folding ravines are history: the
+  drift ran all the time before the Two Storms (2.1). Present-tense text says the river keeps its
+  bed.
+- **L14** Nine calm days were forecast; the Six left at dawn on the sixth; Tam was hurt that
+  first day out; the stir came on the seventh. Dates: the closure on Quiet-wick 7th (Closure
+  Night), the Run on Thaw-wick 6th, the stir on Thaw-wick 7th (4.3).
+- **L15** The roof fitting in Joss's notes is a chimney **cowl**; turncaps are named after cowls.
+- **L16** Players keep seeing "the Commons"; "the Carters' Apron" is the old carters' name only.
+- **L2** Setting a way-lamp is a short Keeper's working, and the camp holds from that night; the
+  naming from parts is the lasting name, optional, recorded and rewarded with ash (3.4).
+- **L3** The Wick Tree's reach holds the land around it still: the town, the lots and the Tangle
+  (2.8). The owner's call.
+- **L4–L6** Frontier, recovery and unmoored now describe the game as shipped (2.4, 2.7, 3.8,
+  2.5).
