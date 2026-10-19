@@ -179,7 +179,7 @@ Glims buy goods, settle Echoes, rest at the hearth and, *[later]*, feed workings
 The **Wick Tree** grows at the heart of Hearthwick, and its roots drink from the Deep Measure.
 Its golden sap, refined into **hearth oil**, doesn't only burn: it **witnesses**. While a lamp
 burns, the land around it is seen, remembered and held in the present. The hearth-stone at its
-foot keeps a lamp that is named and tended every dusk. *[proposal]* The village is named for
+foot keeps a lamp that is named and tended every dusk. The village is named for
 the tree: a hearth at a wick.
 
 - **Weekly sap.** Once a wick, anyone may tap the tree; the chandler refines the jar free into
@@ -196,7 +196,7 @@ the tree: a hearth at a wick.
 - **A wick** (time): seven days, the stretch between one trimming of the lamps and the next.
   Twelve wicks make the year (3.10).
 - **A wick of oil**: what a lamp burns in one wick. A lamp holds three.
-- **A lamp wick**: the cord itself, an item. Relighting a dark road stone burns one.
+- **A lamp wick**: the cord itself, an item. Relighting a dark lamp stone burns one.
 
 ### 3.4 The anchor-light: oil, naming, lamp [shipped]
 
@@ -226,8 +226,8 @@ spoken:
 | **Hearth lantern** | The lamp at the Wick Tree's foot | The village, every dusk |
 | **Lot lantern** | On the stake behind a Hearthwick lot; holds the lot's backland | Oil (three wicks deep); anyone may fill it |
 | **Way-lamp** | Set in the Wilds for a camp; holds one chunk | Oil, as a lot lantern |
-| **Communal lamp** | A public rest light: a relit road stone or a post anyone sets | A visit each wick |
-| **Road stone** | A dark lamp-stone of the old Lantern Road; relit with a lamp wick | A visit each wick, once relit |
+| **Communal lamp** | A public rest light: a relit lamp stone or a post anyone sets | A visit each wick |
+| **Lamp stone** | A dark lamp of the old Lantern Road, in stone; relit with a lamp wick | A visit each wick, once relit |
 | **Route stone** | A stone carrying a Keeper's cut (a naming carved in it) | Stone; it doesn't turn |
 
 ### 3.6 Naming and the Keeper's hand [shipped]
@@ -349,7 +349,8 @@ Keeper **Wenna Hale**, Hesper's successor, kept the road when the pressure broke
    stones and snuffed the chain from the hilltop shrine downward. Dark on purpose, like a fence.
 2. **Hesper walks out.** Hesper, old and long retired, would not accept the
    closure. On the first night of the lull she walked out alone to the Tangle crossing to hold
-   it herself. She did not come back, and the village believes the white-out took her.
+   it herself. She did not come back. The village believes the white-out took her; only Wenna
+   suspected. Orrin learns what his joint did when the player does.
 3. **The lull and the Lull Run.** Nine days of slack calm. Hollis Brack wanted to run a train to
    Sallow Ford for oil; Wenna refused. At dawn on the sixth day **the Six** went *under the mark*
    anyway, on Maren Brack's wheels, carrying storm-grade amber. Silas turned back at the
@@ -464,8 +465,8 @@ The temptation to take any of these is called **the Short Way**, and those who t
   and workings, now turned to hoarding light and hunting anyone who carries a lantern.
 - **Unmoored beasts.** Wolves, beetles and marsh creatures keep their animal nature, but the Dark
   turns their fear and hunger against lamplight. Breaking the fever in a fight frees them to
-  flee into the woods. *[shipped]* the beetles and wisps of the Wilds; wisps are scraps of
-  light that have gone sour *[proposal]*.
+  flee into the woods. *[later]* The animals get an overhaul, with ordinary and corrupted
+  kinds. Until then the Wilds' beetles and wisps stay unexplained: no text says what they are.
 - **Holdouts.** A few survivors of the Company still hold out alone in remote corners of the
   Wilds, wary, waiting to see whether the new Hearthwick keeps its word. *[later]* drop-in
   outposts.
@@ -510,7 +511,7 @@ The Lantern Road left by the East Gate, climbed through **Brackenwood** (iron-oa
 **Ashwatch** (the Keeper's old waystation; the route stone with the closure mark; the Stone
 Warden on the path) and the **hilltop shrine** and its lantern. From the shrine it swung north
 through **the Tangle**, over **the Tangle crossing** (Orrin's bridge; **Dorrit's Span**), and on
-through **the Whitequiet** toward **Sallow Ford**, north-east. Its lamps are dark road stones
+through **the Whitequiet** toward **Sallow Ford**, north-east. Its lamps are dark lamp stones
 now, and route stones lean in the moss.
 
 ### 6.3 The wider world [story]
@@ -649,10 +650,10 @@ of the Measure (now the Unyoking); the Old Ways as the Dark's temptation (now th
 | iron-oak | Lower case, hyphenated |
 | glim, glims | Lower case |
 | wick | Time, oil measure and the item (3.3); "Amber-wick" for a named wick |
-| hearth oil, Wick Tree sap, lamp wick, lamp head, lamp ash, lamp-ash pouch, way-lamp, lot lantern, communal lamp, road stone, route stone, homing turncap, jar of turncaps | Item and thing names in sentence case: "Lamp wick", not "Lamp Wick" |
+| hearth oil, Wick Tree sap, lamp wick, lamp head, lamp ash, lamp-ash pouch, way-lamp, lot lantern, communal lamp, lamp stone (two words, no hyphen), route stone, homing turncap, jar of turncaps | Item and thing names in sentence case: "Lamp wick", not "Lamp Wick" |
 | naming, to name | Lower case |
 | the Keeper's hand | |
-| the Keeper / a Keeper | The title / anyone with the Keeper's hand (3.6) |
+| the Keeper / a Keeper / a camp's keeper | The title / anyone with the Keeper's hand (3.6) / the Keeper who set a camp, lower case. Setting a camp needs the Keeper's hand, so the three agree |
 | working, workings | Lower case |
 | Handcraft, Waycraft, Songcraft, Hearthcraft, Wildcraft | Capitalised Practice names |
 | the Short Way, short-wayer | |
@@ -677,7 +678,17 @@ the far light at Sallow Ford; healing the Crack.
 
 See `open-questions.md` once this draft is reviewed. For now:
 
-- **O2** Does the village know Hesper went out to the crossing, or believe the storm took her?
-- **O6** "Keeper" for a camp's claim owner in the game's build rules collides with the Keeper.
-- **O7** Is the town named for the Wick Tree?
-- **O8** Wisps: scraps of light gone sour?
+- **O1** Homestead lantern posts take a free-text name with examples like "Ada's Light"
+  (`homestead-placement.ts`). Canon says a naming is made from parts and is never after anyone.
+  Call the post's label a *name* (a sign), not a *naming*, or move posts to parts?
+- **O2** The **Ember Charm** keepsake comes from the embers era. Keep it as a charm (literal
+  embers, like the hearth's), rename it, or retire it?
+- **O3** The rogue ability **Echo** (`content/abilities.json`) shares a word with the Echoes of
+  the Six. Rename it (for example "Afterimage", "Double") or leave it until the Practices replace
+  the class abilities?
+- **O4** New found texts the canon invites: a Pell family ledger page of things that never came
+  back; a folk telling of the Unyoking; Orrin on Hesper's joint ("Hesper named it. I carved it.
+  Worst joint I ever made. It's the only one that's never leaned."). The owner writes them, or
+  approves drafts, before an apply lane adds them.
+- **O5** The loading lines (`src/content/loading.ts`) were placeholders. Proposed set in
+  `apply-map.md`; the owner picks.
