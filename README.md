@@ -210,8 +210,9 @@ the Wend keeps its bed and woods and meadows stay where they are. Land held
 by a lit lamp stays. The notice board posts when the next Turning is due.
 
 The way out ends at **the Whitequiet's edge**: you can see a little of the
-land past it, pale through the veil, but you can't walk in. Only a lit camp
-pushes the edge back, and it draws in again when the camp goes dark.
+land past it, pale through the veil, but you can't walk in. Only a lit camp, or
+a lot's lit backland, pushes the edge back, and it draws in again when that
+light goes dark.
 
 ### Papers and the Hearthwick Library
 

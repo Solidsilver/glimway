@@ -100,8 +100,9 @@ the land looks and feels, not how fast it moves.
 ### 2.4 The Whitequiet [shipped]
 
 The pale, silent land at the edge of what anyone holds. Inside its edge, land nobody has walked
-yet comes into view as you walk it. The edge itself cannot be walked through: only a lit camp,
-fed with oil, pushes it back, and the edge draws in again when the camp goes dark. Relighting a
+yet comes into view as you walk it. The edge itself cannot be walked through: only held land, a
+lit camp fed with oil or a lot's lit backland, pushes it back, and the edge draws in again when
+that light goes dark. Relighting a
 lamp stone or walking a path doesn't move it. The Whitequiet keeps what it is given: lost
 objects and impressions of people surface there as **trinkets** and **Echoes** (2.7).
 
