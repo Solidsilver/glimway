@@ -50,15 +50,17 @@ async function step<T>(page: Page, title: string, seconds: number, body: () => P
 
 /** Into the Whitequiet with a turncap in the pack, the world's clock a day from the wick's end. */
 async function inTheBeyond(page: Page): Promise<{ id: string; before: WildsDump }> {
-  const id = await freshPlayer(page, 'Wren')
+  const id = await step(page, 'TEMP a fresh player', 60, () => freshPlayer(page, 'Wren'))
   await wickSlack(page)
   await pinWorld(page, SEED)
   fund(id, { items: { 'homing-turncap': 1 } })
-  await reenter(page)
-  await warp(page, 'outdoors', WHITEQUIET.tx, WHITEQUIET.ty)
-  await waitForWilds(page)
-  await parkCreatures(page)
-  await windowWhole(page)
+  await step(page, 'TEMP reenter', 60, () => reenter(page))
+  await step(page, 'TEMP into the Whitequiet', 60, async () => {
+    await warp(page, 'outdoors', WHITEQUIET.tx, WHITEQUIET.ty)
+    await waitForWilds(page)
+    await parkCreatures(page)
+    await windowWhole(page)
+  })
   // The world's enemies aim at a hero near their camps, and a way home
   // refuses in a fight: stand on the open ground furthest from every camp
   // in the window (as wilds-outer.spec.ts does).
@@ -76,9 +78,11 @@ async function inTheBeyond(page: Page): Promise<{ id: string; before: WildsDump 
     return best
   }, camps)
   expect(quiet, 'open ground in the Whitequiet').not.toBeNull()
-  await warp(page, 'outdoors', quiet!.tx, quiet!.ty)
-  await waitForWilds(page)
-  await parkCreatures(page)
+  await step(page, 'TEMP to the quiet spot', 60, async () => {
+    await warp(page, 'outdoors', quiet!.tx, quiet!.ty)
+    await waitForWilds(page)
+    await parkCreatures(page)
+  })
   const dump = await wilds(page)
   expect(dump.chunk.cy, 'in the Whitequiet').toBeGreaterThanOrEqual(-5)
   expect(dump.chunk.cy, 'in the Whitequiet').toBeLessThanOrEqual(-3)
@@ -105,9 +109,32 @@ async function turncapDuringTurning(page: Page, before: WildsDump, rewrite?: (pl
     const held = new Promise<Route>((resolve) => (asked = resolve))
     await page.route('**/api/ways-home', (r) => (r.request().method() === 'POST' ? asked(r) : r.continue()))
     await parkCreatures(page)
+    // TEMP (A14): what the page did through the pause, if the ask never comes.
+    await page.evaluate(() => {
+      const w = window as unknown as { __a14: unknown[]; __fsFrame: () => { live: boolean; transitioning: boolean; cinematic: boolean }; __fsPlayer: () => { x: number; y: number } }
+      const log: unknown[] = (w.__a14 = [])
+      const t0 = performance.now()
+      let last = t0
+      const tick = () => {
+        const now = performance.now()
+        const f = w.__fsFrame()
+        const p = w.__fsPlayer()
+        if (now - last > 200 || !f.live) log.push({ t: Math.round(now - t0), gap: Math.round(now - last), live: f.live, tr: f.transitioning, cin: f.cinematic, x: Math.round(p.x * 10) / 10, y: Math.round(p.y * 10) / 10 })
+        last = now
+        if (now - t0 < 8000 && log.length < 60) requestAnimationFrame(tick)
+      }
+      requestAnimationFrame(tick)
+    })
     await page.evaluate(() => (window as unknown as { __fsEmit: (e: string, p: unknown) => void }).__fsEmit('game:ways-home', { way: 'turncap' }))
     // The pause (three seconds, standing still) passes, and the way home is asked for.
-    route = await held
+    route = await step(page, `the turncap is asked for (attempt ${attempt})`, 25, async () => {
+      try {
+        return await Promise.race([held, new Promise<never>((_, fail) => setTimeout(() => fail(new Error('no ways-home request')), 20_000))])
+      } catch (e) {
+        const seen = await page.evaluate(() => ({ toasts: (window as unknown as { __fsToasts: () => { seen: unknown[] } }).__fsToasts().seen.slice(-6), frames: (window as unknown as { __a14: unknown[] }).__a14 })).catch((x) => String(x))
+        throw new Error(`${String(e)} ${JSON.stringify(seen)}`)
+      }
+    })
     res = await route.fetch()
     const text = res.ok() ? '' : await res.text()
     if (res.ok() || !text.includes('"in-a-fight"') || attempt >= 4) {
