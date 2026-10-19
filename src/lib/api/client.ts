@@ -628,6 +628,8 @@ export async function claimClientId(opts: ClaimOptions = {}): Promise<ClientIdCl
       if (channel) {
         channel.onmessage = null;
         channel.close();
+        // A closed BroadcastChannel throws on every post: a later reclaim keeps its id.
+        channel = null;
       }
     },
   };

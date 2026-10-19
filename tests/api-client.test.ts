@@ -418,3 +418,18 @@ test('hearth, desk and woodpile: endpoints, method, body and parsed shape', asyn
   assert.equal(act.result.action, 'stack');
   assert.deepEqual(act.result.woodpile.stacks, []);
 });
+
+test('a closed claim posts nothing: a later reclaim keeps its id instead of throwing', async () => {
+  // A closed BroadcastChannel throws on every post (step-back 2, the link's twin).
+  let closed = false;
+  const ch = {
+    onmessage: null as ((ev: { data: unknown }) => void) | null,
+    postMessage: () => {
+      if (closed) throw new Error('InvalidStateError: Channel is closed');
+    },
+    close: () => void (closed = true),
+  };
+  const claim = await claimClientId({ storage: memoryStorage(), waitMs: 1, makeChannel: () => ch });
+  claim.close();
+  assert.equal(await claim.reclaim(), claim.id);
+});

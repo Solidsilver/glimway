@@ -164,7 +164,7 @@ export interface Rig {
   clock: { now: number };
 }
 
-export async function rig(t: TestContext, opts: { state?: Record<string, any>; record?: OutboxRecord | null; store?: ReturnType<typeof memoryOutboxStore>; locks?: LockLike | null; server?: ReturnType<typeof fakeServer>; clientId?: string; clock?: { now: number } } = {}): Promise<Rig> {
+export async function rig(t: TestContext, opts: { state?: Record<string, any>; record?: OutboxRecord | null; store?: ReturnType<typeof memoryOutboxStore>; locks?: LockLike | null; server?: ReturnType<typeof fakeServer>; clientId?: string; clock?: { now: number }; channel?: ConstructorParameters<typeof Link>[0]['channel'] } = {}): Promise<Rig> {
   const server = opts.server ?? fakeServer();
   const store = opts.store ?? memoryOutboxStore();
   const events: Array<[string, unknown]> = [];
@@ -181,7 +181,7 @@ export async function rig(t: TestContext, opts: { state?: Record<string, any>; r
     emit: ((e: string, p: unknown) => events.push([e, p])) as never,
     store,
     locks: opts.locks ?? null,
-    channel: null,
+    channel: opts.channel ?? null,
     now: () => clock.now,
   });
   const session = new FakeSession(link.initialState());
