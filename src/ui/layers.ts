@@ -14,6 +14,8 @@ export type Layer =
   | 'lease'
   /** The world-move screen. */
   | 'move'
+  /** Entering the world: the loading screen, until the first frame is drawn (src/ui/LoadingScreen.svelte). */
+  | 'loading'
   /** Any mounted confirmation, including one nested inside a panel. */
   | 'confirm'
   /** The log-out confirm. */
@@ -41,7 +43,7 @@ export type Layer =
 
 export type LayerFlags = Record<Layer, boolean>
 
-const ORDER: readonly Layer[] = ['gate', 'lease', 'move', 'confirm', 'logout', 'naming', 'leave-deed', 'panel', 'ending', 'dialogue', 'cinematic', 'placement', 'link-notice', 'banner', 'reloading']
+const ORDER: readonly Layer[] = ['gate', 'lease', 'move', 'loading', 'confirm', 'logout', 'naming', 'leave-deed', 'panel', 'ending', 'dialogue', 'cinematic', 'placement', 'link-notice', 'banner', 'reloading']
 
 /** The layers that are up, top first. */
 export function layersUp(flags: LayerFlags): Layer[] {
@@ -54,6 +56,8 @@ export const BLOCKS = {
    * The world's own input (src/game/input.ts uiState.panelOpen): moving,
    * acting, the belt. Conversations and cinematics take input themselves,
    * and placement mode is input. A confirm owns input independently of its parent.
+   * Loading doesn't: there is no world to move in until its scene is built,
+   * and the scene's dark start (at most a second) is already a world.
    */
   worldInput: ['confirm', 'panel', 'ending', 'gate', 'lease', 'naming', 'leave-deed', 'move'],
   /**
@@ -64,22 +68,22 @@ export const BLOCKS = {
    * lamp naming's selects have no text field to keep the letters (each
    * naming closes on its own Escape).
    */
-  appKeys: ['confirm', 'dialogue', 'cinematic', 'gate', 'lease', 'move', 'reloading', 'ending', 'naming'],
+  appKeys: ['confirm', 'dialogue', 'cinematic', 'gate', 'lease', 'move', 'reloading', 'ending', 'naming', 'loading'],
   /**
    * The one-time notices (the party prompt, "you were moved out", the
    * update notice): only on a clear screen, so they are really seen.
    */
-  notices: ['confirm', 'move', 'link-notice', 'panel', 'cinematic', 'dialogue', 'ending', 'lease', 'gate', 'logout', 'placement', 'naming', 'leave-deed', 'banner'],
+  notices: ['confirm', 'move', 'link-notice', 'panel', 'cinematic', 'dialogue', 'ending', 'lease', 'gate', 'logout', 'placement', 'naming', 'leave-deed', 'banner', 'loading'],
   /**
    * The "E: Talk" action prompt. Only what covers the world or takes its
    * input hides it; a gate, a lease or a move screen covers it anyway.
    */
-  actionPrompt: ['dialogue', 'panel', 'cinematic', 'ending', 'placement'],
+  actionPrompt: ['dialogue', 'panel', 'cinematic', 'ending', 'placement', 'loading'],
   /**
    * The homestead bar. It stays through placement (it is placement's own
    * bar), naming and the ending.
    */
-  homeBar: ['panel', 'dialogue', 'cinematic', 'gate', 'lease']
+  homeBar: ['panel', 'dialogue', 'cinematic', 'gate', 'lease', 'loading']
 } as const satisfies Record<string, readonly Layer[]>
 
 /** True when any of `by` is up. */

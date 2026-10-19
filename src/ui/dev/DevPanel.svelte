@@ -10,6 +10,7 @@
   import { clampCount, everyMaterial, GLIMS_GRANT_ID, grantables, searchGrantables, type Grantable } from './grantables'
   import { devGrant, type GrantRequest } from './dev-grant'
   import { CLOCK_STEPS, devClockAdvance } from './dev-clock'
+  import { loadTimingsText } from '../loading.svelte'
 
   // Dev mode: give this account Glimway's own things through the dev
   // server's grant route, and move the server's clock. Only builds with dev
@@ -111,6 +112,11 @@
       {/each}
     </ul>
   {/if}
+  <!-- The last loads, stage by stage (src/lib/load-timings.ts); the Menu copies the same text. -->
+  <section class="timings" data-testid="dev-load-timings">
+    <h3 class="section-title"><Icon name="clock" size={14} /> Load timings</h3>
+    <pre>{loadTimingsText()}</pre>
+  </section>
 </Panel>
 
 <style>
@@ -131,6 +137,14 @@
   }
   .clock {
     margin: 4px 0 12px;
+  }
+  .timings pre {
+    margin: 0;
+    max-height: 40vh;
+    overflow: auto;
+    font-size: 11px;
+    white-space: pre-wrap;
+    user-select: text;
   }
   .confirm {
     display: flex;

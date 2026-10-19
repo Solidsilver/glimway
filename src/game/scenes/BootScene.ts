@@ -22,6 +22,8 @@ import { HOMESTEAD_DATA } from '../../lib/homestead'
 import { fixedPlaceOf, prepareFixed } from '../wilds/fixed'
 import { chunkOfPixel, isWildsArea } from '../wilds/coords'
 import type { Session } from '../session'
+import { bus, EV } from '../events'
+import { artDensity } from '../density'
 
 /**
  * Boot: loads the delivered art (the expansion atlases, the runtime pass of
@@ -38,6 +40,9 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload(): void {
+    // The loading screen follows the fetch (src/ui/loading.svelte.ts).
+    bus.emit(EV.loadStage, { stage: 'fetch' })
+    this.load.on(Phaser.Loader.Events.PROGRESS, (p: number) => bus.emit(EV.loadStage, { progress: p }))
     // Manifests, then every delivered pack's pixels as game-size atlases
     // (the props atlas included). The scene illustrations are UI-only.
     preloadGlimwayExpansion(this)
@@ -56,21 +61,34 @@ export class BootScene extends Phaser.Scene {
     // boot never holds the page for one long frame: once the staged atlases
     // are decoded (off the main thread), so no slice decodes one.
     const steps = this.artSteps()
+    const total = steps.length
     let running: Steps<unknown> | null = null
     const slice = () => {
       const deadline = performance.now() + BOOT_SLICE_MS
-      while (running || steps.length) {
-        if (!running) {
-          const ran = steps.shift()!()
-          running = isSteps(ran) ? ran : null
-        } else if (running.next().done) running = null
-        if (performance.now() >= deadline) return
+      try {
+        while (running || steps.length) {
+          if (!running) {
+            const ran = steps.shift()!()
+            running = isSteps(ran) ? ran : null
+          } else if (running.next().done) running = null
+          if (performance.now() >= deadline) {
+            bus.emit(EV.loadStage, { progress: (total - steps.length - (running ? 1 : 0)) / total })
+            return
+          }
+        }
+      } catch (err) {
+        // The loading screen offers Retry instead of a dark world that never comes.
+        this.events.off(Phaser.Scenes.Events.UPDATE, slice)
+        bus.emit(EV.loadStage, { failed: true, note: ['boot error', String(err instanceof Error ? err.message : err).slice(0, 200)] })
+        throw err
       }
       this.events.off(Phaser.Scenes.Events.UPDATE, slice)
       this.enter(session, pending)
     }
+    bus.emit(EV.loadStage, { stage: 'decode', note: ['art', `density ${artDensity(this)}, ${this.sys.game.renderer.type === Phaser.WEBGL ? 'WebGL' : 'Canvas'}`] })
     void stagedDecoded(this).then(() => {
       if (!this.sys.game) return
+      bus.emit(EV.loadStage, { stage: 'build' })
       this.events.on(Phaser.Scenes.Events.UPDATE, slice)
       slice()
     })
@@ -134,6 +152,7 @@ export class BootScene extends Phaser.Scene {
    * when they come); any other start only fetches them ahead.
    */
   private enter(session: Session, pending: Promise<void> | null): void {
+    bus.emit(EV.loadStage, { stage: 'arrive' })
     const start = () => this.scene.start('World')
     const at = chunkOfPixel(session.state.position.x, session.state.position.y)
     if (!pending || !isWildsArea(session.state.area) || !fixedPlaceOf(at.cx, at.cy)) {

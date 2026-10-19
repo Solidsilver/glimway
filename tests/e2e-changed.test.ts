@@ -181,6 +181,18 @@ for (const [file, want, smoke] of [
   })
 }
 
+// The loading screen (lane A13): its own files run loading.spec.ts alone; what it touches runs it too.
+for (const file of ['src/lib/loading.ts', 'src/lib/load-timings.ts', 'src/content/loading.ts', 'src/ui/loading.svelte.ts', 'src/ui/LoadingScreen.svelte']) {
+  test(`the loading screen: ${file} runs loading.spec.ts`, () => {
+    const output = list(file)
+    assert.deepEqual(specsOf(output), ['loading.spec.ts'], output)
+    assert.doesNotMatch(output, /not in e2e\/changed-map\.json/, output)
+  })
+}
+for (const file of ['src/ui/account-flow.svelte.ts', 'src/game/scenes/BootScene.ts', 'src/game/scenes/fade-hold.ts', 'src/ui/layers.ts', 'src/App.svelte']) {
+  test(`entering the world: ${file} also runs loading.spec.ts`, () => assert.ok(specsOf(list(file)).includes('loading.spec.ts')))
+}
+
 // The step-back's E2E guards (lane A9): each fix's files run the spec that guards it.
 for (const [file, guard] of [
   ['src/game/ways-home.ts', 'ways-home.spec.ts'],

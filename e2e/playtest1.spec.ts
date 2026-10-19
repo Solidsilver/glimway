@@ -214,7 +214,8 @@ for (const device of ['desktop', 'phone'] as const) {
       test('a refused offer is the giver’s own reply, in the conversation', async ({ page }) => {
         const id = await freshPlayer(page, 'RefusedTester')
         seedMarks(id, 'echo:hollis')
-        await page.evaluate(() => (window as unknown as { __fsDevAddFlag: (f: string) => void }).__fsDevAddFlag('echo:hollis'))
+        // A server-written mark: the page learns it from a fresh read of its state.
+        await reenter(page)
         // The server says no (as it would to someone it measured too far off).
         await page.route('**/api/items/heirloom', async (route) => route.fulfill(await refusal(page, 'too-far-away')))
         await setHour(page, { minute: 10, server: true })

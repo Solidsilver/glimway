@@ -418,7 +418,12 @@ export interface HeldLock {
  * device holds it. Without Web Locks every tab is its own sender (2.4).
  */
 export async function holdLock(locks: LockLike | null, name: string, steal = false): Promise<HeldLock | null> {
-  if (!locks) return { lost: new Promise(() => undefined), release: () => undefined };
+  if (!locks) {
+    // No Web Locks: nothing to wait for, so letting go is at once.
+    let release!: () => void;
+    const lost = new Promise<void>((r) => (release = r));
+    return { lost, release };
+  }
   let release!: () => void;
   const held = new Promise<void>((r) => (release = r));
   let granted!: (ok: boolean) => void;
