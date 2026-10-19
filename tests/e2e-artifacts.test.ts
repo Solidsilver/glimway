@@ -93,9 +93,33 @@ test('the step summary counts flaky and failed tests and names the ten slowest',
   assert.ok(!summary.health.slowest.some((s: { test: string }) => s.test === 'fine-0.spec.ts › all › fine-0'))
   const md = readFileSync(f.stepSummary, 'utf8')
   assert.match(md, /^### e2e test/)
-  assert.match(md, /\*\*11 passed, 1 flaky, 1 failed\*\* in 1\.5 min/)
+  assert.match(md, /\*\*11 passed, 1 flaky, 1 failed, 0 helper retries\*\* in 1\.5 min/)
   assert.match(md, /- broken\.spec\.ts › all › broken/)
   assert.match(md, /\| retried\.spec\.ts › retried \| 55\.0 s \| 2 \|/)
+  assert.equal(readFileSync(join(f.dir, '.e2e-artifacts/summary.md'), 'utf8') + '\n', md)
+})
+
+test('helper retries inside passing tests are counted next to the flaky ones (review R2)', (t) => {
+  const retry = (description: string) => ({ type: 'helper retry', description })
+  const spec = (title: string, status: string, results: unknown[], annotations: unknown[] = []) => ({ title, file: `${title}.spec.ts`, tests: [{ projectName: 'chromium', status, expectedStatus: 'passed', annotations, results }] })
+  const f = fixture(t, { stats: { duration: 60_000 }, suites: [{ title: 'all', specs: [
+    // Per-attempt annotations; the test's own list repeats the last attempt's.
+    spec('homestead', 'flaky', [
+      { status: 'failed', retry: 0, duration: 10, annotations: [retry('pressToTalk: E at /Talk to Silas/ (silas) opened nothing; press 2')] },
+      { status: 'passed', retry: 1, duration: 10, annotations: [retry('pressToTalk: E at /Talk to Silas/ (silas) opened nothing; press 2'), { type: 'insets', description: '{}' }] },
+    ], [retry('pressToTalk: E at /Talk to Silas/ (silas) opened nothing; press 2')]),
+    // An older report: annotations on the test only.
+    spec('fights-server', 'expected', [{ status: 'passed', retry: 0, duration: 10 }], [retry('fights-server join: no enemy 5 s after join 1; sending join 2')]),
+    spec('clean', 'expected', [{ status: 'passed', retry: 0, duration: 10, annotations: [{ type: 'insets', description: '{}' }] }]),
+  ] }] })
+  const summary = f.collect()
+  assert.equal(summary.health.helperRetryCount, 3)
+  assert.deepEqual(summary.health.helperRetries.map((r: { test: string; count: number }) => [r.test, r.count]), [['homestead.spec.ts › all › homestead', 2], ['fights-server.spec.ts › all › fights-server', 1]])
+  assert.deepEqual(summary.report.tests.find((x: { title: string }) => x.title === 'all › clean').helperRetries, [])
+  const md = readFileSync(f.stepSummary, 'utf8')
+  assert.match(md, /\*\*2 passed, 1 flaky, 0 failed, 3 helper retries\*\*/)
+  assert.match(md, /\*\*Helper retries:\*\*\n\n- homestead\.spec\.ts › all › homestead \(2\)\n {2}- pressToTalk: E at \/Talk to Silas\/ \(silas\) opened nothing; press 2/)
+  assert.match(md, /- fights-server\.spec\.ts › all › fights-server \(1\)\n {2}- fights-server join: no enemy/)
   assert.equal(readFileSync(join(f.dir, '.e2e-artifacts/summary.md'), 'utf8') + '\n', md)
 })
 

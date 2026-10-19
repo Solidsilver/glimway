@@ -200,3 +200,23 @@ for (const [file, guard] of [
     assert.ok(specsOf(output).includes(guard), output)
   })
 }
+
+// The 0.13 step-back round 2 (T1): files that ran only the smoke tier, or
+// missed the spec that guards them.
+for (const [file, want, smoke] of [
+  ['src/game/link.ts', ['ways-home.spec.ts'], false],
+  ['src/content/camps.ts', ['camps.spec.ts', 'lot-lantern.spec.ts', 'map-tiers.spec.ts', 'land-chip.spec.ts'], false],
+  ['server/internal/store/migrations/038_lamps.sql', ['camps.spec.ts', 'lot-lantern.spec.ts', 'map-tiers.spec.ts', 'land-chip.spec.ts', 'connected.spec.ts', 'party-worlds.spec.ts'], false],
+  ['content/furnishings.json', ['yard.spec.ts', 'homestead.spec.ts', 'companions.spec.ts', 'camps.spec.ts', 'lot-lantern.spec.ts', 'crafting.spec.ts'], true],
+  ['server/internal/settings/settings.go', ['dev-mode.spec.ts', 'connected.spec.ts', 'onboarding.spec.ts'], true],
+  ['src/lib/web-settings.ts', ['dev-mode.spec.ts'], true],
+  ['src/lib/dev-tools.ts', ['dev-mode.spec.ts'], true],
+] as const) {
+  test(`changed selector maps ${file} to the specs that exercise it`, () => {
+    const output = list(file)
+    const specs = specsOf(output)
+    for (const s of want) assert.ok(specs.includes(s), `${s}: ${output}`)
+    assert.equal(smokeTier(output), smoke, output)
+    assert.doesNotMatch(output, /not in e2e\/changed-map\.json/, output)
+  })
+}

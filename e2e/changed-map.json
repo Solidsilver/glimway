@@ -119,6 +119,33 @@
       "specs": ["camps.spec.ts"]
     },
     {
+      "about": "The words of lamps, camps and Pell's crate (way-lamp, lot lantern, crate lines): the specs that read them.",
+      "paths": ["src/content/camps.ts"],
+      "specs": ["camps.spec.ts", "lot-lantern.spec.ts", "map-tiers.spec.ts", "land-chip.spec.ts"]
+    },
+    {
+      "about": "The lamps migration: lamps, camps, holds and the path refunds to Pell's crate, beyond the sign-in and party specs every migration runs.",
+      "paths": ["server/internal/store/migrations/038_lamps.sql"],
+      "specs": ["camps.spec.ts", "lot-lantern.spec.ts", "map-tiers.spec.ts", "land-chip.spec.ts"]
+    },
+    {
+      "about": "The link sends every operation and place report, and adopts a way home's destination (ways-home.spec.ts holds it mid-travel).",
+      "paths": ["src/game/link.ts"],
+      "specs": ["ways-home.spec.ts"]
+    },
+    {
+      "about": "Furnishings: the Yard's shop (Furnish and Build), the way-lamp, lantern posts, the stable, the hearth and desk. Read at start-up, so the smoke tier too.",
+      "paths": ["content/furnishings.json"],
+      "specs": ["yard.spec.ts", "homestead.spec.ts", "review-fixes.spec.ts", "review5-fixes.spec.ts", "companions.spec.ts", "camps.spec.ts", "lot-lantern.spec.ts", "crafting.spec.ts"],
+      "smoke": true
+    },
+    {
+      "about": "Server and web settings: the dev tools a player gets (dev-mode.spec.ts) and the login limits (sign-in). Every page reads them at start-up, so the smoke tier too.",
+      "paths": ["server/internal/settings/**", "src/lib/web-settings.ts", "src/lib/dev-tools.ts"],
+      "specs": ["dev-mode.spec.ts", "connected.spec.ts", "onboarding.spec.ts"],
+      "smoke": true
+    },
+    {
       "paths": ["src/game/entities/interactables.ts", "src/game/wilds/fixed-life.ts", "src/game/wilds/fixed-scope.ts", "src/game/entities/homesteads.ts", "src/game/entities/npcs.ts", "src/game/entities/world-talk.ts", "src/game/entities/repairs.ts", "src/game/entities/item-pickups.ts", "src/game/entities/papers.ts", "src/game/entities/village-life.ts", "src/game/entities/touches.ts"],
       "specs": ["seam.spec.ts", "residents.spec.ts", "homestead.spec.ts", "yard.spec.ts", "village.spec.ts", "open-map.spec.ts"]
     },

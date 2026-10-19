@@ -7,17 +7,22 @@ import (
 	"fmt"
 	"glimway/server/internal/store"
 	"io"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 )
 
 const migrateUsage = "usage: migrate --dry-run COPY.sqlite"
 
 // migrateDryRun rehearses an upgrade of a copy of a database (a backup):
 // verify-backup's checks, this binary's pending migrations applied to a
-// private snapshot of it, the checks again, and the key counts before and
-// after. Starting the server migrates -db for real; this never writes a file
-// it is given (store.DryRunMigrate).
+// private snapshot of it, the checks again, the key counts and every item's
+// quantity before and after, and 038's path refunds against the paid tiles
+// they come from. It fails when a quantity or refund doesn't add up. Starting
+// the server migrates -db for real; this never writes a file it is given
+// (store.DryRunMigrate).
 func migrateDryRun(ctx context.Context, args []string, db string) error {
 	f := flag.NewFlagSet("migrate", flag.ContinueOnError)
 	f.SetOutput(io.Discard)
@@ -34,6 +39,9 @@ func migrateDryRun(ctx context.Context, args []string, db string) error {
 		return fmt.Errorf("migrate --dry-run %s: %w", copyPath, err)
 	}
 	printDryRun(os.Stdout, copyPath, run)
+	if len(run.Problems) > 0 {
+		return fmt.Errorf("migrate --dry-run %s: %d problems (listed above)", copyPath, len(run.Problems))
+	}
 	return nil
 }
 
@@ -79,4 +87,45 @@ func printDryRun(w io.Writer, path string, run store.DryRun) {
 	for _, table := range store.BackupCountTables() {
 		fmt.Fprintf(w, "%-16s %10s %10s\n", dryRunLabels[table], count(run.Before.Counts, table), count(run.After.Counts, table))
 	}
+	if run.Held[0] != nil {
+		fmt.Fprintf(w, "%-16s %10s %10s\n", "quantities", "before", "after")
+		for _, src := range store.LedgerSources() {
+			fmt.Fprintf(w, "%-16s %10d %10d\n", src, run.Held[0].Total(src), run.Held[1].Total(src))
+		}
+	}
+	if r := run.Refunds; r != nil {
+		fmt.Fprintf(w, "038 path refunds: %d ground rows, paid tiles %s, %d free changes\n", r.GroundRows, amounts(r.PaidTiles), r.Free)
+		fmt.Fprintf(w, "  skipped: %d malformed rows, %d tiles with no author, %d by an account that has gone\n", r.Malformed, r.Unauthored, r.Gone)
+		accounts := map[string]bool{}
+		for a := range r.Owed {
+			accounts[a] = true
+		}
+		for a := range r.Refunded {
+			accounts[a] = true
+		}
+		for _, a := range slices.Sorted(maps.Keys(accounts)) {
+			fmt.Fprintf(w, "  %s: owed %s, refunded %s\n", a, amounts(r.Owed[a]), amounts(r.Refunded[a]))
+		}
+		if len(r.Mismatches) == 0 {
+			fmt.Fprintln(w, "  every refund matches its paid tiles")
+		}
+	}
+	if len(run.Problems) == 0 {
+		fmt.Fprintln(w, "quantities add up")
+	}
+	for _, p := range run.Problems {
+		fmt.Fprintf(w, "PROBLEM %s\n", p)
+	}
+}
+
+// amounts renders quantities by name, sorted: "stone 2, timber 1" ("none").
+func amounts(m map[string]int64) string {
+	var parts []string
+	for _, k := range slices.Sorted(maps.Keys(m)) {
+		parts = append(parts, fmt.Sprintf("%s %d", k, m[k]))
+	}
+	if len(parts) == 0 {
+		return "none"
+	}
+	return strings.Join(parts, ", ")
 }

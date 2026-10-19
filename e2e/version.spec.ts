@@ -47,15 +47,25 @@ async function settled(page: Page): Promise<{ x: number; y: number }> {
  * Move the hero a little and ask for a save, which waits 350 ms before it
  * writes. Returns where the hero landed: a collision can nudge the placement,
  * so a nudged hero is placed again where it rests, and the save names that.
+ * The hero must really have moved (a placement into a wall can leave them
+ * where they were, and then the save has nothing new to name): each side in
+ * turn, east first.
  */
 async function stepAside(page: Page): Promise<{ x: number; y: number }> {
-  const at = await player(page)
-  const to = { x: Math.round(at.x) + 40, y: Math.round(at.y) }
-  await place(page, to)
-  const landed = await settled(page)
-  if (landed.x === to.x && landed.y === to.y) return to
-  await place(page, landed)
-  return settled(page)
+  const at = await settled(page)
+  const tried: string[] = []
+  for (const [dx, dy] of [[40, 0], [-40, 0], [0, 40], [0, -40]] as const) {
+    const to = { x: at.x + dx, y: at.y + dy }
+    await place(page, to)
+    let landed = await settled(page)
+    if (landed.x !== to.x || landed.y !== to.y) {
+      await place(page, landed)
+      landed = await settled(page)
+    }
+    if (Math.hypot(landed.x - at.x, landed.y - at.y) >= 16) return landed
+    tried.push(`${JSON.stringify(to)} → ${JSON.stringify(landed)}`)
+  }
+  throw new Error(`stepAside: the hero never moved from ${JSON.stringify(at)}: ${tried.join('; ')}`)
 }
 
 test('a new build shows a calm notice, waits for an open panel, and stays away once dismissed', async ({ page }) => {

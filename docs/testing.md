@@ -106,8 +106,14 @@ on `main`, where `tag-release.yml` needs every run to finish.
 A push that changes only docs (`docs/**` and Markdown files, except
 `CHANGELOG.md`, which the build reads) skips both E2E jobs; `verify` still
 runs. Each E2E job writes its health to the run's step summary: passed, flaky
-(failed, then passed on the retry) and failed tests by name, and the ten
-slowest tests. It also uploads a JSON attempt summary (a lane run's two
+(failed, then passed on the retry) and failed tests by name, the helper
+retries, and the ten slowest tests. A helper retry is an action a helper
+repeated inside one attempt (`noteHelperRetry` in `e2e/helpers.ts` records
+it as a `helper retry` annotation): `pressToTalk` pressing E again at a
+walking resident, or `fights-server.spec.ts` sending its fight join again.
+The test still passes, so Playwright doesn't call it flaky; the summary lists
+each one by test, and the release bar reads both numbers
+([releasing.md](releasing.md)). It also uploads a JSON attempt summary (a lane run's two
 passes, its specs and then the smoke tier, each keep their own report and
 traces); up to three retry traces are retained within a 50 MiB cap. The first
 retry is traced, so it can show a successful attempt while the JSON summary
@@ -263,7 +269,8 @@ it at most 50 ms). A fixed pause is either too short (flaky) or too long
 | Instead of | Use |
 |---|---|
 | `waitForTimeout` after a warp | `warp` / `go` / `waitForArea` (they wait until the area is built, its fade-in done, and a few frames drawn) |
-| a pause before pressing E | `waitForLive(page)` (no dialogue or panel, past the grace after a conversation) or `openTalk(page, prompt)` |
+| a pause before pressing E | `waitForLive(page)` (no dialogue or panel, past the grace after a conversation) or `openTalk(page, prompt)` (the prompt shows, input is live and the target has held still: then one press) |
+| pressing or sending again until it works | wait for the thing to be ready, then act once. Where only a retry will do (someone walking), record each repeat with `noteHelperRetry(helper, detail)` so the step summary counts it |
 | `waitForWilds` before using something on the open map | `chunkWhole(page, tile)` (that tile's chunk attached *and built whole*: its pieces and things registered) or `windowWhole(page)` (the whole 3×3); `waitForWilds` only promises the scene settled and the hero's chunk attached |
 | working out which prompt wins (reach, rank, the tool in hand) in the spec | the game's own election: `targetAt(page, feet)` (the target those feet would get), `standFor(page, id, spots)` (stand where it is `id`), `expectTarget(page, id)`, and `pressOn(page, id, tile)` (chunk whole, input live, exactly `id` elected, then E) |
 | a stall that just times out | a progress check that fails fast with `diagnose(page)` (hero, body, target and what is in reach, the dev walk's next waypoints, the window's build state, the epoch) |

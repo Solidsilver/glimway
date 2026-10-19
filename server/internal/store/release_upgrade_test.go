@@ -9,15 +9,12 @@ import (
 	"testing"
 )
 
-// A populated database from the last release (through 037), upgraded by
-// every pending migration in one start, as live will be: pieces, tools and
-// their fittings, plants, shelf goods and stacks come through unchanged; the
-// wick's paid paths are refunded at Pell's; every new table takes writes in
-// its final shape; and the schema is a fresh database's.
-func TestUpgradeFromLastRelease(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "release.sqlite")
-	old := newUpgradeFixture(t, path, lastShippedMigration, nil)
-	if _, err := old.Exec(`INSERT INTO worlds(id,owner_id,seed,created_at) VALUES('w','alice','seed',1);
+// release037Rows populate a database at the last release (through 037):
+// two players in one home, pieces, tools and fittings in every place, stacks,
+// shelf goods and plants, a fallen lamp, and the wick's ground with two paid
+// stone tiles (alice), a plank (bob) and a free clearing, beside a still
+// change that stays.
+const release037Rows = `INSERT INTO worlds(id,owner_id,seed,created_at) VALUES('w','alice','seed',1);
  INSERT INTO players(account_id,display_name,world_id,created_at,last_seen_at,version) VALUES('alice','Alice','w',1,50,7),('bob','Bob','w',2,60,3);
  INSERT INTO player_place(account_id,area,x,y,place_set_version) VALUES('alice','outdoors',-424.5,-744,7),('bob','in:hearthwick:inn',40,56,0);
  INSERT INTO homesteads(id,world_id,gate,tier,claimed_at) VALUES('house','w',0,2,1);
@@ -52,7 +49,17 @@ func TestUpgradeFromLastRelease(t *testing.T) {
  INSERT INTO world_changes(world_id,realm,layer,chunk,epoch,entity,kind,state,changed_at,changed_by,ends_at) VALUES
  ('w','hearthwick',0,'0:-1','still','ground','ground','{"changes":[{"tx":1,"ty":1,"change":"stone","by":"alice","at":2}]}',2,'alice',NULL),
  ('w','hearthwick',0,'2:-1','wick','ground','ground','{"changes":[{"tx":3,"ty":14,"change":"stone","by":"alice","at":2},{"tx":4,"ty":14,"change":"stone","by":"alice","at":2},{"tx":5,"ty":14,"change":"plank","by":"bob","at":3},{"tx":6,"ty":14,"change":"clear","by":"bob","at":3}]}',3,'alice',604801),
- ('w','hearthwick',0,'2:-1','wick','tree:4:4','felled','{}',3,'bob',604801);`); err != nil {
+ ('w','hearthwick',0,'2:-1','wick','tree:4:4','felled','{}',3,'bob',604801);`
+
+// A populated database from the last release (through 037), upgraded by
+// every pending migration in one start, as live will be: pieces, tools and
+// their fittings, plants, shelf goods and stacks come through unchanged; the
+// wick's paid paths are refunded at Pell's; every new table takes writes in
+// its final shape; and the schema is a fresh database's.
+func TestUpgradeFromLastRelease(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "release.sqlite")
+	old := newUpgradeFixture(t, path, lastShippedMigration, nil)
+	if _, err := old.Exec(release037Rows); err != nil {
 		t.Fatal(err)
 	}
 	// What must come through unchanged, read in 037's columns.
