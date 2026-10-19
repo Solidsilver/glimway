@@ -1,3 +1,4 @@
+import { onSceneEnd } from '../scene-end'
 import { at } from '../../lib/location.ts';
 /**
  * The imported hero's visual: a layered Habitica avatar that breathes when
@@ -177,7 +178,7 @@ export class AvatarVisual {
       this.sendHome()
     }
     scene.input.keyboard?.on('keydown', onKey)
-    scene.events.once('shutdown', () => {
+    onSceneEnd(scene, () => {
       bus.off(EV.companions, onCompanions)
       bus.off(EV.wardrobe, onWardrobe)
       scene.input.keyboard?.off('keydown', onKey)

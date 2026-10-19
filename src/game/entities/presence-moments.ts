@@ -3,6 +3,7 @@
  * (./remote-players.ts): your own emote's bubble (the server doesn't echo
  * it back), and the story beats others reach near you (src/content/witness.ts).
  */
+import { onSceneEnd } from '../scene-end'
 import type Phaser from 'phaser'
 import { hasWitnessed, isWitnessBeat, witnessCopy, witnessMoment } from '../../content/witness'
 import { bus, EV, type EmotePayload, type WitnessPayload } from '../events'
@@ -31,7 +32,7 @@ export function presenceMoments(scene: Phaser.Scene, deps: PresenceMomentsDeps):
   const onWitness = (p: WitnessPayload) => witness(deps, p)
   bus.on(EV.emote, onEmote)
   bus.on(EV.witness, onWitness)
-  scene.events.once('shutdown', () => {
+  onSceneEnd(scene, () => {
     bus.off(EV.emote, onEmote)
     bus.off(EV.witness, onWitness)
   })

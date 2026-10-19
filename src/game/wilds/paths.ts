@@ -16,6 +16,7 @@
  *   turns in N days. A path here stays if someone walks here each wick.
  * - A lay that joins two places names a way; a lift that breaks one says so.
  */
+import { onSceneEnd } from '../scene-end.ts'
 import type Phaser from 'phaser'
 import { PATH_LABELS, PATH_REFUSALS, TURNS_CONFIRM } from '../../content/open-map.ts'
 import { TILE, tileBottom, tileKey, tileMid } from '../../lib/tile.ts'
@@ -135,11 +136,11 @@ export class WildsPaths {
         this.keys.push(key)
       }
     }
-    scene.events.once('shutdown', () => {
+    onSceneEnd(scene, (destroyed) => {
       for (const k of this.keys) k.removeAllListeners()
       this.keys = []
       hideContextButtons('path-')
-      deps.interactables.register(this, [])
+      if (!destroyed) deps.interactables.register(this, [])
     })
   }
 

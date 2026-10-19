@@ -4,6 +4,7 @@
  * follow offset that keep the hero clear of the interface, with a soft
  * fade where the map ends.
  */
+import { onSceneEnd } from '../scene-end'
 import Phaser from 'phaser'
 import { canvasRatio, canvasZoomFor, playInsets, roomZoomFor, snapScroll } from '../viewport'
 import type { WorldData } from '../worlds'
@@ -22,7 +23,7 @@ export class WorldCamera {
     this.snapToPixels()
     const onResize = (size: Phaser.Structs.Size) => this.apply(size.width, size.height)
     scene.scale.on('resize', onResize)
-    scene.events.once('shutdown', () => scene.scale.off('resize', onResize))
+    onSceneEnd(scene, () => scene.scale.off('resize', onResize))
   }
 
   /**

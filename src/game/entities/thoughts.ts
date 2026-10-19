@@ -4,6 +4,7 @@
  * at a time; a newer thought replaces the one showing. The UI sends them
  * (`EV.thought`) for toasts of `kind: 'thought'`.
  */
+import { onSceneEnd } from '../scene-end'
 import Phaser from 'phaser'
 import { DEV_TOOLS } from '../../lib/dev-tools'
 import { bus, EV } from '../events'
@@ -42,7 +43,7 @@ export class Thoughts {
     // Read-only, for playtests (dev builds): the thought on screen now, and every one shown.
     expose('__fsThoughts', () => ({ current: this.current(), seen: [...shownLog] }), scene)
     scene.events.on('postupdate', this.tick, this)
-    scene.events.once('shutdown', () => this.destroy())
+    onSceneEnd(scene, () => this.destroy())
   }
 
   private onThought(p: { text?: string } | undefined): void {

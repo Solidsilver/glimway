@@ -142,6 +142,8 @@
 
   let stageEl: HTMLDivElement
   let game: Phaser.Game | null = null
+  /** enterSession's calls mid-game, counted: only the latest starts a game. */
+  let entering = 0
   let session = $state<Session | null>(null)
   const touch = isTouchFirst()
   // Quests come first at a room's spots (the sponge bowl, the hoist, the reading lamp).
@@ -542,13 +544,19 @@
     // Presence follows connected play (and its lease).
     startPresence(next.link!)
     if (phase === 'playing') {
+      const call = ++entering
       panel = null
       stopGame(game)
+      game = null
       areaShown = false
       await prepareWilds(next)
       // The new world's lane may count different gates: read it before the
       // scenes build (see begin()).
       await homesteadsFor(next).load().catch(() => {})
+      // Another call came in meanwhile (another session, or this one again):
+      // only the latest starts a game, and never beside one still running.
+      if (call !== entering) return
+      stopGame(game)
       game = startGame(stageEl, next)
     } else {
       await begin()
