@@ -407,7 +407,7 @@ export class HomesteadLayer {
       eyebrow: `${lotName(gate)} · Behind the Commons gates`,
       title: mine ? 'Your land' : home ? this.placeName(home, gate) : 'Unclaimed land',
       body: mine
-        ? 'Held by lamplight. Set a named lantern post at the edge to hold more.'
+        ? 'Held by lamplight. A lantern post at the edge, named for its sign, widens the yard you can build in.'
         : home
           ? home.desolate
             ? 'Nobody has lit these lamps in a while. The wild is coming back.'

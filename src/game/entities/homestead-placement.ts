@@ -406,8 +406,8 @@ export class HomesteadArranging {
       // must not land in the name field.
       setTimeout(() =>
         bus.emit(EV.homeNamePrompt, {
-          title: 'Name the lamp',
-          body: 'Land only stays put where a named lamp holds it. What will you call this one?',
+          title: 'Name the post',
+          body: 'A lantern post on your own ground. What will its sign say?',
           placeholder: 'The Wren, Ada’s Light, Last Post…',
           max: HOMESTEAD_DATA.lanternPosts.nameMax
         })

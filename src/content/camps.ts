@@ -122,7 +122,7 @@ export const CRATE_LINES = {
     'packed-up': ['You packed up your camp. It’s all here, every piece of it.', 'All of it, as you left it.'],
   } as Record<string, readonly [string, string]>,
   movedOff: (keeper: string, things: string) => `Moved off ${keeper}’s camp: ${things}. I kept it safe for you.`,
-  collected: (things: string) => `Signed out to you: ${things}. The home pieces are in your pack.`,
+  collected: (things: string) => `Signed out to you: ${things}. It’s all in your pack.`,
   /** The note under an entry in the picker. */
   notes: {
     movedOff: (keeper: string) => `Moved off ${keeper}’s camp`,
