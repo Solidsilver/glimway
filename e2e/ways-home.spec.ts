@@ -1,4 +1,4 @@
-import type { APIResponse, Route } from '@playwright/test'
+import type { APIResponse, Request, Route } from '@playwright/test'
 import { expect, test, type Page } from './fixtures'
 import { accountOf, moveServerClock, pinWorld, reenter, serverState, sql, wickSlack } from './connected'
 import { expectToast, parkCreatures, player, settled, waitForArea, waitForWilds, warp, wilds, windowWhole, worldTileOf, type WildsDump } from './helpers'
@@ -26,6 +26,12 @@ type Place = { area: string; x: number; y: number }
 type Safety = { __fsSafety: () => { transitioning: boolean; areaId: string } }
 
 const transitioning = (page: Page) => page.evaluate(() => (window as unknown as Safety).__fsSafety().transitioning)
+/** Within two tiles of `place`, in its area. */
+const near = (at: Partial<Place> | null | undefined, place: Place) => !!at && at.area === place.area && Math.hypot((at.x ?? NaN) - place.x, (at.y ?? NaN) - place.y) < 2 * 16
+/** A place report (POST /api/report), as sent. */
+const reportOf = (r: Request) => (r.url().endsWith('/api/report') && r.method() === 'POST' ? (r.postDataJSON() as { seq: number; place?: Place }) : null)
+/** The client's request timeout (src/lib/api/client.ts): a held read gives up after it. */
+const CLIENT_TIMEOUT_MS = 15_000
 
 /** Into the Whitequiet with a turncap in the pack, the world's clock a day from the wick's end. */
 async function inTheBeyond(page: Page): Promise<{ id: string; before: WildsDump }> {
@@ -71,7 +77,10 @@ const FIGHT_QUIET_MS = 9_000
  * Use the turncap, and hold its answer until the Turning holds play: the
  * world moves the hero as it is asked (the request reaches it at once), and
  * the page hears of it only once the land is turning. `rewrite` may change
- * the answer the page gets (the place the world chose). Returns that place.
+ * the answer the page gets (the place the world chose). The Turning's land
+ * read is held too, so play stays held until the page has adopted the
+ * destination: a report names it while the hero still stands at the
+ * departure point. Then the land comes in. Returns that place.
  */
 async function turncapDuringTurning(page: Page, before: WildsDump, rewrite?: (place: Place) => Place): Promise<Place> {
   let route!: Route
@@ -115,14 +124,28 @@ async function turncapDuringTurning(page: Page, before: WildsDump, rewrite?: (pl
   await moveServerClock(page, end + 1)
   await page.evaluate((n) => (window as unknown as { __fsDevCalendar: (n: number) => void }).__fsDevCalendar(n), end - 2)
   await page.waitForFunction(() => (window as unknown as Safety).__fsSafety().transitioning === true, undefined, { timeout: 15_000 })
+  // The land read the Turning waits for (src/game/scenes/world-turning.ts): held, play stays held.
+  const land: Route[] = []
+  let landAsked!: () => void
+  const asked = new Promise<void>((resolve) => (landAsked = resolve))
+  await page.route('**/api/wilds/near/**', (r) => { land.push(r); landAsked() })
+  await Promise.race([asked, new Promise((_, fail) => setTimeout(() => fail(new Error('the Turning never read the new land')), 15_000))])
+  const departure = await player(page)
+  // The next report names the destination (one goes every 10 s), well before the held read gives up.
+  const reported = page.waitForRequest((r) => near(reportOf(r)?.place, place), { timeout: CLIENT_TIMEOUT_MS - 3_000 })
   await route.fulfill({ response: res, json: body })
   await page.unroute('**/api/ways-home')
-  // The veil is up for about two seconds of game time and the land loads after it: the answer lands inside the hold.
-  expect(await transitioning(page), 'the answer landed while the Turning held play').toBe(true)
+  await reported
+  expect(await transitioning(page), 'the page adopted the destination while the Turning held play').toBe(true)
+  const held = await player(page)
+  expect(Math.hypot(held.x - departure.x, held.y - departure.y), `the hero is still held at the departure point: ${JSON.stringify({ held, departure })}`).toBeLessThan(2)
+  // Let the land in.
+  await page.unroute('**/api/wilds/near/**')
+  for (const r of land) await r.continue().catch(() => {}) // a read the page gave up on is gone
   return place
 }
 
-/** The hero stands at `place` (in its area), and the world's saved place agrees after the reports since. */
+/** The hero stands at `place` (in its area), and the world's saved place agrees after a report sent since. */
 async function landedAt(page: Page, place: Place): Promise<void> {
   await expect.poll(() => transitioning(page), { timeout: 30_000, message: 'the Turning lets go' }).toBe(false)
   await waitForArea(page, place.area)
@@ -130,7 +153,16 @@ async function landedAt(page: Page, place: Place): Promise<void> {
     const at = await player(page)
     return Math.hypot(at.x - place.x, at.y - place.y)
   }, { timeout: 10_000, message: `the hero stands where the world put them: ${JSON.stringify(place)}` }).toBeLessThan(2 * 16)
-  // The departure point never goes back over it: the saved place stays the destination through the next report.
+  // The departure point never goes back over it: a report sent after landing
+  // (a later sequence than any before it) names the destination, and the
+  // saved place is still the destination once the world has taken it. The
+  // operation's own commit can't pass this alone.
+  const sent = new Set<Request>()
+  const onRequest = (r: Request) => void (reportOf(r) && sent.add(r))
+  page.on('request', onRequest)
+  const later = await page.waitForResponse((r) => sent.has(r.request()) && r.ok(), { timeout: 25_000 }).finally(() => page.off('request', onRequest))
+  const report = reportOf(later.request())!
+  expect(near(report.place, place), `report ${report.seq}, sent after landing, names the destination: ${JSON.stringify(report.place)}`).toBe(true)
   await expect.poll(async () => {
     const st = (await serverState(page)).body.state as { area: string; position: { x: number; y: number } }
     return st.area === place.area && Math.hypot(st.position.x - place.x, st.position.y - place.y) < 2 * 16
