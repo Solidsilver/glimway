@@ -325,7 +325,8 @@ test('a Keeper names their way-lamp through the panel: the server has it, the la
   await expect(naming).toBeHidden()
   await expectToast(page, LAMP_NAMING.named)
   await expect.poll(() => sql(`SELECT short_name FROM lamp_namings WHERE lamp_id='${lamp}';`), { timeout: SERVER_ANSWER_MS }).toBe(short)
-  // Its first naming gives one lamp ash; the lamp's look goes by its name.
-  await expect.poll(async () => (await serverState(page)).body.state.inventory).toContain('lamp-ash')
+  // Its first naming gives its Keeper one lamp ash; the lamp's look goes by its name.
+  const namer = sql(`SELECT namer FROM lamp_namings WHERE lamp_id='${lamp}';`)
+  expect(sql(`SELECT coalesce(sum(qty),0) FROM item_stacks WHERE location='pack' AND owner='${namer}' AND item_def='lamp-ash';`)).toBe('1')
   await expect(page.locator('.prompt')).toContainText(`Look at ${short}`)
 })
