@@ -1066,7 +1066,7 @@
         <div class="logo">
           <span class="lamp"><Icon name="lantern" size={34} /></span>
           <h1>Glimway</h1>
-          <p class="tagline">Relight the old lantern road.</p>
+          <p class="tagline">Relight the old Lantern Road.</p>
         </div>
 
         {#if loadingUp && loading.view}

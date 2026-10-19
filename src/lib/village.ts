@@ -32,10 +32,10 @@ export function calendarLine(d: Pick<CalendarDay, 'wick' | 'day' | 'mark' | 'fes
 
 /** The Marks are named for road work; this is what each means in one line. */
 export const MARK_NOTES: Record<string, string> = {
-  Mudrise: 'The Thaw: paths sink and reappear.',
-  Carting: 'The Green Hush: long light, and the drift slows.',
-  Amberfall: 'The Shedding: maps go wrong fastest.',
-  Quiet: 'The White Quiet: cold is stillness.',
+  Mudrise: 'The Thaw: meltwater, mud, and the river high in its bed.',
+  Carting: 'The Green Hush: long light and easy roads.',
+  Amberfall: 'The Shedding: the woods drop what they’re done with.',
+  Quiet: 'The Quiet: cold is stillness, and rest.',
 };
 
 /** What a festival looks like in Hearthwick (canon: chronicle Part III). */
