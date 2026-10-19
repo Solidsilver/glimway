@@ -35,9 +35,18 @@ draft), the found texts in `texts/`, and the shipped game.
     freeing "the Old Ways" for the paired-lamp travel working.
 12. **The player's Unmoored sway is the Dark's first touch**, shared with Dark-fevered beasts.
 
+13. **Hesper is bound in the brackets at Dorrit's Span (0.15).** Hesper, the Keeper before Wenna,
+    refused the closure and cut a Binding Rune at the Tangle crossing so the road could never be
+    closed; her binding lives in Orrin's iron brackets. The fight is with the span; the
+    redemption is Hesper's, by unwinding her naming the way the Warden is settled; the rebuilt
+    span is Dorrit's flexing design.
+14. **The Weir Effect had both causes.** The road was over-pinned out of ordinary greed (Hemlock's
+    text stands); the Dark worked that crack; Hesper's binding at the crossing turned the second
+    storm into a stir.
+15. **The temptation is "the Short Way"** (those who take it: short-wayers).
+16. **Pell's crate's maker is unknown**: a legend with no name; the Pells only keep it.
+
 ## Open
 
-- Who or what is bound at Dorrit's Span (0.15).
-- Did a binding cause the Weir Effect, or honest over-pinning, or both.
-- Final names: the temptation, the deep-history event, the fallen people, the pockets of
-  corruption, the crate's maker.
+- Names: the deep-history event, its maker, the fallen people (bosses), the pockets of
+  corruption, the Dark's names. Owner wants more alternatives.
