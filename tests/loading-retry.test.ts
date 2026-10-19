@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Link } from '../src/game/link.ts';
 import { EV } from '../src/game/event-names.ts';
-import { emptyRecord, memoryOutboxStore, type OutboxRecord } from '../src/lib/api/outbox.ts';
+import { emptyRecord, memoryOutboxStore, type LockLike, type OutboxRecord } from '../src/lib/api/outbox.ts';
 import { CONTRACT_NUMBER } from '../src/lib/contract.ts';
 import { FakeLocks, FakeSession, fakeServer, markOk, play, player, S, seed, tick } from './helpers/link-rig.ts';
 
@@ -16,7 +16,7 @@ import { FakeLocks, FakeSession, fakeServer, markOk, play, player, S, seed, tick
  * answer lands after the Retry.
  */
 
-function makeLink(server: ReturnType<typeof fakeServer>, store: ReturnType<typeof memoryOutboxStore>, locks: FakeLocks, record: OutboxRecord | null, events: Array<[string, unknown]>) {
+function makeLink(server: ReturnType<typeof fakeServer>, store: ReturnType<typeof memoryOutboxStore>, locks: LockLike | null, record: OutboxRecord | null, events: Array<[string, unknown]>) {
   const link = new Link({
     api: server.api,
     clientId: 'tab',
@@ -113,4 +113,68 @@ test('a link stopped while it claims the outbox lets the lock go (a Retry can al
   const second = makeLink(server, store, locks, null, events);
   t.after(() => second.stop());
   assert.equal(await second.ready(), true);
+});
+
+/**
+ * Web Locks as a browser lets one go: the lock is free only a moment after
+ * its holder released it (the request settles on a later task).
+ */
+class SlowReleaseLocks implements LockLike {
+  private held = new Set<string>();
+  request(name: string, options: { ifAvailable?: boolean; steal?: boolean }, callback: (lock: unknown) => Promise<unknown>): Promise<unknown> {
+    if (this.held.has(name)) return Promise.resolve(callback(null));
+    this.held.add(name);
+    return Promise.resolve(callback({ name })).then(
+      (v) =>
+        new Promise((r) =>
+          setTimeout(() => {
+            this.held.delete(name);
+            r(v);
+          }, 20)
+        )
+    );
+  }
+}
+
+test("without Web Locks, a closing link still closes and the next one owns the outbox", { timeout: 5000 }, async (t) => {
+  const store = memoryOutboxStore();
+  const server = fakeServer();
+  const events: Array<[string, unknown]> = [];
+  const first = makeLink(server, store, null, null, events);
+  t.after(() => first.stop());
+  assert.equal(await first.ready(), true);
+  const closed = first.close();
+  const second = makeLink(server, store, null, null, events);
+  t.after(() => second.stop());
+  assert.equal(await second.ready(), true);
+  await closed;
+});
+
+test("stopped mid-claim, a link’s close waits until its lock is really free: the replacement, built at once, owns it", { timeout: 5000 }, async (t) => {
+  const store = memoryOutboxStore();
+  const locks = new SlowReleaseLocks();
+  const server = fakeServer();
+  let releaseClaim!: () => void;
+  const gate = new Promise<void>((r) => (releaseClaim = r));
+  const claim = store.claim.bind(store);
+  let first = true;
+  store.claim = async (...args: Parameters<typeof claim>) => {
+    if (first) {
+      first = false;
+      await gate;
+    }
+    return claim(...args);
+  };
+  const events: Array<[string, unknown]> = [];
+  const a = makeLink(server, store, locks, null, events);
+  t.after(() => a.stop());
+  await tick();
+  // Retry: the old link closes while its claim is under way, and the new one is built straight away.
+  const closed = a.close();
+  const b = makeLink(server, store, locks, null, events);
+  t.after(() => b.stop());
+  releaseClaim();
+  assert.equal(await b.ready(), true, "the replacement waited for the lock, not superseded by its own page");
+  await closed;
+  assert.equal(events.some(([e, p]) => e === EV.link && (p as { status?: string }).status === "superseded"), false);
 });

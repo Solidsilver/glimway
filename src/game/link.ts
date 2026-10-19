@@ -938,18 +938,18 @@ export class Link {
       const lock = await holdLock(this.locks, name, steal)
       if (!lock) return false
       if (this.stopped) {
-        lock.release()
+        this.letGo(lock)
         return false
       }
       const record = await this.store.claim(this.accountId, this.device)
       if (this.stopped) {
         // Stopped while claiming: the lock must not outlive the link.
-        lock.release()
+        this.letGo(lock)
         return false
       }
       if (!record) {
         // The record couldn't be claimed (storage failed): try again with the next retry.
-        lock.release()
+        this.letGo(lock)
         this.storageFailed()
         return false
       }
@@ -994,7 +994,7 @@ export class Link {
   /** Another tab owns the outbox now (its Take over, or a newer tab without Web Locks): stop, write nothing. */
   private ownershipLost(): void {
     this.fence = null
-    this.lock?.release()
+    if (this.lock) this.letGo(this.lock)
     this.lock = null
     if (this.stopped) return
     this.release('hold')
@@ -2413,11 +2413,18 @@ export class Link {
   }
 
   private closed: Promise<void> | null = null
-  /** Resolves once the held outbox lock is really let go (a browser releases it a moment after `release`). */
+  /** Resolves once every outbox lock this link held is really let go (a browser releases it a moment after `release`). */
   private lockGone: Promise<unknown> = Promise.resolve()
 
+  /** Release a lock this link acquired, and count its release among what `close` waits for. */
+  private letGo(lock: HeldLock): void {
+    const gone = lock.lost.catch(() => undefined)
+    const before = this.lockGone
+    this.lockGone = Promise.all([before, gone])
+    lock.release()
+  }
+
   stop(): void {
-    if (this.lock) this.lockGone = this.lock.lost.catch(() => undefined)
     this.stopped = true
     this.stopTimers()
     if (this.reportTimer !== null) clearInterval(this.reportTimer)
@@ -2426,7 +2433,7 @@ export class Link {
     this.saveRetry = null
     for (const [, waiter] of this.waiters) waiter({ ok: false, code: 'pending' })
     this.waiters.clear()
-    this.lock?.release()
+    if (this.lock) this.letGo(this.lock)
     this.lock = null
     this.fence = null
     if (this.channel) {
