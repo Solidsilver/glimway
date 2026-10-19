@@ -35,7 +35,7 @@ test('the picker asks for one entry, a plant whole or as its seed, or for everyt
 
 test('Pell keeps his take-all words; the picker says what was signed out', () => {
   assert.equal(CRATE_WORDS.takeYours, 'Take your things from the crate', 'Pell’s take-all choice keeps its words');
-  assert.equal(collectedLine([{ itemDef: 'way-lamp', qty: 1 }]), 'Signed out to you: a way-lamp. The home pieces are in your pack.');
+  assert.equal(collectedLine([{ itemDef: 'way-lamp', qty: 1 }]), 'Signed out to you: a way-lamp. It’s all in your pack.');
 });
 
 test('a carried plant is its own row in the pack, named whole, plantable, never given or used', () => {

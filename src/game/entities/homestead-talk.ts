@@ -302,7 +302,7 @@ export class HomesteadTalk {
       label: 'Look into the well',
       verb: 'Look',
       markerOffset: 44,
-      activate: say('The Carters’ Well', ['The old staging well. Every cart filled its casks here before the lantern road. The rope is new; the bucket isn’t.'])
+      activate: say('The Carters’ Well', ['The old staging well. Every cart filled its casks here before the Lantern Road. The rope is new; the bucket isn’t.'])
     })
     out.push({ id: 'home:toolbox', ...at(f.toolbox), label: 'Look in Silas’s toolbox', verb: 'Look', markerOffset: 16, activate: () => this.openToolbox() })
     out.push({ id: 'home:firebox', ...at(f.firebox, 2), label: 'Look at the firebox', verb: 'Look', markerOffset: 16, activate: () => this.lookInFirebox() })
@@ -357,7 +357,7 @@ export class HomesteadTalk {
     const post = this.home.here()?.items.find((i) => i.id === itemId)
     this.say({
       speaker: post?.name ? `“${post.name}”` : 'A lantern post',
-      lines: [post?.name ? `A lantern post, its name cut into the crossbar: ${post.name}. The ground stays put as far as its light reaches.` : 'A lantern post. Nobody has named it, and the dark doesn’t care about it.']
+      lines: [post?.name ? `A lantern post, its name cut into the crossbar: ${post.name}. Its light widens the yard you can build in.` : 'A lantern post. Its sign is blank.']
     })
   }
 

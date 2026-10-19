@@ -303,7 +303,7 @@ test('the drift at the frontier stops you, and says so the first time', async ({
   await waitForLive(page)
   await page.keyboard.down('ArrowUp')
   try {
-    await expectToast(page, /The drift is thick here\. Not without a lamp\./, { timeout: 8_000 })
+    await expectToast(page, /The Whitequiet closes in here\. Only a lit camp pushes it back\./, { timeout: 8_000 })
   } finally {
     await page.keyboard.up('ArrowUp')
   }
