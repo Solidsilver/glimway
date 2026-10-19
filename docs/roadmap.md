@@ -107,7 +107,11 @@ way-lamps in the Wilds, with the map showing what is held, common and turning.
   work touches them.
 - A communal drop-off project, async-friendly.
 - One server-run boss with readable telegraphs. Failure costs time and a repair fee, never items.
-- Needs the owner's lore pass, done during 0.13–0.14, before this release.
+- What waits at the span (canon §4.6): **Hesper**, the Keeper of the Weir Years, still at the
+  Tangle crossing, bound into Orrin's iron brackets. The span itself fights; Hesper can be
+  redeemed by unwinding her binding the way the Warden is settled, and the rebuilt span is
+  Dorrit's: it steps with the hill. The stakes are Orrin's, Ada's and Mara's.
+- The owner's lore pass is done ([`lore/canon.md`](lore/canon.md), 2026-10-19).
 
 ### 0.16 Lake country: kilns, reeds and wild waters
 

@@ -117,6 +117,10 @@ rather than rewritten.
   2026-10-17): no player is near level 30.
 - **Baking** (later, parked 2026-10-17): food with buffs, baked and sold at the stalls. Comes back as
   a tactile craft you can get good at, not a click-to-craft button.
+- **An animal overhaul** (maybe, needs a design session, canon §5.4, 2026-10-19): ordinary
+  animals and corrupted ones. Beasts the Dark has fevered are unmoored, keep their animal nature,
+  and flee into the woods when the fever breaks in a fight. The Wilds' wisps and beetles get
+  explained then; until then no text says what they are.
 - **A quest overhaul** (maybe, needs a design session):
   - quests as a tree, so new ones can be added over time;
   - the first quest is a "tutorial by doing" without feeling like a tutorial: it teaches the
@@ -156,3 +160,6 @@ rather than rewritten.
   only laid paths stay. The cost is that an unpaved shortcut must be cut again each week. If that
   grates in play, let a visited path keep a one-tile shoulder, or let a communal lamp keep a small
   rest clearing around it.
+- **Worn ways** (maybe, canon §2.6, 2026-10-19): a way walked several wicks running becomes
+  **worn** and forgives one missed wick before it turns. The lore says only that care wears in
+  slowly; it isn't canon until built.

@@ -16,6 +16,7 @@ the game can show the first part as "What's new":
 ### For players
 
 - Glimway's home-screen icon and favicon now show the glowing Wick Tree.
+- The Lantern Road's story is settled: the quests, papers and village talk now tell one consistent tale, with the same dates, places and people throughout. Item and furniture names are in sentence case ("Lamp wick", "Wooden stool"), and the loading screen has new lines.
 - The world map shows held land, common paths and dimming warnings. Open Details for the Lamps ledger: see each known light’s reserve and what happens at the turning, then pick a row to find it on the map.
 - Signing in, reloading and stepping outdoors no longer freeze the game for a moment as the world appears.
 - Choose who may build at your camp. Look at your way-lamp and pick "Who may build here": just your household, your household and people you name, everyone but people you name, or everyone in the world. Anyone can still walk through your camp, pick forage there and add oil, and you can always pick up your own things. Felling trees and breaking stone at a camp count as building. You can also move someone else's piece off your camp; it waits for them in a crate at Pell's office.
@@ -24,7 +25,7 @@ the game can show the first part as "What's new":
 - The Wilds turn early once, when this version arrives: the current wick's land is replaced. The Tangle keeps everything.
 - Light your lot lantern: fill the lantern on your lot's back line with hearth oil and the woods behind your lot hold still through the turning. While it burns, that land is part of your yard: set pieces out there and plant in it. Each flask burns for a wick, up to three; anyone may top up a neighbour's lantern. Run dry, it gutters for a wick, then goes dark, and the woods turn; anything you set out there comes home to your storage, and planted seeds come back to your chest.
 - The chandler by the square sells hearth oil, so you can keep your light without amber.
-- Set out a way-lamp in the Wilds to make a camp. Craft one at your bench (six timber, four stone, a lamp head and a lamp wick), then set it down from your pack with a flask of hearth oil, and the land it lights holds through the turning. Set your home pieces out and plant there; friends can top up your lamp. When the oil runs out it gutters for a wick, then the camp goes, and everything you had there waits for you in a crate at Pell's office. Nothing is lost.
+- Set out a way-lamp in the Wilds to make a camp. Craft one at your bench (six timber, four stone, a lamp head and a lamp wick), then set it down from your pack with a flask of hearth oil, and the land it lights holds through the turning. Set out furniture and plant there; friends can top up your lamp. When the oil runs out it gutters for a wick, then the camp goes, and everything you had there waits for you in a crate at Pell's office. Nothing is lost.
 - With reduced motion on, an enemy's "!" warning no longer pops, a defeated enemy fades without sinking, and your hero no longer squashes when you're knocked out.
 - Paths you lay in the Wilds are common ways now: if anyone walks through that bit of land during the wick, the path is still there after the turning, even though the trees around it change. Land nobody visits turns, and its stone or timber waits for whoever laid it in a crate at Pell's office. Paths behind a lot lantern that goes dark go to Pell's the same way.
 - Way-lamps now have their own stone-footed, hooded lamp art in the Wilds and a matching pack icon.
@@ -47,7 +48,7 @@ the game can show the first part as "What's new":
 - A plant in Pell's crate comes back as the plant itself, not just its seed. Plant it again in your yard, your lit backland or a camp you build at, and it carries on growing from where it was. You can still take it as its seed if you'd rather.
 - A relit lamp stone on the Lantern Road now shows its wick burning in the niche, and the stone with Wenna's cut beside it (the Keeper's-hand stone) has its carved panel, dark or lit.
 - With the map's lamps shown, each lamp has a mark where it stands, paler while it's dimming.
-- Camps push back the edge of the Wilds. Land within three chunks of any camp or lit backland is open to walk, gather and build in, so a camp set near the edge, and another set further out, lets you push deeper into the Wilds together. When a camp goes dark at the turning, its edge land goes back to the drift. Anyone left standing out there finds themselves on the nearest open ground still in reach, carrying everything they had.
+- Camps push back the Whitequiet's edge. Land within three chunks of any camp or lit backland is open to walk, gather and build in, so a camp set near the edge, and another set further out, lets you push deeper into the Wilds together. When a camp goes dark at the turning, the edge draws in again. Anyone left standing out there finds themselves on the nearest open ground still in reach, carrying everything they had.
 - A small chip at the top of the screen says what the land under your feet is in the Wilds: held (your camp, a friend's camp, your lot or someone's lot), common (kept by people walking through) or wild (its trees and finds change at the next turning). Land whose lamp is gone says "Turning": it turns at the next one. When the lamp holding the land is down to its last wick of oil, the chip turns amber and says it's dimming, a wick before the lamp starts guttering. Tap or hover over it for a sentence about what that means.
 - When your camp's way-lamp or your lot's lantern is down to its last wick, the game tells you once, the next time you play. You won't hear it if you're standing right by the lamp. Your lot lantern in each world you play gets its own notice.
 - A lamp on its last wick of oil now looks dimmed straight away, in the world and on the map, and says so when you look at it. Before, it looked lit until it started guttering a wick later.
@@ -64,7 +65,7 @@ the game can show the first part as "What's new":
 - After travelling home by turncap or lamp-ash pouch, a reload or a dropped connection no longer puts you back where you set out. If the trip only goes through later, the game tells you. Being moved back inside the world's edge now sticks too.
 - A turncap or lamp-ash pouch no longer lets go with "You moved" when the game stutters while you hold still. Opening a panel or switching away from the tab still lets go.
 - A reload no longer starts you a few steps back from where you were.
-- A camp refused for want of oil, or because the ground is blocked, no longer pushes the edge of the Wilds out for a moment.
+- A camp refused for want of oil, or because the ground is blocked, no longer pushes the Whitequiet's edge out for a moment.
 - The trowel and the map no longer treat backland or camp land as lit when its lantern ran out before the game caught up.
 
 ### Technical
