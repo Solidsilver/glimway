@@ -8,6 +8,7 @@
  * the hero's side. Pure visual; what's held comes from the item model
  * (./items).
  */
+import { onSceneEnd } from '../scene-end'
 import type Phaser from 'phaser'
 import { offHandTuck } from '../../lib/items'
 import { ITEM_ART_FALLBACK, itemIcon } from '../items-pass'
@@ -26,7 +27,7 @@ export class OffHandVisual {
   constructor(private scene: Phaser.Scene, private session: Session, private hero: () => Hero, private avatar: () => AvatarVisual | null = () => null) {
     const refresh = () => this.refresh()
     bus.on(EV.itemsChanged, refresh)
-    scene.events.once('shutdown', () => {
+    onSceneEnd(scene, () => {
       bus.off(EV.itemsChanged, refresh)
       this.image?.destroy()
       this.image = null
