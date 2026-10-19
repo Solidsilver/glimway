@@ -43,7 +43,7 @@ draft), the found texts in `texts/`, and the shipped game.
     text stands); the Dark worked that crack; Hesper's binding at the crossing turned the second
     storm into a stir.
 15. **The temptation is "the Short Way"** (those who take it: short-wayers).
-16. **Pell's crate's maker is unknown**: a legend with no name; the Pells only keep it.
+16. **Pell's crate is a family heirloom** (superseded the "maker unknown" call; see 25).
 
 17. **Fallbrine** did the deep-history deed. No epithet; the story reveals what he did.
 18. **No single name for the fallen.** Different people call them different things: some are
@@ -52,7 +52,23 @@ draft), the found texts in `texts/`, and the shipped game.
 19. **Corrupted pockets are "frets"** ("the fret on Marrow Fen").
 20. **The Dark** in speech; **the Draught** in Keepers' writing (proposed; the owner didn't object).
 
+21. **Fallbrine's deed is "the Unyoking"** in history; Fallbrine himself called it "the Release".
+    The Dark gets in where care stops, by doing too little or forcing too much.
+
+22. **Road geography.** Sallow Ford lies north-east. The old Lantern Road left by the East Gate,
+    climbed past Ashwatch to the hilltop shrine, then swung north through the Tangle crossing
+    (Dorrit's Span) and on through the Whitequiet. The shrine's "east of here" line becomes north.
+23. **Turncaps** (owner asked for the explanation; the game already matches): grey mushrooms
+    whose caps lean toward the nearest held light. A homing turncap is one set in amber while it
+    still leans toward town.
+24. **The Practices replace magic.md's four class-locked crafts (later).** The Habitica class is
+    a lean: a head start in one Practice (Warrior: Handcraft, Mage: Songcraft, Healer:
+    Hearthcraft, Rogue: Waycraft).
+25. **Pell's crate came down Pell's family.** Pell's father gave it to him; it has passed down
+    for generations, maybe made by an ancestor, maybe given to one. The Pells have worked to
+    understand the land (hence deeds) and the way it gives things back. Sometimes things go
+    missing (to settle: never a player's own things).
+
 ## Open
 
-- The deep-history event's name: it should say the attempt to free people from work, craft and
-  making.
+- What goes missing from the crate, given the game's never-lose-an-item rule.
