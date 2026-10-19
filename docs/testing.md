@@ -335,6 +335,18 @@ and traces, and a re-run of the branch. The local steps below are the owner's.
    IN (SELECT world_id FROM region_epochs)")` before the first Wilds read, as
    the handoff test does.
 6. `npx playwright test --last-failed` re-runs what failed.
+7. "Test timeout" with no step named means a wait with no bound of its own: a
+   promise the spec built (a held `page.route`, an event) or `page.evaluate`.
+   `actionTimeout` covers only Playwright's own waits. Give such a wait a named
+   step with a timeout (`step()` in ways-home.spec.ts), and have its failure
+   say what the game did instead (its toasts, `__fsSafety`). The game can
+   decline quietly: a pause that lets go asks nothing.
+8. Check game code for real-time gaps between frames. On a loaded runner one
+   frame can take over two seconds (CI 2026-10-19). Code that treats a gap
+   over some threshold as "the player stopped" or "something took the
+   screen" fails then. The ways-home pause did, until it asked the scene's
+   `playHold` instead. Game time (`delta`, capped at 50 ms a frame) and the
+   scene's own hold are safe. `scene.time.now` is wall time.
 
 ## Performance
 
