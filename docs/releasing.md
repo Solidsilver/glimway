@@ -73,7 +73,16 @@ deploy.
    migrates a private snapshot of it in a temporary folder, checks that
    again, and prints the schema, the migrations applied and how long they
    took, and the counts before and after (accounts, worlds, homes, items,
-   plants, holds, camps, Pell's crates). `COPY` itself is never written. It
+   plants, holds, camps, Pell's crates). Then the quantities: every item
+   stack's qty, every plant and every crate entry's qty, summed by item
+   before and after. When `038_lamps.sql` is applied it also reconciles the
+   path refunds: from the copy's 037 data, the wick's ground rows, the paid
+   tiles by kind, the free changes, and what the backfill skips (rows that
+   don't parse, tiles with no author, authors whose account has gone); then
+   the stone and timber each account is owed against the `land-changed`
+   crate entries the upgrade wrote, chunk by chunk. A line starting
+   `PROBLEM` is something the upgrade doesn't explain, and the command then
+   exits non-zero. `COPY` itself is never written. It
    refuses this server's `-db` and any file that looks in use (a `-wal`,
    `-shm` or `-journal` beside it, more than one hard link, or a process
    holding it), so rehearse on a plain copy. Details:
@@ -86,7 +95,15 @@ deploy.
    - accounts, worlds and homes are the same before and after;
    - every other count that changes is one the release's migrations explain
      (things moved into Pell's crates, say), and nothing drops to zero that
-     wasn't zero.
+     wasn't zero;
+   - "quantities add up", and no `PROBLEM` lines: item stacks and plants
+     have the same total before and after, item by item, and crate entries
+     grow by exactly the refunds;
+   - for 038: "every refund matches its paid tiles", and each account's
+     refund is what you'd expect of the paths it laid. Note the skipped
+     counts with the output: no author or a gone account is expected of old
+     data and refunds nothing; a malformed row is a `PROBLEM` (its tiles go
+     unrefunded), so look at that row in the copy before going on.
 
    Record the output with the release (its decision-log entry). If anything
    looks wrong, stop: the release waits for a fix and a new rehearsal.

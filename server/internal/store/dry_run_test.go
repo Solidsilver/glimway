@@ -215,3 +215,89 @@ func TestDryRunMigrateResolvesSymlinksFirst(t *testing.T) {
 		t.Fatalf("the target moved to %s", got)
 	}
 }
+
+// releaseWithOddGround is the last release's populated database (release037Rows)
+// with the wick ground the backfill skips: a row that doesn't parse, a paid
+// tile with no author and one by an account that has gone.
+const releaseWithOddGround = release037Rows + `
+ INSERT INTO world_changes(world_id,realm,layer,chunk,epoch,entity,kind,state,changed_at,changed_by,ends_at) VALUES
+ ('w','hearthwick',0,'3:-1','wick','ground','ground','{"changes":[{"tx":1',4,'alice',604801),
+ ('w','hearthwick',0,'4:-1','wick','ground','ground','{"changes":[{"tx":1,"ty":1,"change":"stone","at":4},{"tx":2,"ty":1,"change":"plank","by":"carol","at":4}]}',4,'alice',604801);`
+
+// The rehearsal sums every item before and after, and reconciles 038's path
+// refunds against the 037 ground they come from: stacks and plants keep their
+// quantities, the crate entries grow by exactly the refunds, and what the
+// backfill skips is counted. A row that doesn't parse is a problem.
+func TestDryRunMigrateReconcilesQuantitiesAndRefunds(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "copy.sqlite")
+	old := newUpgradeFixture(t, path, lastShippedMigration, nil)
+	if _, err := old.Exec(releaseWithOddGround); err != nil {
+		t.Fatal(err)
+	}
+	old.Close()
+	run, err := DryRunMigrate(context.Background(), path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for src, want := range map[string][2]int64{"item stacks": {55, 55}, "plants": {2, 2}, "crate entries": {0, 3}} {
+		if got := [2]int64{run.Held[0].Total(src), run.Held[1].Total(src)}; got != want {
+			t.Fatalf("%s: %v, want %v", src, got, want)
+		}
+	}
+	if !reflect.DeepEqual(run.Held[1]["item stacks"], map[string]int64{"timber": 40, "stone": 12, "wild-thyme": 3}) {
+		t.Fatal("stacks by item", run.Held[1]["item stacks"])
+	}
+	r := run.Refunds
+	if r == nil {
+		t.Fatal("no refund summary with 038 applied")
+	}
+	if r.GroundRows != 3 || r.Malformed != 1 || r.Free != 1 || r.Unauthored != 1 || r.Gone != 1 ||
+		!reflect.DeepEqual(r.PaidTiles, map[string]int64{"stone": 3, "plank": 2}) {
+		t.Fatalf("ground: %+v", r)
+	}
+	want := map[string]map[string]int64{"alice": {"stone": 2}, "bob": {"timber": 1}}
+	if !reflect.DeepEqual(r.Owed, want) || !reflect.DeepEqual(r.Refunded, want) || len(r.Mismatches) != 0 {
+		t.Fatalf("owed %v, refunded %v, mismatches %v", r.Owed, r.Refunded, r.Mismatches)
+	}
+	if len(run.Problems) != 1 || !strings.Contains(run.Problems[0], "1 of the wick's ground rows don't parse") {
+		t.Fatal("problems", run.Problems)
+	}
+}
+
+// What doesn't add up is listed: a refund the upgrade lost, and a stack that
+// changed.
+func TestDryRunReconcileFindsLossesAndChanges(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	before, after := filepath.Join(dir, "037.sqlite"), filepath.Join(dir, "038.sqlite")
+	old := newUpgradeFixture(t, before, lastShippedMigration, nil)
+	if _, err := old.Exec(release037Rows); err != nil {
+		t.Fatal(err)
+	}
+	old.Close()
+	if err := snapshot(ctx, before, after); err != nil {
+		t.Fatal(err)
+	}
+	s, err := Open(after)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = s.DB.Exec(`DELETE FROM recovery_entries WHERE account_id='bob';
+ UPDATE item_stacks SET qty=41 WHERE owner='alice' AND item_def='timber';
+ DELETE FROM homestead_plants WHERE id='apple';
+ PRAGMA wal_checkpoint(TRUNCATE);`); err != nil {
+		t.Fatal(err)
+	}
+	s.Close()
+	run := DryRun{Applied: []string{"038_lamps.sql"}}
+	if err = run.reconcile(ctx, before, after); err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{
+		"world w chunk 2:-1: bob timber owed 1, refunded 0",
+		"item stacks: timber 40 -> 41",
+		"plants: apple-sapling 1 -> 0",
+	}; !reflect.DeepEqual(run.Problems, want) {
+		t.Fatalf("problems:\n%s\nwant\n%s", strings.Join(run.Problems, "\n"), strings.Join(want, "\n"))
+	}
+}
