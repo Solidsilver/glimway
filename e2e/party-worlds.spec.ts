@@ -112,12 +112,32 @@ test('a settled member is asked once, then moves into the party’s world', asyn
   await expect(move).toContainText('Stays behind')
   await expect(move).toContainText('Village project gifts, still credited there')
   await expect(move.getByTestId('move-blocks')).toHaveCount(0)
+  // TEMP A11 diagnostic: every game canvas put on the page from here, and who put it there.
+  await other.evaluate(() => {
+    const w = window as unknown as { __a11Canvas: string[] }
+    w.__a11Canvas = []
+    for (const m of ['appendChild', 'insertBefore'] as const) {
+      const orig = Node.prototype[m] as (...a: unknown[]) => unknown
+      ;(Node.prototype as unknown as Record<string, unknown>)[m] = function (this: Node, ...a: unknown[]) {
+        if ((a[0] as Element)?.tagName === 'CANVAS') w.__a11Canvas.push(`${performance.now() | 0}: ${(new Error().stack ?? '').split('\n').slice(2, 14).map((l) => l.trim().replace(/\(?http:\/\/[^/]+/, '')).filter((l) => !l.includes('phaser.js')).join(' < ')}`)
+        return orig.apply(this, a)
+      }
+    }
+  })
   await move.getByRole('button', { name: 'Move to your party’s world' }).click()
   await expectToast(other, 'You set down your pack in your party’s world.')
   await expect(move).toHaveCount(0)
   await waitForWorld(other)
 
   expect((await serverState(other)).body.worldId).toBe(world)
+  for (let i = 0; i < 2; i++) {
+    const diag = await other.evaluate(async () => {
+      const { bus, EV } = (await import(/* @vite-ignore */ '/src/game/events.ts' as string)) as { bus: any; EV: Record<string, string> }
+      return { at: performance.now() | 0, canvases: document.querySelectorAll('canvas').length, relocate: bus.listenerCount(EV.relocate), held: bus.listenerCount(EV.held), added: (window as unknown as { __a11Canvas: string[] }).__a11Canvas }
+    })
+    console.log('A11-DIAG', JSON.stringify(diag))
+    await other.waitForTimeout(5000)
+  }
   // The move destroyed the old game without a reload: none of its scene still
   // answers (step-back 2 2026-10-18, C1). A pack refresh keeps this world's
   // pack model (the old belt tracker swapped it for an empty one).
