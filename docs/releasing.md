@@ -118,7 +118,10 @@ Never move or reuse a published tag: fix forward with the next patch version.
 ### 0.13.0: one restart of live
 
 Live runs 0.11.2. The 0.13.0 deploy changes the live unit, so it restarts
-the server once (later settings changes only reload it):
+the server once. After that, a change to a *live* setting only reloads it
+(SIGHUP); a change to a restart-only setting, such as the login limits in
+`[server.login]`, still restarts it (the module's `reloadTriggers` and
+`restartTriggers`; each setting's kind is in `deploy/glimway.example.toml`):
 
 - the unit gains a settings file, `/etc/glimway/config.toml`, rendered from
   `services.glimway.settings`, and an `ExecReload` that sends SIGHUP;
