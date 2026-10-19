@@ -131,6 +131,8 @@ export class AccountFlow<S extends FlowSession> {
   /** Your party plays in a world that isn't yours: the one-time prompt. */
   partyPrompt = $state<WorldView | null>(null)
   moving = $state<Moving | null>(null)
+  /** The session the last move opened, and its world (afterMove). */
+  private arrived: { session: S; worldId: string } | null = null
   /** Left the party whose world you live in (or were moved out of it): said once a sign-in. */
   leaverNotice = $state<WorldView | null>(null)
   /** A connected session waiting for the player to take over the lease. */
@@ -420,6 +422,12 @@ export class AccountFlow<S extends FlowSession> {
    * ("Arriving…"), freezing the old scene, until the new world is open.
    */
   async afterMove(snapshot: Snapshot, line: string): Promise<void> {
+    // A move told twice (its answer, then its operation settling as landed)
+    // opens one new world: a second opening would tear down the first
+    // mid-build and leave its game running.
+    if (this.moving?.arriving) return
+    const arrived = this.arrived
+    if (arrived && arrived.session === this.host.session() && arrived.worldId === snapshot.worldId) return
     if (this.moving) this.moving.arriving = true
     else this.moving = { target: { ...NO_WORLD, id: snapshot.worldId }, home: false, view: null, arriving: true }
     this.partyPrompt = null
@@ -430,6 +438,7 @@ export class AccountFlow<S extends FlowSession> {
       this.host.leaveWorld()
       const name = this.ui.account?.name ?? snapshot.displayName
       const s = await this.deps.connect({ snapshot, cache: null, name })
+      this.arrived = { session: s, worldId: snapshot.worldId }
       await s.link!.reconnect(false)
       await this.settle(s)
       this.moving = null

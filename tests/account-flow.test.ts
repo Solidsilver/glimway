@@ -256,6 +256,25 @@ test('a move that lands opens the new world; one that can’t open goes back to 
   assert.equal(g.flow.snapshot?.worldId, 'w4')
 })
 
+test('a move told twice (its answer, then its operation landing) opens one new world', async () => {
+  // Step-back 2 (C1): the second opening tore the first down mid-build and
+  // left its game running, its scene answering the new world's events.
+  const t = setup({ api: { world: async () => ({}) } })
+  t.ui.account = { accountId: 'h1', name: 'Tansy' }
+  t.flow.openMove({ id: 'w2', ownerId: '', ownerName: 'Ada', members: 2, ownerHere: false, party: true }, false, null)
+  // Told again while the first is still arriving…
+  await Promise.all([t.flow.afterMove(snap({ worldId: 'w2' }), 'Welcome.'), t.flow.afterMove(snap({ worldId: 'w2' }), 'Landed.')])
+  // …and once more after it has opened.
+  await t.flow.afterMove(snap({ worldId: 'w2' }), 'Landed.')
+  assert.equal(t.connected.length, 1)
+  assert.equal(t.played.length, 1)
+  assert.equal(t.played[0]!.destroyed, null, 'the opened world stays open')
+  assert.deepEqual(t.toasts, ['Welcome.'])
+  // A later move elsewhere still opens.
+  await t.flow.afterMove(snap({ worldId: 'w3' }), 'Welcome back.')
+  assert.equal(t.played.length, 2)
+})
+
 test('logging out keeps unsent progress for the next sign-in, and clears a cache the server has', async () => {
   const dirty = setup({ api: { logout: async () => undefined } })
   const link = new FakeLink('h1')

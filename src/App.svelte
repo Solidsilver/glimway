@@ -549,6 +549,8 @@
       // The new world's lane may count different gates: read it before the
       // scenes build (see begin()).
       await homesteadsFor(next).load().catch(() => {})
+      // A newer session came in meanwhile: its own call starts the game (two would both run).
+      if (session !== next) return
       game = startGame(stageEl, next)
     } else {
       await begin()
