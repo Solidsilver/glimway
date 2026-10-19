@@ -83,6 +83,14 @@ import { glimsGift } from '../content/purse.ts'
 import { unlockNotice, type MagicMarks } from '../lib/combat.ts'
 
 const HEARTBEAT_MS = 30_000
+
+/**
+ * Links of this page that are closing (a session ended for a Retry, a move,
+ * Back to the title), by lock name: until each has let its outbox lock go,
+ * a new link for the same account and device waits instead of finding the
+ * lock taken and calling itself superseded by its own page.
+ */
+const closing = new Map<string, Set<Promise<void>>>()
 /** After this long without an answer the chip says "Reaching the world…". */
 const REACHING_MS = 60_000
 
@@ -923,13 +931,22 @@ export class Link {
     if (this.fence !== null) return Promise.resolve(true)
     if (this.owning) return this.owning
     this.owning = (async () => {
-      const lock = await holdLock(this.locks, lockName(this.accountId, this.device), steal)
+      const name = lockName(this.accountId, this.device)
+      // A link of this page still closing holds the lock for a moment yet.
+      await Promise.all([...(closing.get(name) ?? [])])
+      if (this.stopped) return false
+      const lock = await holdLock(this.locks, name, steal)
       if (!lock) return false
       if (this.stopped) {
         lock.release()
         return false
       }
       const record = await this.store.claim(this.accountId, this.device)
+      if (this.stopped) {
+        // Stopped while claiming: the lock must not outlive the link.
+        lock.release()
+        return false
+      }
       if (!record) {
         // The record couldn't be claimed (storage failed): try again with the next retry.
         lock.release()
@@ -2367,7 +2384,40 @@ export class Link {
     return { kept: this.entries.length }
   }
 
+  /**
+   * End this link once `after` settles (the session's last save): it
+   * stops, and resolves once its outbox lock is let go. Until then a new link
+   * of this page for the same outbox waits for it (`own`).
+   */
+  close(after: Promise<unknown> = Promise.resolve()): Promise<void> {
+    if (this.closed) return this.closed
+    const name = lockName(this.accountId, this.device)
+    const set = closing.get(name) ?? new Set<Promise<void>>()
+    closing.set(name, set)
+    const done: Promise<void> = after
+      .catch(() => undefined)
+      .then(async () => {
+        // A claim under way finishes first, then finds the link stopped and lets go.
+        const owning = this.owning
+        this.stop()
+        await owning?.catch(() => undefined)
+        await this.lockGone
+      })
+      .finally(() => {
+        set.delete(done)
+        if (!set.size && closing.get(name) === set) closing.delete(name)
+      })
+    set.add(done)
+    this.closed = done
+    return done
+  }
+
+  private closed: Promise<void> | null = null
+  /** Resolves once the held outbox lock is really let go (a browser releases it a moment after `release`). */
+  private lockGone: Promise<unknown> = Promise.resolve()
+
   stop(): void {
+    if (this.lock) this.lockGone = this.lock.lost.catch(() => undefined)
     this.stopped = true
     this.stopTimers()
     if (this.reportTimer !== null) clearInterval(this.reportTimer)
