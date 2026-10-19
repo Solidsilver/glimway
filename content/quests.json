@@ -3,7 +3,7 @@
     {
       "id": "lantern-road",
       "title": "The Lantern Road",
-      "blurb": "Mara’s grandmother kept the lantern road east of here. The lamp on Ashwatch hill has been dark thirty years.",
+      "blurb": "Mara’s grandmother kept the Lantern Road east of here. The lamp on Ashwatch hill has been dark thirty years.",
       "line": "road",
       "chapter": 1,
       "after": [
@@ -22,7 +22,7 @@
           "glims": 0,
           "witness": "",
           "goal": "Hear Mara out about the road",
-          "objective": "Mara has a question for you about the dark lantern road. Find her in the Hearthwick square.",
+          "objective": "Mara has a question for you about the dark Lantern Road. Find her in the Hearthwick square.",
           "where": {
             "area": "hearthwick",
             "npc": "mara"

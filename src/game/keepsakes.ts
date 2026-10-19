@@ -42,7 +42,7 @@ const ASKS: Record<string, Ask> = {
     line: '…That halter. Tam knotted every splice his own way, so the oxen would know his hands. May I see it?',
     giveReply: [
       'Every knot holding. He talked to his oxen more than to people, but he tied a careful knot.',
-      'Keep this leaf of my oil receipts. And — the twins’ birthday is at The Breaking. I light two nights for it.'
+      'Keep this leaf of my oil receipts. And — the twins’ birthday is at the Breaking. I light two nights for it.'
     ],
     notYetReply: ['Not yet. That’s a fair answer. It waited thirty years; it can wait its turn.']
   },
