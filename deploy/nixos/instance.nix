@@ -169,12 +169,12 @@ in {
     extraFlags = option (types.listOf types.str) [ ] "Extra server flags appended after generated flags.";
     openFirewall = option types.bool false "Open the backend TCP port for non-loopback listeners; with the managed Caddy proxy, open 80 and 443 instead.";
     web = {
-      enable = option types.bool true "Run the static file server on a local listener.";
+      enable = option types.bool true "Serve the web app on a local listener (the server's static-only mode, with cache headers).";
       root = option (types.nullOr types.str) null "Optional absolute existing dist directory instead of webPackage (migration escape hatch).";
       listenAddress = option types.str "127.0.0.1" "Static listener bind address (IPv6 without brackets).";
       user = option types.str cfg.user "Existing account for the static listener; defaults to the backend user.";
       group = option types.str cfg.group "Existing group for the static listener; defaults to the backend group.";
-      port = option types.port webPort "Static file server port.";
+      port = option types.port webPort "Static web listener port.";
     };
     reverseProxy.enable = mkEnableOption "Caddy HTTPS virtual host at publicOrigin, routing /api/* and /ws to the backend and other requests to the static listener";
   };
@@ -246,12 +246,18 @@ in {
       users.users.${cfg.user} = { isSystemUser = true; group = cfg.group; };
     })
     (lib.mkIf cfg.web.enable {
+      # The web bundle through the server's own static handler (serve-static:
+      # no database, no settings), not a plain file server: the Nix store's
+      # 1970 timestamps leave a file server no validator, so every launch
+      # downloaded all the art. This sends content ETags, immutable caching
+      # for Vite's hashed assets and no-store for html and version.json
+      # (server/cmd/glimway-server/static.go, docs/home-server.md).
       systemd.services.${name} = {
         description = "${title} static web app";
         wantedBy = [ "multi-user.target" ];
         after = [ "network.target" ];
         serviceConfig = {
-          ExecStart = utils.escapeSystemdExecArgs [ "${pkgs.caddy}/bin/caddy" "file-server" "--root" webRoot "--listen" webListen ];
+          ExecStart = utils.escapeSystemdExecArgs [ (lib.getExe cfg.package) "-listen" webListen "-static-dir" webRoot "serve-static" ];
           User = cfg.web.user;
           Group = cfg.web.group;
           Restart = "on-failure";
@@ -265,6 +271,9 @@ in {
           ProtectKernelModules = true;
           ProtectControlGroups = true;
           RestrictSUIDSGID = true;
+          ProtectKernelLogs = true;
+          LockPersonality = true;
+          RestrictAddressFamilies = [ "AF_INET" "AF_INET6" ];
         };
       };
     })
