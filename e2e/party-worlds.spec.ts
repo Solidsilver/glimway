@@ -112,6 +112,8 @@ test('a settled member is asked once, then moves into the party’s world', asyn
   await expect(move).toContainText('Stays behind')
   await expect(move).toContainText('Village project gifts, still credited there')
   await expect(move.getByTestId('move-blocks')).toHaveCount(0)
+  const otherErrors: string[] = []
+  other.on('pageerror', (e) => otherErrors.push((e.stack ?? e.message).split('\n').slice(0, 10).join(' | ')))
   // TEMP A11 diagnostic: every game canvas put on the page from here, and who put it there.
   await other.evaluate(() => {
     const w = window as unknown as { __a11Canvas: string[] }
@@ -135,7 +137,7 @@ test('a settled member is asked once, then moves into the party’s world', asyn
       const { bus, EV } = (await import(/* @vite-ignore */ '/src/game/events.ts' as string)) as { bus: any; EV: Record<string, string> }
       return { at: performance.now() | 0, canvases: document.querySelectorAll('canvas').length, relocate: bus.listenerCount(EV.relocate), held: bus.listenerCount(EV.held), added: (window as unknown as { __a11Canvas: string[] }).__a11Canvas }
     })
-    console.log('A11-DIAG', JSON.stringify(diag))
+    console.log('A11-DIAG', JSON.stringify({ ...diag, errors: otherErrors }))
     await other.waitForTimeout(5000)
   }
   // The move destroyed the old game without a reload: none of its scene still
