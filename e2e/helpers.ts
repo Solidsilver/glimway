@@ -1,6 +1,6 @@
 import { anchor } from '../src/lib/location.ts'
 import type { FsHooks } from '../src/game/dev-hooks.ts'
-import { expect, type Page } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 import type { TilePoint } from './positions.ts'
 
 /**
@@ -733,28 +733,52 @@ export async function readDialogue(page: Page, opts: { pick?: RegExp; picked?: (
   throw new Error('the conversation never closed')
 }
 
-/** Press E at an interactable once its prompt shows and world input is live; the conversation opens. */
+/** Press E at an interactable once it's ready (pressToTalk); the conversation opens. */
 export async function openTalk(page: Page, prompt: RegExp | string): Promise<void> {
   await pressToTalk(page, prompt)
   await expect(page.getByRole('dialog', { name: /Conversation with/ })).toBeVisible()
 }
 
 /**
- * Press E at `prompt` until a conversation opens. Someone who walks (Silas
- * on his cycle) can step out of reach between the prompt read and the press,
- * and that E opens nothing (CI, 2026-10-18: homestead.spec.ts). A player
- * presses again; so does this, while the prompt still shows and nothing
- * opened, up to three presses.
+ * The annotation type of a helper's in-test retry: an action pressed or sent
+ * again inside one attempt. Playwright doesn't count it as flaky (the test
+ * passed), so scripts/e2e-artifacts.mjs counts these next to the flaky tests.
+ */
+export const HELPER_RETRY = 'helper retry'
+
+/** Record one in-test retry (HELPER_RETRY) on the running test. */
+export function noteHelperRetry(helper: string, detail: string): void {
+  test.info().annotations.push({ type: HELPER_RETRY, description: `${helper}: ${detail}` })
+}
+
+/**
+ * Press E at `prompt` once it's ready, and a conversation opens. Ready: the
+ * prompt shows, world input is live, and the elected target has held still
+ * (same point, same place) for a few frames.
+ *
+ * One press for anything that stays put. Only a walking resident (one with a
+ * pose in `__fsNpcs`: Silas on his cycle) can step out of reach between the
+ * read and the press, and that E opens nothing (CI, 2026-10-18:
+ * homestead.spec.ts). Then this presses again, as a player would, up to three
+ * presses, and records each extra press (noteHelperRetry).
  */
 export async function pressToTalk(page: Page, prompt: RegExp | string): Promise<void> {
   const before = (await dialogueState(page)).opened
   for (let press = 1; ; press++) {
     await expect(page.locator('.prompt')).toContainText(prompt)
     await waitForLive(page)
+    const target = await steady(page, async () => ({ live: (await frame(page))?.live === true, t: (await targetNow(page)).target }), {
+      frames: 4, seconds: 5, ready: (v) => v.live && !!v.t, message: `a still target at ${prompt}`,
+    }).then((v) => v.t, () => null)
+    if (!target) throw new Error(`no still target at ${prompt}: ${await diagnose(page)}`)
     await page.keyboard.press('e')
     const opened = await waitGame(page, () => dialogueState(page), (d) => d.opened > before, { seconds: 5, message: `a conversation at ${prompt}` }).then(() => true, () => false)
     if (opened) return
-    if (press >= 3 || (await dialogueState(page)).open) throw new Error(`E at ${prompt} opened no conversation after ${press} presses: ${await diagnose(page)}`)
+    const walker = await page.evaluate((id) => (window.__fsNpcs?.() ?? []).some((n) => n.id === id), target.id)
+    if (!walker || press >= 3 || (await dialogueState(page)).open) {
+      throw new Error(`E at ${prompt} (${target.id}${walker ? ', a walking resident' : ''}) opened no conversation after ${press} press${press > 1 ? 'es' : ''}: ${await diagnose(page)}`)
+    }
+    noteHelperRetry('pressToTalk', `E at ${prompt} (${target.id}) opened nothing; press ${press + 1}`)
   }
 }
 
