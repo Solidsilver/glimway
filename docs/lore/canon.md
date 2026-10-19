@@ -210,7 +210,7 @@ A lamp with oil but no naming burns **hollow**: it warms, it lights, it anchors 
 is not a spell; it is telling the lamp what it is holding still. These three are the first and
 commonest **working** (5.1): naming is its cadence, the lamp its vessel, the oil its care.
 
-*[proposal]* Every lamp that holds land has a naming, even when the player doesn't see one
+Every lamp that holds land has a naming, even when the player doesn't see one
 spoken:
 
 - a **lot lantern**'s naming is the lot's deed in Pell's ledger ("we do not deed the coordinates
@@ -272,8 +272,9 @@ of clerks came to keep deeds.
 
 When a lamp goes dark, a path goes unwalked or a camp is packed up, the drift gives the made
 things back to the crate, for the person they belong to: "The woods turned. Pell has your
-things." *[proposal]* The Pell family ledgers record things that did **not** come back; see open
-question O3. A player's own things always do.
+things." The Pell family ledgers also record things that did **not** come back: only the old
+world's things, never a player's. Some of them are the trinkets the Whitequiet gives back, so Pell
+reads the same mystery as the Six from the other end. A player's own things always come back.
 
 ### 3.9 Ways home [shipped]
 
@@ -337,7 +338,7 @@ the road rest. When Orrin built the great bridge at the Tangle crossing, Hesper 
 bracket joint so it would never lean. Dorrit Venn, Orrin's apprentice, argued for oak trunnels
 that would let the joint flex ("if the hill wants to wander, do we step with it, or remind it to
 stay put?"). Hesper's joint was a binding, not a naming: it ordered the ground instead of
-reminding it. *[proposal: the detail of how it was cut.]*
+reminding it. Orrin carved it; Hesper bound it.
 
 ### 4.3 The Winter of Two Storms [shipped as story]
 
@@ -346,7 +347,7 @@ Keeper **Wenna Hale**, Hesper's successor, kept the road when the pressure broke
 1. **The first storm.** A white-out; the road burned through its oil ("Oil, 3 casks short").
    Wenna closed the road: she cut the closure mark, *two weaves and a break*, into the route
    stones and snuffed the chain from the hilltop shrine downward. Dark on purpose, like a fence.
-2. **Hesper walks out** *[proposal]*. Hesper, old and long retired, would not accept the
+2. **Hesper walks out.** Hesper, old and long retired, would not accept the
    closure. On the first night of the lull she walked out alone to the Tangle crossing to hold
    it herself. She did not come back, and the village believes the white-out took her.
 3. **The lull and the Lull Run.** Nine days of slack calm. Hollis Brack wanted to run a train to
@@ -357,7 +358,7 @@ Keeper **Wenna Hale**, Hesper's successor, kept the road when the pressure broke
    would not flex; the ground tore around it, and the bridge broke in half, as Dorrit had
    warned. **Bett Cooley** and **Dorrit Venn** fell with the carts. The other four pushed on and
    reached **Sallow Ford**. Behind them the road forgot its shape and the chain went dark. The
-   Tangle is the scar of that night.
+   Tangle is the scar of that night. Hesper's binding cost Bett and Dorrit their lives.
 
 ### 4.4 The Six [shipped]
 
@@ -635,7 +636,7 @@ of the Measure (now the Unyoking); the Old Ways as the Dark's temptation (now th
 | Glimway | The game |
 | Hearthwick | The town |
 | the Wick Tree | Capitalised |
-| the drift | Lower case, like weather *[proposal, O5]* |
+| the drift | Lower case, like weather |
 | the Turning, a turning | Capitalised as the event's name; "the land turns", "at the turning" in prose |
 | the Deep Measure, the Measure | |
 | the Unyoking, the Crack | Fallbrine's own word: the Release |
@@ -676,14 +677,7 @@ the far light at Sallow Ford; healing the Crack.
 
 See `open-questions.md` once this draft is reviewed. For now:
 
-- **O1** Hesper's story (4.2–4.3) is a proposal: the joint, walking out in the lull, and that her
-  binding is why the bridge broke. It makes her partly responsible for Bett's and Dorrit's
-  deaths. Confirm, soften, or change.
 - **O2** Does the village know Hesper went out to the crossing, or believe the storm took her?
-- **O3** What goes missing from Pell's crate, given that a player's things never do. Proposal:
-  only the old world's things, and the trinkets the Whitequiet gives back are some of them.
-- **O4** How lamps that the player never hears named still hold land (3.4 proposal).
-- **O5** "The drift" lower case, or "the Drift"?
 - **O6** "Keeper" for a camp's claim owner in the game's build rules collides with the Keeper.
 - **O7** Is the town named for the Wick Tree?
 - **O8** Wisps: scraps of light gone sour?

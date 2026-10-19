@@ -69,6 +69,12 @@ draft), the found texts in `texts/`, and the shipped game.
     understand the land (hence deeds) and the way it gives things back. Sometimes things go
     missing (to settle: never a player's own things).
 
+26. **Canon draft 1 written** (`canon.md`). Confirmed from it: Hesper's bound joint is why the
+    bridge broke, so she is partly responsible for Bett's and Dorrit's deaths; every lamp that
+    holds land has a naming (a lot lantern's is its deed, a way-lamp's is spoken as it's set, a
+    communal lamp is held by footsteps and hollow until named); only the old world's things go
+    missing from Pell's crate, never a player's; "the drift" is lower case.
+
 ## Open
 
-- What goes missing from the crate, given the game's never-lose-an-item rule.
+See canon.md §14.
