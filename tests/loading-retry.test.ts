@@ -121,7 +121,7 @@ test('a link stopped while it claims the outbox lets the lock go (a Retry can al
  */
 class SlowReleaseLocks implements LockLike {
   private held = new Set<string>();
-  request(name: string, options: { ifAvailable?: boolean; steal?: boolean }, callback: (lock: unknown) => Promise<unknown>): Promise<unknown> {
+  request(name: string, _options: { ifAvailable?: boolean; steal?: boolean }, callback: (lock: unknown) => Promise<unknown>): Promise<unknown> {
     if (this.held.has(name)) return Promise.resolve(callback(null));
     this.held.add(name);
     return Promise.resolve(callback({ name })).then(
