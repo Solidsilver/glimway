@@ -1,7 +1,7 @@
 import type { APIResponse, Request, Route } from '@playwright/test'
 import { expect, test, type Page } from './fixtures'
 import { accountOf, moveServerClock, pinWorld, reenter, serverState, sql, wickSlack } from './connected'
-import { expectToast, parkCreatures, player, settled, waitForArea, waitForWilds, warp, wilds, windowWhole, worldTileOf, type WildsDump } from './helpers'
+import { diagnose, expectToast, parkCreatures, player, settled, waitForArea, waitForWilds, warp, wilds, windowWhole, worldTileOf, type WildsDump } from './helpers'
 import { freshPlayer, fund } from './home-helpers'
 import { WAYS_HOME_LINES } from '../src/lib/ways-home.ts'
 
@@ -32,6 +32,21 @@ const near = (at: Partial<Place> | null | undefined, place: Place) => !!at && at
 const reportOf = (r: Request) => (r.url().endsWith('/api/report') && r.method() === 'POST' ? (r.postDataJSON() as { seq: number; place?: Place }) : null)
 /** The client's request timeout (src/lib/api/client.ts): a held read gives up after it. */
 const CLIENT_TIMEOUT_MS = 15_000
+
+/**
+ * A step that gives up after `seconds` and says where the game stood:
+ * arriving and reloading wait on `settled`, which has no timeout of its own,
+ * so a stall would otherwise spend the test's whole budget unnamed (CI,
+ * 2026-10-19).
+ */
+async function step<T>(page: Page, title: string, seconds: number, body: () => Promise<T>): Promise<T> {
+  try {
+    return await test.step(title, body, { timeout: seconds * 1000 })
+  } catch (e) {
+    const safety = await page.evaluate(() => (window as unknown as Safety).__fsSafety()).catch(() => null)
+    throw new Error(`${title}: ${String(e).slice(0, 400)}\nsafety ${JSON.stringify(safety)}\n${await diagnose(page)}`)
+  }
+}
 
 /** Into the Whitequiet with a turncap in the pack, the world's clock a day from the wick's end. */
 async function inTheBeyond(page: Page): Promise<{ id: string; before: WildsDump }> {
@@ -139,16 +154,18 @@ async function turncapDuringTurning(page: Page, before: WildsDump, rewrite?: (pl
   expect(await transitioning(page), 'the page adopted the destination while the Turning held play').toBe(true)
   const held = await player(page)
   expect(Math.hypot(held.x - departure.x, held.y - departure.y), `the hero is still held at the departure point: ${JSON.stringify({ held, departure })}`).toBeLessThan(2)
-  // Let the land in.
-  await page.unroute('**/api/wilds/near/**')
-  for (const r of land) await r.continue().catch(() => {}) // a read the page gave up on is gone
+  // Let the land in (a read the page gave up on is gone).
+  await step(page, 'the held land reads go on', 15, async () => {
+    await page.unroute('**/api/wilds/near/**')
+    await Promise.all(land.map((r) => r.continue().catch(() => {})))
+  })
   return place
 }
 
 /** The hero stands at `place` (in its area), and the world's saved place agrees after a report sent since. */
 async function landedAt(page: Page, place: Place): Promise<void> {
   await expect.poll(() => transitioning(page), { timeout: 30_000, message: 'the Turning lets go' }).toBe(false)
-  await waitForArea(page, place.area)
+  await step(page, `the hero arrives in ${place.area}`, 30, () => waitForArea(page, place.area))
   await expect.poll(async () => {
     const at = await player(page)
     return Math.hypot(at.x - place.x, at.y - place.y)
@@ -167,9 +184,11 @@ async function landedAt(page: Page, place: Place): Promise<void> {
     const st = (await serverState(page)).body.state as { area: string; position: { x: number; y: number } }
     return st.area === place.area && Math.hypot(st.position.x - place.x, st.position.y - place.y) < 2 * 16
   }, { timeout: 20_000, message: 'the saved place is the destination' }).toBe(true)
-  await reenter(page, place.area)
-  if (place.area === 'outdoors') await waitForWilds(page)
-  else await settled(page, { area: place.area })
+  await step(page, 'a reload in place', 45, async () => {
+    await reenter(page, place.area)
+    if (place.area === 'outdoors') await waitForWilds(page)
+    else await settled(page, { area: place.area })
+  })
   const back = await player(page)
   expect(Math.hypot(back.x - place.x, back.y - place.y), `after a reload: ${JSON.stringify({ back, place })}`).toBeLessThan(2 * 16)
 }
