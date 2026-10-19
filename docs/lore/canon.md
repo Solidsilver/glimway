@@ -1,6 +1,6 @@
 # Glimway canon
 
-**Status: draft 1 (2026-10-19), under review with the owner.** When final, this is the single
+**Status: final (2026-10-19), settled with the owner.** This is the single
 source of truth for Glimway's lore. It supersedes `chronicle.md`, everything under `drafts/`
 (the world bibles, the rewrites, the three takes and the owner's magic bible) and the lore
 passages in design docs. The found texts in `texts/` stay as primary sources: where one
@@ -11,9 +11,8 @@ How to read the tags:
 - **[shipped]**: in the game today (0.13). Text that describes it must match how it works.
 - **[later]**: canon, but not built. Players may hear of it in stories and texts. No dialogue,
   item or help text may promise it as something they can do now.
-- **[proposal]**: written for this draft and not yet confirmed by the owner. Settled at review.
 
-Section 12 lists terms and their one spelling. Section 14 lists what is still open.
+Section 12 lists terms and their one spelling. Section 14 lists what was settled at review and what is parked. `apply-map.md` says where this lands in the game.
 
 ---
 
@@ -674,14 +673,9 @@ the far light at Sallow Ford; healing the Crack.
 
 ---
 
-## 14. Open questions
+## 14. Settled at review, and parked
 
-Still open:
-
-- **O1** The loading lines (`src/content/loading.ts`) were placeholders. Proposed set in
-  `apply-map.md`; the owner picks.
-
-Settled at review (2026-10-19):
+Nothing is open for 0.13.0. Settled at review (2026-10-19):
 
 - A homestead lantern post's label is a **name**, like a house name on a sign, not a naming.
   Only lamps that hold land in the Wilds get namings.
@@ -689,3 +683,7 @@ Settled at review (2026-10-19):
 - The rogue ability **Echo** keeps its name until the Practices replace the class abilities.
 - **New found texts** (a Pell ledger page, a folk telling of the Unyoking, Orrin on Hesper's
   joint) are parked: not for 0.13.0.
+- The **loading lines** are the set in `apply-map.md` (package F).
+- **Parked for 0.15:** new dialogue that only adds lore (Pell on his family crate, Elara as the
+  sceptic, the hollow-until-named lamp, the deed as a lot lantern's naming, the sap that
+  witnesses). These are canon; they reach players with the story release.

@@ -1,7 +1,7 @@
 # Lore pass: working notes
 
 The owner's calls during the lore pass (exp/lore-final, from 2026-10-19), in the order they came.
-These feed `canon.md`. When canon.md is final it supersedes this file.
+These fed `canon.md`, which is final and supersedes this file (kept as the record of the calls).
 
 Sources: `chronicle.md` (the canon so far), `drafts/glimway-lore-magic-bible.md` (the owner's new
 draft), the found texts in `texts/`, and the shipped game.

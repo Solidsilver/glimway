@@ -64,13 +64,13 @@ a change outside its files, it notes it for the owning lane instead of making it
 | `world.ts:142` (Brackenwood card) | "where the lantern road once ran east toward Sallow Ford" → keep east (it leaves town east), capitalise: "where the Lantern Road once ran east, and then north to Sallow Ford". |
 | `world.ts` `DIALOGUE`, `locations`, `ROOM_CARDS` | Casing sweep: "lantern road" → "Lantern Road" (`:139` eyebrow, `:326`, `:424`, `:529`). |
 | `world.ts:140` | "Iron-oak" at a sentence start is fine; check others. |
-| `world.ts:697` (hearth) | "Embers keep low…" is literal fire, keep. Optional: one clause that the Wick Tree's lamp "witnesses" the square (canon §3.2). |
+| `world.ts:697` (hearth) | "Embers keep low…" is literal fire. Keep. |
 | `world.ts:102-105` Ember Charm | Keep (owner, 2026-10-19). |
 | `world.ts` journal `The Drift's Sway` / `Finding the Anchor` | Keep titles; body may name the state **unmoored** (canon §2.5). Journal titles are asserted in `tests/residents.test.ts:79-80`. |
 | `quests/index.ts:83` `roadGoal` | "The lantern road glows again" → "The Lantern Road". |
 | `content/quests.json:6,25` | Casing: "lantern road" → "Lantern Road". |
 | `quests/keepers-hand.ts`, `quests.json:831,837` | No change (north past the Whitequiet matches canon). |
-| `quests/signpost.ts` | No direction change: the signpost's east finger and the east gate stay. Check the glim line ("a bead of amber, cut to the Count House's measure") against canon §3.1; optionally add "light from kept promises". |
+| `quests/signpost.ts` | No direction change: the signpost's east finger and the east gate stay. Check the glim line ("a bead of amber, cut to the Count House's measure") against canon §3.1 |
 | `App.svelte:1069`, `index.html:7` | "Relight the old lantern road." → "Relight the old Lantern Road." |
 | `Moments.svelte` | No change ("A road is a promise people keep renewing." fits). |
 
@@ -79,11 +79,9 @@ a change outside its files, it notes it for the owning lane instead of making it
 | Where | Change |
 |---|---|
 | `camps.ts` `CRATE_LINES.collected` | "Signed out to you: {things}. The home pieces are in your pack." says "home pieces" for every kind of thing. → kind-neutral, e.g. "Signed out to you: {things}. It's all in your pack." Asserted in `tests/crate-picker.test.ts:38`. |
-| `camps.ts` `CRATE_LINES` (lapsed, inCrate, notes) | Keep "Nothing is lost." Optionally one line of crate lore: the woods give back what was made with care (canon §2.7, §3.8). Pell's family history itself goes to package C. |
+| `camps.ts` `CRATE_LINES` (lapsed, inCrate, notes) | Keep "Nothing is lost." |
 | `camps.ts` `LAMP_OIL.needOil` | Matches canon. Keep. |
-| `src/lib/communal-lamps.ts:102` | "An old lamp stone, burning again. It asks for no oil." Keep; add for an unnamed lamp that it "burns hollow until a Keeper names it" (canon §3.4) if it fits the 160-character rule. |
-| `src/lib/lot-lantern.ts:26-31` | Optional: the lot's deed is its lantern's naming (canon §3.4), e.g. in the lit readout. |
-| `src/lib/wick-sap.ts:15-40`, `village-life.ts:261-302` | Optional: the sap "witnesses"; the roots reach the Deep Measure (canon §3.2). Keep it short. |
+| `src/lib/communal-lamps.ts:102` | "An old lamp stone, burning again. It asks for no oil." Keep. |
 | `homestead-placement.ts:409-411` (lantern-post name prompt) | A post on your own lot holds no land and gets a *name*, not a naming. Title "Name the lamp" → "Name the post"; body "Land only stays put where a named lamp holds it. What will you call this one?" → e.g. "A lantern post on your own ground. What will the sign call it?" Placeholder may keep "Ada’s Light". |
 | `homestead-talk.ts:305` | "before the lantern road" → "Lantern Road". |
 | `game/wilds/communal-lamps.ts:261` | Speaker "Lamp stone" is fine. |
@@ -99,8 +97,6 @@ a change outside its files, it notes it for the owning lane instead of making it
 |---|---|
 | `src/lib/village.ts:35-46` mark lines | "The White Quiet: cold is stillness." → "The Quiet: cold is stillness, and rest." "The Thaw", "The Green Hush", "The Shedding" stay. |
 | `residents.ts:131, 198, 269` | "The White Quiet" → "the Quiet". Asserted by `tests/residents.test.ts:132-144` (`/^Smoke-wick\. The White Quiet/`). |
-| `residents.ts` Elara | She is the sceptic about the Dark (canon §2.5, §7.1). Optional one line in her topics: the drift isn't angry; whatever people call the Dark, she calls geology. |
-| `pell.ts` idle lines | Add one or two lines on the family crate: his father gave it to him; the Pells have kept it for generations, studying how the land gives things back (canon §3.8). New text: owner approves the lines. |
 | `expansion-writing.ts` `BUILDER_NPC_DATA` | "I drove the lantern road twenty years." → "Lantern Road". |
 | `expansion-writing.ts:85,95`, `WILDS_INNER`, `POIS`, `TRINKETS` | Casing sweep; check POI texts against canon §2.7 (trinkets are things meant to come home). |
 | `expansion-writing.ts` `NEW_NPC_LINES` | Dead at runtime but tested; leave. |
@@ -145,7 +141,7 @@ a change outside its files, it notes it for the owning lane instead of making it
 | `content/items.json` blurbs | Sweep for "lantern road", "Iron-Oak", "lamp-stone", "White Quiet". `storm-oil` "Kept for the old ways." stays. |
 | `content/items.json:532` Ember Charm | Keep (owner). |
 | `src/content/inventory.ts` `CRAFTED_BLURBS` | Keep the `lamp-wick` blurb identical to items.json. |
-| `src/content/loading.ts` | Placeholders. Proposed (owner picks, canon O1): connect "Finding your way back…" (keep); land "Reading the lie of the land…" (keep); fetch "Trimming the wicks…"; decode "Filling the lamps…"; build "Speaking the namings…"; arrive "Parting the Whitequiet…"; paint "The land remembers you…". `loadingCopy.slow` "The road is still there." keep. |
+| `src/content/loading.ts` | Placeholders. Settled (owner): connect "Finding your way back…" (keep); land "Reading the lie of the land…" (keep); fetch "Trimming the wicks…"; decode "Filling the lamps…"; build "Speaking the namings…"; arrive "Parting the Whitequiet…"; paint "The land remembers you…". `loadingCopy.slow` "The road is still there." keep. |
 | `src/content/controls.ts:32` | "home goods" is fine for the inventory tab. |
 | `README.md:4, 102` | "lantern road" → "Lantern Road"; check the "Beyond the village" section (l.153-238) against canon (the Whitequiet, the Turning every wick). |
 | `CHANGELOG.md` Unreleased `### For players` | It is live text (What's New). "Set your home pieces…" → plain wording; casing. Old entries stay as history. |
@@ -154,7 +150,7 @@ a change outside its files, it notes it for the owning lane instead of making it
 
 ## Not in any package (decisions first)
 
-- Canon O1 (`canon.md` §14).
-- New found texts: parked, not for 0.13.0.
+
+- **Parked for 0.15 (owner):** new found texts, and new dialogue that only adds lore (Pell on his family crate, Elara as the sceptic about the Dark, the hollow-until-named lamp, the deed as a lot lantern's naming, the sap that witnesses). 0.13.0 gets fixes, renames and the lines listed here.
 - The rogue ability "Echo" keeps its name until the Practices (owner).
 - Any new mechanic in canon §13.
