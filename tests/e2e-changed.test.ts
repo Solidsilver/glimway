@@ -180,3 +180,23 @@ for (const [file, want, smoke] of [
     assert.doesNotMatch(output, /not in e2e\/changed-map\.json/, output)
   })
 }
+
+// The step-back's E2E guards (lane A9): each fix's files run the spec that guards it.
+for (const [file, guard] of [
+  ['src/game/ways-home.ts', 'ways-home.spec.ts'],
+  ['server/internal/api/ways_home.go', 'ways-home.spec.ts'],
+  ['src/game/scenes/travel-hold.ts', 'ways-home.spec.ts'],
+  ['src/game/scenes/world-turning.ts', 'ways-home.spec.ts'],
+  ['src/game/scenes/world-turning.ts', 'wilds-outer.spec.ts'],
+  ['src/ui/layers.ts', 'camps.spec.ts'],
+  ['src/ui/panel-state.svelte.ts', 'camps.spec.ts'],
+  ['src/ui/panel-state.svelte.ts', 'gifts.spec.ts'],
+  ['src/ui/CratePanel.svelte', 'camps.spec.ts'],
+  ['src/ui/GateShelfPanel.svelte', 'gifts.spec.ts'],
+  ['src/ui/InventoryPanel.svelte', 'camps.spec.ts'],
+] as const) {
+  test(`step-back guard: ${file} runs ${guard}`, () => {
+    const output = list(file)
+    assert.ok(specsOf(output).includes(guard), output)
+  })
+}

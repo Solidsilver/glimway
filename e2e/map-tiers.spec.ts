@@ -1,7 +1,7 @@
 import { expect, test } from './fixtures'
 import { accountOf, reenter, sql, wickSlack } from './connected'
 import { claimDeed, freshPlayer, fund, homes, readOn, talk } from './home-helpers'
-import { waitForLive, warp } from './helpers'
+import { chunkWhole, expectTarget, waitForLive, warp } from './helpers'
 import { lanternStake, lotOrigin } from '../src/lib/lots.ts'
 
 // A real lot lantern, read through the map's protocol. The server's unit
@@ -17,7 +17,12 @@ for (const phone of [false,true]) {
     await reenter(page)
     await page.evaluate(() => (window as unknown as { __fsHomes: { fresh(): Promise<void> } }).__fsHomes.fresh())
     const o = lotOrigin(gate), stake = lanternStake(gate,12)
-    await warp(page,'outdoors',o.tx+stake.x,o.ty+stake.y+1)
+    const lamp = { tx: o.tx+stake.x, ty: o.ty+stake.y }
+    await warp(page,'outdoors',lamp.tx,lamp.ty+1)
+    // The lantern is the lot chunk's: waitForWilds promises only that the chunk is attached, and its
+    // sliced build can still be registering the lantern's prompt (a missing prompt, CI 39138317348).
+    await chunkWhole(page, lamp)
+    await expectTarget(page, `home:lantern:${gate}`, 10)
     await talk(page,/Look at the lantern/,/Fill it with hearth oil/)
     await readOn(page,/The lantern burns/)
     await expect.poll(async () => (await homes(page)).mine?.lantern?.lit).toBe(true)

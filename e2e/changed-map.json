@@ -30,7 +30,7 @@
     },
     {
       "paths": ["server/internal/api/ways_home*.go", "src/game/ways-home.ts", "src/lib/ways-home.ts"],
-      "specs": ["camps.spec.ts"]
+      "specs": ["camps.spec.ts", "ways-home.spec.ts"]
     },
     {
       "paths": ["server/internal/api/wick_sap*.go", "src/lib/wick-sap.ts"],
@@ -512,6 +512,16 @@
     {
       "paths": ["src/ui/layers.ts"],
       "specs": ["polish.spec.ts", "onboarding-layout.spec.ts", "homestead.spec.ts", "talk.spec.ts", "party-worlds.spec.ts"]
+    },
+    {
+      "about": "The step-back's A4 guards live in camps.spec.ts: the lamp naming holds I, J and C (layers), Pell's crate reads once per take (panel-state), and the bag's camp buttons follow you into a camp (InventoryPanel).",
+      "paths": ["src/ui/layers.ts", "src/ui/panel-state.svelte.ts", "src/ui/InventoryPanel.svelte"],
+      "specs": ["camps.spec.ts"]
+    },
+    {
+      "about": "A Turning's hold and the relocations it keeps (step-back A2): ways-home.spec.ts answers a way home during the veil; wilds-outer.spec.ts turns the land in place.",
+      "paths": ["src/game/scenes/travel-hold.ts", "src/game/scenes/world-turning.ts"],
+      "specs": ["ways-home.spec.ts", "wilds-outer.spec.ts"]
     },
     {
       "paths": ["src/ui/account-flow.svelte.ts"],

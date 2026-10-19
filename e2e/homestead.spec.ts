@@ -2,12 +2,12 @@ import { goLot } from './home-helpers'
 import { expect, test, type Page } from './fixtures'
 import { serverState, sql, accountOf, CONTRACT, served, reenter, seedStory } from './connected'
 import { readFileSync } from 'node:fs'
-import { inCommons, windowWhole, waitForArea, waitForLive, player, expectAreaCard, expectToast, SERVER_ANSWER_MS } from './helpers'
+import { chunkWhole, frames, inCommons, windowWhole, waitForArea, waitForLive, player, expectAreaCard, expectToast, SERVER_ANSWER_MS } from './helpers'
 import { area, earnGlims, freshPlayer, fund, go, homeAt, homes, hurt, landOf, lane, myHome, place, readOn, shot, silasSays, talk, throughGate, type Home, DEED_BOUGHT, yardBuild, pellSays, DEEDS, AT_PELL, manageDeed, giveUpPlace } from './home-helpers'
 import { HOMESTEAD_DATA } from '../src/lib/homestead.ts'
 import { PLACES } from '../src/lib/places.ts'
 import { LAND, buildableKind, clearable, clearedSet, effectiveKind, homeLights, isLit, type Land } from '../src/lib/homestead-land.ts'
-import { homeDoorstep, lotName } from '../src/lib/lots.ts'
+import { homeDoorstep, lotName, lotOrigin } from '../src/lib/lots.ts'
 
 /**
  * Homesteads, second version, against the real Go server
@@ -250,7 +250,17 @@ test('claim and guidance, then expansion: lantern posts, naming, clearing, cotta
   const ground = await landOf(page, free.gate)
   const near = spotOn(home, ground, (x, y, k, lit) => lit && buildableKind(k) && Math.abs(x - S.x) <= 4 && y > S.y)
   await goLot(page, free.gate, near.x, near.y + 1)
+  // The warp's new scene reads the lot's home as it attaches, and a changed
+  // home rebuilds the lot chunk a frame or more later. That rebuild closes a
+  // tray opened in between, without a word (a game race, reported by lane
+  // A9; CI 39168271006, 38824358463): let the read land and the rebuild run first.
+  const lot = lotOrigin(free.gate)
+  await chunkWhole(page, { tx: lot.tx + near.x, ty: lot.ty + near.y })
+  await expect.poll(async () => (await homes(page)).reading, { timeout: SERVER_ANSWER_MS }).toBe(0)
+  await frames(page, 5)
+  await chunkWhole(page, { tx: lot.tx + near.x, ty: lot.ty + near.y })
   await page.getByTestId('arrange').click()
+  await expect(tray.locator('[data-piece="wooden-stool"]').first()).toBeVisible()
   await carryTo(page, 'wooden-stool', near.x, near.y)
   await expect(tray.getByRole('button', { name: /Set it here/ })).toBeEnabled()
   await shot(page, 'placement-land-desktop')
