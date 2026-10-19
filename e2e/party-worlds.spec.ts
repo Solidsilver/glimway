@@ -121,8 +121,11 @@ test('a settled member is asked once, then moves into the party’s world', asyn
   // The move destroyed the old game without a reload: none of its scene still
   // answers (step-back 2 2026-10-18, C1). A pack refresh keeps this world's
   // pack model (the old belt tracker swapped it for an empty one).
-  await other.evaluate(() => (window as unknown as Hooks).__fsItems.load())
-  expect(await other.evaluate(() => (window as unknown as Hooks).__fsItems() !== null), 'the pack is still read after a refresh').toBe(true)
+  await expect.poll(() => other.evaluate(async () => {
+    const hooks = window as unknown as Hooks
+    const r = (await hooks.__fsItems.load()) as { ok: boolean; code?: string }
+    return { read: r.ok ? 'ok' : r.code, view: hooks.__fsItems() !== null }
+  }), { timeout: SERVER_ANSWER_MS, message: 'the pack is still read after a refresh' }).toEqual({ read: 'ok', view: true })
   // A relocation, as a way home's landing sends it, reaches this scene (the
   // old one threw on its torn-down hero before this one heard it).
   const at = await other.evaluate(() => (window as unknown as Hooks).__fsPlayer())

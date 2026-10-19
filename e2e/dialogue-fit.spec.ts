@@ -22,7 +22,8 @@ async function openLongList(page: Page): Promise<void> {
     { text: CAMP_RULE_WORDS.done, dismiss: true }
   ]
   await waitForLive(page)
-  await page.evaluate((choices) => (window as unknown as { __fsEmit: (e: string, p: unknown) => void }).__fsEmit('ui:dialogue', { id: 'camp-rules', speaker: CAMP_RULE_WORDS.heading, lines: ['Who may build at this lamp.'], choices }), choices)
+  const talk = { id: 'camp-rules', speaker: CAMP_RULE_WORDS.heading, lines: ['Who may build at this lamp.'], choices }
+  await page.evaluate((talk) => (window as unknown as { __fsEmit: (e: string, p: unknown) => void }).__fsEmit('ui:dialogue', talk), talk)
   await expect.poll(async () => (await dialogueState(page)).choices?.length ?? 0, { message: 'the replies are shown' }).toBe(choices.length)
 }
 
