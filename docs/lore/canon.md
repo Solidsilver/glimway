@@ -141,7 +141,7 @@ in where care stops, and care stops in two ways:
   the door as wide as idleness. Rest is part of care; that is why the road was meant to go dark
   in winter, and why Quiet is a season.
 
-*[proposal, later mechanic]* A way walked several wicks running becomes **worn** and forgives
+*[later idea, `ideas.md`]* A way walked several wicks running becomes **worn** and forgives
 one missed wick. Not canon until built; the lore says only that care wears in slowly.
 
 ### 2.7 What the land gives back [shipped]
