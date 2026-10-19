@@ -3,7 +3,8 @@ import type { Locator, Request } from '@playwright/test'
 import { expect, test, type Page } from './fixtures'
 import { accountOf, moveServerClock, pinWorld, reenter, seedMarks, serverState, sql, wickSlack } from './connected'
 import { AT_PELL, DEEDS, freshPlayer, fund, go, homes, pellSays, readOn, seedDeed, shot, talk } from './home-helpers'
-import { frames, parkCreatures, player, spotsAround, standFor, waitForLive, waitForWilds, warp, windowWhole } from './helpers'
+import { SERVER_ANSWER_MS, expectToast, frames, parkCreatures, player, spotsAround, standFor, waitForLive, waitForWilds, warp, windowWhole } from './helpers'
+import { LAMP_NAMING } from '../src/content/lamp-naming.ts'
 import { calendarAt } from '../src/lib/calendar.ts'
 
 /**
@@ -288,7 +289,7 @@ test('the bag’s camp buttons follow you into the camp, and the lamp naming hol
   await expect(bag).toBeHidden()
 
   // The naming (step-back U1): its selects keep no letters, so I, J and C
-  // open nothing beneath it. (It is left open: closing it is the fixme below.)
+  // open nothing beneath it. (It is left open: closing it is the next test.)
   const naming = await openNaming(page, lamp, set)
   const dialogs = page.getByRole('dialog')
   for (const key of ['i', 'j', 'c']) {
@@ -300,14 +301,9 @@ test('the bag’s camp buttons follow you into the camp, and the lamp naming hol
   }
 })
 
-// FIXME(A9, real bug, CI 39173736738): closing the lamp naming throws. App.svelte's
-// LampNamingPanel callbacks clear `home.lampNaming` and then read `ask.lamp`, but
-// `ask` is the `{@const}` of that same field, so it is null by then:
-// "TypeError: Cannot read properties of null (reading 'lamp')" at onCancel, from
-// LampNamingPanel's Escape. EV.lampNamed is never emitted. onName has the same
-// shape, so naming a lamp likely never reaches the server either. Unquarantine
-// with the fix.
-test.fixme('Escape cancels the lamp naming and opens nothing', async ({ page }) => {
+// A10: closing the naming used to throw (App.svelte read its cleared ask;
+// CI 39173736738), so neither a cancel nor a naming was ever sent.
+test('Escape cancels the lamp naming and opens nothing', async ({ page }) => {
   test.setTimeout(150_000)
   const { lamp, set } = await keepersLamp(page)
   const naming = await openNaming(page, lamp, set)
@@ -316,4 +312,20 @@ test.fixme('Escape cancels the lamp naming and opens nothing', async ({ page }) 
   await frames(page, 10)
   await expect(page.getByRole('dialog'), 'Escape cancelled the naming and opened nothing').toHaveCount(0)
   await waitForLive(page)
+  expect(sql(`SELECT count(*) FROM lamp_namings WHERE lamp_id='${lamp}';`), 'a cancel names nothing').toBe('0')
+})
+
+test('a Keeper names their way-lamp through the panel: the server has it, the lamp answers to it', async ({ page }) => {
+  test.setTimeout(150_000)
+  const { lamp, set } = await keepersLamp(page)
+  const naming = await openNaming(page, lamp, set)
+  const short = ((await naming.getByTestId('naming-preview').locator('.short').textContent()) ?? '').replace(/^Short name:\s*/, '').trim()
+  expect(short, 'the panel previews a short name').not.toBe('')
+  await naming.getByTestId('naming-submit').click()
+  await expect(naming).toBeHidden()
+  await expectToast(page, LAMP_NAMING.named)
+  await expect.poll(() => sql(`SELECT short_name FROM lamp_namings WHERE lamp_id='${lamp}';`), { timeout: SERVER_ANSWER_MS }).toBe(short)
+  // Its first naming gives one lamp ash; the lamp's look goes by its name.
+  await expect.poll(async () => (await serverState(page)).body.state.inventory).toContain('lamp-ash')
+  await expect(page.locator('.prompt')).toContainText(`Look at ${short}`)
 })
