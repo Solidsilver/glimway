@@ -21,6 +21,8 @@ import { firstWorldCopy, worldCopy } from '../content/world-moves.ts'
 export interface FlowLink {
   readonly status: 'online' | 'offline' | 'superseded' | 'signed-out'
   readonly accountId: string
+  /** The world it plays in (it follows a move's answer). */
+  readonly worldId?: string
   readonly dirty: boolean
   reconnect(takeOver: boolean): Promise<void>
   takeOver(): Promise<void>
@@ -427,7 +429,8 @@ export class AccountFlow<S extends FlowSession> {
     // mid-build and leave its game running.
     if (this.moving?.arriving) return
     const arrived = this.arrived
-    if (arrived && arrived.session === this.host.session() && arrived.worldId === snapshot.worldId) return
+    const here = this.host.session()
+    if (arrived && arrived.session === here && (arrived.worldId === snapshot.worldId || here?.link?.worldId === snapshot.worldId)) return
     if (this.moving) this.moving.arriving = true
     else this.moving = { target: { ...NO_WORLD, id: snapshot.worldId }, home: false, view: null, arriving: true }
     this.partyPrompt = null

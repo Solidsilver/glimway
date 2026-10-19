@@ -270,6 +270,13 @@ test('a move told twice (its answer, then its operation landing) opens one new w
   assert.equal(t.played.length, 1)
   assert.equal(t.played[0]!.destroyed, null, 'the opened world stays open')
   assert.deepEqual(t.toasts, ['Welcome.'])
+  // The world's own read names the world as the opened link has it, whatever the move's answer said.
+  const u = setup({ api: { world: async () => ({}) } })
+  u.ui.account = { accountId: 'h1', name: 'Tansy' }
+  await u.flow.afterMove(snap({ worldId: '' }), 'Welcome.')
+  ;(u.played[0]!.link as unknown as { worldId: string }).worldId = 'w2'
+  await u.flow.afterMove(snap({ worldId: 'w2' }), 'Landed.')
+  assert.equal(u.played.length, 1)
   // A later move elsewhere still opens.
   await t.flow.afterMove(snap({ worldId: 'w3' }), 'Welcome back.')
   assert.equal(t.played.length, 2)

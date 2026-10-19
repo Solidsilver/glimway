@@ -121,26 +121,6 @@ test('a settled member is asked once, then moves into the party’s world', asyn
   // The move destroyed the old game without a reload: none of its scene still
   // answers (step-back 2 2026-10-18, C1). A pack refresh keeps this world's
   // pack model (the old belt tracker swapped it for an empty one).
-  // TEMP A11 diagnostic: which code makes pack models after the move.
-  const diag = await other.evaluate(async () => {
-    const { bus, EV } = (await import(/* @vite-ignore */ '/src/game/events.ts' as string)) as { bus: any; EV: Record<string, string> }
-    const stacks: string[] = []
-    const on = bus.on.bind(bus)
-    bus.on = (name: string, fn: unknown, ctx?: unknown) => {
-      if (name === EV.mutationResolved) stacks.push((new Error('new Items').stack ?? '').split('\n').slice(3, 9).map((l) => l.trim().replace(/\(?http:\/\/[^/]+/, '')).join(' < '))
-      return on(name, fn, ctx)
-    }
-    const hooks = window as unknown as Hooks
-    const r = (await hooks.__fsItems.load()) as { ok: boolean; code?: string }
-    const views: boolean[] = []
-    for (let i = 0; i < 30; i++) {
-      views.push(hooks.__fsItems() !== null)
-      await new Promise((res) => setTimeout(res, 100))
-    }
-    bus.on = on
-    return { read: r.ok ? 'ok' : r.code, views: views.map((v) => (v ? 1 : 0)).join(''), relocate: bus.listenerCount(EV.relocate), held: bus.listenerCount(EV.held), stacks }
-  })
-  console.log('A11-DIAG', JSON.stringify(diag))
   await expect.poll(() => other.evaluate(async () => {
     const hooks = window as unknown as Hooks
     const r = (await hooks.__fsItems.load()) as { ok: boolean; code?: string }
