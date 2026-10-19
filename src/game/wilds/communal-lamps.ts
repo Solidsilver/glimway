@@ -17,6 +17,7 @@
  * walking into another chunk, every half minute, and after each of your own
  * lamp operations. Drawn for the chunks around the hero.
  */
+import { onSceneEnd } from '../scene-end.ts'
 import Phaser from 'phaser'
 import type { CommunalLampView } from '../../lib/gen/glimway/v1/lamps_pb.js'
 import { COMMUNAL_LAMP_DONE, COMMUNAL_LAMP_ERRORS, COMMUNAL_POST_FRAME, ROUTE_STONE_ORIGIN_X, canLift, canRelight, communalLampLines, communalLampName, darkStoneLines, lampTiles, lampsNear, litStone, relightCost, roadStoneArt } from '../../lib/communal-lamps.ts'
@@ -88,11 +89,19 @@ export class WildsCommunalLamps {
     bus.on(EV.communalPost, onPost)
     bus.on(EV.lampStoneLook, onStone)
     bus.on(EV.lampNamed, onNamed)
-    scene.events.once('shutdown', () => {
+    onSceneEnd(scene, (destroyed) => {
       this.gone = true
       bus.off(EV.communalPost, onPost)
       bus.off(EV.lampStoneLook, onStone)
       bus.off(EV.lampNamed, onNamed)
+      // A destroyed scene took its images, tweens, bodies and markers with it.
+      if (destroyed) {
+        this.tweens = []
+        this.images = []
+        this.bodies = []
+        this.stones = []
+        return
+      }
       this.clear()
       deps.interactables.register(this, [])
     })

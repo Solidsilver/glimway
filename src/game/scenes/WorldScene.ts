@@ -395,7 +395,7 @@ export class WorldScene extends Phaser.Scene {
         this.window?.fixturesReady()
       }
       bus.on(EV.fixedReady, late)
-      this.events.once('shutdown', () => bus.off(EV.fixedReady, late))
+      onSceneEnd(this, () => bus.off(EV.fixedReady, late))
     }
     this.actions = new WorldActions({
       scene: this,
@@ -473,10 +473,10 @@ export class WorldScene extends Phaser.Scene {
       })
       // ?perf=1 samples the open map's display list and tweens (src/game/perf.ts).
       perfWatch(this)
-      this.events.once('shutdown', () => perfWatch(null))
+      onSceneEnd(this, () => perfWatch(null))
       // The HUD names the land you stand in (the meadow, the Wend) from the loaded chunks.
       setWildsLand(landName)
-      this.events.once('shutdown', () => setWildsLand(null))
+      onSceneEnd(this, () => setWildsLand(null))
       this.paths = new WildsPaths(this, {
         session: this.session,
         interactables: this.interactables,
@@ -552,14 +552,15 @@ export class WorldScene extends Phaser.Scene {
       live: () => this.worldLive(),
       act: () => this.handleAction()
     })
-    this.events.once('shutdown', () => {
+    onSceneEnd(this, (destroyed) => {
       clearMapPosition(this)
       // A restart mid-beat must never leave the HUD hidden and input blocked.
       if (this.cinematic) {
         this.cinematic = false
         bus.emit(EV.cinematic, { active: false })
       }
-      this.input.keyboard?.enableGlobalCapture()
+      // A destroyed game's keyboard went with it.
+      if (!destroyed) this.input.keyboard?.enableGlobalCapture()
     })
 
     this.session.emitArea()
@@ -574,16 +575,8 @@ export class WorldScene extends Phaser.Scene {
     this.finger = null
     this.drawFinger()
     emitPortraits(this)
-    const unlisten = listen({
-      [EV.quest]: () => this.refreshMarkers(),
-      [EV.profileChanged]: () => this.onProfileChanged(),
-      [EV.worldRefresh]: () => this.onWorldRefresh(),
-      [EV.relocate]: (p) => this.onRelocate(p),
-      [EV.notePosition]: () => this.notePosition(),
-      [EV.dialogueClosed]: (p) => this.onDialogueClosed(p)
-    })
-    this.events.once('shutdown', () => {
-      unlisten()
+    this.listenBus()
+    onSceneEnd(this, () => {
       // Epoch bump: in-flight avatar/companion loads must not add objects to a
       // dead scene or fight a rebuilt scene's own composition. Hero combat
       // timing and the avatar's carried state ride out the restart.
@@ -596,7 +589,7 @@ export class WorldScene extends Phaser.Scene {
     this.presenceArea = presenceAreaFor(this.world.areaId, { x: this.hero.sprite.x, y: this.hero.sprite.y })
     feed?.setArea(this.presenceArea)
     this.remotePlayers = createRemotePlayers(this, feed, this.presenceArea, false, this.reducedMotion)
-    this.events.once('shutdown', () => this.remotePlayers.clear())
+    onSceneEnd(this, () => this.remotePlayers.clear())
     // Pet a pet (crafts.md 2.1): your follower, friends' and the yard's.
     this.petting = new Petting(
       this,
@@ -1089,6 +1082,24 @@ export class WorldScene extends Phaser.Scene {
     const x = tileMid(spot.tx)
     const y = (spot.ty + 1) * TILE - 3
     this.finger = this.add.image(x, y, 'signpost-finger').setOrigin(0.5, 1).setAngle(-12).setDepth(y - 4)
+  }
+
+  /**
+   * The bus events this scene answers, until it ends: a restart shuts it
+   * down, a world move destroys its game. A destroyed scene still listening
+   * would answer the next world's events (its relocation, before the new
+   * scene hears it).
+   */
+  private listenBus(): void {
+    const unlisten = listen({
+      [EV.quest]: () => this.refreshMarkers(),
+      [EV.profileChanged]: () => this.onProfileChanged(),
+      [EV.worldRefresh]: () => this.onWorldRefresh(),
+      [EV.relocate]: (p) => this.onRelocate(p),
+      [EV.notePosition]: () => this.notePosition(),
+      [EV.dialogueClosed]: (p) => this.onDialogueClosed(p)
+    })
+    onSceneEnd(this, unlisten)
   }
 
   private onProfileChanged(): void {

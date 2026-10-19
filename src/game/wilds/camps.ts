@@ -13,6 +13,7 @@
  * into another chunk, every half minute, and after each of your own camp
  * operations. Drawn for the chunks around the hero.
  */
+import { onSceneEnd } from '../scene-end.ts'
 import Phaser from 'phaser'
 import type { CampResult, CampView } from '../../lib/gen/glimway/v1/camps_pb.js'
 import { CAMP_ERRORS, CAMP_RULES, campAtTile, campFrame, campHasRoom, campLampName, campLines, campLook, campNameable, campPieceName, campPlantLines, campRefusal, ownerName, campRule, campRuleLines, campSpot, campTaken, movedOffLine, moveOffLines, ruleNames, withMember, withoutMember, type CampRule } from '../../lib/camps.ts'
@@ -79,10 +80,16 @@ export class WildsCamps {
     }
     bus.on(EV.campDo, onDo)
     bus.on(EV.lampNamed, onNamed)
-    scene.events.once('shutdown', () => {
+    onSceneEnd(scene, (destroyed) => {
       this.gone = true
       bus.off(EV.campDo, onDo)
       bus.off(EV.lampNamed, onNamed)
+      // A destroyed scene took its images, bodies and markers with it.
+      if (destroyed) {
+        this.images = []
+        this.bodies = []
+        return
+      }
       this.clear()
       deps.interactables.register(this, [])
     })

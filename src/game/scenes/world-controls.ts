@@ -4,6 +4,7 @@
  * (number keys and the wheel pick what's in hand), and the mouse on the
  * world. Each acts only while the hero has control (`live`).
  */
+import { onSceneEnd } from '../scene-end'
 import Phaser from 'phaser'
 import { SWING, kindForKey, noSwingThought, stepKind } from '../../lib/belt'
 import { itemDef } from '../../lib/items'
@@ -107,7 +108,7 @@ export class WorldControls {
     bus.on(EV.cast, onCast)
     bus.on(EV.castMove, onMove)
     bus.on(EV.dodge, onDodge)
-    scene.events.once('shutdown', () => {
+    onSceneEnd(scene, () => {
       stopBelt()
       for (const key of Object.values(this.keys)) key.removeAllListeners('down')
       kb.off('keydown', this.onBeltKey, this)

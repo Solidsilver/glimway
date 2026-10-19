@@ -6,6 +6,7 @@
  * The server moves the hero and the scene follows (EV.relocate). Binding a
  * pouch to the lamp beside you (EV.waysHomeBind) needs no pause.
  */
+import { onSceneEnd } from './scene-end.ts'
 import Phaser from 'phaser'
 import { WAYS_HOME_LINES, WayPause, pauseMs, type WayHome } from '../lib/ways-home.ts'
 import { waysHomeErrorText } from '../content/errors.ts'
@@ -42,7 +43,7 @@ export class WaysHome {
     const onBind = () => void this.bind()
     bus.on(EV.waysHome, onUse)
     bus.on(EV.waysHomeBind, onBind)
-    scene.events.once('shutdown', () => {
+    onSceneEnd(scene, () => {
       bus.off(EV.waysHome, onUse)
       bus.off(EV.waysHomeBind, onBind)
       this.pause?.p.cancel()
