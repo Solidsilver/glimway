@@ -280,29 +280,33 @@
       {/if}
       <div class="content">
         <div class="tag" style={`--tag:${tagColor}`}>{speaker}</div>
-        <p class="line" aria-live="polite">{shown}<span class="caret" class:on={typing}></span></p>
-        {#if showChoices && choices}
-          <div class="choices" use:focusFirst>
-            {#each choices as c, i}
-              <button
-                type="button"
-                class="choice"
-                class:costs={!!c.action}
-                disabled={c.disabled}
-                aria-describedby={c.note ? `choice-note-${i}` : undefined}
-                onclick={(e) => { e.stopPropagation(); choose(c) }}
-              >
-                {#if !touch}<span class="kbd">{i + 1}</span>{/if}
-                <span class="label">{c.text}</span>
-                {#if c.note}
-                  <span class="note" id={`choice-note-${i}`}>
-                    {#if c.action || c.disabled}<Glim size={12} />{/if}{c.note}
-                  </span>
-                {/if}
-              </button>
-            {/each}
-          </div>
-        {:else}
+        <!-- A long talk or list (a keeper's members) scrolls here; the name and the way out stay put. -->
+        <div class="body">
+          <p class="line" aria-live="polite">{shown}<span class="caret" class:on={typing}></span></p>
+          {#if showChoices && choices}
+            <div class="choices" use:focusFirst>
+              {#each choices as c, i}
+                <button
+                  type="button"
+                  class="choice"
+                  class:costs={!!c.action}
+                  disabled={c.disabled}
+                  aria-describedby={c.note ? `choice-note-${i}` : undefined}
+                  onclick={(e) => { e.stopPropagation(); choose(c) }}
+                >
+                  {#if !touch}<span class="kbd">{i + 1}</span>{/if}
+                  <span class="label">{c.text}</span>
+                  {#if c.note}
+                    <span class="note" id={`choice-note-${i}`}>
+                      {#if c.action || c.disabled}<Glim size={12} />{/if}{c.note}
+                    </span>
+                  {/if}
+                </button>
+              {/each}
+            </div>
+          {/if}
+        </div>
+        {#if !(showChoices && choices)}
           <div class="footer">
             {#if !typing}
               <span class="next" class:more={!atLastLine}>
@@ -323,8 +327,11 @@
     position: absolute;
     left: 0;
     right: 0;
+    /* Bounded by the screen both ways: a box taller than it scrolls inside (.body). */
+    top: max(14px, env(safe-area-inset-top));
     bottom: max(14px, env(safe-area-inset-bottom));
     display: flex;
+    align-items: flex-end;
     justify-content: center;
     padding: 0 14px;
     z-index: 30;
@@ -333,17 +340,28 @@
   }
   .box {
     width: min(680px, 100%);
+    max-height: 100%;
     padding: 16px 20px 14px;
     pointer-events: auto;
     cursor: pointer;
-    display: grid;
-    grid-template-columns: 1fr;
+    display: flex;
     gap: 16px;
   }
-  .box.has-portrait {
-    grid-template-columns: auto 1fr;
+  .content {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .body {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
   }
   .portrait {
+    flex: none;
     width: 92px;
     height: 92px;
     align-self: start;
@@ -372,7 +390,8 @@
     margin-top: 0;
   }
   .tag {
-    display: inline-block;
+    align-self: flex-start;
+    flex: none;
     padding: 2px 10px 3px;
     font-family: var(--font-display);
     font-size: 15px;
@@ -424,6 +443,12 @@
     display: grid;
     gap: 8px;
     margin-top: 4px;
+  }
+  /* The last reply is the way out (Done, Leave it, Never mind): it stays in
+     view at the foot of a long list. */
+  .choice:last-child {
+    position: sticky;
+    bottom: 0;
   }
   .choice {
     display: flex;

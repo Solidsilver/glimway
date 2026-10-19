@@ -280,7 +280,7 @@
     },
     {
       "paths": ["src/content/world.ts", "src/game/entities/interactables.ts", "src/game/entities/world-talk.ts", "src/game/dialogue.ts", "src/game/entities/npcs.ts", "src/game/npc-routines.ts", "src/ui/DialoguePanel.svelte", "src/game/area/**", "src/game/worlds.ts"],
-      "specs": ["quest.spec.ts", "glims.spec.ts", "combat.spec.ts", "touches.spec.ts"]
+      "specs": ["quest.spec.ts", "glims.spec.ts", "combat.spec.ts", "touches.spec.ts", "dialogue-fit.spec.ts"]
     },
     {
       "paths": [
