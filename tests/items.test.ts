@@ -61,9 +61,9 @@ test('items.json loads with a representative set and the shared rules', () => {
   assert.equal(assetKind(itemDef('timber')!), 'material');
   assert.equal(assetKind(itemDef('lamp-wick')!), 'item');
   // Existing ids keep their names (and the new ones carry the catalogue's).
-  assert.equal(itemName('lamp-wick'), 'Lamp Wick');
-  assert.equal(itemName('whittled-fox'), 'Whittled Fox');
-  assert.equal(itemName('wooden-stool'), 'Wooden Stool', 'home goods from homestead.json');
+  assert.equal(itemName('lamp-wick'), 'Lamp wick');
+  assert.equal(itemName('whittled-fox'), 'Whittled fox');
+  assert.equal(itemName('wooden-stool'), 'Wooden stool', 'home goods from homestead.json');
 });
 
 test('gift phrases preserve makers, articles, and named pieces', () => {
@@ -181,7 +181,7 @@ test('menders stand where Silas and Orrin do', () => {
 test('a gift reads like a line someone would say', () => {
   assert.equal(giftPhrase('comfrey-salve', 1), 'a comfrey salve');
   assert.equal(giftPhrase('amber-bead', 1), 'an amber bead');
-  assert.equal(giftPhrase('lamp-wick', 2), '2 Lamp Wicks');
+  assert.equal(giftPhrase('lamp-wick', 2), '2 Lamp wicks');
   assert.equal(giftPhrase('nans-lamplighter-pole', 1), "Nan's lamplighter pole");
 });
 

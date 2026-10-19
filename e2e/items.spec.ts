@@ -121,7 +121,7 @@ test('a twist mends you; the fox goes in a pocket, and the lantern rides in the 
   const twists = await pick(page, 'item:keepers-twists')
   await expect(twists).toContainText('Mends you a little')
   await twists.getByRole('button', { name: 'Use' }).click()
-  await expect(dialog(page).getByTestId('inv-message')).toHaveText("You used Keeper's Twists.")
+  await expect(dialog(page).getByTestId('inv-message')).toHaveText("You used Keeper's twists.")
   await expect(dialog(page).getByTestId('qty-item:keepers-twists')).toHaveText('1')
   await expect.poll(async () => (await vitals(page)).hp).toBe(Math.min(before + 10, (await vitals(page)).maxHp))
 
@@ -131,7 +131,7 @@ test('a twist mends you; the fox goes in a pocket, and the lantern rides in the 
   await expect(fox).toContainText('Papers glint brighter')
   await fox.getByRole('button', { name: 'Pocket' }).click()
   await expect(fox.getByTestId('in-pocket')).toHaveText('In pocket 1')
-  await expect(dialog(page).getByTestId('pocket-1')).toContainText('Whittled Fox')
+  await expect(dialog(page).getByTestId('pocket-1')).toContainText('Whittled fox')
   await expect(dialog(page).getByTestId('carry-strip')).toContainText('A satchel, apron or coat adds a second pocket.')
   // Story keepsakes are kept: no Give.
   await expect(fox.getByRole('button', { name: /Give/ })).toHaveCount(0)

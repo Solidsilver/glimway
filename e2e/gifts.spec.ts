@@ -259,7 +259,7 @@ test('maker thank-you mail: when item made by someone else is used, maker receiv
   const salveRow = inv.locator(`[data-item="item:keepers-twists@${accountOf(idWren)}"]`)
   await expect(salveRow).toContainText('Made by Wren')
   await salveRow.getByRole('button', { name: 'Use' }).click()
-  await expect(inv.getByTestId('inv-message')).toHaveText("You used Keeper's Twists.")
+  await expect(inv.getByTestId('inv-message')).toHaveText("You used Keeper's twists.")
   // Escape closes the card, then the bag.
   await pageFinn.keyboard.press('Escape')
   if (await inv.isVisible()) await pageFinn.keyboard.press('Escape')
@@ -278,7 +278,7 @@ test('maker thank-you mail: when item made by someone else is used, maker receiv
   await expect(mailPanel).toBeVisible()
 
   // The thank-you mail appears in the mailbox
-  await expect(mailPanel).toContainText("Finn used Keeper's Twists you made.")
+  await expect(mailPanel).toContainText("Finn used Keeper's twists you made.")
   await mailPanel.locator('button', { hasText: 'Read' }).click()
 })
 

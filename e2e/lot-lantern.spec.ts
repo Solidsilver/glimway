@@ -59,7 +59,7 @@ test('fill the lot lantern, set a stool out in the backland, see the lantern lit
   const shop = page.getByRole('dialog', { name: 'Silas’s Yard' })
   await shop.getByRole('tab', { name: 'Furnish' }).click()
   await shop.locator('[data-buy="wooden-stool"]').click()
-  await expect(shop.locator('.msg.ok')).toContainText('Wooden Stool is yours')
+  await expect(shop.locator('.msg.ok')).toContainText('Wooden stool is yours')
   await shop.getByRole('button', { name: 'Close Silas’s yard' }).click()
 
   // The lantern on the back line: dark, then filled.

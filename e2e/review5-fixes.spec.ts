@@ -54,7 +54,7 @@ test('finding 2: a 200 with a truncated body is replayed with the same key, neve
   // Once unreadable: the same request is asked again at once and completes.
   await truncateNextAnswer(page, '/api/homestead/buy', 1)
   await shop.locator('[data-buy="wooden-stool"]').click()
-  await expect(shop.locator('.msg.ok')).toContainText('Wooden Stool is yours')
+  await expect(shop.locator('.msg.ok')).toContainText('Wooden stool is yours')
   expect(keys).toHaveLength(2)
   expect(keys[1]).toBe(keys[0])
   expect((await myHome(page, id)).items.filter((i) => i.itemDef === 'wooden-stool')).toHaveLength(1)
@@ -158,12 +158,12 @@ test('finding 5: crafting sends the batch it shows, after the stock runs low', a
   await stool.getByRole('button', { name: 'More' }).click()
   await expect(stool.locator('.cost')).toContainText('9 timber for 3')
   await stool.locator('[data-craft="craft-wooden-stool"]').click()
-  await expect(panel.locator('.msg.ok')).toContainText('Made 3 Wooden Stools')
+  await expect(panel.locator('.msg.ok')).toContainText('Made 3 Wooden stools')
   // Three timber left: one stool shown, one stool made.
   await expect(stool).toContainText('You can make 1')
   await expect(stool.locator('.cost')).toHaveText('3 timber')
   await stool.locator('[data-craft="craft-wooden-stool"]').click()
-  await expect(panel.locator('.msg.ok')).toContainText('Made a Wooden Stool')
+  await expect(panel.locator('.msg.ok')).toContainText('Made a Wooden stool')
 })
 
 test('finding 6: the date turns at midnight without leaving the scene', async ({ page }) => {

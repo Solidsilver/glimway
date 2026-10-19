@@ -62,14 +62,14 @@ test.describe('the pack', () => {
     await expect(supplies.getByTestId('material-timber')).toHaveText('4')
     await expect(supplies.getByTestId('material-amber')).toHaveText('1')
     await expect(supplies.getByTestId('material-stone')).toHaveCount(0)
-    await expect(supplies.getByText('Lamp Wick')).toBeVisible()
+    await expect(supplies.getByText('Lamp wick')).toBeVisible()
     await expect(supplies.locator('.badge').first()).toBeVisible()
     await shot(page, 'inventory-supplies-desktop')
 
     await page.keyboard.press('ArrowRight')
     const keep = dialog(page).getByTestId('inv-page-keepsakes')
     await expect(keep.locator('[data-cell]').first()).toContainText('Ember Charm')
-    await expect(keep.getByText('Whittled Fox')).toBeVisible()
+    await expect(keep.getByText('Whittled fox')).toBeVisible()
     await shot(page, 'inventory-keepsakes-desktop')
 
     await page.keyboard.press('ArrowRight')
@@ -209,7 +209,7 @@ test.describe('touch', () => {
     await tab(page, /Supplies/).tap()
     await expect(dialog(page).getByTestId('material-fiber')).toHaveText('3')
     await tab(page, /Keepsakes/).tap()
-    await expect(dialog(page).getByText('Tin Whistle')).toBeVisible()
+    await expect(dialog(page).getByText('Tin whistle')).toBeVisible()
     // Nothing spills off the side of the screen.
     const vw = page.viewportSize()!.width
     const box = (await dialog(page).locator('.panel').boundingBox())!
@@ -279,7 +279,7 @@ test.describe('in a world', () => {
     // Pick an icon: its card says where the pieces are.
     await goods.locator('[data-cell="decoration:wooden-stool"]').click()
     const stool = goods.locator('[data-item="decoration:wooden-stool"]')
-    await expect(stool).toContainText('Wooden Stool')
+    await expect(stool).toContainText('Wooden stool')
     await expect(stool).toContainText('1 set out · 1 put away')
     await goods.locator('[data-cell="decoration:potted-fern"]').click()
     await expect(goods.locator('[data-item="decoration:potted-fern"]')).toContainText('1 put away')

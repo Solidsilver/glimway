@@ -300,7 +300,7 @@
     },
     {
       "id": "lamp-wick",
-      "name": "Lamp Wick",
+      "name": "Lamp wick",
       "tab": "supplies",
       "kind": "part",
       "marked": true,
@@ -308,7 +308,7 @@
     },
     {
       "id": "oilcloth-wrap",
-      "name": "Oilcloth Wrap",
+      "name": "Oilcloth wrap",
       "tab": "supplies",
       "kind": "part",
       "marked": true,
@@ -316,7 +316,7 @@
     },
     {
       "id": "wooden-peg",
-      "name": "Wooden Peg",
+      "name": "Wooden peg",
       "tab": "supplies",
       "kind": "part",
       "marked": true,
@@ -336,7 +336,7 @@
       "tab": "supplies",
       "kind": "fitting",
       "fitting": "hold",
-      "blurb": "Common at old lamp-stones. Not one of the Eleven. Fitted to a tool, it wears slower."
+      "blurb": "Common at old lamp stones. Not one of the Eleven. Fitted to a tool, it wears slower."
     },
     {
       "id": "tarrow-edge-strip",
@@ -381,7 +381,7 @@
     },
     {
       "id": "keepers-twists",
-      "name": "Keeper's Twists",
+      "name": "Keeper's twists",
       "tab": "supplies",
       "kind": "consumable",
       "marked": true,
@@ -436,7 +436,7 @@
     },
     {
       "id": "whittled-fox",
-      "name": "Whittled Fox",
+      "name": "Whittled fox",
       "tab": "keepsakes",
       "kind": "keepsake",
       "bound": true,
@@ -450,7 +450,7 @@
     },
     {
       "id": "knotted-halter",
-      "name": "Knotted Ox-Halter",
+      "name": "Knotted ox-halter",
       "tab": "keepsakes",
       "kind": "keepsake",
       "bound": true,
@@ -465,7 +465,7 @@
     },
     {
       "id": "work-glove",
-      "name": "Work Glove",
+      "name": "Work glove",
       "tab": "keepsakes",
       "kind": "keepsake",
       "pocket": [
@@ -478,7 +478,7 @@
     },
     {
       "id": "river-glass-bead",
-      "name": "River Glass Bead",
+      "name": "River glass bead",
       "tab": "keepsakes",
       "kind": "keepsake",
       "pocket": [
@@ -490,7 +490,7 @@
     },
     {
       "id": "tin-whistle",
-      "name": "Tin Whistle",
+      "name": "Tin whistle",
       "tab": "keepsakes",
       "kind": "keepsake",
       "bound": true,
@@ -505,7 +505,7 @@
     },
     {
       "id": "beeswax-candle",
-      "name": "Beeswax Candle",
+      "name": "Beeswax candle",
       "tab": "keepsakes",
       "kind": "keepsake",
       "bound": true,
@@ -514,14 +514,14 @@
     },
     {
       "id": "spare-bootlace",
-      "name": "Spare Bootlace",
+      "name": "Spare bootlace",
       "tab": "keepsakes",
       "kind": "keepsake",
       "blurb": "Waxed leather, still knotted in the double hitch runners use, as if the boot came off a moment ago."
     },
     {
       "id": "road-nails",
-      "name": "Stamped Road-Nails",
+      "name": "Stamped road-nails",
       "tab": "keepsakes",
       "kind": "keepsake",
       "bound": true,
@@ -538,14 +538,14 @@
     },
     {
       "id": "tool-rack",
-      "name": "Tool Rack",
+      "name": "Tool rack",
       "tab": "home",
       "kind": "home-good",
       "blurb": "Pegs for every tool, each one's fittings on show."
     },
     {
       "id": "stone-hearth",
-      "name": "Stone Hearth",
+      "name": "Stone hearth",
       "tab": "home",
       "kind": "home-good",
       "blurb": "Where hearth recipes are made."
@@ -767,7 +767,7 @@
       "name": "Lamp head",
       "tab": "supplies",
       "kind": "part",
-      "blurb": "Iron frame, glass and a wick holder for a lantern post. Bought from Orrin or salvaged from old lamp-stones."
+      "blurb": "Iron frame, glass and a wick holder for a lantern post. Bought from Orrin or salvaged from old lamp stones."
     },
     {
       "id": "wax-seal",
@@ -821,7 +821,7 @@
     },
     {
       "id": "oil-twists",
-      "name": "Keeper's Twists (oil)",
+      "name": "Keeper's twists (oil)",
       "tab": "supplies",
       "kind": "consumable",
       "marked": true,
@@ -949,10 +949,10 @@
     },
     {
       "id": "lantern-post",
-      "name": "Lantern Post",
+      "name": "Lantern post",
       "tab": "home",
       "kind": "home-good",
-      "blurb": "Expands your land. Holds back the dark where its light falls."
+      "blurb": "A lantern post for your own ground. Its light widens the yard you can build in, and it takes a name for its sign."
     },
     {
       "id": "way-lamp",
@@ -1107,7 +1107,7 @@
     },
     {
       "id": "recipe-card-twists",
-      "name": "Recipe card: Keeper's Twists",
+      "name": "Recipe card: Keeper's twists",
       "tab": "papers",
       "kind": "paper",
       "marked": true,

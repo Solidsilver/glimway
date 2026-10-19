@@ -82,9 +82,9 @@ test('pack decorations can move (placed ones belong to the homestead); materials
     { kind: 'item', id: 'river-glass-bead', qty: 2 },
     { kind: 'decoration', id: 'wooden-stool', qty: 1 },
   ], "Joss's whistle is a story keepsake: it stays with you");
-  assert.equal(assetPhrase({ kind: 'item', id: 'tin-whistle', qty: 1 }), 'a Tin Whistle');
+  assert.equal(assetPhrase({ kind: 'item', id: 'tin-whistle', qty: 1 }), 'a Tin whistle');
   assert.equal(assetPhrase({ kind: 'material', id: 'timber', qty: 12 }), '12 timber');
-  assert.equal(assetPhrase({ kind: 'decoration', id: 'wooden-stool', qty: 2 }), '2 Wooden Stools');
+  assert.equal(assetPhrase({ kind: 'decoration', id: 'wooden-stool', qty: 2 }), '2 Wooden stools');
   // Tools go one by one, by their own id; heirlooms stay.
   const inst = (id: string, itemDef: string) => ({ id, itemDef, condition: 9, maxCondition: 90, usesLeft: 3, state: 'worn' as const, wardenSet: false, fittings: [], maker: null });
   const tools = movableAssets({ materials: {}, items: {}, decorations: {}, instances: [inst('a', 'bench-axe'), inst('b', 'bench-axe'), inst('c', 'brack-felling-axe')] });

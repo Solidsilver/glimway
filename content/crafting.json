@@ -2,21 +2,21 @@
   "utilityItems": [
     {
       "id": "lamp-wick",
-      "name": "Lamp Wick"
+      "name": "Lamp wick"
     },
     {
       "id": "oilcloth-wrap",
-      "name": "Oilcloth Wrap"
+      "name": "Oilcloth wrap"
     },
     {
       "id": "wooden-peg",
-      "name": "Wooden Peg"
+      "name": "Wooden peg"
     }
   ],
   "recipes": [
     {
       "id": "craft-wooden-stool",
-      "name": "Wooden Stool",
+      "name": "Wooden stool",
       "minTier": 2,
       "materials": {
         "timber": 3
@@ -29,7 +29,7 @@
     },
     {
       "id": "craft-potted-fern",
-      "name": "Potted Fern",
+      "name": "Potted fern",
       "minTier": 2,
       "materials": {
         "fiber": 3,
@@ -43,7 +43,7 @@
     },
     {
       "id": "craft-wash-basin",
-      "name": "Wash Basin",
+      "name": "Wash basin",
       "minTier": 2,
       "materials": {
         "stone": 4
@@ -56,7 +56,7 @@
     },
     {
       "id": "craft-woven-basket",
-      "name": "Woven Basket",
+      "name": "Woven basket",
       "minTier": 2,
       "materials": {
         "fiber": 4
@@ -69,7 +69,7 @@
     },
     {
       "id": "craft-oak-table",
-      "name": "Oak Table",
+      "name": "Oak table",
       "minTier": 2,
       "materials": {
         "seasoned-timber": 8,
@@ -83,7 +83,7 @@
     },
     {
       "id": "craft-reading-chair",
-      "name": "Reading Chair",
+      "name": "Reading chair",
       "minTier": 2,
       "materials": {
         "seasoned-timber": 6,
@@ -97,7 +97,7 @@
     },
     {
       "id": "craft-amber-sconce",
-      "name": "Amber Sconce",
+      "name": "Amber sconce",
       "minTier": 2,
       "materials": {
         "stone": 3,
@@ -111,7 +111,7 @@
     },
     {
       "id": "craft-lamp-wick",
-      "name": "Lamp Wick",
+      "name": "Lamp wick",
       "minTier": 2,
       "materials": {
         "fiber": 2
@@ -124,7 +124,7 @@
     },
     {
       "id": "craft-oilcloth-wrap",
-      "name": "Oilcloth Wrap",
+      "name": "Oilcloth wrap",
       "minTier": 2,
       "materials": {
         "fiber": 4,
@@ -138,7 +138,7 @@
     },
     {
       "id": "craft-wooden-peg",
-      "name": "Wooden Peg",
+      "name": "Wooden peg",
       "minTier": 2,
       "materials": {
         "timber": 2
@@ -694,7 +694,7 @@
     },
     {
       "id": "hearth-keepers-twists",
-      "name": "Keeper's Twists",
+      "name": "Keeper's twists",
       "minTier": 1,
       "materials": {
         "flour": 2,
@@ -726,7 +726,7 @@
     },
     {
       "id": "hearth-oil-twists",
-      "name": "Keeper's Twists (oil)",
+      "name": "Keeper's twists (oil)",
       "minTier": 1,
       "materials": {
         "flour": 2,
