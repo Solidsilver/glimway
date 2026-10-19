@@ -22,7 +22,17 @@ export function onSceneEnd(scene: { events: SceneEvents }, fn: (destroyed: boole
   const end = (destroyed: boolean) => {
     scene.events.off('shutdown', shut)
     scene.events.off('destroy', gone)
-    fn(destroyed)
+    if (!destroyed) return fn(false)
+    // A throw here would stop Phaser's teardown halfway (the rest of the
+    // scene's destroy listeners, the canvas, the loop): the old game would
+    // run on beside the next one. Finish the teardown; still report it.
+    try {
+      fn(true)
+    } catch (err) {
+      queueMicrotask(() => {
+        throw err
+      })
+    }
   }
   const shut = () => end(false)
   const gone = () => end(true)

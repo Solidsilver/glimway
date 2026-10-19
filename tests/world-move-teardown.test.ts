@@ -191,3 +191,46 @@ test('a destroyed scene’s cleanup leaves what Phaser already tore down alone',
   new WildsCommunalLamps(s as never, deps)
   s.destroy()
 })
+
+test('a destroy listener that throws still lets the rest of the teardown run, and is reported', async () => {
+  // Phaser stops its game teardown at the first throw: the old game ran on beside the new one.
+  const { onSceneEnd } = await import('../src/game/scene-end.ts')
+  const s = scene()
+  const ran: string[] = []
+  onSceneEnd(s, () => {
+    throw new Error('drew on a destroyed scene')
+  })
+  onSceneEnd(s, () => ran.push('next'))
+  const reported: unknown[] = []
+  const onUncaught = (e: unknown) => reported.push(e)
+  const listeners = process.listeners('uncaughtException')
+  process.removeAllListeners('uncaughtException')
+  process.on('uncaughtException', onUncaught)
+  try {
+    s.destroy()
+    assert.deepEqual(ran, ['next'])
+    await flush()
+    assert.equal((reported[0] as Error)?.message, 'drew on a destroyed scene')
+  } finally {
+    process.off('uncaughtException', onUncaught)
+    for (const l of listeners) process.on('uncaughtException', l)
+  }
+})
+
+test('a layer letting go of its points as the game is destroyed draws no marker', async () => {
+  // The village's chunks detach on destroy and register again (CI, party-worlds): Phaser's factory is gone.
+  const { Interactables } = await import('../src/game/entities/interactables.ts')
+  const s = scene()
+  let drawing = true
+  const image: any = new Proxy(function () {}, { get: (_t, p) => (p === 'then' ? undefined : p === 'active' ? true : image), apply: () => image })
+  const host = { ...s, add: { image: () => (drawing ? image : assert.fail('drew on a destroyed scene')) }, time: { now: 0 }, tweens: inert }
+  const it = new Interactables(host as never, { reducedMotion: true })
+  const owner = {}
+  const point = (id: string) => ({ id, x: 0, y: 0, label: id, marker: () => 'talk' as const, activate: () => {} }) as never
+  it.register(owner, [point('a')])
+  it.buildMarkers()
+  drawing = false
+  s.destroy()
+  it.register(owner, [point('b')])
+  it.register(owner, [])
+})
