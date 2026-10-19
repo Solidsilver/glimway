@@ -105,6 +105,9 @@
   import { watchPlayInsets, type Docks } from './ui/play-insets'
   import { goalTarget, pinned, pinnedOpenQuest, spotQuests, pinnedProgress, pinnedQuest, recordGuideSteps, setPinned, usePinFor } from './game/guide-pin'
   import { BLOCKS, blocked, layersUp } from './ui/layers'
+  import { loading } from './ui/loading.svelte'
+  import LoadingScreen from './ui/LoadingScreen.svelte'
+  import type { LoadKind } from './lib/loading'
   import { confirms } from './ui/confirm.svelte'
   import { setSpotQuests } from './game/room-spots'
 
@@ -474,24 +477,104 @@
   async function begin(): Promise<void> {
     if (!session || !stageEl || phase !== 'title' || starting) return
     starting = true
-    // The Wilds need their region before the first chunk builds: the world's
-    // frozen epoch, read through the link.
-    await prepareWilds(session)
-    // The Commons builds for the lane as the server holds it: reading the
-    // lane here, before the scene builds, saves a rebuild (a second ground
-    // repaint) when the scene's own read arrives and the lane has grown.
-    await homesteadsFor(session).load().catch(() => {})
-    // World text (damage numbers, exit labels) uses the display font: make
-    // sure it is ready before the first frame draws any.
+    if (await readLand(session, 'enter')) startWorld(session)
+  }
+
+  /** The boot running now: a Retry, Back or a newer world makes an older one let go. */
+  let bootRun = 0
+
+  /**
+   * Read what the first frame needs, under the loading screen's "land"
+   * stage. False when a newer boot took over, or a read failed (the loading
+   * screen offers Retry).
+   */
+  async function readLand(s: Session, kind: LoadKind): Promise<boolean> {
+    const run = ++bootRun
+    const current = () => run === bootRun && session === s
+    loading.stage('land', kind)
     try {
-      await Promise.race([document.fonts.load('10px "Pixelify Sans"'), new Promise((r) => setTimeout(r, 1200))])
+      // The Wilds need their region before the first chunk builds: the world's
+      // frozen epoch, read through the link.
+      await prepareWilds(s)
+      if (!current()) return false
+      // The Commons builds for the lane as the server holds it: reading the
+      // lane here, before the scene builds, saves a rebuild (a second ground
+      // repaint) when the scene's own read arrives and the lane has grown.
+      await homesteadsFor(s).load().catch(() => {})
+      if (!current()) return false
+      // World text (damage numbers, exit labels) uses the display font: make
+      // sure it is ready before the first frame draws any.
+      try {
+        await Promise.race([document.fonts.load('10px "Pixelify Sans"'), new Promise((r) => setTimeout(r, 1200))])
+      } catch {
+        /* fall back to monospace */
+      }
+      return current()
     } catch {
-      /* fall back to monospace */
+      if (current()) loading.fail()
+      return false
     }
-    phase = 'playing'
-    void loadWebSettings()
-    game = startGame(stageEl, session)
-    whatsNew.start()
+  }
+
+  /** Start the game for `s` (the loading screen stays until its first frame: EV.worldShown). */
+  function startWorld(s: Session): void {
+    if (phase !== 'playing') {
+      phase = 'playing'
+      void loadWebSettings()
+      game = startGame(stageEl, s)
+      whatsNew.start()
+    } else {
+      // Never beside one still running.
+      stopGame(game)
+      game = startGame(stageEl, s)
+    }
+  }
+
+  /**
+   * The loading screen's Retry. Still connecting: a fresh attempt (the
+   * account flow ends this one first). Past that: the same session boots
+   * the world again; nothing is claimed or sent anew.
+   */
+  function retryLoad(): void {
+    if (loading.view?.stage === 'connect') {
+      void account.retry()
+      return
+    }
+    const s = session
+    if (!s || !stageEl) return
+    loading.cancel('retry')
+    stopGame(game)
+    game = null
+    areaShown = false
+    panel = null
+    void readLand(s, 'retry').then((ok) => ok && startWorld(s))
+  }
+
+  /** The loading screen's way back to the title: the attempt or the session ends, and Continue starts afresh. */
+  function backFromLoad(): void {
+    if (loading.view?.stage === 'connect') {
+      account.backToTitle()
+      return
+    }
+    loading.cancel('title')
+    bootRun++
+    // Its link lets the outbox go before the next Continue claims it (src/game/link.ts close).
+    session?.destroy()
+    session = null
+    ui.link = null
+    leaveForTitle()
+  }
+
+  /** Stop the game and show the title (Continue works again). */
+  function leaveForTitle(): void {
+    resetWebSettings()
+    stopPresence()
+    stopGame(game)
+    game = null
+    areaShown = false
+    panel = null
+    starting = false
+    phase = 'title'
   }
 
   // ------------------------------------------------------------ connected play
@@ -504,6 +587,7 @@
     connect: connectedSession,
     nameOf: (snapshot, cache) => accountName(snapshot, cache),
     ui,
+    loading,
     host: {
       session: () => session,
       starting: () => starting,
@@ -515,12 +599,9 @@
         villageUi.waiting = 0
       },
       toTitle: () => {
-        resetWebSettings()
-        stopPresence()
-        stopGame(game)
-        game = null
-        areaShown = false
-        phase = 'title'
+        loading.cancel('title')
+        bootRun++
+        leaveForTitle()
       },
       reload: () => window.location.reload()
     }
@@ -549,15 +630,11 @@
       stopGame(game)
       game = null
       areaShown = false
-      await prepareWilds(next)
-      // The new world's lane may count different gates: read it before the
-      // scenes build (see begin()).
-      await homesteadsFor(next).load().catch(() => {})
-      // Another call came in meanwhile (another session, or this one again):
-      // only the latest starts a game, and never beside one still running.
-      if (call !== entering) return
-      stopGame(game)
-      game = startGame(stageEl, next)
+      // The new world's land and lane, then its game (see begin()), under the
+      // loading screen. Another call meanwhile (another session, or this one
+      // again) takes over: readLand's run says so, and only the latest starts a game.
+      if (!(await readLand(next, 'move')) || call !== entering) return
+      startWorld(next)
     } else {
       await begin()
     }
@@ -614,7 +691,8 @@
       placement: !!home.placement,
       'link-notice': !!ui.linkNotice,
       banner: ui.bannerUp,
-      reloading: update.reloading
+      reloading: update.reloading,
+      loading: loading.active
     })
   )
 
@@ -843,6 +921,8 @@
   })
 
   const showPrompt = $derived(!!ui.prompt.label && !blocked(layers, BLOCKS.actionPrompt))
+  /** The loading screen is what shows (a lease question or the move screen comes first). */
+  const loadingUp = $derived(loading.active && !account.gate && !account.moving && !leaseBlock)
 </script>
 
 <svelte:window onkeydown={onKeyGlobal} />
@@ -851,6 +931,8 @@
   <div class="stage" bind:this={stageEl}></div>
 
   {#if phase === 'playing' && session}
+    <!-- Until the world's first frame, the HUD and the touch pad are neither seen nor used (the loading screen is up). -->
+    <div class="world-ui" class:veiled={loading.active} inert={loading.active} data-testid="world-ui">
     <Hud
       onJournal={() => toggle('journal')}
       onMap={openMap}
@@ -880,6 +962,7 @@
     <!-- Under the full-screen map the touch pad is out of reach, for pointers and assistive tech alike. -->
     <div class="covered" inert={mapOpen}>{#if !home.placement}<TouchControls />{/if}</div>
     <HomeBar hidden={blocked(layers, BLOCKS.homeBar)} dockBottom={controlsDock} />
+    </div>
     <Banners />
     <Toasts />
     <Moments {session} />
@@ -969,8 +1052,8 @@
     {/if}
   {/if}
 
-  {#if phase !== 'playing'}
-    <div class="title-screen">
+  {#if phase !== 'playing' || loadingUp}
+    <div class="title-screen" class:entering={loadingUp}>
       <img class="bg" src="/assets/fingersnap/packed/fingersnap-village.webp" alt="" />
       <div class="shade" aria-hidden="true"></div>
       <div class="fireflies" aria-hidden="true">
@@ -986,7 +1069,9 @@
           <p class="tagline">Relight the old lantern road.</p>
         </div>
 
-        {#if phase === 'loading'}
+        {#if loadingUp && loading.view}
+          <LoadingScreen view={loading.view} onRetry={retryLoad} onBack={backFromLoad} />
+        {:else if phase === 'loading'}
           <p class="status"><span class="spark"></span> Lighting the lamps…</p>
         {:else}
           <div class="actions">
@@ -1211,6 +1296,14 @@
   }
   @keyframes prompt-in {
     from { opacity: 0; transform: translate(-50%, 6px); }
+  }
+
+  /* The HUD group while the loading screen is up: kept mounted (it listens), not seen. */
+  .world-ui {
+    display: contents;
+  }
+  .world-ui.veiled {
+    visibility: hidden;
   }
 
   /* ---- title screen ---- */

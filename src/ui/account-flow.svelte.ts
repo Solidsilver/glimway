@@ -16,6 +16,7 @@ import type { Snapshot, WorldChoice, WorldMoveResponse, WorldRef, WorldView } fr
 import type { HabiticaProfile, VitalsSource } from '../lib/habitica/types.ts'
 import { accountCopy, leaseCopy } from '../content/connected.ts'
 import { firstWorldCopy, worldCopy } from '../content/world-moves.ts'
+import { loadingCopy } from '../content/loading.ts'
 
 /** What the flow needs of a session's link (src/game/link.ts). */
 export interface FlowLink {
@@ -91,6 +92,15 @@ export interface AccountDeps<S extends FlowSession> {
   host: AccountHost<S>
   /** How long logging out waits for the last upload. */
   logoutWaitMs?: number
+  /** The loading screen, told when connecting starts, fails or gives way to a gate. */
+  loading?: FlowLoading
+}
+
+/** The loading screen's stage model (src/ui/loading.svelte.ts), as far as connecting goes. */
+export interface FlowLoading {
+  begin(kind: 'enter' | 'retry', stage: 'connect'): void
+  fail(): void
+  cancel(outcome?: 'retry' | 'title' | 'cancelled'): void
 }
 
 /** A step between signing in and playing: the world choice or the lease. */
@@ -139,6 +149,10 @@ export class AccountFlow<S extends FlowSession> {
   leaverNotice = $state<WorldView | null>(null)
   /** A connected session waiting for the player to take over the lease. */
   private pending: S | null = null
+  /** Continue's attempt: a Retry or Back from the loading screen abandons it (`abandon`). */
+  private attempt = 0
+  /** The attempt's session, made but not yet playing. */
+  private attempting: S | null = null
   private deps: AccountDeps<S>
 
   constructor(deps: AccountDeps<S>) {
@@ -191,21 +205,68 @@ export class AccountFlow<S extends FlowSession> {
   }
 
   /** Title: Continue in your world. */
-  async continue(): Promise<void> {
+  async continue(kind: 'enter' | 'retry' = 'enter'): Promise<void> {
     if (this.busy || this.host.starting() || (!this.ui.account && !this.choice)) return
     this.busy = true
     this.error = ''
+    const attempt = ++this.attempt
+    const current = () => attempt === this.attempt
     try {
       if (this.choice) {
         await this.openWorldChoice(this.choice)
         return
       }
+      this.loading?.begin(kind, 'connect')
       const s = await this.deps.connect({ snapshot: this.snapshot, cache: await this.deps.cache.load(this.ui.account!.accountId), name: this.ui.account!.name })
+      if (!current()) {
+        // Abandoned while it was being made: it never plays.
+        s.destroy(true)
+        return
+      }
+      this.attempting = s
       await s.link!.reconnect(false)
+      // Abandoned meanwhile: `abandon` ended its session.
+      if (!current()) return
+      this.attempting = null
       await this.settle(s)
+    } catch {
+      // The loading screen says so and offers Retry, or the title (without one, the title says so).
+      if (current()) {
+        if (this.loading) this.loading.fail()
+        else this.error = loadingCopy.titleError
+      }
     } finally {
-      this.busy = false
+      if (current()) this.busy = false
     }
+  }
+
+  /**
+   * The loading screen's Retry while connecting: this attempt's session ends
+   * (its link lets the outbox go first: src/game/link.ts close) and a fresh
+   * attempt starts. Both are this page's own client, so the server keeps one
+   * lease; what the outbox holds is sent once, by the new link.
+   */
+  async retry(): Promise<void> {
+    this.abandon()
+    this.loading?.cancel('retry')
+    await this.continue('retry')
+  }
+
+  /** The loading screen's way back to the title while connecting. */
+  backToTitle(): void {
+    this.abandon()
+    this.loading?.cancel('title')
+  }
+
+  private abandon(): void {
+    this.attempt++
+    this.attempting?.destroy(true)
+    this.attempting = null
+    this.busy = false
+  }
+
+  private get loading(): FlowLoading | undefined {
+    return this.deps.loading
   }
 
   /** The guide signed in to the server (or the world choice was just answered). */
@@ -332,11 +393,14 @@ export class AccountFlow<S extends FlowSession> {
   private async settle(s: S): Promise<void> {
     const status = s.link!.status
     if (status === 'superseded') {
+      // The lease question takes the screen.
+      this.loading?.cancel()
       this.pending = s
       this.gate = { kind: 'elsewhere', busy: false, error: '' }
       return
     }
     if (status === 'signed-out') {
+      this.loading?.cancel('title')
       s.destroy(true)
       this.ui.link = null
       this.snapshot = null
@@ -435,6 +499,7 @@ export class AccountFlow<S extends FlowSession> {
     else this.moving = { target: { ...NO_WORLD, id: snapshot.worldId }, home: false, view: null, arriving: true }
     this.partyPrompt = null
     this.leaverNotice = null
+    let entering: S | null = null
     try {
       // Its link already adopted the move's answer; nothing is left to upload.
       this.host.session()?.destroy(true)
@@ -443,10 +508,18 @@ export class AccountFlow<S extends FlowSession> {
       const s = await this.deps.connect({ snapshot, cache: null, name })
       this.arrived = { session: s, worldId: snapshot.worldId }
       await s.link!.reconnect(false)
-      await this.settle(s)
+      // The new world is this account's now (a Continue from the title opens it),
+      // and the loading screen takes the arrival from here: the land reads can
+      // stall, and it has Retry and the way back; the move screen has neither.
+      this.snapshot = snapshot
       this.moving = null
+      entering = s
+      await this.settle(s)
+      // Left meanwhile (Back to the title): this arrival is no longer the player's.
+      if (this.host.session() !== s) return
       this.ui.toast({ text: line, icon: 'world' })
     } catch {
+      if (entering && this.host.session() !== entering) return
       // The move stands on the server; this page couldn't open the new
       // world. Back to the title, where Continue steps in.
       this.moving = null

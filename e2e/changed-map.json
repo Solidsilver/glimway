@@ -555,6 +555,11 @@
       "specs": ["connected.spec.ts", "party-worlds.spec.ts", "coop.spec.ts"]
     },
     {
+      "about": "Entering the world (lane A13): the loading screen, its stages and timings, Retry and Back, and the boot and dark start that end it.",
+      "paths": ["src/lib/loading.ts", "src/lib/load-timings.ts", "src/content/loading.ts", "src/ui/loading.svelte.ts", "src/ui/LoadingScreen.svelte", "src/ui/layers.ts", "src/ui/account-flow.svelte.ts", "src/game/scenes/BootScene.ts", "src/game/scenes/fade-hold.ts", "src/game/sync-safety.ts", "src/game/main.ts", "src/game/session.ts", "src/App.svelte"],
+      "specs": ["loading.spec.ts"]
+    },
+    {
       "paths": ["src/ui/play-insets.ts"],
       "specs": ["camera.spec.ts", "touch.spec.ts", "onboarding-layout.spec.ts"]
     },

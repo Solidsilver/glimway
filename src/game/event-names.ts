@@ -17,6 +17,9 @@ import type { ResidentsMetPayload } from './residents'
 import type { SoundCue } from './sound-bank'
 import type { VillagePanel } from './village'
 
+/** Boot's report to the loading screen: the stage it is in, how far (0–1), a fact, or a failure. */
+export type LoadStagePayload = { stage?: 'fetch' | 'decode' | 'build' | 'arrive' | 'paint'; progress?: number; note?: [string, string]; failed?: boolean }
+
 /**
  * Event names and payloads for the bus (src/game/events.ts): the one registry.
  * Kept free of Phaser so plain modules (the server link) and Node tests can
@@ -99,6 +102,10 @@ export const EV = {
   wilds: 'ui:wilds',
   /** Every fixed footprint's chunks have arrived (src/game/wilds/fixed.ts). */
   fixedReady: 'game:fixed-ready',
+  /** Booting the world (BootScene, WorldScene): a stage, its progress, or a fact for the load timings (src/ui/loading.svelte.ts). */
+  loadStage: 'game:load-stage',
+  /** A world build's dark start lifted: the world is drawn (WorldScene). */
+  worldShown: 'game:world-shown',
   /** The dev/playtest clock moved (the calendar and the outer Wilds follow). */
   clock: 'game:clock',
   /** The outer Wilds turned under the player (an ended epoch): { reason }. */
@@ -509,6 +516,8 @@ export interface EventMap {
   [EV.fallSettled]: { lantern: string }
   [EV.wilds]: WildsPayload
   [EV.fixedReady]: void
+  [EV.loadStage]: LoadStagePayload
+  [EV.worldShown]: void
   [EV.clock]: void
   [EV.turning]: { reason: 'epoch-ended' }
   [EV.planted]: { plant: HomePlantView; gate: number; worldId: string }

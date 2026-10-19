@@ -48,6 +48,9 @@ test('fill the lot lantern, set a stool out in the backland, see the lantern lit
   test.setTimeout(240_000)
   const id = await freshPlayer(page, 'Wick')
   fund(id, { items: { 'hearth-oil': 1 } })
+  // The pack was read when the world opened: read it again, or the oil is
+  // only known if that read happened to land after the fund.
+  await page.evaluate(() => (window as unknown as { __fsItems: { load: () => Promise<unknown> } }).__fsItems.load())
   seedGlims(id, 20)
   const gate = await claimDeed(page)
 

@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { BLOCKS, blocked, layersUp, type Layer, type LayerFlags } from '../src/ui/layers.ts'
 
-const LAYERS: Layer[] = ['gate', 'lease', 'move', 'confirm', 'logout', 'naming', 'leave-deed', 'panel', 'ending', 'dialogue', 'cinematic', 'placement', 'link-notice', 'banner', 'reloading']
+const LAYERS: Layer[] = ['gate', 'lease', 'move', 'confirm', 'logout', 'naming', 'leave-deed', 'panel', 'ending', 'dialogue', 'cinematic', 'placement', 'link-notice', 'banner', 'reloading', 'loading']
 
 /**
  * The five predicates as App.svelte wrote them out by hand before the layer
@@ -11,20 +11,22 @@ const LAYERS: Layer[] = ['gate', 'lease', 'move', 'confirm', 'logout', 'naming',
  * - a confirm (nested in a panel, or the log-out one) holds everything a
  *   panel does, and App's keys too;
  * - a naming holds App's keys: the lamp naming has no text field, so J, C
- *   and I opened a panel under it that took its focus.
+ *   and I opened a panel under it that took its focus;
+ * - the loading screen (entering the world) holds App's keys, the notices,
+ *   the action prompt and the homestead bar, but not the world's input.
  */
 function before(f: LayerFlags) {
   const panel = f.panel, gate = f.gate, leaseBlock = f.lease, moving = f.move, confirmLogout = f.logout, confirm = f.confirm
   const namePrompt = f.naming, leaveAsk = f['leave-deed'], endingOpen = f.ending, dialogueOpen = f.dialogue, cinematic = f.cinematic
-  const placement = f.placement, linkNotice = f['link-notice'], bannerUp = f.banner, reloading = f.reloading
+  const placement = f.placement, linkNotice = f['link-notice'], bannerUp = f.banner, reloading = f.reloading, loading = f.loading
   return {
     worldInput: confirm || panel || endingOpen || gate || leaseBlock || namePrompt || leaveAsk || moving,
-    appKeys: confirm || dialogueOpen || cinematic || gate || leaseBlock || moving || reloading || endingOpen || namePrompt,
+    appKeys: confirm || dialogueOpen || cinematic || gate || leaseBlock || moving || reloading || endingOpen || namePrompt || loading,
     notices: !(
-      !confirm && !moving && !linkNotice && !panel && !cinematic && !dialogueOpen && !endingOpen && !leaseBlock && !gate && !confirmLogout && !placement && !namePrompt && !leaveAsk && !bannerUp
+      !confirm && !moving && !linkNotice && !panel && !cinematic && !dialogueOpen && !endingOpen && !leaseBlock && !gate && !confirmLogout && !placement && !namePrompt && !leaveAsk && !bannerUp && !loading
     ),
-    actionPrompt: !(!dialogueOpen && !panel && !cinematic && !endingOpen && !placement),
-    homeBar: panel || dialogueOpen || cinematic || gate || leaseBlock
+    actionPrompt: !(!dialogueOpen && !panel && !cinematic && !endingOpen && !placement) || loading,
+    homeBar: panel || dialogueOpen || cinematic || gate || leaseBlock || loading
   }
 }
 
