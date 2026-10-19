@@ -54,7 +54,11 @@ deploy.
    two flaky tests (decision 61 in
    [decisions-overnight.md](decisions-overnight.md)); the release commit's own
    run must be one of them or come after them. A red run is fixed forward on
-   `dev`, never by moving `main`.
+   `dev`, never by moving `main`. Read the step summary's helper retries
+   next to the flaky count: a press or send a helper repeated inside a test
+   that passed (a walking resident, the fight-join fixture). Playwright can't
+   count them as flaky, so report both numbers with the runs; a test that
+   keeps needing them is a flake to chase like any other.
 5. **Rehearse the upgrade** on the release commit, against a copy of the live
    database. The owner copies the newest *verified* live backup (from
    `/var/lib/glimway-server/backups/`, only the `.sqlite` file) to a path the
