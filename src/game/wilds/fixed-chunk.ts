@@ -47,6 +47,8 @@ export interface FixedHooks {
   attach(key: string): (() => void)[]
   detach(key: string, refreshing?: boolean): void
   late?(key: string): (() => void)[]
+  /** The chunk must not be rebuilt now (a lot mid-placement): its rebuild waits. */
+  busy?(key: string): boolean
 }
 
 export interface FixedChunkDeps {

@@ -1115,12 +1115,15 @@
     <LampNamingPanel
       landmarks={ask.landmarks}
       onName={(parts) => {
+        // `ask` follows home.lampNaming: read it before the field is cleared.
+        const { lamp, kind } = ask
         home.lampNaming = null
-        bus.emit(EV.lampNamed, { lamp: ask.lamp, kind: ask.kind, parts })
+        bus.emit(EV.lampNamed, { lamp, kind, parts })
       }}
       onCancel={() => {
+        const { lamp, kind } = ask
         home.lampNaming = null
-        bus.emit(EV.lampNamed, { lamp: ask.lamp, kind: ask.kind, parts: null })
+        bus.emit(EV.lampNamed, { lamp, kind, parts: null })
       }}
     />
   {/if}

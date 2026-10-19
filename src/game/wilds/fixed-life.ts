@@ -77,6 +77,10 @@ export class FixedLife implements FixedHooks {
     return homes.attach(key)
   }
 
+  busy(key: string): boolean {
+    return this.homeKeys.has(key) && !!this.deps.homes()?.busy?.(key)
+  }
+
   detach(key: string, refreshing = false): void {
     const { world, npcs, talk, pickups, papers, repairs, touches, village } = this.deps
     const ids = fixedNpcs(key).map((n) => n.id)
