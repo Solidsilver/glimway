@@ -65,7 +65,7 @@ a change outside its files, it notes it for the owning lane instead of making it
 | `world.ts` `DIALOGUE`, `locations`, `ROOM_CARDS` | Casing sweep: "lantern road" → "Lantern Road" (`:139` eyebrow, `:326`, `:424`, `:529`). |
 | `world.ts:140` | "Iron-oak" at a sentence start is fine; check others. |
 | `world.ts:697` (hearth) | "Embers keep low…" is literal fire, keep. Optional: one clause that the Wick Tree's lamp "witnesses" the square (canon §3.2). |
-| `world.ts:102-105` Ember Charm | Wait for canon O2. |
+| `world.ts:102-105` Ember Charm | Keep (owner, 2026-10-19). |
 | `world.ts` journal `The Drift's Sway` / `Finding the Anchor` | Keep titles; body may name the state **unmoored** (canon §2.5). Journal titles are asserted in `tests/residents.test.ts:79-80`. |
 | `quests/index.ts:83` `roadGoal` | "The lantern road glows again" → "The Lantern Road". |
 | `content/quests.json:6,25` | Casing: "lantern road" → "Lantern Road". |
@@ -73,7 +73,6 @@ a change outside its files, it notes it for the owning lane instead of making it
 | `quests/signpost.ts` | No direction change: the signpost's east finger and the east gate stay. Check the glim line ("a bead of amber, cut to the Count House's measure") against canon §3.1; optionally add "light from kept promises". |
 | `App.svelte:1069`, `index.html:7` | "Relight the old lantern road." → "Relight the old Lantern Road." |
 | `Moments.svelte` | No change ("A road is a promise people keep renewing." fits). |
-| **New text (canon O4, owner first)** | Orrin's line on Hesper's joint, as an after-quest line. |
 
 ## B. Lamps, land, the crate, oil and ways home
 
@@ -85,7 +84,7 @@ a change outside its files, it notes it for the owning lane instead of making it
 | `src/lib/communal-lamps.ts:102` | "An old lamp stone, burning again. It asks for no oil." Keep; add for an unnamed lamp that it "burns hollow until a Keeper names it" (canon §3.4) if it fits the 160-character rule. |
 | `src/lib/lot-lantern.ts:26-31` | Optional: the lot's deed is its lantern's naming (canon §3.4), e.g. in the lit readout. |
 | `src/lib/wick-sap.ts:15-40`, `village-life.ts:261-302` | Optional: the sap "witnesses"; the roots reach the Deep Measure (canon §3.2). Keep it short. |
-| `homestead-placement.ts:410-504` (lantern-post name prompt) | Wait for canon O1. Its "Land only stays put where a named lamp holds it" stays true. |
+| `homestead-placement.ts:409-411` (lantern-post name prompt) | A post on your own lot holds no land and gets a *name*, not a naming. Title "Name the lamp" → "Name the post"; body "Land only stays put where a named lamp holds it. What will you call this one?" → e.g. "A lantern post on your own ground. What will the sign call it?" Placeholder may keep "Ada’s Light". |
 | `homestead-talk.ts:305` | "before the lantern road" → "Lantern Road". |
 | `game/wilds/communal-lamps.ts:261` | Speaker "Lamp stone" is fine. |
 | `content/homestead.json` `lampNaming` | No change. Check the site phrase "the old lamp stone" has no hyphen. |
@@ -136,7 +135,6 @@ a change outside its files, it notes it for the owning lane instead of making it
 | `docs/design/magic.md` | Header note: the four class-locked crafts are superseded by the Practices (canon §5, later); the class is a lean. |
 | `docs/roadmap.md` 0.15 | Name what waits at Dorrit's Span: Hesper, bound in the brackets (canon §4.6). |
 | `docs/ideas.md` | Add: **worn ways** (a way walked several wicks running forgives a missed wick, canon §2.6); the **animal overhaul** (ordinary and corrupted animals; wisps and beetles explained then). |
-| **New texts (canon O4, owner first)** | A Pell family ledger page; a folk telling of the Unyoking; possibly a Hesper text. Each needs a `papers.ts` entry and a place to be found. |
 
 ## F. Items, help, loading and player docs
 
@@ -145,9 +143,9 @@ a change outside its files, it notes it for the owning lane instead of making it
 | `content/items.json:302` `lamp-wick` | "Lamp Wick" → "Lamp wick"; also `crafting.json:5`. Asserted in `tests/items.test.ts:64,184` ("2 Lamp Wicks"), `tests/inventory.test.ts:44`, `e2e/inventory.spec.ts:65`. |
 | `content/items.json:951` `lantern-post`, `furnishings.json` | "Lantern Post" → "Lantern post". Asserted in `e2e/homestead.spec.ts:231-240,435`. Its blurb is duplicated in `expansion-writing.ts` (package C): agree the text with C, or leave the blurb. |
 | `content/items.json` blurbs | Sweep for "lantern road", "Iron-Oak", "lamp-stone", "White Quiet". `storm-oil` "Kept for the old ways." stays. |
-| `content/items.json:532` Ember Charm | Wait for canon O2. Asserted in `tests/inventory.test.ts:25`, `e2e/inventory.spec.ts:71`. |
+| `content/items.json:532` Ember Charm | Keep (owner). |
 | `src/content/inventory.ts` `CRAFTED_BLURBS` | Keep the `lamp-wick` blurb identical to items.json. |
-| `src/content/loading.ts` | Placeholders. Proposed (owner picks, canon O5): connect "Finding your way back…" (keep); land "Reading the lie of the land…" (keep); fetch "Trimming the wicks…"; decode "Filling the lamps…"; build "Speaking the namings…"; arrive "Parting the Whitequiet…"; paint "The land remembers you…". `loadingCopy.slow` "The road is still there." keep. |
+| `src/content/loading.ts` | Placeholders. Proposed (owner picks, canon O1): connect "Finding your way back…" (keep); land "Reading the lie of the land…" (keep); fetch "Trimming the wicks…"; decode "Filling the lamps…"; build "Speaking the namings…"; arrive "Parting the Whitequiet…"; paint "The land remembers you…". `loadingCopy.slow` "The road is still there." keep. |
 | `src/content/controls.ts:32` | "home goods" is fine for the inventory tab. |
 | `README.md:4, 102` | "lantern road" → "Lantern Road"; check the "Beyond the village" section (l.153-238) against canon (the Whitequiet, the Turning every wick). |
 | `CHANGELOG.md` Unreleased `### For players` | It is live text (What's New). "Set your home pieces…" → plain wording; casing. Old entries stay as history. |
@@ -156,7 +154,7 @@ a change outside its files, it notes it for the owning lane instead of making it
 
 ## Not in any package (decisions first)
 
-- Canon O1–O5 (`canon.md` §14).
-- The rogue ability "Echo" (canon O3) is a game ability name in `content/abilities.json` with
-  tests; renaming it is a small code-adjacent change, not a lore lane's.
+- Canon O1 (`canon.md` §14).
+- New found texts: parked, not for 0.13.0.
+- The rogue ability "Echo" keeps its name until the Practices (owner).
 - Any new mechanic in canon §13.

@@ -676,19 +676,16 @@ the far light at Sallow Ford; healing the Crack.
 
 ## 14. Open questions
 
-See `open-questions.md` once this draft is reviewed. For now:
+Still open:
 
-- **O1** Homestead lantern posts take a free-text name with examples like "Ada's Light"
-  (`homestead-placement.ts`). Canon says a naming is made from parts and is never after anyone.
-  Call the post's label a *name* (a sign), not a *naming*, or move posts to parts?
-- **O2** The **Ember Charm** keepsake comes from the embers era. Keep it as a charm (literal
-  embers, like the hearth's), rename it, or retire it?
-- **O3** The rogue ability **Echo** (`content/abilities.json`) shares a word with the Echoes of
-  the Six. Rename it (for example "Afterimage", "Double") or leave it until the Practices replace
-  the class abilities?
-- **O4** New found texts the canon invites: a Pell family ledger page of things that never came
-  back; a folk telling of the Unyoking; Orrin on Hesper's joint ("Hesper named it. I carved it.
-  Worst joint I ever made. It's the only one that's never leaned."). The owner writes them, or
-  approves drafts, before an apply lane adds them.
-- **O5** The loading lines (`src/content/loading.ts`) were placeholders. Proposed set in
+- **O1** The loading lines (`src/content/loading.ts`) were placeholders. Proposed set in
   `apply-map.md`; the owner picks.
+
+Settled at review (2026-10-19):
+
+- A homestead lantern post's label is a **name**, like a house name on a sign, not a naming.
+  Only lamps that hold land in the Wilds get namings.
+- The **Ember Charm** stays: literal embers, a charm that holds a coal's warmth.
+- The rogue ability **Echo** keeps its name until the Practices replace the class abilities.
+- **New found texts** (a Pell ledger page, a folk telling of the Unyoking, Orrin on Hesper's
+  joint) are parked: not for 0.13.0.
