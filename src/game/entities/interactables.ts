@@ -110,7 +110,19 @@ export class Interactables {
   constructor(scene: Phaser.Scene, deps: { reducedMotion: boolean }) {
     this.scene = scene
     this.deps = deps
+    // Made before the layers that register here, so this hears the end first.
+    if (scene.events) onSceneEnd(scene, (destroyed) => {
+      this.destroyed = destroyed
+    })
   }
+
+  /**
+   * The game was destroyed (a world move): Phaser's factories are gone, and
+   * a layer letting go of its points mid-teardown must draw nothing. A
+   * throw there would stop Phaser's teardown halfway and leave the old game
+   * running beside the new one.
+   */
+  private destroyed = false
 
   /** Replace an owner's points (and their markers). The old ones leave the list in one pass (an owner can have hundreds: a chunk's pieces). */
   register(owner: object, points: readonly Interactable[]): void {
@@ -125,6 +137,7 @@ export class Interactables {
     if (points.length) this.byOwner.set(owner, points)
     else this.byOwner.delete(owner)
     this.list.push(...points)
+    if (this.destroyed) return
     if (this.markersBuilt) {
       for (const it of points) this.addMarker(it)
       this.refreshMarkers()
@@ -331,7 +344,7 @@ export class Interactables {
   }
 
   private addMarker(it: Interactable): void {
-    if (!it.marker || this.markers.has(it)) return
+    if (!it.marker || this.markers.has(it) || this.destroyed) return
     const img = this.scene.add
       .image(it.x, it.y - (it.markerOffset ?? DEFAULT_MARKER_OFFSET), 'mark-quest')
       .setOrigin(0.5, 1)

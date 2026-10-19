@@ -430,7 +430,8 @@ export class Link {
   private readonly now: () => number
   private readonly serverClock: () => number
   private readonly locks: LockLike | null
-  private readonly channel: ChannelLike | null
+  /** Null once stopped: a closed BroadcastChannel throws on every post. */
+  private channel: ChannelLike | null
   private lock: HeldLock | null = null
   /** The record's fence while this tab owns it (null: not the owner, never writes). */
   private fence: number | null = null
@@ -2439,6 +2440,9 @@ export class Link {
     if (this.channel) {
       this.channel.onmessage = null
       this.channel.close()
+      // A save still draining (a report, a queued change) lands after this:
+      // its record is stored, and it tells no other tab.
+      this.channel = null
     }
     if (typeof window !== 'undefined') window.removeEventListener('online', this.onOnline)
   }

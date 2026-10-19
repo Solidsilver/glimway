@@ -145,6 +145,8 @@
 
   let stageEl: HTMLDivElement
   let game: Phaser.Game | null = null
+  /** enterSession's calls mid-game, counted: only the latest starts a game. */
+  let entering = 0
   let session = $state<Session | null>(null)
   const touch = isTouchFirst()
   // Quests come first at a room's spots (the sponge bowl, the hoist, the reading lamp).
@@ -521,7 +523,11 @@
       void loadWebSettings()
       game = startGame(stageEl, s)
       whatsNew.start()
-    } else game = startGame(stageEl, s)
+    } else {
+      // Never beside one still running.
+      stopGame(game)
+      game = startGame(stageEl, s)
+    }
   }
 
   /**
@@ -619,12 +625,16 @@
     // Presence follows connected play (and its lease).
     startPresence(next.link!)
     if (phase === 'playing') {
+      const call = ++entering
       panel = null
       stopGame(game)
       game = null
       areaShown = false
-      // The new world's land and lane, then its game (see begin()), under the loading screen.
-      if (await readLand(next, 'move')) startWorld(next)
+      // The new world's land and lane, then its game (see begin()), under the
+      // loading screen. Another call meanwhile (another session, or this one
+      // again) takes over: readLand's run says so, and only the latest starts a game.
+      if (!(await readLand(next, 'move')) || call !== entering) return
+      startWorld(next)
     } else {
       await begin()
     }

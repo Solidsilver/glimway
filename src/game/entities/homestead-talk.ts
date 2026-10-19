@@ -400,11 +400,16 @@ export class HomesteadTalk {
 
   private async fillLantern(gate: number): Promise<void> {
     const r = await this.home.homes.act({ op: 'lantern', gate })
-    if (!r.ok) return this.say({ speaker: 'Lot Lantern', lines: [r.text] })
+    if (!r.ok) {
+      // Gone meanwhile (a door, a world move): the refusal is still told, the stake stays behind.
+      if (this.home.gone) return void bus.emit(EV.toast, { text: r.text, icon: 'lantern', kind: 'error' })
+      return this.say({ speaker: 'Lot Lantern', lines: [r.text] })
+    }
     // Its backland holds again (or longer): the land chip asks again.
     invalidateLand()
     void itemsFor(this.deps.session).load()
     const home = await this.home.homes.fetchHome(gate)
+    if (this.home.gone) return
     sfx('settle')
     this.say({ speaker: 'Lot Lantern', lines: lanternLines(home?.lantern, HOMESTEAD_DATA.lotLantern.maxWicks, lotName(gate)) })
   }
@@ -455,6 +460,9 @@ export class HomesteadTalk {
   }
 
   private say(d: Dialogue): void {
+    // A late answer's talk belongs to the layer it was asked in: once that has
+    // gone, it would open over the next scene (or a restart of this one).
+    if (this.home.gone) return
     openDialogue({ id: 'home', speaker: d.speaker, lines: d.lines, choices: d.choices })
   }
 
@@ -634,6 +642,7 @@ export class HomesteadTalk {
     }
     bus.emit(EV.notePosition)
     const r = await this.home.homes.act({ op: 'place', itemId, scene: 'gate', x: 0, y: 0, rotation: 0 })
+    if (this.home.gone) return
     if (r.ok) {
       sfx('pop')
       this.deps.rebuild()
@@ -673,7 +682,7 @@ export class HomesteadTalk {
     if (!link) return
     bus.emit(EV.notePosition)
     const r = await link.recoveryCollect()
-    if (!this.scene.sys.isActive()) return
+    if (this.home.gone || !this.scene.sys.isActive()) return
     if (!r.ok) {
       sfx('fizzle')
       this.say({ speaker: PELL.name, lines: [homeErrorText(r.code)] })
@@ -691,7 +700,7 @@ export class HomesteadTalk {
     const back = this.home.homes.gateInfo(gate)?.reclaim ?? false
     const price = this.home.homes.gateInfo(gate)?.price ?? HOMESTEAD_DATA.deeds.glims
     const r = await this.home.homes.claim(gate)
-    if (!this.scene.sys.isActive()) return
+    if (this.home.gone || !this.scene.sys.isActive()) return
     if (!r.ok) {
       this.say({ speaker: PELL.name, lines: [r.code === 'insufficient-glims' ? PELL_DEED.notEnoughGlims : r.text] })
       return
@@ -712,7 +721,7 @@ export class HomesteadTalk {
     const me = this.home.homes.myId
     if (!me) return
     const r = await this.home.homes.sign(homeId, me)
-    if (!this.scene.sys.isActive()) return
+    if (this.home.gone || !this.scene.sys.isActive()) return
     if (!r.ok) {
       this.say({ speaker: PELL.name, lines: [r.text] })
       return
