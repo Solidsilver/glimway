@@ -215,9 +215,8 @@ export class WildsWindow {
       if (this.fixedDaySignature) this.seasonalPending = new Set(this.fixed.keys())
       this.fixedDaySignature = signature
     }
-    const stale = this.seasonalPending.values().next().value
+    const stale = this.nextRebuild()
     if (stale) {
-      this.seasonalPending.delete(stale)
       // Input is event-driven and can arrive before the next scene update.
       // A refresh under the hero (or their prompt, across a chunk edge) must
       // replace its fixtures in one turn, without an empty interaction list
@@ -700,6 +699,21 @@ export class WildsWindow {
 
   /** Mutable home overlays rebuild through the same window budget, without a scene restart. */
   refreshFixed(key: string): void { if (this.fixed.has(key)) this.seasonalPending.add(key) }
+
+  /**
+   * The next fixed chunk to rebuild, taken off the queue. A chunk a layer
+   * holds (a lot mid-placement: detaching it would end the placement) stays
+   * queued and is rebuilt once it is let go.
+   */
+  private nextRebuild(): string | undefined {
+    const hooks = this.deps.hooks()
+    for (const key of this.seasonalPending) {
+      if (hooks?.busy?.(key)) continue
+      this.seasonalPending.delete(key)
+      return key
+    }
+    return undefined
+  }
 
   /** Late layers join pending/built chunks through their existing budgeted job. */
   fixturesReady(): void {

@@ -251,16 +251,18 @@ test('claim and guidance, then expansion: lantern posts, naming, clearing, cotta
   const near = spotOn(home, ground, (x, y, k, lit) => lit && buildableKind(k) && Math.abs(x - S.x) <= 4 && y > S.y)
   await goLot(page, free.gate, near.x, near.y + 1)
   // The warp's new scene reads the lot's home as it attaches, and a changed
-  // home rebuilds the lot chunk a frame or more later. That rebuild closes a
-  // tray opened in between, without a word (a game race, reported by lane
-  // A9; CI 39168271006, 38824358463): let the read land and the rebuild run first.
+  // home rebuilds the lot chunk a frame or more later. That rebuild used to
+  // close a tray opened in between, without a word (lane A9; CI 39168271006,
+  // 38824358463). Press Arrange as soon as the read lands, before the
+  // rebuild has had its frames: the rebuild waits for the placement now.
   const lot = lotOrigin(free.gate)
   await chunkWhole(page, { tx: lot.tx + near.x, ty: lot.ty + near.y })
   await expect.poll(async () => (await homes(page)).reading, { timeout: SERVER_ANSWER_MS }).toBe(0)
-  await frames(page, 5)
-  await chunkWhole(page, { tx: lot.tx + near.x, ty: lot.ty + near.y })
   await page.getByTestId('arrange').click()
   await expect(tray.locator('[data-piece="wooden-stool"]').first()).toBeVisible()
+  await frames(page, 10)
+  await chunkWhole(page, { tx: lot.tx + near.x, ty: lot.ty + near.y })
+  await expect(tray, 'a lot rebuild never closes an open tray').toBeVisible()
   await carryTo(page, 'wooden-stool', near.x, near.y)
   await expect(tray.getByRole('button', { name: /Set it here/ })).toBeEnabled()
   await shot(page, 'placement-land-desktop')
