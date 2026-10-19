@@ -36,6 +36,16 @@ export function setSyncSafety(fn: () => SyncSafety): () => void {
   }
 }
 
+/**
+ * The game is stopping (src/game/main.ts stopGame): no world is live from
+ * now, though its scene only ends on the next frame. A world move or a
+ * Retry starts the next game at once, and the old scene's answer must not
+ * stand in for it meanwhile.
+ */
+export function clearSyncSafety(): void {
+  current = null
+}
+
 /** The live world's state for the sync gate (null: no world is live). */
 export function syncSafety(): SyncSafety | null {
   return current ? current.answer() : null
