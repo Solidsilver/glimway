@@ -35,13 +35,26 @@ function deferred<T>() {
 
 const flush = () => new Promise((r) => setTimeout(r, 0))
 
-/** A scene that draws nothing and shuts down when told. */
+/**
+ * A scene that draws nothing and ends when told: shut down (a door, a
+ * restart) or destroyed (App's world move destroys the game, and Phaser then
+ * sends no shutdown).
+ */
 function scene() {
-  const ends: (() => void)[] = []
+  const ends = new Map<string, Set<() => void>>()
+  const end = (name: string) => {
+    const fns = [...(ends.get(name) ?? [])]
+    ends.delete(name)
+    for (const fn of fns) fn()
+  }
   return {
-    events: { once: (name: string, fn: () => void) => void (name === 'shutdown' && ends.push(fn)) },
+    events: {
+      once: (name: string, fn: () => void) => void (ends.get(name) ?? ends.set(name, new Set()).get(name)!).add(fn),
+      off: (name: string, fn: () => void) => void ends.get(name)?.delete(fn),
+    },
     textures: { exists: () => false },
-    shutdown: () => ends.splice(0).forEach((fn) => fn()),
+    shutdown: () => end('shutdown'),
+    destroy: () => end('destroy'),
   }
 }
 
@@ -116,8 +129,8 @@ test('another account on the same page, or leaving the world, sees no camps', ()
 
 // ------------------------------------------------------------ G2: naming after the scene has gone
 
-for (const kind of ['camp', 'communal'] as const) {
-  test(`a ${kind} naming read that lands after its scene shut down opens no panel`, async () => {
+for (const [kind, ending] of [['camp', 'shutdown'], ['communal', 'shutdown'], ['camp', 'destroy'], ['communal', 'destroy']] as const) {
+  test(`a ${kind} naming read that lands after its scene's ${ending} opens no panel`, async () => {
     const opened: unknown[] = []
     const listen = (p: unknown) => opened.push(p)
     bus.on(EV.lampNamingOpen, listen)
@@ -140,7 +153,7 @@ for (const kind of ['camp', 'communal'] as const) {
       const late = deferred<unknown>()
       const gone = make(late.promise)
       gone.c.onAction('name:lamp-2')
-      gone.s.shutdown()
+      gone.s[ending]()
       late.resolve(answer)
       await flush()
       assert.equal(opened.length, 1)
@@ -153,8 +166,8 @@ for (const kind of ['camp', 'communal'] as const) {
 
 // ------------------------------------------------------------ G2: an operation's outcome after the scene has gone
 
-for (const kind of ['camp', 'communal'] as const) {
-  test(`a ${kind} operation’s refusal or pending, answered after its scene shut down, is still told; its panel is not`, async () => {
+for (const [kind, ending] of [['camp', 'shutdown'], ['communal', 'shutdown'], ['camp', 'destroy'], ['communal', 'destroy']] as const) {
+  test(`a ${kind} operation’s refusal or pending, answered after its scene's ${ending}, is still told; its panel is not`, async () => {
     const toasts: { text: string; kind?: string }[] = []
     const panels: unknown[] = []
     const onToast = (p: { text: string; kind?: string }) => toasts.push(p)
@@ -169,7 +182,7 @@ for (const kind of ['camp', 'communal'] as const) {
         const { deps } = controllerDeps(link('w', 'acct', kind === 'camp' ? { camp: () => held.promise, readCommons: async () => ({ ok: false, code: 'offline' }) } : { communalLamp: () => held.promise }))
         const c = kind === 'camp' ? new WildsCamps(s as never, deps) : new WildsCommunalLamps(s as never, deps)
         c.onAction(action)
-        s.shutdown()
+        s[ending]()
         held.resolve(answer)
         await flush()
       }
