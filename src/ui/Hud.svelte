@@ -142,7 +142,7 @@
     if (chipTimer !== null) window.clearTimeout(chipTimer)
     if (openChip) chipTimer = window.setTimeout(() => (openChip = null), 5000)
   }
-  const unmooredWhy = 'Unmoored: the drift’s sway holds you. Rest in lamplight or take a remedy.'
+  const unmooredWhy = 'Unmoored: the land won’t hold still around you. Rest on safe ground in town or at home, or take a remedy.'
   const openWhy = $derived.by(() => {
     if (!openChip) return null
     if (openChip === 'date' && villageUi.calendar) {

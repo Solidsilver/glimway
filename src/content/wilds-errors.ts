@@ -12,7 +12,7 @@ export const WILDS_CLAIM_ERRORS: Readonly<Record<string, string>> = {
   'condition-unmet': 'You weren’t near for that fight. The next one is yours to join.',
   'too-far-away': 'Too far away — step closer.',
   'not-in-wilds': 'That only works out in the Wilds.',
-  'beyond-frontier': 'That place is beyond the drift.',
+  'beyond-frontier': 'That place is past the Whitequiet’s edge.',
   'epoch-ended': 'The drift has turned. The land is new.',
   'claim-rate-limited': 'That is plenty of gathering for one minute. Take a breath.',
   'already-lit': 'That lantern is already lit.',

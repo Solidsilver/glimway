@@ -64,7 +64,7 @@ test('unmoored status shows HUD hint, and using comfrey salve clears it', async 
   // HUD hint should now be visible
   await expect(hint).toBeVisible()
   await expect(hint).toContainText('Unmoored')
-  await expect(hint).toHaveAttribute('title', /the drift’s sway holds you/)
+  await expect(hint).toHaveAttribute('title', /the land won’t hold still around you/)
   await shot(page, 'unmoored-edge-bands')
 
   // Open inventory and use comfrey-salve

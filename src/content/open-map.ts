@@ -86,7 +86,7 @@ export const MAP_LABELS = {
   retry: 'Try again',
   you: 'You',
   gate: 'Commons gate',
-  frontier: 'The drift',
+  frontier: 'The Whitequiet’s edge',
   road: 'The Lantern Road',
   river: 'The Wend',
   ways: 'Ways',
@@ -115,7 +115,7 @@ export const MAP_LABELS = {
   zoom: 'Zoom {pct}%',
   legendWalked: 'Walked land',
   legendBlank: 'Not walked yet',
-  legendBeyond: 'Past the drift',
+  legendBeyond: 'Past the Whitequiet’s edge',
 } as const;
 
 /**
@@ -155,7 +155,7 @@ export const OPEN_MAP_CARDS = {
     name: 'The Wend',
     eyebrow: 'The river',
     tagline: 'Wide and dark. Cross at a ford.',
-    description: 'The river runs south toward the mill. Where a path meets it there is a ford of stepping stones; wading is slow. It finds a new course every wick.',
+    description: 'The river runs south toward the mill. Where a path meets it there is a ford of stepping stones; wading is slow. It keeps its bed; the land along it turns every wick.',
   },
 } as const;
 

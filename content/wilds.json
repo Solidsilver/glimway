@@ -1133,7 +1133,7 @@
     "originCy": -2
   },
   "words": {
-    "drift": "The drift is thick here. Not without a lamp.",
+    "drift": "The Whitequiet closes in here. Only a lit camp pushes it back.",
     "turned": "The drift turned while you stood in it.",
     "lampStone": "A lamp stone, cold a long time. Its niche is black with old soot. Mara might know what it was for.",
     "needTool": "You'd need {tool} for this.",
@@ -1212,7 +1212,7 @@
       },
       {
         "ring": 3,
-        "phrase": "Out near the edge of the drift."
+        "phrase": "Out near the Whitequiet's edge."
       }
     ],
     "pastRiver": ", past the river",
