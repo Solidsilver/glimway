@@ -438,14 +438,7 @@ The load run is a measurement, not part of the correctness gate.
 
 ## Quarantined
 
-One Playwright test is quarantined:
-
-- `camps.spec.ts`, "Escape cancels the lamp naming and opens nothing"
-  (`test.fixme`, 2026-10-18, lane A9). Closing the lamp naming throws
-  `TypeError: Cannot read properties of null (reading 'lamp')`: the
-  `LampNamingPanel` callbacks in `src/App.svelte` clear `home.lampNaming`
-  and then read `ask.lamp`, where `ask` is that field's `{@const}`. Remove
-  the quarantine with the fix.
+No Playwright test is quarantined.
 
 Keep real product regressions in the gate when possible; if one must be
 marked `test.fixme`, record the current reason here and remove the

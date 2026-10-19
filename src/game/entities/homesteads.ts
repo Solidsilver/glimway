@@ -491,7 +491,8 @@ export class HomesteadLayer {
 
   readonly fixedHooks: FixedHooks = {
     attach: (key) => this.attachFixedChunk(key),
-    detach: (key, refreshing) => this.detachFixedChunk(key, refreshing)
+    detach: (key, refreshing) => this.detachFixedChunk(key, refreshing),
+    busy: (key) => this.lots?.placingIn(key) ?? false
   }
 
   /** Per frame: the way to your gate, and whether the hero may arrange their place. */

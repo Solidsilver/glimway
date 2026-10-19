@@ -184,5 +184,10 @@ export class LotHomes {
     }
   }
   has(gate: number): boolean { return this.lots.has(gate) }
+  /** A placement is open on the lot in this chunk (its rebuild must wait: detaching ends the placement). */
+  placingIn(key: string): boolean {
+    const [cx, cy] = key.split(',').map(Number), gate = lotAt(cx!, cy!)
+    return gate !== null && !!this.lots.get(gate)?.child.arranging.placement
+  }
   home(gate: number): HomeView | null { return this.lots.get(gate)?.child.here() ?? null }
 }
