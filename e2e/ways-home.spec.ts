@@ -44,7 +44,8 @@ async function step<T>(page: Page, title: string, seconds: number, body: () => P
     return await test.step(title, body, { timeout: seconds * 1000 })
   } catch (e) {
     const safety = await page.evaluate(() => (window as unknown as Safety).__fsSafety()).catch(() => null)
-    throw new Error(`${title}: ${String(e).slice(0, 400)}\nsafety ${JSON.stringify(safety)}\n${await diagnose(page)}`)
+    const toasts = await page.evaluate(() => window.__fsToasts?.().seen.slice(-4).map((t) => t.text)).catch(() => null)
+    throw new Error(`${title}: ${String(e).slice(0, 400)}\nsafety ${JSON.stringify(safety)}\ntoasts ${JSON.stringify(toasts)}\n${await diagnose(page)}`)
   }
 }
 
@@ -106,8 +107,9 @@ async function turncapDuringTurning(page: Page, before: WildsDump, rewrite?: (pl
     await page.route('**/api/ways-home', (r) => (r.request().method() === 'POST' ? asked(r) : r.continue()))
     await parkCreatures(page)
     await page.evaluate(() => (window as unknown as { __fsEmit: (e: string, p: unknown) => void }).__fsEmit('game:ways-home', { way: 'turncap' }))
-    // The pause (three seconds, standing still) passes, and the way home is asked for.
-    route = await held
+    // The pause (three seconds, standing still) passes, and the way home is
+    // asked for. A pause that lets go asks nothing, and says why in a toast.
+    route = await step(page, `the turncap is asked for (attempt ${attempt})`, 15, () => held)
     res = await route.fetch()
     const text = res.ok() ? '' : await res.text()
     if (res.ok() || !text.includes('"in-a-fight"') || attempt >= 4) {
