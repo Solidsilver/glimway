@@ -8,7 +8,7 @@ Let it be recorded that Silas of the Carters' Compact has purchased the rights t
 
 **Boundary Definition:**
 Because the Commons edge borders the inner Wilds, this plot cannot be measured in yards. The boundaries of Silas’s property shall be defined as follows: 
-From the western hinge of his front door, extending outward to the exact distance that a single, standard hearth-grade lantern casts its light on a moonless night in the season of the White Quiet. 
+From the western hinge of his front door, extending outward to the exact distance that a single, standard hearth-grade lantern casts its light on a moonless night in the season of the Quiet. 
 
 If Silas wishes a larger yard, he must afford better oil. If he lets his lamp go out, the yard belongs to the woods.
 

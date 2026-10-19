@@ -6,9 +6,9 @@
 
 **TO ALL WOODCUTTERS, CARTERS, AND FORAGERS OF THE EASTERN REACHES:**
 
-Let it be known that the Iron-Oak ( *Quercus ferrum* ) of the Brackenwood and outer Wilds is the lifeblood of the Reed river trade, the foundation of our barges, and the sole property of the future. 
+Let it be known that the iron-oak ( *Quercus ferrum* ) of the Brackenwood and outer Wilds is the lifeblood of the Reed river trade, the foundation of our barges, and the sole property of the future. 
 
-It takes two lifetimes of men for a single Iron-Oak to mature its rings into the density required for a true barge-knee. Therefore, the cutting of any standing Iron-Oak is strictly prohibited unless said tree has been inspected, measured, and struck with the lead-and-wax seal of the Oak Hall (The Wheel and the Wave) upon its trunk.
+It takes two lifetimes of men for a single iron-oak to mature its rings into the density required for a true barge-knee. Therefore, the cutting of any standing iron-oak is strictly prohibited unless said tree has been inspected, measured, and struck with the lead-and-wax seal of the Oak Hall (The Wheel and the Wave) upon its trunk.
 
 **Article IV: On the Stealing of Shade**
 Any person found felling an unmarked tree shall be guilty of *Stealing Shade*. They have robbed not the current magistrate, but the grandchildren of this valley who would have sat beneath its boughs or sailed upon its timber. 

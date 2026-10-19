@@ -1,7 +1,7 @@
 # A Note Found in a Linseed Box
 
 **Author:** Aldo Tolley
-**Date:** Eight years ago.
+**Date:** Two winters ago.
 **Material:** Scrawled on the back of a flour receipt, tucked under twenty-seven wooden foxes.
 
 Finn,
