@@ -78,3 +78,17 @@ draft), the found texts in `texts/`, and the shipped game.
 ## Open
 
 See canon.md §14.
+
+## After Sol's second-pass review (2026-10-19)
+
+27. **L13** Old texts' moving rivers and ridges are history: the drift ran all the time before
+    the Two Storms; since then it moves only at the Turning.
+28. **L14** Nine calm days forecast; the Six left at dawn on the sixth; Tam hurt that first day
+    out; the stir on the seventh. Closure on Quiet-wick 7th (Closure Night), the Run on Thaw-wick
+    6th, the stir on Thaw-wick 7th.
+29. **L15** The roof fitting is a chimney cowl; turncaps are named after cowls.
+30. **L16** Players see "the Commons"; "the Carters' Apron" is the old carters' name only.
+31. **L2** Setting a way-lamp is a short Keeper's working; the naming from parts is its lasting
+    name.
+32. **L3** The Wick Tree's reach holds the land around it still: the town, the lots and the
+    Tangle. Unmoored where the reach thins, deep in the Tangle.
