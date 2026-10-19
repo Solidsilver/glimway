@@ -234,6 +234,7 @@ export class WorldScene extends Phaser.Scene {
   private actions!: WorldActions
 
   create(): void {
+    bus.emit(EV.loadStage, { stage: 'paint' })
     this.session = this.registry.get('session') as Session
     const state = this.session.state
     const arrival = arrive(this.session, { entry: this.pendingEntry })
@@ -535,11 +536,16 @@ export class WorldScene extends Phaser.Scene {
       // must finish, or the scene never restarts (fadeIn always forces).
       const lift = this.fadeHold.start()
       const show = () => {
-        if (lift()) cam.fadeIn(280, 12, 12, 20)
+        if (!lift()) return
+        cam.fadeIn(280, 12, 12, 20)
+        bus.emit(EV.worldShown)
       }
       void holding.then(show, show)
       this.time.delayedCall(1200, show)
-    } else this.cameras.main.fadeIn(280, 12, 12, 20)
+    } else {
+      this.cameras.main.fadeIn(280, 12, 12, 20)
+      bus.emit(EV.worldShown)
+    }
 
     // Input
     this.controls = new WorldControls(this, {
@@ -658,7 +664,8 @@ export class WorldScene extends Phaser.Scene {
         areaId: this.world.areaId,
         position: { x: px, y: py },
         safe: isSafeArea(this.world.areaId, { x: px, y: py }),
-        transitioning: this.transitioning,
+        // Still dark at its start (the loading screen is up): not yet a world to sync in.
+        transitioning: this.transitioning || this.fadeHold.active,
         dialogueOpen: uiState.dialogueOpen,
         enemiesNear: enemiesNearForSync(this.world.areaId, { x: px, y: py }, this.enemies.enemies)
       }
