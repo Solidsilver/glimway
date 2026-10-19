@@ -220,7 +220,7 @@ async function landedAt(page: Page, place: Place): Promise<void> {
   expect(Math.hypot(back.x - place.x, back.y - place.y), `after a reload: ${JSON.stringify({ back, place })}`).toBeLessThan(2 * 16)
 }
 
-test('a turncap answered while a Turning holds play lands at the north arch once the veil lifts', async ({ page }) => {
+for (const copy of [1, 2, 3]) test(`a turncap answered while a Turning holds play lands at the north arch once the veil lifts${copy > 1 ? ` (TEMP copy ${copy})` : ''}`, async ({ page }) => {
   test.setTimeout(150_000)
   const { before } = await inTheBeyond(page)
   const arch = await turncapDuringTurning(page, before)
@@ -228,7 +228,7 @@ test('a turncap answered while a Turning holds play lands at the north arch once
   await landedAt(page, arch)
 })
 
-test('a relocation into another area, answered while a Turning holds play, is taken once the veil lifts', async ({ page }) => {
+for (const copy of [1, 2, 3]) test(`a relocation into another area, answered while a Turning holds play, is taken once the veil lifts${copy > 1 ? ` (TEMP copy ${copy})` : ''}`, async ({ page }) => {
   // No way home names another area yet (both land on the open map), so the
   // answer is rewritten to the library, and the world's place with it: the
   // scene must leave for that area as the hold lets go.
