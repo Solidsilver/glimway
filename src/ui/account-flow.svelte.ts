@@ -488,6 +488,7 @@ export class AccountFlow<S extends FlowSession> {
     else this.moving = { target: { ...NO_WORLD, id: snapshot.worldId }, home: false, view: null, arriving: true }
     this.partyPrompt = null
     this.leaverNotice = null
+    let entering: S | null = null
     try {
       // Its link already adopted the move's answer; nothing is left to upload.
       this.host.session()?.destroy(true)
@@ -495,10 +496,18 @@ export class AccountFlow<S extends FlowSession> {
       const name = this.ui.account?.name ?? snapshot.displayName
       const s = await this.deps.connect({ snapshot, cache: null, name })
       await s.link!.reconnect(false)
-      await this.settle(s)
+      // The new world is this account's now (a Continue from the title opens it),
+      // and the loading screen takes the arrival from here: the land reads can
+      // stall, and it has Retry and the way back; the move screen has neither.
+      this.snapshot = snapshot
       this.moving = null
+      entering = s
+      await this.settle(s)
+      // Left meanwhile (Back to the title): this arrival is no longer the player's.
+      if (this.host.session() !== s) return
       this.ui.toast({ text: line, icon: 'world' })
     } catch {
+      if (entering && this.host.session() !== entering) return
       // The move stands on the server; this page couldn't open the new
       // world. Back to the title, where Continue steps in.
       this.moving = null

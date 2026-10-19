@@ -47,7 +47,7 @@ class Session implements FlowSession {
   }
 }
 
-function setup(opts: { connect?: () => Promise<Session> } = {}) {
+function setup(opts: { connect?: () => Promise<Session>; play?: (s: Session) => Promise<void> } = {}) {
   const log: string[] = []
   const loading: FlowLoading = {
     begin: (kind, stage) => void log.push(`begin ${kind} ${stage}`),
@@ -57,6 +57,9 @@ function setup(opts: { connect?: () => Promise<Session> } = {}) {
   const made: Session[] = []
   const played: Session[] = []
   let status: FlowLink['status'] = 'online'
+  let current: Session | null = null
+  const toasts: string[] = []
+  let titled = 0
   const flow = new AccountFlow<Session>({
     api: {} as AccountApi,
     probe: async () => ({ kind: 'signed-in', snapshot: { accountId: 'h1', displayName: 'Tansy', state: createNewGame(), worldId: 'w1' } as unknown as Snapshot }),
@@ -69,19 +72,23 @@ function setup(opts: { connect?: () => Promise<Session> } = {}) {
         return s
       }),
     nameOf: () => 'Tansy',
-    ui: { server: 'unknown', account: null, link: null, toast: () => undefined },
+    ui: { server: 'unknown', account: null, link: null, toast: (p: { text: string }) => void toasts.push(p.text) },
     host: {
-      session: () => played.at(-1) ?? null,
+      session: () => current,
       starting: () => false,
-      play: async (s) => void played.push(s),
+      play: async (s) => {
+        played.push(s)
+        current = s
+        await opts.play?.(s)
+      },
       closePanel: () => undefined,
       leaveWorld: () => undefined,
-      toTitle: () => undefined,
+      toTitle: () => void (titled += 1),
       reload: () => undefined,
     },
     loading,
   })
-  return { flow, log, made, played, setStatus: (s: FlowLink['status']) => (status = s) }
+  return { flow, log, made, played, toasts, titled: () => titled, leave: () => (current = null), setStatus: (s: FlowLink['status']) => (status = s) }
 }
 
 const tick = () => new Promise((r) => setTimeout(r, 0))
@@ -154,4 +161,40 @@ test('the lease question takes the screen from the loading screen', async () => 
   await going
   assert.equal(flow.gate?.kind, 'elsewhere')
   assert.deepEqual(log, ['begin enter connect', 'cancel cancelled'])
+})
+
+const moved = (worldId: string) => ({ accountId: 'h1', displayName: 'Tansy', state: createNewGame(), worldId }) as unknown as Snapshot
+
+test('a world move hands its arrival to the loading screen before the land reads, which can stall', async () => {
+  let land!: () => void
+  const { flow, made, toasts } = setup({ play: () => new Promise<void>((r) => (land = r)) })
+  await flow.init()
+  flow.openMove({ id: 'w2', ownerId: '', ownerName: '', members: 0, ownerHere: false, party: false }, false, null)
+  const arriving = flow.afterMove(moved('w2'), 'Welcome.')
+  await tick()
+  made[0]!.link.release()
+  await tick()
+  // The world is entering (its land reads under way): no move screen without buttons over it.
+  assert.equal(flow.moving, null, 'the move screen let go: the loading screen, with Retry and Back, shows')
+  assert.equal(flow.snapshot?.worldId, 'w2', 'a Continue from the title opens the new world')
+  land()
+  await arriving
+  assert.deepEqual(toasts, ['Welcome.'])
+})
+
+test('an arrival abandoned by Back to the title does nothing when its entry ends later', async () => {
+  let fail!: (e: Error) => void
+  const { flow, made, toasts, titled, leave } = setup({ play: () => new Promise<void>((_, j) => (fail = j)) })
+  await flow.init()
+  const arriving = flow.afterMove(moved('w2'), 'Welcome.')
+  await tick()
+  made[0]!.link.release()
+  await tick()
+  // Back to the title from the loading screen: App ends the session.
+  leave()
+  fail(new Error('the land read gave up'))
+  await arriving
+  assert.equal(titled(), 0, 'no second trip to the title')
+  assert.equal(flow.error, '')
+  assert.deepEqual(toasts, [])
 })
