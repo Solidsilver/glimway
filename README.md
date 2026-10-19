@@ -451,6 +451,10 @@ npm run verify:all  # verify, then the playtests
 
 First time running the playtests: `npx playwright install chromium`.
 
+These playtest commands are for people on their own machine. Agents don't
+run Playwright or Vite on the shared host: they push and let CI run the
+browser checks (docs/testing.md).
+
 The playtests run in parallel (`E2E_WORKERS`, default half the cores, 2 to
 3 locally). Every test runs against a server: each worker starts its own Go server,
 database and fake habitica.com on free ports at its first test; one Vite dev

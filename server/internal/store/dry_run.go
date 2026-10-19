@@ -7,16 +7,23 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"syscall"
 	"time"
 )
 
 // DryRun is what migrate --dry-run reports: the database before and after
-// the migrations this binary applies, which ones, and how long they took.
+// the migrations this binary applies, which ones, and how long they took;
+// every item's quantity before and after; 038's path refunds reconciled
+// against the 037 data (nil unless 038 is applied); and Problems, what the
+// upgrade doesn't explain. A run with problems still reports them all.
 type DryRun struct {
 	Before, After BackupSummary
 	Applied       []string
 	Took          time.Duration
+	Held          [2]Ledger // before, after
+	Refunds       *Refunds038
+	Problems      []string
 }
 
 // DryRunMigrate rehearses an upgrade of a database (the release rehearsal,
@@ -67,7 +74,42 @@ func DryRunMigrate(ctx context.Context, path string) (DryRun, error) {
 	if run.After.Pending != 0 {
 		return run, fmt.Errorf("after: %d migrations still pending", run.After.Pending)
 	}
+	if err = run.reconcile(ctx, resolved, private); err != nil {
+		return run, fmt.Errorf("quantities: %w", err)
+	}
 	return run, nil
+}
+
+// reconcile reads both databases' holdings, and 038's refunds when it was
+// applied, and lists what doesn't add up.
+func (run *DryRun) reconcile(ctx context.Context, beforePath, afterPath string) error {
+	before, err := readOnly(beforePath)
+	if err != nil {
+		return err
+	}
+	defer before.Close()
+	after, err := readOnly(afterPath)
+	if err != nil {
+		return err
+	}
+	defer after.Close()
+	if run.Held[0], err = readLedger(ctx, before); err != nil {
+		return err
+	}
+	if run.Held[1], err = readLedger(ctx, after); err != nil {
+		return err
+	}
+	if slices.Contains(run.Applied, "038_lamps.sql") {
+		if run.Refunds, err = reconcile038(ctx, before, after); err != nil {
+			return err
+		}
+		if run.Refunds.Malformed > 0 {
+			run.Problems = append(run.Problems, fmt.Sprintf("038: %d of the wick's ground rows don't parse, so their paid tiles go unrefunded", run.Refunds.Malformed))
+		}
+		run.Problems = append(run.Problems, run.Refunds.Mismatches...)
+	}
+	run.Problems = append(run.Problems, quantityProblems(run.Held[0], run.Held[1], run.Refunds)...)
+	return nil
 }
 
 // snapshot writes a standalone copy of src to dst, reading src read-only.
