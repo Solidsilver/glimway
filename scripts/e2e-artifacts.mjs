@@ -13,6 +13,9 @@ const diagnosticsMaxBytes = 2 * 1024 * 1024
 const diagnosticStringMaxBytes = 16 * 1024
 const diagnosticMaxItems = 50
 const reportPolicy = { maximumBytes: reportMaxBytes, copiedPath: null, copiedPaths: [], note: '' }
+// e2e/helpers.ts HELPER_RETRY: an action a helper pressed or sent again
+// inside one attempt. The test passes, so Playwright never calls it flaky.
+const helperRetryType = 'helper retry'
 
 // Keep structured errors and output even when the original report is too large.
 // Bound individual values and the combined diagnostic payload; say when cut.
@@ -94,6 +97,16 @@ function readReports() {
   return reports
 }
 
+/**
+ * A test's helper retries, from the unbounded report (every attempt's; an
+ * older report without per-attempt annotations has them on the test).
+ */
+function helperRetriesOf(test) {
+  const pick = (notes) => (notes ?? []).filter((n) => n?.type === helperRetryType).map((n) => String(n.description ?? ''))
+  const perAttempt = (test.results ?? []).flatMap((result) => pick(result.annotations))
+  return perAttempt.length ? perAttempt : pick(test.annotations)
+}
+
 /** Stats of several passes: counts and duration added, the first start. */
 function mergeStats(all) {
   const stats = all.filter(Boolean)
@@ -121,6 +134,7 @@ function summarizeReport() {
             status: test.status,
             expectedStatus: test.expectedStatus,
             annotations: diagnostics.bounded(test.annotations ?? []),
+            helperRetries: helperRetriesOf(test),
             attempts: (test.results ?? []).map((result) => ({
               status: result.status, retry: result.retry, durationMs: result.duration,
               error: diagnostics.bounded(result.error),
@@ -165,7 +179,9 @@ for (const candidate of candidates) {
 /**
  * What a reader of the run needs without opening a log (review T4/T5): how
  * many tests passed only on their retry, which failed both attempts, and the
- * ten slowest tests (every attempt's time added: what the run paid for them).
+ * ten slowest tests (every attempt's time added: what the run paid for them),
+ * and the helper retries (review R2): presses and sends a helper repeated
+ * inside a passing test, which the flaky count can't see.
  */
 function health(report) {
   // A spec file's own suite is titled with its file name: say it once.
@@ -176,7 +192,11 @@ function health(report) {
     .map((t) => ({ test: name(t), durationMs: t.attempts.reduce((sum, a) => sum + (a.durationMs ?? 0), 0), attempts: t.attempts.length }))
     .sort((a, b) => b.durationMs - a.durationMs)
     .slice(0, 10)
-  return { flaky, hard, slowest }
+  const helperRetries = report.tests
+    .filter((t) => t.helperRetries?.length)
+    .map((t) => ({ test: name(t), count: t.helperRetries.length, notes: t.helperRetries }))
+  const helperRetryCount = helperRetries.reduce((sum, t) => sum + t.count, 0)
+  return { flaky, hard, slowest, helperRetryCount, helperRetries }
 }
 
 const seconds = (ms) => `${(ms / 1000).toFixed(1)} s`
@@ -187,10 +207,13 @@ function healthMarkdown(report, h) {
   const title = process.env.E2E_SUMMARY_TITLE || 'E2E'
   if (!report.available) return `### ${title}\n\nNo Playwright report: ${report.error}\n`
   const passed = report.tests.filter((t) => t.status === 'expected').length
-  const lines = [`### ${title}`, '', `**${passed} passed, ${h.flaky.length} flaky, ${h.hard.length} failed**${report.stats?.duration ? ` in ${(report.stats.duration / 60000).toFixed(1)} min` : ''}. Flaky: failed, then passed on the retry.`, '']
+  const lines = [`### ${title}`, '', `**${passed} passed, ${h.flaky.length} flaky, ${h.hard.length} failed, ${h.helperRetryCount} helper ${h.helperRetryCount === 1 ? 'retry' : 'retries'}**${report.stats?.duration ? ` in ${(report.stats.duration / 60000).toFixed(1)} min` : ''}. Flaky: failed, then passed on the retry. Helper retry: a helper pressed or sent again inside a test that passed.`, '']
   for (const [label, list] of [['Failed', h.hard], ['Flaky', h.flaky]]) {
     if (!list.length) continue
     lines.push(`**${label}:**`, '', ...list.map((t) => `- ${t}`), '')
+  }
+  if (h.helperRetries.length) {
+    lines.push('**Helper retries:**', '', ...h.helperRetries.flatMap((t) => [`- ${t.test} (${t.count})`, ...t.notes.map((n) => `  - ${n}`)]), '')
   }
   if (h.slowest.length) {
     lines.push('**Slowest tests** (all attempts):', '', '| Test | Time | Attempts |', '|---|---:|---:|')

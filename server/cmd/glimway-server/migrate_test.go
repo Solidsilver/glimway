@@ -99,3 +99,44 @@ func TestPrintDryRun(t *testing.T) {
 		}
 	}
 }
+
+// The quantities and 038's refunds are printed, and each problem on its own line.
+func TestPrintDryRunQuantitiesAndRefunds(t *testing.T) {
+	var out bytes.Buffer
+	run := store.DryRun{
+		Before:  store.BackupSummary{Schema: "037_one_town.sql"},
+		After:   store.BackupSummary{Schema: "038_lamps.sql"},
+		Applied: []string{"038_lamps.sql"},
+		Held: [2]store.Ledger{
+			{"item stacks": {"timber": 40, "stone": 12}, "plants": {"wild-thyme": 1}},
+			{"item stacks": {"timber": 40, "stone": 12}, "plants": {"wild-thyme": 1}, "crate entries": {"stone": 2, "timber": 1}},
+		},
+		Refunds: &store.Refunds038{
+			GroundRows: 2, Malformed: 1, PaidTiles: map[string]int64{"stone": 2, "plank": 1}, Free: 1, Unauthored: 0, Gone: 1,
+			Owed:     map[string]map[string]int64{"alice": {"stone": 2}, "bob": {"timber": 1}},
+			Refunded: map[string]map[string]int64{"alice": {"stone": 2}, "bob": {"timber": 1}},
+		},
+		Problems: []string{"038: 1 of the wick's ground rows don't parse, so their paid tiles go unrefunded"},
+	}
+	printDryRun(&out, "copy.sqlite", run)
+	for _, want := range []string{
+		"quantities           before      after\nitem stacks              52         52\nplants                    1          1\ncrate entries             0          3\n",
+		"038 path refunds: 2 ground rows, paid tiles plank 1, stone 2, 1 free changes\n",
+		"  skipped: 1 malformed rows, 0 tiles with no author, 1 by an account that has gone\n",
+		"  alice: owed stone 2, refunded stone 2\n  bob: owed timber 1, refunded timber 1\n  every refund matches its paid tiles\n",
+		"PROBLEM 038: 1 of the wick's ground rows don't parse",
+	} {
+		if !strings.Contains(out.String(), want) {
+			t.Fatalf("missing %q in:\n%s", want, out.String())
+		}
+	}
+	if strings.Contains(out.String(), "quantities add up") {
+		t.Fatal("a run with problems says it adds up")
+	}
+	run.Problems = nil
+	out.Reset()
+	printDryRun(&out, "copy.sqlite", run)
+	if !strings.HasSuffix(out.String(), "quantities add up\n") {
+		t.Fatal(out.String())
+	}
+}

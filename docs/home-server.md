@@ -201,8 +201,11 @@ migrations this version would apply on start to a private snapshot of it in a
 temporary folder, and checks the snapshot again. `COPY` itself is only read,
 never written. It prints the schema before and after, which migrations ran and
 how long they took, and the counts of accounts, worlds, homes, items, plants,
-holds, camps and Pell's crates before and after. It exits non-zero on any
-failure. It refuses the `-db` file and any database that looks in use: a
+holds, camps and Pell's crates before and after; then the quantities (stack,
+plant and crate-entry totals, compared item by item) and, for 0.13's
+`038_lamps.sql`, the path refunds reconciled against the paid tiles in the
+copy (docs/releasing.md says what to check). It exits non-zero on any failure,
+and when a quantity or refund doesn't add up (its `PROBLEM` lines). It refuses the `-db` file and any database that looks in use: a
 `-wal`, `-shm` or `-journal` file beside it (symlinks followed first), more
 than one hard link, or, on Linux, a process holding it.
 

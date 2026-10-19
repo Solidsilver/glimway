@@ -3,7 +3,7 @@ import { expect, type Page } from './fixtures'
 import type { Locator } from '@playwright/test'
 import { accountOf, allow, CONTRACT, newUser, openTitleGuide, pasteAndConnect, pastOpening, routeHabitica, serverState, setHabitica, sql, syncFromMenu, waitForWorld, served } from './connected'
 import { landFromCells, type Land } from '../src/lib/homestead-land.ts'
-import { dialogueState, frames, inCommons, pressToTalk, readDialogue, settled, waitForArea, waitForLive, expectToast, SERVER_ANSWER_MS } from './helpers'
+import { dialogueState, frames, inCommons, noteHelperRetry, pressToTalk, readDialogue, settled, waitForArea, waitForLive, expectToast, SERVER_ANSWER_MS } from './helpers'
 import { setHour } from './room-helpers'
 import { residentAt } from '../src/lib/residents.ts'
 
@@ -106,6 +106,7 @@ export async function talk(page: Page, prompt: RegExp, pick?: RegExp): Promise<v
     await expect.poll(async () => (await dialogueState(page)).opened).toBeGreaterThan(mark)
     if (!pick || picked) return
     if (attempt >= 3) throw new Error(`no reply matching ${pick} was offered at ${prompt}`)
+    noteHelperRetry('talk', `no reply matching ${pick} at ${prompt}; asking again (talk ${attempt + 1})`)
     await frames(page, 30)
   }
 }

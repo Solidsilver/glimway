@@ -559,14 +559,16 @@ test('the Whitequiet’s motes drift with each outer chunk, stay through its sit
   await page.evaluate(() => (window as unknown as { __fsDevAddFlag: (f: string) => void }).__fsDevAddFlag('paper:motes-test'))
   await frames(page, 5)
   // Two samples that agree on the counts before redraw, not a poll that passes once and a
-  // fresh read after it (T4). A count that never comes back fails below with what was seen.
+  // fresh read after it (T4). A count that never comes back fails here, naming what was seen.
   const want = { motes: MOTES * outer.length, tweens: before.tweens }
   const after = await steady(page, () => moteResources(page), {
     frames: 2,
     seconds: 20,
-    message: 'Whitequiet scene counts settle after redraw',
+    message: `Whitequiet scene counts settle after redraw at ${JSON.stringify(want)}`,
     ready: (z) => z.motes === want.motes && z.tweens === want.tweens
-  }).catch(() => moteResources(page))
+  }).catch(async (e) => {
+    throw new Error(`${String(e).slice(0, 300)}; last seen ${JSON.stringify(await moteResources(page))}`)
+  })
   expect(after.motes, 'the motes survive the redraw').toBe(MOTES * outer.length)
   expect(after.tweens, 'and so do their tweens (no more, no fewer)').toBe(before.tweens)
 

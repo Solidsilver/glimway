@@ -54,7 +54,11 @@ deploy.
    two flaky tests (decision 61 in
    [decisions-overnight.md](decisions-overnight.md)); the release commit's own
    run must be one of them or come after them. A red run is fixed forward on
-   `dev`, never by moving `main`.
+   `dev`, never by moving `main`. Read the step summary's helper retries
+   next to the flaky count: a press or send a helper repeated inside a test
+   that passed (a walking resident, the fight-join fixture). Playwright can't
+   count them as flaky, so report both numbers with the runs; a test that
+   keeps needing them is a flake to chase like any other.
 5. **Rehearse the upgrade** on the release commit, against a copy of the live
    database. The owner copies the newest *verified* live backup (from
    `/var/lib/glimway-server/backups/`, only the `.sqlite` file) to a path the
@@ -69,7 +73,16 @@ deploy.
    migrates a private snapshot of it in a temporary folder, checks that
    again, and prints the schema, the migrations applied and how long they
    took, and the counts before and after (accounts, worlds, homes, items,
-   plants, holds, camps, Pell's crates). `COPY` itself is never written. It
+   plants, holds, camps, Pell's crates). Then the quantities: every item
+   stack's qty, every plant and every crate entry's qty, summed by item
+   before and after. When `038_lamps.sql` is applied it also reconciles the
+   path refunds: from the copy's 037 data, the wick's ground rows, the paid
+   tiles by kind, the free changes, and what the backfill skips (rows that
+   don't parse, tiles with no author, authors whose account has gone); then
+   the stone and timber each account is owed against the `land-changed`
+   crate entries the upgrade wrote, chunk by chunk. A line starting
+   `PROBLEM` is something the upgrade doesn't explain, and the command then
+   exits non-zero. `COPY` itself is never written. It
    refuses this server's `-db` and any file that looks in use (a `-wal`,
    `-shm` or `-journal` beside it, more than one hard link, or a process
    holding it), so rehearse on a plain copy. Details:
@@ -82,7 +95,15 @@ deploy.
    - accounts, worlds and homes are the same before and after;
    - every other count that changes is one the release's migrations explain
      (things moved into Pell's crates, say), and nothing drops to zero that
-     wasn't zero.
+     wasn't zero;
+   - "quantities add up", and no `PROBLEM` lines: item stacks and plants
+     have the same total before and after, item by item, and crate entries
+     grow by exactly the refunds;
+   - for 038: "every refund matches its paid tiles", and each account's
+     refund is what you'd expect of the paths it laid. Note the skipped
+     counts with the output: no author or a gone account is expected of old
+     data and refunds nothing; a malformed row is a `PROBLEM` (its tiles go
+     unrefunded), so look at that row in the copy before going on.
 
    Record the output with the release (its decision-log entry). If anything
    looks wrong, stop: the release waits for a fix and a new rehearsal.
@@ -114,7 +135,10 @@ Never move or reuse a published tag: fix forward with the next patch version.
 ### 0.13.0: one restart of live
 
 Live runs 0.11.2. The 0.13.0 deploy changes the live unit, so it restarts
-the server once (later settings changes only reload it):
+the server once. After that, a change to a *live* setting only reloads it
+(SIGHUP); a change to a restart-only setting, such as the login limits in
+`[server.login]`, still restarts it (the module's `reloadTriggers` and
+`restartTriggers`; each setting's kind is in `deploy/glimway.example.toml`):
 
 - the unit gains a settings file, `/etc/glimway/config.toml`, rendered from
   `services.glimway.settings`, and an `ExecReload` that sends SIGHUP;
