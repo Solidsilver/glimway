@@ -15,63 +15,11 @@ import (
 	"time"
 
 	"glimway/content"
-	"glimway/server/internal/wilds"
+	"glimway/server/internal/worldlab"
 )
 
 //go:embed index.html
 var page []byte
-
-type tileInfo struct {
-	Tile          [2]int            `json:"tile"`
-	Chunk         [2]int            `json:"chunk"`
-	Local         [2]int            `json:"local"`
-	Epoch         wilds.Epoch       `json:"epoch"`
-	Land          string            `json:"land"`
-	ChunkLand     string            `json:"chunkLand"`
-	Ground        string            `json:"ground"`
-	Solid         bool              `json:"solid"`
-	Entities      []wilds.Entity    `json:"entitiesOnTile"`
-	ChunkEntities []wilds.Entity    `json:"chunkEntities"`
-	Sites         []wilds.Site      `json:"sitesOnTile"`
-	Places        []wilds.PlaceMark `json:"placesOnTile"`
-	Fixed         string            `json:"fixed,omitempty"`
-}
-
-func inspect(o options) (result, error) {
-	tx, ty := o.Inspect[0], o.Inspect[1]
-	cx, cy := wilds.ChunkOf(tx, ty)
-	lx, ly := wilds.LocalOf(tx, ty)
-	info := &tileInfo{Tile: *o.Inspect, Chunk: [2]int{cx, cy}, Local: [2]int{lx, ly}, Epoch: epoch(o, cx, cy), Entities: []wilds.Entity{}, Sites: []wilds.Site{}, Places: []wilds.PlaceMark{}}
-	if p := wilds.FixedFootprintAt(cx, cy); p != nil {
-		info.Fixed = p.GetId()
-		return result{Tile: info}, nil
-	}
-	c, err := wilds.GenerateV3(info.Epoch, cx, cy, nil)
-	if err != nil {
-		return result{}, err
-	}
-	info.Land = wilds.LandAt(wilds.WickEpoch(o.Seed, o.Epoch), tx, ty)
-	info.ChunkLand = c.Land
-	info.Ground = content.WildsRules.Grounds[int(c.Ground[ly*c.Size+lx])].GetId()
-	info.Solid = c.Solid[ly*c.Size+lx]
-	info.ChunkEntities = c.Entities
-	for _, e := range c.Entities {
-		if e.TX == lx && e.TY == ly {
-			info.Entities = append(info.Entities, e)
-		}
-	}
-	for _, s := range c.Sites {
-		if s.TX == lx && s.TY == ly {
-			info.Sites = append(info.Sites, s)
-		}
-	}
-	for _, p := range c.Places {
-		if p.TX == lx && p.TY == ly {
-			info.Places = append(info.Places, p)
-		}
-	}
-	return result{Tile: info}, nil
-}
 
 func serve(addr string, defaults options) error {
 	host, _, err := net.SplitHostPort(addr)
@@ -216,12 +164,11 @@ func handler(defaults options) http.Handler {
 				http.Error(w, err.Error(), 400)
 				return
 			}
-			image, report, err := compare(out, b, time.Since(started))
+			image, details, err := worldlab.Compare(out, b, time.Since(started))
 			if err != nil {
 				http.Error(w, err.Error(), 400)
 				return
 			}
-			details := report.(diffStats)
 			out.PNG = image
 			out.Comparison = &details
 			out.Signatures = nil

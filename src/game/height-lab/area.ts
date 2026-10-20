@@ -28,6 +28,7 @@
  *   comes out of the second mouth onto the plateau.
  */
 import {
+  CAVE,
   DX,
   DY,
   E,
@@ -35,19 +36,22 @@ import {
   N,
   ROWS_PER_LEVEL,
   S,
+  SURFACE,
   W,
   findPath,
   newLayer,
   portalKey,
   setClosed,
   setFlat,
-  step,
   walkable,
   type Dir,
   type Layer,
   type Node,
   type Stack
 } from './levels.ts'
+import { darkMap, daylight, stillLight, type DarkMap, type Glow } from './light.ts'
+
+export { CAVE, SURFACE }
 
 export const LAB_W = 72
 export const LAB_H = 72
@@ -55,10 +59,8 @@ export const LAB_H = 72
 /** Ground palette: indexes into this are a layer's `ground`. Content ground ids, plus the cave's own. */
 export const GROUNDS = ['meadow', 'moss', 'trodden', 'path', 'water', 'bank', 'woods', 'cave-floor', 'cave-rock'] as const
 export type GroundId = (typeof GROUNDS)[number]
-const G = Object.fromEntries(GROUNDS.map((g, i) => [g, i])) as Record<GroundId, number>
+export const G = Object.fromEntries(GROUNDS.map((g, i) => [g, i])) as Record<GroundId, number>
 
-export const SURFACE = 0
-export const CAVE = 1
 
 export interface PropSpot {
   kind: 'oak' | 'pine' | 'birch' | 'boulder' | 'fern' | 'cairn' | 'standing-stone' | 'thicket'
@@ -77,30 +79,59 @@ export interface Mouth {
   arch: [number, number]
 }
 
+/** The lab's areas: the first round's valley, plateau and shoulder; the mountain with its saddle and deep cave (./mountain.ts). */
+export type AreaName = 'shoulder' | 'mountain'
+
+export interface AreaOptions {
+  /** Walked tiles from a mouth to where daylight is gone. */
+  skyTiles: number
+}
+
 export interface LabArea {
+  name: AreaName
   stack: Stack
   /** Surface top height per tile (levels) before carving: what stands above a cave. */
   top: Int8Array
   props: PropSpot[]
   mouths: Mouth[]
-  /** Crystal glows in the chamber (tile middles). */
-  glows: { tx: number; ty: number; color: number }[]
+  /** Crystals in the cave (tile middles; z: the floor's level): lights. */
+  glows: Glow[]
   spawn: Node
   /** The remote player's loop (BFS walks between these). */
   route: Node[]
-  /** Creature homes: one on the plateau, one in the chamber. */
+  /** Creature homes. */
   homes: { layer: number; tx: number; ty: number; art: 'slime' | 'mushroom' }[]
+  /** The cave's walked distance from the nearest mouth, per tile (./light.ts daylight). */
+  walk: Float32Array
+  /** The cave's still light per tile, and the dark it leaves, as texels (./light.ts). */
+  light: Float32Array
+  dark: DarkMap
 }
+
+/** An area as authored: everything but what's worked out from it (light). */
+export type AreaPlan = Omit<LabArea, 'walk' | 'light' | 'dark'>
+
+/** Work out an authored area's light: daylight from its mouths, then its crystals and open air. */
+export function lightArea(plan: AreaPlan, opts: AreaOptions): LabArea {
+  const walk = daylight(plan.stack, opts.skyTiles)
+  const light = stillLight(plan.stack, plan.top, plan.glows)
+  return { ...plan, walk, light, dark: darkMap(plan.stack, light) }
+}
+
+/** Walked tiles from a mouth to where daylight is gone, unless switched. */
+export const SKY_TILES = 6
+
+export const DEFAULT_AREA_OPTIONS: AreaOptions = { skyTiles: SKY_TILES }
 
 // ---------------------------------------------------------------- helpers
 
-const idx = (l: { w: number }, tx: number, ty: number) => ty * l.w + tx
+export const idx = (l: { w: number }, tx: number, ty: number) => ty * l.w + tx
 
-function rect(fn: (tx: number, ty: number) => void, x0: number, y0: number, x1: number, y1: number): void {
+export function rect(fn: (tx: number, ty: number) => void, x0: number, y0: number, x1: number, y1: number): void {
   for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) fn(tx, ty)
 }
 
-function ellipse(fn: (tx: number, ty: number) => void, cx: number, cy: number, rx: number, ry: number): void {
+export function ellipse(fn: (tx: number, ty: number) => void, cx: number, cy: number, rx: number, ry: number): void {
   for (let ty = Math.floor(cy - ry); ty <= Math.ceil(cy + ry); ty++)
     for (let tx = Math.floor(cx - rx); tx <= Math.ceil(cx + rx); tx++) {
       const u = (tx - cx) / rx
@@ -110,7 +141,7 @@ function ellipse(fn: (tx: number, ty: number) => void, cx: number, cy: number, r
 }
 
 /** Small integer hash, for scattering. */
-function hash(x: number, y: number, salt: number): number {
+export function hash(x: number, y: number, salt: number): number {
   let h = (x * 374761393 + y * 668265263 + salt * 2147483647) | 0
   h = Math.imul(h ^ (h >>> 13), 1274126177)
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296
@@ -119,19 +150,22 @@ function hash(x: number, y: number, salt: number): number {
 /**
  * Faces from a top-height map: where land drops to the south by k levels,
  * the k × ROWS_PER_LEVEL tiles in front of it (on the lower land) are face.
- * Everything else is flat at its height.
+ * Everything else is flat at its height. With a mask (a cave's floor), only
+ * the tiles in it are touched: the rest stays as it was.
  */
-export function deriveFaces(l: Layer, top: Int8Array): void {
-  for (let ty = 0; ty < l.h; ty++) for (let tx = 0; tx < l.w; tx++) setFlat(l, tx, ty, top[idx(l, tx, ty)]!)
+export function deriveFaces(l: Layer, top: Int8Array, mask?: Uint8Array): void {
+  const inMask = (j: number) => !mask || mask[j] === 1
+  for (let ty = 0; ty < l.h; ty++) for (let tx = 0; tx < l.w; tx++) if (inMask(idx(l, tx, ty))) setFlat(l, tx, ty, top[idx(l, tx, ty)]!)
   for (let tx = 0; tx < l.w; tx++)
     for (let ty = 0; ty < l.h - 1; ty++) {
+      if (!inMask(idx(l, tx, ty))) continue
       const hi = top[idx(l, tx, ty)]!
       const lo = top[idx(l, tx, ty + 1)]!
       if (hi <= lo) continue
       const rows = (hi - lo) * ROWS_PER_LEVEL
       for (let i = 1; i <= rows && ty + i < l.h; i++) {
         const j = idx(l, tx, ty + i)
-        if (top[j]! >= hi) break
+        if (top[j]! >= hi || !inMask(j)) break
         setClosed(l, tx, ty + i, KIND.face)
         l.faceTop[j] = hi
         l.faceRow[j] = i - 1
@@ -194,7 +228,21 @@ export function ramp(l: Layer, x0: number, y0: number, x1: number, y1: number, u
   }, x0, y0, x1, y1)
 }
 
-function portal(stack: Stack, a: number, tx: number, ty: number, d: Dir, b: number): void {
+/** Paint a path (ground only) along straight runs between points, on flat land. */
+export function pathLine(l: Layer, pts: [number, number][]): void {
+  for (let k = 0; k < pts.length - 1; k++) {
+    let [x, y] = pts[k]!
+    const [x1, y1] = pts[k + 1]!
+    while (x !== x1 || y !== y1) {
+      if (l.kind[idx(l, x, y)] === KIND.flat && l.ground[idx(l, x, y)] !== G.water) l.ground[idx(l, x, y)] = G.path
+      if (x !== x1) x += Math.sign(x1 - x)
+      else y += Math.sign(y1 - y)
+    }
+    if (l.kind[idx(l, x1, y1)] === KIND.flat) l.ground[idx(l, x1, y1)] = G.path
+  }
+}
+
+export function portal(stack: Stack, a: number, tx: number, ty: number, d: Dir, b: number): void {
   stack.portals.set(portalKey(stack, a, tx, ty, d), b)
   const back = ((d + 2) & 3) as Dir
   stack.portals.set(portalKey(stack, b, tx + DX[d], ty + DY[d], back), a)
@@ -202,7 +250,7 @@ function portal(stack: Stack, a: number, tx: number, ty: number, d: Dir, b: numb
 
 // ---------------------------------------------------------------- the area
 
-export function buildLabArea(): LabArea {
+export function buildLabArea(opts: AreaOptions = DEFAULT_AREA_OPTIONS): LabArea {
   const w = LAB_W
   const h = LAB_H
   const surface = newLayer('surface', w, h)
@@ -230,18 +278,6 @@ export function buildLabArea(): LabArea {
 
   // Paths (paint only): valley spawn to the ramp and the mouth; across the
   // plateau to the switchback and the second mouth; over the shoulder.
-  const pathLine = (l: Layer, pts: [number, number][]) => {
-    for (let k = 0; k < pts.length - 1; k++) {
-      let [x, y] = pts[k]!
-      const [x1, y1] = pts[k + 1]!
-      while (x !== x1 || y !== y1) {
-        if (l.kind[idx(l, x, y)] === KIND.flat && l.ground[idx(l, x, y)] !== G.water) l.ground[idx(l, x, y)] = G.path
-        if (x !== x1) x += Math.sign(x1 - x)
-        else y += Math.sign(y1 - y)
-      }
-      if (l.kind[idx(l, x1, y1)] === KIND.flat) l.ground[idx(l, x1, y1)] = G.path
-    }
-  }
   pathLine(surface, [[24, 60], [24, 46], [17, 46], [17, 40]])
   pathLine(surface, [[24, 46], [30, 46], [30, 40]])
   pathLine(surface, [[17, 36], [17, 30], [40, 30], [40, 25]])
@@ -293,7 +329,7 @@ export function buildLabArea(): LabArea {
   for (const tx of [30, 31]) portal(stack, SURFACE, tx, 40, N, CAVE)
   for (const tx of [52, 53]) portal(stack, SURFACE, tx, 25, N, CAVE)
 
-  caveLight(stack)
+  // (Light is worked out from the finished plan: lightArea.)
   caveRock(stack, top)
 
   // Props: woods round the valley's edges, pines and stones on the plateau,
@@ -351,82 +387,29 @@ export function buildLabArea(): LabArea {
     { layer: SURFACE, tx: 50, ty: 29 },
     { layer: SURFACE, tx: 17, ty: 32 }
   ]
-  return {
-    stack,
-    top,
-    props,
-    mouths,
-    glows: [
-      { tx: 24, ty: 24, color: 0x7fd8ff },
-      { tx: 39, ty: 21, color: 0xb48cff },
-      { tx: 33, ty: 29, color: 0x7fffc8 },
-      { tx: 29, ty: 18, color: 0x7fd8ff }
-    ],
-    spawn,
-    route,
-    homes: [
-      { layer: SURFACE, tx: 24, ty: 31, art: 'slime' },
-      { layer: CAVE, tx: 35, ty: 23, art: 'mushroom' }
-    ]
-  }
+  return lightArea(
+    {
+      name: 'shoulder',
+      stack,
+      top,
+      props,
+      mouths,
+      glows: [
+        { tx: 24, ty: 24, z: -1, color: 0x7fd8ff },
+        { tx: 39, ty: 21, z: -1, color: 0xb48cff },
+        { tx: 33, ty: 29, z: -1, color: 0x7fffc8 },
+        { tx: 29, ty: 18, z: -1, color: 0x7fd8ff }
+      ],
+      spawn,
+      route,
+      homes: [
+        { layer: SURFACE, tx: 24, ty: 31, art: 'slime' },
+        { layer: CAVE, tx: 35, ty: 23, art: 'mushroom' }
+      ]
+    },
+    opts
+  )
 }
-
-/**
- * Daylight in the cave: full at the tiles just inside a mouth, gone six
- * tiles in (walked distance). What the surface sees of someone inside:
- * the arch's two rows only.
- */
-function caveLight(stack: Stack): void {
-  const cave = stack.layers[CAVE]!
-  const dist = new Int32Array(cave.w * cave.h).fill(-1)
-  const queue: number[] = []
-  for (const [key, to] of stack.portals) {
-    if (to !== CAVE) continue
-    const d = key & 3
-    const t = key >> 2
-    const tx = (t % (stack.w * stack.h)) % stack.w + DX[d]
-    const ty = Math.floor((t % (stack.w * stack.h)) / stack.w) + DY[d]
-    const i = idx(cave, tx, ty)
-    if (dist[i] === 0) continue
-    dist[i] = 0
-    queue.push(i)
-  }
-  for (let q = 0; q < queue.length; q++) {
-    const i = queue[q]!
-    const tx = i % cave.w
-    const ty = Math.floor(i / cave.w)
-    for (let d = 0; d < 4; d++) {
-      if (step(stack, CAVE, tx, ty, d as Dir) !== CAVE) continue
-      const j = idx(cave, tx + DX[d], ty + DY[d])
-      if (dist[j] >= 0) continue
-      dist[j] = dist[i]! + 1
-      queue.push(j)
-    }
-  }
-  for (let i = 0; i < dist.length; i++) {
-    if (dist[i]! < 0) continue
-    cave.sky[i] = Math.max(0, 1 - dist[i]! / SKY_TILES)
-    cave.seen[i] = dist[i] === 0 ? 1 : dist[i] === 1 ? 0.5 : 0
-  }
-  // Closed cave tiles take the most light of the floor beside them, so the
-  // light sampled between tiles doesn't dip at the walls.
-  const sky = cave.sky.slice()
-  for (let ty = 0; ty < cave.h; ty++)
-    for (let tx = 0; tx < cave.w; tx++) {
-      const i = idx(cave, tx, ty)
-      if (dist[i]! >= 0) continue
-      let best = 0
-      for (let d = 0; d < 4; d++) {
-        const x = tx + DX[d]
-        const y = ty + DY[d]
-        if (x >= 0 && y >= 0 && x < cave.w && y < cave.h && dist[idx(cave, x, y)]! >= 0) best = Math.max(best, sky[idx(cave, x, y)]!)
-      }
-      cave.sky[i] = best
-    }
-}
-
-/** Walked tiles from a mouth to where daylight is gone. */
-export const SKY_TILES = 6
 
 /** How far rock is drawn round the cave's floor (tiles). */
 export const ROCK_REACH = 3
@@ -436,7 +419,7 @@ export const ROCK_REACH = 3
  * land above stands higher than that floor (so none is drawn over the
  * open valley in front of a mouth).
  */
-function caveRock(stack: Stack, top: Int8Array): void {
+export function caveRock(stack: Stack, top: Int8Array): void {
   const cave = stack.layers[CAVE]!
   const surface = stack.layers[SURFACE]!
   // A face (or a mouth or trail cut into one) stands as high as its top.

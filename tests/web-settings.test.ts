@@ -9,7 +9,7 @@ test('the answer is read strictly: only true turns a tool on', () => {
   assert.deepEqual(parseWebSettings({ dev: null }), { dev: null });
   assert.deepEqual(parseWebSettings(null), { dev: null });
   assert.deepEqual(parseWebSettings({ dev: { grant: true, hooks: 'yes', clock: 1, fight_fall: true } }), {
-    dev: { grant: true, hooks: false, clock: false, fight_fall: true },
+    dev: { grant: true, hooks: false, clock: false, fight_fall: true, world_lab: false },
   });
 });
 

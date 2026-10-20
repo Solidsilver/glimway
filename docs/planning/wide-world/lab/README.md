@@ -1,6 +1,6 @@
 # World lab v0
 
-A database-free Go tool that calls `server/internal/wilds` directly. Run from the repository root:
+A database-free Go tool that calls `server/internal/wilds` directly (the renderer lives in `server/internal/worldlab`; a dev build of the server serves the same lab in the browser, below). Run from the repository root:
 
 ```sh
 nix develop -c nice -n 10 go build -o /tmp/worldlab ./server/cmd/worldlab
@@ -17,7 +17,7 @@ The default `--content=content/wilds.json` reads the current file without rebuil
 
 ## Views and overlays
 
-Atlas samples **glimpses only**, never chunks. A pixel is a chunk's centre land, tinted blue when the Wend crosses it. Region generates chunks in parallel and paints each ground tile, darkening solid tiles. Chunk paints the same ground at 4×, marks entities/sites/places, and traces paths through the walkability graph. Unknown grounds get a stable opaque fallback colour from the shared Go palette; the older frontier render tests use the same palette.
+Atlas samples **glimpses only**, never chunks. A pixel is a chunk's centre land, tinted blue when the Wend crosses it. Region generates chunks in parallel and paints each ground tile, darkening solid tiles. Chunk paints the same ground at 4×, marks entities/sites/places, and traces paths through the walkability graph. Unknown grounds get a stable opaque fallback colour from the shared Go palette; the older home render tests use the same palette.
 
 Each overlay is a boolean flag, or use `--overlays=land-cells,place-cells,tiers,wend,road,rumours,border,solid,reach`:
 
@@ -65,11 +65,33 @@ Open <http://127.0.0.1:8099>. Drag to pan, wheel/buttons to zoom through atlas �
 
 The page polls content hashes once per second and re-renders when either configured content file changes, including atomic editor saves. Invalid content displays the validation error while retaining the previous image; the next valid save retries. Each render returns its PNG and stats together. One render request runs at a time, chunk parallelism stays bounded, and abandoned requests cancel their worker processes. The listener accepts explicit loopback addresses only. Stop with Ctrl-C.
 
+## In the browser, on a dev server
+
+A dev build of the server (`go build -tags dev`, as on the staging instance) serves the lab itself: open the dev panel (the backquote key, or Menu → Dev) and press **Open the world lab**. It shows for an account the settings give `server.dev.world_lab` (on with `dev.enable`, for `dev.accounts`), and on a local dev build without settings for callers on that machine. A release server has no such routes, and a release web build has none of the page.
+
+- **Pan and zoom** by dragging, the wheel, a pinch, or the arrow and +/− keys. *Auto* shows the atlas below a pixel a tile and the region view above; *Atlas*, *Region* and *Chunk* pick one (chunk: the chunk in the middle, at 8 px a tile, with reach paths). Your hero is the gold dot when the seed is your world's.
+- **Seed and epoch** start at your world's seed and the wick it is in now (*Your world, now*); *Reproducible epoch* is the CLI's default.
+- **Overlays, stats, a tile:** the View tab toggles the overlays; Stats shows the last render's report (both versions and what changed in a diff); tapping a tile opens the Tile tab.
+- **Compare** shows A, B and what changed side by side (one at a time on a phone): another seed for B, or the server's rules for one side and your edited copy for the other.
+- **Rules:** an editable copy of the server's `content/wilds.json`, kept in that browser. It is checked as you type (where the JSON breaks, then the server's validation), and *Download* saves it for a lane to commit. Renders with "edited rules" send it along; the server's own rules never change.
+- **Go here** moves your hero to the tile (or the nearest open tile in its chunk) through the world scene's own warp: only where you stand changes, saved like a step. It always lands in your own world, so the page warns when the shown seed, epoch or rules aren't your world's as it is now, and it is off for a chunk past the world border (the server's `location.OnGrid`, which would refuse the save). On authored ground it lands on the very tile picked.
+
+Routes, all under `/api/dev/worldlab/` behind the dev gate: `GET state` (defaults, limits, the embedded rules), `POST render` (`{view, seed, epoch, rect, scale, overlays, rules?, b?: {seed, rules?}}`, answered with the PNG and its stats together), `POST tile` (`{seed, epoch, at: [tx, ty], rules?}`) and `POST check` (`{rules}`).
+
+How it keeps off the game's back:
+
+- **Every render and tile runs in a worker process**, the server binary again (`glimway-server _worldlab-worker`), whatever its rules. Edited rules are installed only there (`wilds.ConfigureForTools`), so they can't reach the generator the game uses; the server process only decodes them to report errors (`content.DecodeWilds` is pure). Even embedded renders go to a worker, to keep their CPU at a low priority and their memory out of the game's heap.
+- Workers run at **nice 15** (the whole process group, so every thread), with `GOMAXPROCS=2`, `GOMEMLIMIT=768MiB`, two chunk workers and a **60 s** limit; an abandoned request kills its worker.
+- **At most two workers at once** (a diff's two panels run side by side and take both); a request waits up to 30 s for one, then gets a 503.
+- The CLI's **limits** hold (atlas ≤ 1M chunks, tile views ≤ 2.4M tiles, ≤ 16M pixels, scale 1–8, coordinates ±100,000), request bodies are at most 512 KiB, and identical requests are answered from a **128 MiB cache** of recent answers.
+
+Measured on this host through the worker, at nice 15 with `GOMAXPROCS=2`: a 1,000 × 1,000 chunk atlas in **6.5 s**; a 64 × 64 chunk region (2.36M tiles, reach on) in **3.9 s**. The page asks for what the screen shows plus a margin, so usual requests are far smaller.
+
 ## Example renders
 
 Each example has its complete measured JSON report beside it.
 
-Atlas, seed `map`, chunks `-40,-60` through `39,19`, 4 px/chunk, frontier/road/rumour overlays:
+Atlas, seed `map`, chunks `-40,-60` through `39,19`, 4 px/chunk, road/rumour overlays (rendered with the 0.13 frontier overlay, since replaced by `border`):
 
 ![Atlas](atlas.png)
 

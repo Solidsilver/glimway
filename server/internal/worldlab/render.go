@@ -1,4 +1,4 @@
-package main
+package worldlab
 
 import (
 	"bytes"
@@ -18,7 +18,7 @@ import (
 	"glimway/server/internal/wilds"
 )
 
-type stats struct {
+type Stats struct {
 	Content         string             `json:"content"`
 	ContentSHA256   string             `json:"contentSHA256"`
 	View            string             `json:"view"`
@@ -52,14 +52,17 @@ type made struct {
 	err   error
 }
 
-func epoch(o options, cx, cy int) wilds.Epoch {
+func epoch(o Options, cx, cy int) wilds.Epoch {
 	if wilds.EpochKindAt(cx, cy) == wilds.EpochStill {
 		return wilds.StillEpoch(o.Seed)
 	}
 	return wilds.WickEpoch(o.Seed, o.Epoch)
 }
 
-func render(ctx context.Context, o options) (result, error) {
+// Render draws one view of the generator in this process, with the rules
+// content.WildsRules holds now (a worker's, after ConfigureForTools, or the
+// embedded ones). Use Spawn to render in a fresh worker process.
+func Render(ctx context.Context, o Options) (Result, error) {
 	started := time.Now()
 	S := int(content.WildsRules.GetChunkSize())
 	cw, ch := o.Rect[2]-o.Rect[0]+1, o.Rect[3]-o.Rect[1]+1
@@ -72,7 +75,7 @@ func render(ctx context.Context, o options) (result, error) {
 	// Land and river are lasting geography, so a wick glimpse is also the
 	// correct centre-land sample for still footprints.
 	glimpses := wilds.Glimpses(wilds.WickEpoch(o.Seed, o.Epoch), coords)
-	st := stats{View: o.View, Seed: o.Seed, Epoch: o.Epoch, Rect: o.Rect, ChunkSize: S, Chunks: len(coords), LandShare: map[string]float64{}, Note: "Land shares and axial runs sample chunk centres. Rectangles include both endpoints."}
+	st := Stats{View: o.View, Seed: o.Seed, Epoch: o.Epoch, Rect: o.Rect, ChunkSize: S, Chunks: len(coords), LandShare: map[string]float64{}, Note: "Land shares and axial runs sample chunk centres. Rectangles include both endpoints."}
 	source := o.Raw
 	if len(source) == 0 {
 		source, _ = content.FS.ReadFile("wilds.json")
@@ -81,6 +84,9 @@ func render(ctx context.Context, o options) (result, error) {
 	st.Content = o.Content
 	if st.Content == "" {
 		st.Content = "embedded"
+		if len(o.Raw) > 0 {
+			st.Content = "edited"
+		}
 	}
 	st.ContentSHA256 = hex.EncodeToString(digest[:])
 	landCounts := map[string]int{}
@@ -99,7 +105,7 @@ func render(ctx context.Context, o options) (result, error) {
 	}
 	width, height := cw*unit, ch*unit
 	img := image.NewRGBA(image.Rect(0, 0, width*o.Scale, height*o.Scale))
-	res := result{Width: width, Height: height, Scale: o.Scale}
+	res := Result{Width: width, Height: height, Scale: o.Scale}
 	if o.Signatures {
 		res.Signatures = make([]uint64, width*height)
 	}
@@ -339,7 +345,7 @@ func cross(img *image.RGBA, x, y, r int, c color.RGBA) {
 	}
 }
 
-func overlayColour(o options, c color.RGBA, cx, cy, tx, ty, unit int, river, road bool, solid int) color.RGBA {
+func overlayColour(o Options, c color.RGBA, cx, cy, tx, ty, unit int, river, road bool, solid int) color.RGBA {
 	if enabled(o, "tiers") {
 		tier := wilds.Tier(cx, cy)
 		c = blend(c, wilds.GroundColour(fmt.Sprint("tier-", tier)))
@@ -502,9 +508,9 @@ func reach(img *image.RGBA, walk, valid []bool, w, h, scale int, paint bool, anc
 	return unreachable
 }
 
-type diffStats struct {
-	A            stats   `json:"a"`
-	B            stats   `json:"b"`
+type DiffStats struct {
+	A            Stats   `json:"a"`
+	B            Stats   `json:"b"`
 	Changed      int     `json:"changedUnits"`
 	Share        float64 `json:"changedShare"`
 	Unit         string  `json:"unit"`
@@ -512,20 +518,22 @@ type diffStats struct {
 	Note         string  `json:"note"`
 }
 
-func compare(a, b result, elapsed time.Duration) ([]byte, any, error) {
+// Compare lays out A, B and a change mask side by side. Both need
+// Signatures and the same view, rectangle and scale.
+func Compare(a, b Result, elapsed time.Duration) ([]byte, DiffStats, error) {
 	if a.Width != b.Width || a.Height != b.Height || a.Scale != b.Scale || a.Stats.ChunkSize != b.Stats.ChunkSize {
-		return nil, nil, fmt.Errorf("content versions need matching chunk size and image dimensions")
+		return nil, DiffStats{}, fmt.Errorf("content versions need matching chunk size and image dimensions")
 	}
 	ia, err := png.Decode(bytes.NewReader(a.PNG))
 	if err != nil {
-		return nil, nil, err
+		return nil, DiffStats{}, err
 	}
 	ib, err := png.Decode(bytes.NewReader(b.PNG))
 	if err != nil {
-		return nil, nil, err
+		return nil, DiffStats{}, err
 	}
 	if len(a.Signatures) != a.Width*a.Height || len(b.Signatures) != len(a.Signatures) {
-		return nil, nil, fmt.Errorf("missing comparison signatures")
+		return nil, DiffStats{}, fmt.Errorf("missing comparison signatures")
 	}
 	w, h := ia.Bounds().Dx(), ia.Bounds().Dy()
 	img := image.NewRGBA(image.Rect(0, 0, w*3+4, h))
@@ -545,7 +553,7 @@ func compare(a, b result, elapsed time.Duration) ([]byte, any, error) {
 	if a.Stats.View == "atlas" {
 		unit = "chunk glimpses"
 	}
-	st := diffStats{a.Stats, b.Stats, count, float64(count) / float64(len(a.Signatures)), unit, float64(elapsed.Microseconds()) / 1000, "Panels: A, B, changed. Tile changes compare ground ID, solidity, decor, entities, sites and places; atlas compares land and river crossing. Overlays do not affect the change mask."}
+	st := DiffStats{a.Stats, b.Stats, count, float64(count) / float64(len(a.Signatures)), unit, float64(elapsed.Microseconds()) / 1000, "Panels: A, B, changed. Tile changes compare ground ID, solidity, decor, entities, sites and places; atlas compares land and river crossing. Overlays do not affect the change mask."}
 	var out bytes.Buffer
 	err = png.Encode(&out, img)
 	return out.Bytes(), st, err

@@ -140,9 +140,14 @@
       "smoke": true
     },
     {
+      "about": "The world lab: the dev panel's page (src/ui/dev/world-lab) and its dev server routes and workers (server/internal/worldlab).",
+      "paths": ["src/ui/dev/world-lab/**", "src/game/dev-warp.ts", "src/game/scenes/world-dev-hooks.ts", "src/ui/dev/DevPanel.svelte", "server/internal/worldlab/**", "server/internal/api/dev_worldlab.go", "server/cmd/glimway-server/dev_routes.go"],
+      "specs": ["world-lab.spec.ts", "dev-mode.spec.ts"]
+    },
+    {
       "about": "Server and web settings: the dev tools a player gets (dev-mode.spec.ts) and the login limits (sign-in). Every page reads them at start-up, so the smoke tier too.",
       "paths": ["server/internal/settings/**", "src/lib/web-settings.ts", "src/lib/dev-tools.ts"],
-      "specs": ["dev-mode.spec.ts", "connected.spec.ts", "onboarding.spec.ts"],
+      "specs": ["dev-mode.spec.ts", "connected.spec.ts", "onboarding.spec.ts", "world-lab.spec.ts"],
       "smoke": true
     },
     {

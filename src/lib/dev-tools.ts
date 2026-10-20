@@ -24,11 +24,11 @@ export const DEV_LOCAL: boolean = !!import.meta.env?.DEV
 export function devTools(): DevTools | null {
   if (!DEV_TOOLS) return null
   const dev = webSettings().dev
-  if (DEV_LOCAL) return { grant: true, hooks: true, fight_fall: true, clock: dev?.clock ?? false }
+  if (DEV_LOCAL) return { grant: true, hooks: true, fight_fall: true, world_lab: true, clock: dev?.clock ?? false }
   return dev
 }
 
 /** The dev panel has something to show. */
 export function devPanelOn(tools: DevTools | null): boolean {
-  return DEV_LOCAL || !!tools && (tools.grant || tools.clock)
+  return DEV_LOCAL || !!tools && (tools.grant || tools.clock || tools.world_lab)
 }

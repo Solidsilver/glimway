@@ -4,11 +4,14 @@ package main
 
 import (
 	"glimway/server/internal/api"
+	"glimway/server/internal/location"
 	"glimway/server/internal/settings"
+	"glimway/server/internal/worldlab"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 )
 
 // devBuild: this build has dev tools (go build -tags dev).
@@ -18,7 +21,7 @@ const devBuild = true
 var devLog = log.New(os.Stdout, "glimway ", log.LstdFlags|log.LUTC)
 
 // everyTool is local dev's: every tool, for this machine.
-var everyTool = settings.Tools{Grant: true, Hooks: true, Clock: true, FightFall: true}
+var everyTool = settings.Tools{Grant: true, Hooks: true, Clock: true, FightFall: true, WorldLab: true}
 
 // devCallerFor is how a dev build decides who may use its tools.
 func devCallerFor(a *api.Server, access devAccess) devCaller {
@@ -51,14 +54,17 @@ func devCallerWith(who func(*http.Request) (string, bool), access devAccess) dev
 }
 
 // devRoutes mounts dev mode's routes: POST /api/dev/grant
-// (server/internal/api/dev_grant.go) and POST /api/dev/fight-fall
-// (server/internal/api/dev_fights.go). Dev builds only; a caller without
-// the tool finds no such route. (The clock's: dev_clock.go. Which tools a
-// player has reaches the client in GET /api/web-settings.)
+// (server/internal/api/dev_grant.go), POST /api/dev/fight-fall
+// (server/internal/api/dev_fights.go) and the world lab under
+// /api/dev/worldlab/ (server/internal/worldlab). Dev builds only; a caller
+// without the tool finds no such route. (The clock's: dev_clock.go. Which
+// tools a player has reaches the client in GET /api/web-settings.)
 func devRoutes(a *api.Server, caller devCaller) func(http.Handler) http.Handler {
+	lab := devWorldLab(a)
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Path != api.DevGrantPath && r.URL.Path != api.DevFightFallPath {
+			inLab := strings.HasPrefix(r.URL.Path, worldlab.Prefix)
+			if r.URL.Path != api.DevGrantPath && r.URL.Path != api.DevFightFallPath && !inLab {
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -66,6 +72,8 @@ func devRoutes(a *api.Server, caller devCaller) func(http.Handler) http.Handler 
 			w.Header().Set("Cache-Control", "no-store")
 			tools := caller(r)
 			switch {
+			case inLab && tools.WorldLab && lab != nil:
+				lab.ServeHTTP(w, r)
 			case r.URL.Path == api.DevFightFallPath && tools.FightFall:
 				a.DevFightFall(w, r)
 			case r.URL.Path == api.DevGrantPath && tools.Grant:
@@ -75,4 +83,27 @@ func devRoutes(a *api.Server, caller devCaller) func(http.Handler) http.Handler 
 			}
 		})
 	}
+}
+
+// worldLabWorker is the hidden command a world lab render runs in: this
+// binary again, in a process of its own (server/internal/worldlab).
+const worldLabWorker = "_worldlab-worker"
+
+// devWorldLab is the world lab, its renders in workers of this binary.
+func devWorldLab(a *api.Server) *worldlab.Lab {
+	exe, err := os.Executable()
+	if err != nil {
+		devLog.Printf("world lab off: %v", err)
+		return nil
+	}
+	return worldlab.NewLab([]string{exe, worldLabWorker}, a.DevWorldLabHere, location.OnGridPublished)
+}
+
+// devCommand runs a dev build's hidden commands (a world lab worker),
+// before anything else: no settings, database or listener.
+func devCommand(args []string) (bool, error) {
+	if len(args) == 1 && args[0] == worldLabWorker {
+		return true, worldlab.RunWorker(os.Stdin, os.Stdout)
+	}
+	return false, nil
 }
