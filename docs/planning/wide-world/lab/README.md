@@ -17,9 +17,9 @@ The default `--content=content/wilds.json` reads the current file without rebuil
 
 ## Views and overlays
 
-Atlas samples **glimpses only**, never chunks. A pixel is a chunk's centre land, tinted blue when the Wend crosses it. Region generates chunks in parallel and paints each ground tile, darkening solid tiles. Chunk paints the same ground at 4×, marks entities/sites/places, and traces paths through the walkability graph. Unknown grounds get a stable opaque fallback colour from the shared Go palette; the older frontier render tests use the same palette.
+Atlas samples **glimpses only**, never chunks. A pixel is a chunk's centre land, tinted blue when the Wend crosses it. Region generates chunks in parallel and paints each ground tile, darkening solid tiles. Chunk paints the same ground at 4×, marks entities/sites/places, and traces paths through the walkability graph. Unknown grounds get a stable opaque fallback colour from the shared Go palette; the older home render tests use the same palette.
 
-Each overlay is a boolean flag, or use `--overlays=land-cells,place-cells,tiers,wend,road,rumours,frontier,solid,reach`:
+Each overlay is a boolean flag, or use `--overlays=land-cells,place-cells,tiers,wend,road,rumours,border,solid,reach`:
 
 | Flag | Shows |
 | --- | --- |
@@ -29,7 +29,7 @@ Each overlay is a boolean flag, or use `--overlays=land-cells,place-cells,tiers,
 | `--wend` | Blue river crossings in atlas; water/ford tiles in generated views |
 | `--road` | Gold road; atlas uses conservative road segment bounds |
 | `--rumours` | Orange cross at the wick's rumour |
-| `--frontier` | Red outline of the current generator's public frontier rectangle; never clips generation |
+| `--border` | Red outline of the world border (0.14): nothing is made past it |
 | `--solid` | Pink solid tiles, dark open tiles; chunk top/left edges show red/green solid/open share |
 | `--reach` | Walkability-tree paths to boundary samples and markers; cyan boundary-connected, orange isolated |
 
@@ -74,7 +74,7 @@ A dev build of the server (`go build -tags dev`, as on the staging instance) ser
 - **Overlays, stats, a tile:** the View tab toggles the overlays; Stats shows the last render's report (both versions and what changed in a diff); tapping a tile opens the Tile tab.
 - **Compare** shows A, B and what changed side by side (one at a time on a phone): another seed for B, or the server's rules for one side and your edited copy for the other.
 - **Rules:** an editable copy of the server's `content/wilds.json`, kept in that browser. It is checked as you type (where the JSON breaks, then the server's validation), and *Download* saves it for a lane to commit. Renders with "edited rules" send it along; the server's own rules never change.
-- **Go here** moves your hero to the tile (or the nearest open tile in its chunk) through the world scene's own warp: only where you stand changes, saved like a step. It always lands in your own world, so the page warns when the shown seed, epoch or rules aren't your world's as it is now, and it is off for a chunk your world doesn't reach yet (the server's `location.OnGridPublished`, which would refuse the save). On authored ground it lands on the very tile picked.
+- **Go here** moves your hero to the tile (or the nearest open tile in its chunk) through the world scene's own warp: only where you stand changes, saved like a step. It always lands in your own world, so the page warns when the shown seed, epoch or rules aren't your world's as it is now, and it is off for a chunk past the world border (the server's `location.OnGrid`, which would refuse the save). On authored ground it lands on the very tile picked.
 
 Routes, all under `/api/dev/worldlab/` behind the dev gate: `GET state` (defaults, limits, the embedded rules), `POST render` (`{view, seed, epoch, rect, scale, overlays, rules?, b?: {seed, rules?}}`, answered with the PNG and its stats together), `POST tile` (`{seed, epoch, at: [tx, ty], rules?}`) and `POST check` (`{rules}`).
 
@@ -91,7 +91,7 @@ Measured on this host through the worker, at nice 15 with `GOMAXPROCS=2`: a 1,00
 
 Each example has its complete measured JSON report beside it.
 
-Atlas, seed `map`, chunks `-40,-60` through `39,19`, 4 px/chunk, frontier/road/rumour overlays:
+Atlas, seed `map`, chunks `-40,-60` through `39,19`, 4 px/chunk, road/rumour overlays (rendered with the 0.13 frontier overlay, since replaced by `border`):
 
 ![Atlas](atlas.png)
 

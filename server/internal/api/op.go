@@ -107,8 +107,8 @@ func (a *Server) keyedOpFinalized(w http.ResponseWriter, r *http.Request, op *co
 		where = nil
 	} else if where == nil || !validArea(where.Area) || !finiteWhere(where) {
 		return refuse(fail(409, "invalid-position"))
-	} else if !wildsWhereInside(s.WorldID, where) {
-		return refuse(fail(409, "beyond-frontier"))
+	} else if !wildsWhereInside(where) {
+		return refuse(fail(409, "beyond-border"))
 	}
 	if _, err = tx.ExecContext(ctx, "SAVEPOINT gameplay"); err != nil {
 		return err
@@ -152,10 +152,6 @@ func (a *Server) keyedOpFinalized(w http.ResponseWriter, r *http.Request, op *co
 		// items only.
 		if decision == rollbackOperation {
 			if _, e := tx.ExecContext(ctx, "ROLLBACK TO gameplay"); e != nil {
-				return e
-			}
-			// A hold taken (or let go) since is undone; so is its reach.
-			if e := store.RefreshReach(ctx, tx); e != nil {
 				return e
 			}
 		}
@@ -216,7 +212,7 @@ func (a *Server) keyedOpFinalized(w http.ResponseWriter, r *http.Request, op *co
 }
 
 func finiteWhere(where *contract.Where) bool {
-	if where == nil || math.IsNaN(where.X) || math.IsNaN(where.Y) || math.IsInf(where.X, 0) || math.IsInf(where.Y, 0) || math.Abs(where.X) > 1e6 || math.Abs(where.Y) > 1e6 {
+	if where == nil || math.IsNaN(where.X) || math.IsNaN(where.Y) || math.IsInf(where.X, 0) || math.IsInf(where.Y, 0) || math.Abs(where.X) > worldPixelBound() || math.Abs(where.Y) > worldPixelBound() {
 		return false
 	}
 	if room, ok := content.RoomFor(where.Area); ok {
@@ -230,16 +226,24 @@ func finiteWhere(where *contract.Where) bool {
 	return true
 }
 
-// wildsWhereInside: a Wilds `where` (world pixels, finite) stands in a chunk
-// inside the world's frontier (open-map.md 2.6, lamps.md 2.2); any other area is not the
-// frontier's business.
-func wildsWhereInside(world string, where *contract.Where) bool {
+// worldPixelBound is the largest |x| or |y| a position may name, in world
+// pixels: a chunk past the world border's far edge, so a step past it is
+// beyond-border, not invalid (0.14; it was 1e6 while the frontier
+// kept everyone near home, short of the border's 1.57e6).
+func worldPixelBound() float64 {
+	return float64((wilds.BorderChunks() + 2) * chunkSize() * wildsTileSize)
+}
+
+// wildsWhereInside: a Wilds `where` (world pixels, finite) stands on the
+// grid, inside the world border (0.14) or on a fixed footprint; any other
+// area is not the border's business.
+func wildsWhereInside(where *contract.Where) bool {
 	if where.Area != outdoorsArea {
 		return true
 	}
 	tx, ty := wilds.TileOfPixel(where.X, where.Y)
 	cx, cy := wilds.ChunkOf(tx, ty)
-	return location.OnGrid(world, cx, cy)
+	return location.OnGrid(cx, cy)
 }
 
 func rulesPosition(w *contract.Where) rules.Position { return rules.Position{X: w.X, Y: w.Y} }

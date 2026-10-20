@@ -19,7 +19,6 @@ import (
 
 	"glimway/content"
 	"glimway/server/internal/chunks"
-	"glimway/server/internal/frontier"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/location"
 	"glimway/server/internal/wilds"
@@ -179,6 +178,9 @@ func (c *Chunks) Create(ctx context.Context, tx *sql.Tx, world, kind string, now
 		if err != nil {
 			return nil, err
 		}
+		if err = logWickGrowth(ctx, tx, world, ended); err != nil {
+			return nil, err
+		}
 		lapsed, err := c.judgeTurnings(ctx, tx, world, e, now)
 		if err != nil {
 			return nil, err
@@ -234,7 +236,7 @@ func deleteStaleEpochs(ctx context.Context, tx *sql.Tx, world, kind, season stri
 }
 
 // Chunk reads one chunk of an epoch in the caller's world, making it the
-// first time it is asked for (open-map.md 2.3): only inside the frontier, on
+// first time it is asked for (open-map.md 2.3): only inside the world border, on
 // layer 0, in the epoch its coordinates call for, and by the epoch's own
 // generator version. The blob is stored under a unique key, so of two racing
 // first reads one blob wins and both answer it. Another world's epoch, an
@@ -349,7 +351,7 @@ func (c *Chunks) stored(ctx context.Context, tx *sql.Tx, k chunkKey) (*contract.
 // make generates a chunk and stores it, then answers what is stored.
 func (c *Chunks) make(ctx context.Context, tx *sql.Tx, world string, e *contract.WildsEpoch, layer, cx, cy int32) (*contract.WorldChunk, error) {
 	x, y := int(cx), int(cy)
-	if layer != 0 || !frontier.Inside(world, x, y) || wilds.EpochKindAt(x, y) != e.Kind {
+	if layer != 0 || !wilds.InsideBorder(x, y) || wilds.EpochKindAt(x, y) != e.Kind {
 		return nil, sql.ErrNoRows
 	}
 	if c.Generator == nil {
@@ -408,7 +410,7 @@ func (c *Chunks) make(ctx context.Context, tx *sql.Tx, world string, e *contract
 					kept = append(kept, chunks.Kept{CX: nx, CY: ny, Chunk: m})
 					continue
 				}
-				if wilds.EpochKindAt(nx, ny) != EpochStill || !frontier.Inside(world, nx, ny) {
+				if wilds.EpochKindAt(nx, ny) != EpochStill || !wilds.InsideBorder(nx, ny) {
 					continue
 				}
 				if still == nil {

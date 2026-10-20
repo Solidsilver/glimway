@@ -13,7 +13,6 @@ import (
 	"errors"
 	"glimway/content"
 	"glimway/server/internal/chunks"
-	"glimway/server/internal/frontier"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/location"
 	"glimway/server/internal/ports"
@@ -219,7 +218,7 @@ func lanterns(ctx context.Context, tx *sql.Tx, epoch string) ([]*contract.WildsL
 // GET /api/wilds/chunk/<epochId>/<layer>/<cx>/<cy>: the stored chunk as
 // binary protobuf, made on its first read. Immutable, so the browser may
 // keep it for good; it is only ever asked for under an epoch a fresh near
-// read named.
+// read named, and only within sight of the reader (sight.go).
 func (a *Server) chunkRead(w http.ResponseWriter, r *http.Request) error {
 	parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/wilds/chunk/"), "/")
 	if len(parts) != 4 || parts[0] == "" || len(parts[0]) > 128 {
@@ -238,6 +237,12 @@ func (a *Server) chunkRead(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	defer tx.Rollback()
+	// Only land round the reader (sight.go).
+	if ok, err := chunkInSight(r.Context(), tx, s, int(n[1]), int(n[2])); err != nil {
+		return err
+	} else if !ok {
+		return fail(409, "beyond-sight")
+	}
 	m, err := a.Config.Chunks.Chunk(r.Context(), tx, s.WorldID, parts[0], n[0], n[1], n[2])
 	if err != nil {
 		return chunkError(err)
@@ -267,7 +272,7 @@ const wildsInteractionRadius = 3
 // request boundary checked it).
 func wildsTileOf(x, y float64) (int, int) { return wilds.TileOfPixel(x, y) }
 
-// nearWithin: the player stands in the Wilds, inside the frontier, within r
+// nearWithin: the player stands in the Wilds, inside the border, within r
 // tiles of the world tile (x, y).
 func nearWithin(s store.Snapshot, x, y, r int) error {
 	if !generatedPlace(s.State.Area, s.State.Position.X, s.State.Position.Y) {
@@ -277,8 +282,8 @@ func nearWithin(s store.Snapshot, x, y, r int) error {
 	if location.SourceOf(wilds.ChunkOf(x, y)).Kind != location.SourceGenerated {
 		return fail(409, "not-in-wilds")
 	}
-	if !frontier.Inside(s.WorldID, wilds.FloorDiv(px, chunkSize()), wilds.FloorDiv(py, chunkSize())) {
-		return fail(409, "beyond-frontier")
+	if !wilds.InsideBorder(wilds.FloorDiv(px, chunkSize()), wilds.FloorDiv(py, chunkSize())) {
+		return fail(409, "beyond-border")
 	}
 	dx, dy := px-x, py-y
 	if dx*dx+dy*dy > r*r {
@@ -750,7 +755,7 @@ func (w wildsService) PlaceFallen(ctx context.Context, tx *sql.Tx, s *store.Snap
 	S := chunkSize()
 	tx0, ty0 := wildsTileOf(where.X, where.Y)
 	cx, cy := wilds.FloorDiv(tx0, S), wilds.FloorDiv(ty0, S)
-	if !frontier.Inside(s.WorldID, cx, cy) || wilds.EpochKindAt(cx, cy) != epoch.Kind {
+	if !wilds.InsideBorder(cx, cy) || wilds.EpochKindAt(cx, cy) != epoch.Kind {
 		return none("invalid-place")
 	}
 	var stored int

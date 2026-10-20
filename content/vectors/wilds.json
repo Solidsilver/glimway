@@ -1241,14 +1241,13 @@
       ]
     },
     {
-      "name": "missing-south-limit",
+      "name": "missing-border",
       "valid": false,
       "rule": "required",
       "edits": [
         {
           "path": [
-            "frontier",
-            "southLimit"
+            "border"
           ],
           "remove": true
         }

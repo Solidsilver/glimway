@@ -40,11 +40,11 @@ func epochFor(seed, season string, cx, cy int) Epoch {
 
 // frontierList is every chunk of the 0.8 frontier, row by row.
 func frontierList() [][2]int {
-	minCx, minCy, maxCx, maxCy := frontierChunks()
+	minCx, minCy, maxCx, maxCy := homeRect()
 	var out [][2]int
 	for cy := minCy; cy <= maxCy; cy++ {
 		for cx := minCx; cx <= maxCx; cx++ {
-			if insideReach(cx, cy) && FixedFootprintAt(cx, cy) == nil {
+			if insideHome(cx, cy) && FixedFootprintAt(cx, cy) == nil {
 				out = append(out, [2]int{cx, cy})
 			}
 		}
@@ -87,7 +87,7 @@ func buildFrontierKept(t testing.TB, seed, season, keptSeed string) *frontierMap
 func buildFrontierStored(t testing.TB, seed, season string, stored map[[2]int]Chunk, held bool) *frontierMap {
 	t.Helper()
 	S := chunkSize()
-	minCx, minCy, maxCx, maxCy := frontierChunks()
+	minCx, minCy, maxCx, maxCy := homeRect()
 	m := &frontierMap{seed: seed, season: season, x0: minCx * S, y0: minCy * S, W: (maxCx - minCx + 1) * S, H: (maxCy - minCy + 1) * S, chunks: map[[2]int]Chunk{}}
 	m.walk = make([]bool, m.W*m.H)
 	m.ground = make([]Ground, m.W*m.H)
@@ -277,9 +277,6 @@ func TestV3EdgeAgreement(t *testing.T) {
 					if (nx == cx && ny == cy) && lx >= band && ly >= band && lx < S-band && ly < S-band {
 						continue // interior: detail's
 					}
-					if ny > int(contentRules().GetFrontier().GetSouthLimit()) {
-						continue
-					}
 					if EpochKindAt(cx, cy) == EpochStill && EpochKindAt(nx, ny) != EpochStill {
 						continue // the kept side never predicts the newer one
 					}
@@ -382,7 +379,7 @@ func (m *frontierMap) mustReachAll(t *testing.T) {
 
 // frontierRoutes are the wick world's routes in the frontier.
 func frontierRoutes(w *world) []*line {
-	minCx, minCy, maxCx, maxCy := frontierChunks()
+	minCx, minCy, maxCx, maxCy := homeRect()
 	x0, y0 := CellOf(minCx, minCy)
 	x1, y1 := CellOf(maxCx, maxCy)
 	var out []*line
@@ -452,7 +449,7 @@ func TestV3Seams(t *testing.T) {
 func TestV3Wend(t *testing.T) {
 	S := chunkSize()
 	data := contentRules().GetRiver()
-	_, minCy, maxCx, maxCy := frontierChunks()
+	_, minCy, maxCx, maxCy := homeRect()
 	tangle, wq := Footprint("tangle"), Footprint("whitequiet")
 	for _, ws := range v3Worlds(60) {
 		seed, season := ws[0], ws[1]
@@ -480,7 +477,7 @@ func TestV3Wend(t *testing.T) {
 					t.Fatalf("%s: river past the Whitequiet's west column at %d,%d", seed, tx, ty)
 				}
 				north = north || ty == minCy*S
-				west = west || !insideReach(FloorDiv(tx-1, S), FloorDiv(ty, S))
+				west = west || !insideHome(FloorDiv(tx-1, S), FloorDiv(ty, S))
 				if ty == (maxCy+1)*S-1 {
 					south = true
 					if cx > int(data.GetLeavesMaxCx()) {
@@ -597,7 +594,7 @@ func TestV3Road(t *testing.T) {
 		}
 		inside := 0
 		for _, mk := range r.marks {
-			if !insideReach(mk.chunk[0], mk.chunk[1]) {
+			if !insideHome(mk.chunk[0], mk.chunk[1]) {
 				continue
 			}
 			inside++
@@ -622,11 +619,11 @@ func TestV3Road(t *testing.T) {
 		// The frontier's east edge on the road's own rows: the reach is
 		// clipped at its corners, so it lies short of the frontier rectangle
 		// (whose east edge the lot column sets, further south).
-		minCx, _, maxCx, _ := frontierChunks()
+		minCx, _, maxCx, _ := homeRect()
 		east := false
 		for ty := a.y0; ty < oy-S; ty++ {
 			for cx := maxCx; cx >= minCx; cx-- {
-				if insideReach(cx, floorDiv(ty, S)) {
+				if insideHome(cx, floorDiv(ty, S)) {
 					east = east || a.ground[a.i((cx+1)*S-1, ty)] == groundPaving
 					break
 				}
@@ -776,14 +773,15 @@ func TestV3PlacesAndRumour(t *testing.T) {
 		places := w.rumourPlaces()
 		// Pinned per seed, independent of the enumeration/filter implementation.
 		// Hearthwick 2's 5×4 block makes cells (1, 1) and (1, 2) footprint
-		// cells and moves the frontier a chunk east.
-		counts := [...]int{12, 13, 16, 15, 14, 12, 12, 16, 14, 12, 14, 15, 13, 14, 13, 15, 13, 13, 13, 13, 11, 12, 15, 11, 12, 12, 11, 16, 15, 13, 12, 10, 14, 10, 11, 13, 13, 15, 11, 12}
+		// cells and moves home a chunk east. 0.14 (the landform's own version,
+		// places no longer kept north of home's south row) dropped about two a seed.
+		counts := [...]int{10, 10, 11, 11, 10, 9, 10, 14, 10, 8, 10, 13, 11, 13, 10, 14, 11, 10, 10, 11, 7, 10, 11, 9, 12, 8, 9, 12, 12, 11, 10, 8, 11, 7, 9, 11, 11, 10, 9, 9}
 		expected := counts[seedIndex]
 		if len(places) != expected {
 			t.Fatalf("%s: %d rumour places; want %d", seed, len(places), expected)
 		}
 		for _, p := range places {
-			if FixedFootprintAt(p.CX, p.CY) != nil || !insideReach(p.CX, p.CY) {
+			if FixedFootprintAt(p.CX, p.CY) != nil || !insideHome(p.CX, p.CY) {
 				t.Fatal("rumour place is not generated frontier ground")
 			}
 			ch := m.chunks[[2]int{p.CX, p.CY}]
@@ -860,7 +858,7 @@ func (m *frontierMap) sides() []int {
 	label := make([]int, m.W*m.H)
 	next := 0
 	for i := range label {
-		if !insideReach(FloorDiv(m.x0+i%m.W, chunkSize()), FloorDiv(m.y0+i/m.W, chunkSize())) || label[i] != 0 || m.ground[i] == groundRiverWater || m.ground[i] == groundRiverFord {
+		if !insideHome(FloorDiv(m.x0+i%m.W, chunkSize()), FloorDiv(m.y0+i/m.W, chunkSize())) || label[i] != 0 || m.ground[i] == groundRiverWater || m.ground[i] == groundRiverFord {
 			continue
 		}
 		next++
@@ -875,7 +873,7 @@ func (m *frontierMap) sides() []int {
 					continue
 				}
 				k := y*m.W + x
-				if !insideReach(FloorDiv(m.x0+x, chunkSize()), FloorDiv(m.y0+y, chunkSize())) || label[k] != 0 || m.ground[k] == groundRiverWater || m.ground[k] == groundRiverFord {
+				if !insideHome(FloorDiv(m.x0+x, chunkSize()), FloorDiv(m.y0+y, chunkSize())) || label[k] != 0 || m.ground[k] == groundRiverWater || m.ground[k] == groundRiverFord {
 					continue
 				}
 				label[k] = next
@@ -939,14 +937,14 @@ func TestV3Glimpse(t *testing.T) {
 	for i, g := range landGround {
 		floorLand[g.floor] = i
 	}
-	minCx, minCy, maxCx, maxCy := frontierChunks()
+	minCx, minCy, maxCx, maxCy := homeRect()
 	for _, ws := range v3Worlds(8) {
 		seed, season := ws[0], ws[1]
 		e := WickEpoch(seed, season)
 		var outside [][2]int
 		for cy := minCy - 2; cy <= maxCy; cy++ {
 			for cx := minCx - 2; cx <= maxCx+2; cx++ {
-				if !insideReach(cx, cy) {
+				if !insideHome(cx, cy) {
 					outside = append(outside, [2]int{cx, cy})
 				}
 			}
@@ -1197,8 +1195,8 @@ func TestV3EdgeTilesFollowField(t *testing.T) {
 // and a lot's open back on each side.
 func TestV3TownReach(t *testing.T) {
 	S := chunkSize()
-	x0, _, _, _ := frontierChunks()
-	reach := int(contentRules().GetFrontier().GetReach())
+	x0, _, _, _ := homeRect()
+	reach := homeReach
 	for _, f := range content.PlacesRules.GetFixed() {
 		if fx0, _, _, _ := content.FixedChunks(f); f.GetId() == "lots-west" && x0 > fx0-reach {
 			t.Fatalf("frontier starts at cx %d, fewer than %d chunks west of the lots", x0, reach)
@@ -1252,7 +1250,7 @@ func TestV3TownReach(t *testing.T) {
 						continue
 					}
 					tx, ty := place.front()
-					if m.in(tx, ty) && insideReach(FloorDiv(tx, S), FloorDiv(ty, S)) && !seen[m.i(tx, ty)] {
+					if m.in(tx, ty) && insideHome(FloorDiv(tx, S), FloorDiv(ty, S)) && !seen[m.i(tx, ty)] {
 						t.Fatalf("%s: %v cannot reach cell %d,%d front %d,%d", ws[0], p, cellX, cellY, tx, ty)
 					}
 				}
@@ -1265,11 +1263,11 @@ func TestV3TownReach(t *testing.T) {
 // neighbouring a missing chunk. Whole connected components may lead to drift.
 func frontierExitTile(tx, ty int) bool {
 	S := chunkSize()
-	if !insideReach(FloorDiv(tx, S), FloorDiv(ty, S)) {
+	if !insideHome(FloorDiv(tx, S), FloorDiv(ty, S)) {
 		return false
 	}
 	for _, d := range dirs4 {
-		if !insideReach(FloorDiv(tx+d[0], S), FloorDiv(ty+d[1], S)) {
+		if !insideHome(FloorDiv(tx+d[0], S), FloorDiv(ty+d[1], S)) {
 			return true
 		}
 	}

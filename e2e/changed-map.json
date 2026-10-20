@@ -109,8 +109,8 @@
       "specs": ["paths.spec.ts"]
     },
     {
-      "about": "Holds, frontier reach and claim rules: who may set or keep a lamp, and where.",
-      "paths": ["server/internal/api/frontier_reach*.go", "server/internal/api/claim_rules*.go", "server/internal/store/holds.go", "server/internal/store/reach.go", "server/internal/store/commons.go"],
+      "about": "Holds, the world border and claim rules: who may set or keep a lamp, and where.",
+      "paths": ["server/internal/api/border_settle*.go", "server/internal/api/claim_rules*.go", "server/internal/store/holds.go", "server/internal/store/place_move.go", "server/internal/store/commons.go"],
       "specs": ["camps.spec.ts", "lot-lantern.spec.ts", "land-chip.spec.ts", "paths.spec.ts"]
     },
     {
@@ -179,7 +179,7 @@
       "specs": ["fishing.spec.ts", "companions.spec.ts", "paths.spec.ts", "echo-keepsakes.spec.ts", "repairs.spec.ts", "items.spec.ts", "glims.spec.ts", "connected.spec.ts"]
     },
     {
-      "paths": ["server/internal/api/open_map*.go", "server/internal/chunks/**", "server/internal/store/chunks*.go", "server/internal/wildsgen/**", "server/internal/frontier/**", "server/internal/worldchange/**", "content/wilds*", "content/wilds/**"],
+      "paths": ["server/internal/api/open_map*.go", "server/internal/chunks/**", "server/internal/store/chunks*.go", "server/internal/wildsgen/**", "server/internal/api/sight.go", "server/internal/worldchange/**", "content/wilds*", "content/wilds/**"],
       "specs": ["open-map.spec.ts", "paths.spec.ts", "rumour.spec.ts"]
     },
     {

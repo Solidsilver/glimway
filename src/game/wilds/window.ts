@@ -53,20 +53,19 @@ import type { ExitDef } from '../worlds.ts'
 import { PLACES, fixedChunks } from '../../lib/places.ts'
 import { chunkSig, effectiveChunk, forgetGround, groundAt, solidAt } from './ground-view.ts'
 import { chunkGather, chunkLandmarks } from './terrain.ts'
-import { crossed, frontierDistance, keepAttached, paintable, planWindow, SLACK_TILES, veilEdges, walledChunks, type WindowPlan } from './window-plan.ts'
-import { AttachedChunk, BuildQueue, DriftChunk, groundTexture, paintDriftChunk, type ChunkDeps } from './window-chunk.ts'
+import { crossed, rectDistance, keepAttached, paintable, planWindow, SLACK_TILES, veilEdges, walledChunks, type WindowPlan } from './window-plan.ts'
+import { AttachedChunk, BorderVeil, BuildQueue, DriftChunk, groundTexture, paintDriftChunk, type ChunkDeps } from './window-chunk.ts'
 import { lanes, paintAway, paintHere, paintsAway, type PaintJob } from './paint-worker.ts'
 import { paintTable } from './ground-table.ts'
 import { chunkOrigin } from './terrain.ts'
 import { fnv1a32 } from '../../lib/hash.ts'
 import { TILE } from '../../lib/tile.ts'
-import { chunkTerrain, insideNamedFrontier, landRevision, loadWildsChunk, NEAR_MAX_AGE_MS, placeKey, refreshLand, refreshNear, wildsEpoch, wildsFrontier, wildsView } from './store.ts'
+import { chunkTerrain, insideNamedBorder, landRevision, loadWildsChunk, NEAR_MAX_AGE_MS, placeKey, refreshLand, refreshNear, wildsEpoch, wildsBorder, wildsView } from './store.ts'
 import { markSeen, markWalked } from './walked.ts'
 import { LandHere } from './land-here.ts'
 import { perfSpan, perfTime, perfWithout } from '../perf.ts'
 import { addAll, destroyAll, destroyStatics, enableStatics, looseImage } from '../area/bulk.ts'
 import { staticBox } from '../area/collision.ts'
-import { heldReach } from '../../lib/wilds/coords.ts'
 
 export interface WindowDeps extends Omit<ChunkDeps, 'ground' | 'gather' | 'builds'>, Pick<FixedChunkDeps, 'interactables' | 'enter' | 'hooks'> {
   session: Session
@@ -75,15 +74,15 @@ export interface WindowDeps extends Omit<ChunkDeps, 'ground' | 'gather' | 'build
 
 /** On the grid as the window sees it: inside the frontier the server named, or on a fixed footprint. */
 export function onWindow(cx: number, cy: number): boolean {
-  return insideNamedFrontier(cx, cy) || fixedPlaceOf(cx, cy) !== null
+  return insideNamedBorder(cx, cy) || fixedPlaceOf(cx, cy) !== null
 }
 
 /** Pixels from the grid (the frontier and every fixed footprint): the drift fogs with it. */
 export function gridDistance(f: { minCx: number; minCy: number; maxCx: number; maxCy: number }, wx: number, wy: number): number {
-  let d = frontierDistance(f, wx, wy)
+  let d = rectDistance(f, wx, wy)
   for (const p of PLACES.fixed) {
     const c = fixedChunks(p)
-    d = Math.min(d, frontierDistance({ minCx: c.x0, minCy: c.y0, maxCx: c.x1, maxCy: c.y1 }, wx, wy))
+    d = Math.min(d, rectDistance({ minCx: c.x0, minCy: c.y0, maxCx: c.x1, maxCy: c.y1 }, wx, wy))
   }
   return d
 }
@@ -157,11 +156,12 @@ export class WildsWindow {
   /** The attached chunks still being built, in attachment order (./window-chunk.ts BuildQueue). */
   readonly builds = new BuildQueue()
   private drifts = new Map<string, DriftChunk>()
+  /** The border's veil over the attached and drift chunks near it (./window-chunk.ts BorderVeil). */
+  private veils = new Map<string, BorderVeil>()
   /** Walls over the chunks beside the hero's that aren't attached (./window-plan.ts walledChunks). */
   private walls = new Map<string, Phaser.Physics.Arcade.Image>()
-  /** The named reach the plan was made for: a camp set moves it, and the window is planned again. */
-  private seenFrontier: unknown = null
-  private seenHeld: unknown = null
+  /** The border the plan was made for: content that widens it plans the window again. */
+  private seenBorder: unknown = null
   private reachSig = ''
   private paints = new Map<string, PaintedChunk>()
   private far = new Map<string, Phaser.GameObjects.Image[]>()
@@ -255,7 +255,7 @@ export class WildsWindow {
     this.landHere.update(at.cx, at.cy, view, landRevision())
     // Nothing to place a window on until the Wilds have been read once (the
     // entities say so on screen, and try again).
-    if (!wildsFrontier()) return
+    if (!wildsBorder()) return
     if (this.reachMoved() || crossed(this.plan?.center ?? null, at)) this.recentre(at.cx, at.cy)
     else this.dropBehind()
     if (view && view.version !== this.lastVersion) {
@@ -265,6 +265,7 @@ export class WildsWindow {
     this.step()
     this.wall(at.cx, at.cy)
     this.buildSome()
+    this.syncVeils()
     this.seenTimer -= dt
     if (this.seenTimer <= 0) {
       this.seenTimer = 0.5
@@ -272,17 +273,28 @@ export class WildsWindow {
     }
   }
 
-  /** Has the named reach (the near read's rectangle and held keys) changed since the window was last planned? */
+  /** Has the named border (the near read's rectangle) changed since the window was last planned? */
   private reachMoved(): boolean {
-    const f = wildsFrontier()
-    const held = heldReach()
-    if (f === this.seenFrontier && held === this.seenHeld) return false
-    this.seenFrontier = f
-    this.seenHeld = held
-    const sig = JSON.stringify([f, held])
+    const f = wildsBorder()
+    if (f === this.seenBorder) return false
+    this.seenBorder = f
+    const sig = JSON.stringify(f)
     if (sig === this.reachSig) return false
     this.reachSig = sig
     return true
+  }
+
+  /** The border's veil over every attached and drift chunk near it, and none over the rest. */
+  private syncVeils(): void {
+    const want = new Set([...this.attached.keys(), ...this.drifts.keys()])
+    for (const [key, v] of this.veils) if (!want.has(key)) {
+      v.destroy()
+      this.veils.delete(key)
+    }
+    for (const key of want) if (!this.veils.has(key)) {
+      const { cx, cy } = parseChunkKey(key)
+      this.veils.set(key, new BorderVeil(this.deps.scene, cx, cy))
+    }
   }
 
   /**
@@ -407,7 +419,7 @@ export class WildsWindow {
     this.plan = plan
     const session = this.deps.session
     const wick = wildsEpoch('wick').id
-    if (insideNamedFrontier(cx, cy) && wick) markWalked(wick, chunkKey(cx, cy))
+    if (insideNamedBorder(cx, cy) && wick) markWalked(wick, chunkKey(cx, cy))
     // Drift the reach has grown over (a camp set) goes now: the land is attached in its place.
     for (const [key, d] of this.drifts) if (plan.attach.includes(key)) {
       d.destroy()
@@ -500,7 +512,7 @@ export class WildsWindow {
       if (had) {
         // Patched in place (./window-chunk.ts patch): its ground is repainted off the frame.
         const p = this.paints.get(key)
-        if (!p || p.sig === had.sig || this.pending.get(key) === had.sig || !paintable(cx, cy, insideNamedFrontier, known)) continue
+        if (!p || p.sig === had.sig || this.pending.get(key) === had.sig || !paintable(cx, cy, insideNamedBorder, known)) continue
         this.paint(key, had.sig)
         return true
       }
@@ -512,7 +524,7 @@ export class WildsWindow {
       const sig = this.sigOf(cx, cy)
       const p = this.paints.get(key)
       if (!p || p.sig !== sig) {
-        if (this.pending.get(key) === sig || !paintable(cx, cy, insideNamedFrontier, known)) continue
+        if (this.pending.get(key) === sig || !paintable(cx, cy, insideNamedBorder, known)) continue
         this.paint(key, sig)
         return true
       }
@@ -523,14 +535,14 @@ export class WildsWindow {
     for (const key of plan.drift) {
       if (this.drifts.has(key)) continue
       const view = wildsView()
-      const f = wildsFrontier()
+      const f = wildsBorder()
       if (!view || !f) break
       const { cx, cy } = parseChunkKey(key)
-      const glimpse = view.glimpse.get(key) ?? null
-      const sig = `drift|${view.wick.id}|${glimpse?.land ?? ''}|${glimpse?.river ?? ''}`
+      // Nothing lies past the border: the drift there is woods in fog, no glimpse.
+      const sig = `drift|${view.wick.id}`
       let p = this.paints.get(key)
       if (!p || p.sig !== sig) {
-        const painted = paintDriftChunk(this.deps.scene, cx, cy, glimpse, seasonMark(view.wick.season), (wx, wy) => gridDistance(f, wx, wy), view.wick.worldSeed, `wilds-drift:${key}`)
+        const painted = paintDriftChunk(this.deps.scene, cx, cy, null, seasonMark(view.wick.season), (wx, wy) => gridDistance(f, wx, wy), view.wick.worldSeed, `wilds-drift:${key}`)
         this.logPaint(key, painted.ms, true)
         p = { key: painted.key, sig }
         this.paints.set(key, p)
@@ -877,6 +889,8 @@ export class WildsWindow {
     for (const c of this.fixed.values()) c.destroy()
     this.fixed.clear()
     for (const d of this.drifts.values()) d.destroy()
+    for (const v of this.veils.values()) v.destroy()
+    this.veils.clear()
     for (const imgs of this.far.values()) destroyAll(this.deps.scene, imgs)
     for (const p of this.paints.values()) if (this.deps.scene.textures.exists(p.key)) this.deps.scene.textures.remove(p.key)
     this.attached.clear()
@@ -921,6 +935,8 @@ export class WildsWindow {
     for (const c of this.attached.values()) c.destroy()
     for (const c of this.fixed.values()) c.destroy()
     for (const c of this.drifts.values()) c.destroy()
+    for (const v of this.veils.values()) v.destroy()
+    this.veils.clear()
     if (this.walls.size) destroyStatics(this.deps.scene.physics.world as never, this.deps.solids as never, [...this.walls.values()] as never)
     this.walls.clear()
     this.fixed.clear()

@@ -58,7 +58,7 @@ var cutStones sync.Map
 
 // cutStoneFor is the quest's stone for a world of this seed: the first lamp
 // stone along the Lantern Road, out from the Whitequiet, that stands on
-// visitable land inside the frontier. Never a weekly site: the road and its
+// visitable land inside the world border. Never a weekly site: the road and its
 // stones are the seed's alone. Tests swap it (the fake generator lays no
 // road).
 var cutStoneFor = func(world, seed string) string {
@@ -298,7 +298,7 @@ func (a *Server) lampLandmarks(ctx context.Context, tx *sql.Tx, world, self stri
 	for dy := -1; dy <= 1; dy++ {
 		for dx := -1; dx <= 1; dx++ {
 			kx, ky := cx+dx, cy+dy
-			if location.SourceOf(kx, ky).Kind != location.SourceGenerated || !location.OnGrid(world, kx, ky) {
+			if location.SourceOf(kx, ky).Kind != location.SourceGenerated || !location.OnGrid(kx, ky) {
 				continue
 			}
 			land, err := a.wickChunk(ctx, tx, world, kx, ky, now)

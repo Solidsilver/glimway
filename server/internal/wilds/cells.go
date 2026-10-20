@@ -55,8 +55,7 @@ func (p *Place) front() (int, int) {
 }
 
 // PlaceAt is the place of a cell in a wick epoch; false for a footprint
-// cell, a cell wholly south of the frontier's south limit, or a still
-// epoch.
+// cell or a still epoch.
 func PlaceAt(e Epoch, cellX, cellY int) (Place, bool) {
 	if e.check() != nil {
 		return Place{}, false
@@ -110,11 +109,7 @@ func (w *world) place(x, y int) *Place {
 	}
 	S := chunkSize()
 	n := int(contentRules().GetCells().GetCellChunks())
-	south := int(contentRules().GetFrontier().GetSouthLimit())
 	cx0, cy0 := cellChunk0(x, y)
-	if cy0 > south {
-		return nil
-	}
 	rng := NewRng(w.e.hash("place", x, y))
 	// The spot: the first try clear of the river and the road, else the
 	// try with the most room.
@@ -122,7 +117,7 @@ func (w *world) place(x, y int) *Place {
 	var best *spot
 	for a := 0; a < placeTries; a++ {
 		s := spot{cx: cx0 + rng.NextInt(n), cy: cy0 + rng.NextInt(n), tx: rng.Between(placeLo, S-1-placeLo), ty: rng.Between(placeLo, S-1-placeLo)}
-		if s.cy > south || FootprintAt(s.cx, s.cy) != nil || FixedFootprintAt(s.cx, s.cy) != nil || nearKeepOut(s.cx*S+s.tx, s.cy*S+s.ty, maxClearing) {
+		if FootprintAt(s.cx, s.cy) != nil || FixedFootprintAt(s.cx, s.cy) != nil || nearKeepOut(s.cx*S+s.tx, s.cy*S+s.ty, maxClearing) {
 			continue
 		}
 		p := tileCentre(s.cx*S+s.tx, s.cy*S+s.ty)

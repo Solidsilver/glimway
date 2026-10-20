@@ -1,7 +1,7 @@
 package wilds
 
 // A rumour each wick (open-map.md 2.10, decision 19). One place per world
-// per wick, hashed, among the new cells' places inside the 0.8 frontier
+// per wick, hashed, among the new cells' places at home (world_v3.go)
 // (never a footprint's cell). Its find is a site in front of the place's
 // landmark, rumour:<cx>:<cy>, made with the chunk (it's a pure function of
 // the epoch). The parts Elara's words are built from never name
@@ -31,13 +31,13 @@ func Rumour(e Epoch) (RumourPick, bool) {
 
 // rumourPlaces are the places the rumour can pick, in cell order.
 func (w *world) rumourPlaces() []*Place {
-	minCx, minCy, maxCx, maxCy := frontierChunks()
+	minCx, minCy, maxCx, maxCy := homeRect()
 	x0, y0 := CellOf(minCx, minCy)
 	x1, y1 := CellOf(maxCx, maxCy)
 	var out []*Place
 	for y := y0; y <= y1; y++ {
 		for x := x0; x <= x1; x++ {
-			if p := w.place(x, y); p != nil && insideReach(p.CX, p.CY) {
+			if p := w.place(x, y); p != nil && insideHome(p.CX, p.CY) {
 				out = append(out, p)
 			}
 		}
@@ -72,7 +72,7 @@ func (w *world) rumour() (RumourPick, bool) {
 
 // rumourRing is the distance word's ring for a place: its chunk's distance
 // from the nearest footprint, clamped to the rings content has words for
-// (1..3). Not wilds.Ring: inside 0.8's frontier that is always 1, so every
+// (1..3). Not wilds.Ring: at home that is always 1, so every
 // rumour would be "not far".
 func rumourRing(cx, cy int) int {
 	top := 1

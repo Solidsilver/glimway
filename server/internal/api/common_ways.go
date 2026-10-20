@@ -29,7 +29,6 @@ import (
 
 	"glimway/content"
 	"glimway/server/internal/chunks"
-	"glimway/server/internal/frontier"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/location"
 	"glimway/server/internal/store"
@@ -107,7 +106,7 @@ func (c commonWays) Turn(ctx context.Context, tx *sql.Tx, world string, ended, n
 		if err != nil {
 			return err
 		}
-		if keep && location.SourceOf(cx, cy).Kind == location.SourceGenerated && wilds.EpochKindAt(cx, cy) == store.EpochWick && frontier.Inside(world, cx, cy) {
+		if keep && location.SourceOf(cx, cy).Kind == location.SourceGenerated && wilds.EpochKindAt(cx, cy) == store.EpochWick && wilds.InsideBorder(cx, cy) {
 			m, err := c.a.Config.Chunks.Chunk(ctx, tx, world, next.Id, 0, int32(cx), int32(cy))
 			if err != nil && !errors.Is(err, sql.ErrNoRows) {
 				return err
@@ -242,7 +241,7 @@ func (c commonWays) carryWays(ctx context.Context, tx *sql.Tx, world string, end
 
 // creditVisit flags the chunk under a Wilds position (world pixels) visited
 // this wick, in the caller's transaction: only a wick chunk inside the
-// frontier, whose Common work the turning judges.
+// world border, whose Common work the turning judges.
 func creditVisit(ctx context.Context, tx *sql.Tx, world string, x, y float64, now int64) error {
 	cx, cy, ok := visitChunk(world, x, y)
 	if !ok {
@@ -257,7 +256,7 @@ func visitChunk(world string, x, y float64) (int, int, bool) {
 }
 
 func visitable(world string, cx, cy int) bool {
-	return location.SourceOf(cx, cy).Kind == location.SourceGenerated && wilds.EpochKindAt(cx, cy) == store.EpochWick && frontier.Inside(world, cx, cy)
+	return location.SourceOf(cx, cy).Kind == location.SourceGenerated && wilds.EpochKindAt(cx, cy) == store.EpochWick && wilds.InsideBorder(cx, cy)
 }
 
 type visitKey struct {

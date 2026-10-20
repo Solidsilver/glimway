@@ -78,7 +78,7 @@ func TestHeldPatchSeams(t *testing.T) {
 			for _, c := range p {
 				for _, d := range dirs4 {
 					n := [2]int{c[0] + d[0], c[1] + d[1]}
-					if _, held := stored[n]; held || !insideReach(n[0], n[1]) || w.keptAt(n[0], n[1]) {
+					if _, held := stored[n]; held || !insideHome(n[0], n[1]) || w.keptAt(n[0], n[1]) {
 						continue
 					}
 					for off := 0; off < S; off++ {

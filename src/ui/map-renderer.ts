@@ -9,7 +9,7 @@
  * - Further out, one overview of the walked land, a few pixels a chunk (or a
  *   chunk a pixel, or several chunks a pixel for a very wide map), built when
  *   the map's input changes and never per drag.
- * - Parchment, the chunk grid, the glimpse past the drift and the frontier's
+ * - Parchment, the chunk grid, the glimpse's wash and the world border's
  *   edge are drawn straight into the viewport: nothing is allocated for the
  *   blank land between walked chunks.
  * - Ways and places are marks over it, kept in buckets so a pan looks only
@@ -112,7 +112,7 @@ export class MapRenderer {
   private input: MapInput | null = null
   private scope = ''
   private land = new Map<string, ChunkLandStatus>()
-  /** Walked chunks inside the frontier, by key. */
+  /** Walked chunks on the grid, by key. */
   private byKey = new Map<string, MapChunk & { rev: string }>()
   /** The revision each chunk's cached raster was made from. */
   private revAt = new Map<string, string>()
@@ -151,10 +151,9 @@ export class MapRenderer {
       this.scope = scope
     }
     this.input = input
-    const f = input.frontier
     this.byKey.clear()
     for (const c of [...input.chunks, ...(input.fixed ?? [])]) {
-      if (!onMapGrid(f, c.cx, c.cy)) continue
+      if (!onMapGrid(c.cx, c.cy)) continue
       const key = `${c.cx},${c.cy}`
       const rev = c.rev ?? hashChunk(c)
       this.byKey.set(key, { ...c, rev })
@@ -227,16 +226,35 @@ export class MapRenderer {
     const Y = (ty: number) => Math.round(oy + ty * k)
     const vis = visibleTiles(view, vp)
     const vc = { minCx: Math.floor(vis.minTx / S), minCy: Math.floor(vis.minTy / S), maxCx: Math.floor(vis.maxTx / S), maxCy: Math.floor(vis.maxTy / S) }
-    const f = input.frontier
+    const f = input.window
     const chunkCss = S * view.scale
     const slots = (Math.ceil(vp.w / chunkCss) + 1) * (Math.ceil(vp.h / chunkCss) + 1)
     const hatch = slots <= DETAIL_SLOTS
     ctx.imageSmoothingEnabled = false
 
-    // Past the drift: the glimpse's wash (hatched for the Wend, close in).
+    // The window round you: parchment, and a faint chunk grid where the cells are big enough to read.
+    const fx0 = Math.max(f.minCx, vc.minCx)
+    const fx1 = Math.min(f.maxCx, vc.maxCx)
+    const fy0 = Math.max(f.minCy, vc.minCy)
+    const fy1 = Math.min(f.maxCy, vc.maxCy)
+    ctx.fillStyle = css(MAP_COLOURS.parchment)
+    for (let cy = fy0; cy <= fy1; cy++) for (let cx = fx0; cx <= fx1; cx++) {
+      if (!onMapGrid(cx, cy)) continue
+      const x = X(cx * S), y = Y(cy * S), w = X((cx + 1) * S) - x, h = Y((cy + 1) * S) - y
+      ctx.fillStyle = css(MAP_COLOURS.parchment)
+      ctx.fillRect(x, y, w, h)
+      if (chunkCss >= 12) {
+        ctx.fillStyle = css(MAP_COLOURS.grid)
+        const line = Math.max(1, Math.round(r))
+        ctx.fillRect(x, y, line, h)
+        ctx.fillRect(x, y, w, line)
+      }
+    }
+
+    // Over it, the glimpse's wash (hatched for the Wend, close in).
     for (const g of input.glimpse) {
       if (g.cx < vc.minCx || g.cx > vc.maxCx || g.cy < vc.minCy || g.cy > vc.maxCy) continue
-      if (onMapGrid(f, g.cx, g.cy)) continue
+      if (!onMapGrid(g.cx, g.cy)) continue
       const x0 = X(g.cx * S)
       const y0 = Y(g.cy * S)
       const w = X((g.cx + 1) * S) - x0
@@ -246,25 +264,6 @@ export class MapRenderer {
       } else {
         ctx.fillStyle = css(glimpseColour(g.land), GLIMPSE_ALPHA / 255)
         ctx.fillRect(x0, y0, w, h)
-      }
-    }
-
-    // The frontier: parchment, and a faint chunk grid where the cells are big enough to read.
-    const fx0 = Math.max(f.minCx, vc.minCx)
-    const fx1 = Math.min(f.maxCx, vc.maxCx)
-    const fy0 = Math.max(f.minCy, vc.minCy)
-    const fy1 = Math.min(f.maxCy, vc.maxCy)
-    ctx.fillStyle = css(MAP_COLOURS.parchment)
-    for (let cy = fy0; cy <= fy1; cy++) for (let cx = fx0; cx <= fx1; cx++) {
-      if (!onMapGrid(f, cx, cy)) continue
-      const x = X(cx * S), y = Y(cy * S), w = X((cx + 1) * S) - x, h = Y((cy + 1) * S) - y
-      ctx.fillStyle = css(MAP_COLOURS.parchment)
-      ctx.fillRect(x, y, w, h)
-      if (chunkCss >= 12) {
-        ctx.fillStyle = css(MAP_COLOURS.grid)
-        const line = Math.max(1, Math.round(r))
-        ctx.fillRect(x, y, line, h)
-        ctx.fillRect(x, y, w, line)
       }
     }
 
@@ -358,7 +357,7 @@ export class MapRenderer {
       }
     }
 
-    // The frontier's edge, dashed in the drift's colour.
+    // The world border's edge, where the window reaches it, dashed in the drift's colour.
     ctx.strokeStyle = css(MAP_COLOURS.drift)
     ctx.lineWidth = Math.max(1, Math.round(2 * r))
     ctx.setLineDash([6 * r, 6 * r])

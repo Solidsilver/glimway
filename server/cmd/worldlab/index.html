@@ -19,12 +19,12 @@
 </div><div id="overlays"></div>
 </form>
 <div id="status" role="status"></div>
-<div id="legend">Drag to pan · wheel or buttons to zoom across scales · click to inspect a tile · content saves re-render automatically.<br>Land cells magenta; place cells cyan; Wend blue; road gold; frontier red. Entities white; sites magenta; lamps yellow; places red. Reach: cyan boundary-connected, orange isolated. Solid view: pink tiles, chunk edge red/green = solid/open share. Fixed ground: grey hatch.</div>
+<div id="legend">Drag to pan · wheel or buttons to zoom across scales · click to inspect a tile · content saves re-render automatically.<br>Land cells magenta; place cells cyan; Wend blue; road gold; world border red. Entities white; sites magenta; lamps yellow; places red. Reach: cyan boundary-connected, orange isolated. Solid view: pink tiles, chunk edge red/green = solid/open share. Fixed ground: grey hatch.</div>
 </header>
 <main><div id="viewport"><canvas id="map" aria-label="Generated world map"></canvas></div><aside><strong>Stats</strong><pre id="stats">Loading…</pre><div id="tile"><strong>Tile inspector</strong><pre id="detail">Click the map.</pre></div></aside></main>
 <script>
 const $=id=>document.getElementById(id),canvas=$('map'),ctx=canvas.getContext('2d'),vp=$('viewport');
-const names=['land-cells','place-cells','tiers','wend','road','rumours','frontier','solid','reach'];
+const names=['land-cells','place-cells','tiers','wend','road','rumours','border','solid','reach'];
 for(const name of names){const label=document.createElement('label'),input=document.createElement('input');input.type='checkbox';input.value=name;input.name='overlay';label.append(input,document.createTextNode(name));$('overlays').append(label)}
 let rendered=null,revision='',zoom=1,offset=[0,0],drag=null,pending=null,sequence=0,ready=false;
 const selected=()=>[...document.querySelectorAll('[name=overlay]:checked')].map(e=>e.value).join(',');

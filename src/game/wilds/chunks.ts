@@ -31,7 +31,13 @@ const PREFIX = `${CONTRACT_NUMBER}:${loadWilds().generatorVersion}:`;
 
 const chunkKey = (epochId: string, cx: number, cy: number) => `${PREFIX}${epochId}:${cx}:${cy}`;
 
-/** Decoded chunks, by key. */
+/**
+ * Decoded chunks, by key, oldest first. With the world open (0.14) a long
+ * walk would fill it without end, so it keeps the MEMORY_CHUNKS used most
+ * lately (a load that finds one moves it to the back); IndexedDB keeps the
+ * rest of the wick.
+ */
+export const MEMORY_CHUNKS = 1024;
 const memory = new Map<string, ChunkTerrain>();
 /** In-flight loads, so two callers share one fetch. */
 const loading = new Map<string, Promise<ChunkTerrain>>();
@@ -50,7 +56,11 @@ export function cachedTerrain(epochId: string, cx: number, cy: number): ChunkTer
 export function loadChunk(api: Pick<OperationsApi, 'chunk'>, epochId: string, cx: number, cy: number): Promise<ChunkTerrain> {
   const key = chunkKey(epochId, cx, cy);
   const ready = memory.get(key);
-  if (ready) return Promise.resolve(ready);
+  if (ready) {
+    memory.delete(key);
+    memory.set(key, ready);
+    return Promise.resolve(ready);
+  }
   let pending = loading.get(key);
   if (!pending) {
     pending = (async () => {
@@ -146,8 +156,15 @@ export async function pruneChunks(currentEpochs: readonly string[], fixedEpochs:
 }
 
 function keep(key: string, terrain: ChunkTerrain): ChunkTerrain {
+  memory.delete(key);
   memory.set(key, terrain);
+  while (memory.size > MEMORY_CHUNKS) memory.delete(memory.keys().next().value!);
   return terrain;
+}
+
+/** Every chunk loaded on this page, of any epoch (the oldest may go: MEMORY_CHUNKS). */
+export function loadedTerrain(): IterableIterator<ChunkTerrain> {
+  return memory.values();
 }
 
 /** The raw bytes go to IndexedDB (re-encoded: the transport hands back the decoded chunk). */

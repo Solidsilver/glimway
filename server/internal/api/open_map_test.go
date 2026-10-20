@@ -46,7 +46,7 @@ func (x *rig) pathOp(c *http.Cookie, s response, op string, key string, sx, sy, 
 	epoch := "outside"
 	if len(epochs) > 0 {
 		epoch = epochs[0]
-	} else if wildsWhereInside("", tileWhere(tx, ty)) {
+	} else if wildsWhereInside(tileWhere(tx, ty)) {
 		dbtx, err := x.db.DB.BeginTx(context.Background(), nil)
 		if err != nil {
 			x.t.Fatal(err)
@@ -157,9 +157,9 @@ func TestWildsClear(t *testing.T) {
 	if len(n.Ground) != 1 || n.Ground[0].Epoch != n.Wick.Id || len(n.Ground[0].Changes.Changes) != 2 {
 		t.Fatal("near ground", n.Ground)
 	}
-	// Beyond the frontier: the where itself is refused. Chunk (6, -1) is four
-	// chunks past the east lot column (cx 2), one past the frontier's reach.
-	if _, code := x.pathOp(c, s, "clear", "beyond", 6*24+1, -10, 6*24+1, -11, "", 409); code != "beyond-frontier" {
+	// Past the border: the where itself is refused.
+	past := (wilds.BorderChunks()+1)*24 + 1
+	if _, code := x.pathOp(c, s, "clear", "beyond", past, -10, past, -11, "", 409); code != "beyond-border" {
 		t.Fatal(code)
 	}
 	// Water, fords and paving can't be cleared, nor an entity's tile.
@@ -690,7 +690,9 @@ func TestRefusedOperationDoesNotLeaveAPhantomChunk(t *testing.T) {
 		srv.ServeHTTP(w, r)
 		return w.Code
 	}
-	// The second server refuses a lay that makes (4,-8), then the first reads it.
+	// The second server refuses a lay that makes (4,-8), then the first reads
+	// it, from near it (reads answer within sight).
+	x.putAt(s.AccountID, 4, -6)
 	tx2, ty2 := local(4, -8, [2]int{3, 14})
 	raw, _ := protojson.Marshal(&contract.WildsLayRequest{Op: op(s.Lease, "broke-2"), Where: tileWhere(tx2, ty2+1), X: int32(tx2), Y: int32(ty2), Kind: "stone", Epoch: wick.Id})
 	r := httptest.NewRequest("POST", "/api/wilds/lay", bytes.NewReader(raw))

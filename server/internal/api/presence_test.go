@@ -8,6 +8,7 @@ import (
 	"glimway/content"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
+	"glimway/server/internal/wilds"
 	"log"
 	"math"
 	"net/http"
@@ -604,8 +605,8 @@ func TestPresenceMessageValidation(t *testing.T) {
 		{"unknown-area", map[string]any{"type": "join", "area": "private-home"}, false},
 		{"region-room", map[string]any{"type": "join", "area": "wilds:inner-1:0:0"}, false},
 		{"bare-wilds", map[string]any{"type": "join", "area": "outdoors"}, false},
-		{"beyond-frontier", map[string]any{"type": "join", "area": "outdoors:6:0"}, false},
-		{"south-of-the-gate", map[string]any{"type": "join", "area": "outdoors:6:4"}, false},
+		{"beyond-border", map[string]any{"type": "join", "area": "outdoors:4097:0"}, false},
+		{"north-of-the-border", map[string]any{"type": "join", "area": "outdoors:0:-4097"}, false},
 		{"chunk-canonical", map[string]any{"type": "join", "area": "outdoors:00:-1"}, false},
 		{"position-without-room", positionMessage(0), false},
 		{"position-bounds", positionMessage(1e7), true},
@@ -810,7 +811,7 @@ func TestPresenceAuthDeadlineAndHTTPDeadlines(t *testing.T) {
 // outside); one outside is dropped, neither kept nor relayed. A position in
 // a neighbouring chunk (mid-crossing, the join waiting out its cooldown)
 // still travels.
-func TestPresenceWildsPositionsStayInsideTheFrontier(t *testing.T) {
+func TestPresenceWildsPositionsStayInsideTheBorder(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	bc, b := x.member("bob", s.WorldID)
@@ -824,11 +825,12 @@ func TestPresenceWildsPositionsStayInsideTheFrontier(t *testing.T) {
 		return map[string]any{"type": "pos", "x": px, "y": py, "facing": map[string]any{"x": 0, "y": 1}, "moving": true}
 	}
 	const chunk = 24 * 16
+	edge := float64((wilds.BorderChunks() + 1) * chunk)
 	for name, p := range map[string][2]float64{
-		"east":  {6*chunk + 8, -chunk + 8},
-		"west":  {-6*chunk - 8, -chunk + 8},
-		"north": {8, -8*chunk - 8},
-		"south": {2*chunk + 8, 8*chunk + 8},
+		"east":  {edge + 8, -chunk + 8},
+		"west":  {-edge - 8, -chunk + 8},
+		"north": {8, -edge - 8},
+		"south": {2*chunk + 8, edge + 8},
 	} {
 		a.send(at(p[0], p[1]))
 		select {
@@ -837,8 +839,9 @@ func TestPresenceWildsPositionsStayInsideTheFrontier(t *testing.T) {
 		case <-time.After(60 * time.Millisecond):
 		}
 	}
-	// The frontier's own edges, and a neighbouring chunk, travel.
-	for _, p := range [][2]float64{{4*chunk + chunk - 1, -chunk + 8}, {8, chunk - 1}, {chunk + 8, -chunk + 8}} {
+	// The border's own edges, and land far from home that was past the old
+	// frontier, travel.
+	for _, p := range [][2]float64{{edge - 1, -chunk + 8}, {8, -edge + chunk}, {6*chunk + 8, -chunk + 8}, {2*chunk + 8, 8*chunk + 8}} {
 		time.Sleep(time.Second / 7)
 		a.send(at(p[0], p[1]))
 		if pos := bob.expect("pos"); pos.X != p[0] {

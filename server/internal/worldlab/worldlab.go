@@ -41,7 +41,7 @@ const (
 )
 
 // OverlayNames are the overlays, in the order the CLI lists them.
-var OverlayNames = []string{"land-cells", "place-cells", "tiers", "wend", "road", "rumours", "frontier", "solid", "reach"}
+var OverlayNames = []string{"land-cells", "place-cells", "tiers", "wend", "road", "rumours", "border", "solid", "reach"}
 
 // Options is one render or inspection. Raw, when set, is the wilds rules a
 // worker installs before it starts; Content names where they came from.
@@ -197,7 +197,7 @@ type TileInfo struct {
 	Fixed         string            `json:"fixed,omitempty"`
 	Stand         *[2]int           `json:"stand,omitempty"`
 	// OnGrid: the caller's world lets a hero stand in this chunk (the lab
-	// sets it from the server's frontier; a worker never does).
+	// sets it from the world border (location.OnGrid); a worker never does).
 	OnGrid *bool `json:"onGrid,omitempty"`
 }
 

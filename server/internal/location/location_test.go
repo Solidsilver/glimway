@@ -179,7 +179,7 @@ func checkLookups(t *testing.T, doc vectorLookups) {
 		}
 	}
 	for _, v := range doc.OnGrid {
-		if got := OnGrid("w", v.Chunk[0], v.Chunk[1]); got != v.OnGrid {
+		if got := OnGrid(v.Chunk[0], v.Chunk[1]); got != v.OnGrid {
 			t.Errorf("OnGrid%v = %v", v.Chunk, got)
 		}
 	}
@@ -197,7 +197,7 @@ func TestTownPositionsOnTheGrid(t *testing.T) {
 	for _, v := range readVectors(t).Positions {
 		cx, cy := wilds.ChunkOf(v.Tile[0], v.Tile[1])
 		space := ContentSpace(v.Area)
-		if space != Outdoors || !OnGrid("w", cx, cy) || At(space, float64(v.Tile[0]*16+8), float64(v.Tile[1]*16+8)).ID != "hearthwick" {
+		if space != Outdoors || !OnGrid(cx, cy) || At(space, float64(v.Tile[0]*16+8), float64(v.Tile[1]*16+8)).ID != "hearthwick" {
 			t.Errorf("%s is outside Hearthwick", v.Source)
 		}
 	}
@@ -311,16 +311,30 @@ func TestEveryTownPositionHasAVector(t *testing.T) {
 	}
 }
 
-func TestOnGridIsTheFrontierPlusFixedFootprints(t *testing.T) {
+func TestOnGridIsTheBorderPlusFixedFootprints(t *testing.T) {
 	for cy := -12; cy <= 6; cy++ {
 		for cx := -8; cx <= 8; cx++ {
 			fixed := SourceOf(cx, cy).Kind == SourceFixed
 			if fixed && wilds.FootprintAt(cx, cy) != nil {
 				t.Errorf("chunk %d,%d is both fixed and a Wilds footprint", cx, cy)
 			}
-			if got := OnGrid("w", cx, cy); fixed && !got {
+			if got := OnGrid(cx, cy); fixed && !got {
 				t.Errorf("fixed chunk %d,%d is off the grid", cx, cy)
 			}
+		}
+	}
+}
+
+func TestOnGridStopsAtTheBorder(t *testing.T) {
+	b := wilds.BorderChunks()
+	for _, c := range [][2]int{{b, b}, {-b, -b}, {b, -b}, {-b, b}, {0, b}, {-b, 0}} {
+		if !OnGrid(c[0], c[1]) {
+			t.Errorf("chunk %v inside the border is off the grid", c)
+		}
+	}
+	for _, c := range [][2]int{{b + 1, 0}, {0, -b - 1}, {-b - 1, b}, {b, b + 1}} {
+		if OnGrid(c[0], c[1]) {
+			t.Errorf("chunk %v past the border is on the grid", c)
 		}
 	}
 }

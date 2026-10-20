@@ -9,7 +9,6 @@ import (
 	"glimway/content"
 	"glimway/server/internal/chunks"
 	"glimway/server/internal/chunks/fakegen"
-	"glimway/server/internal/frontier"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/land"
 	"glimway/server/internal/location"
@@ -220,7 +219,7 @@ func lanternTile(v wildsView) (int, int) {
 // chunks on demand, and answers every entity in the window, fresh.
 func TestWildsNearMakesEpochsAndChunks(t *testing.T) {
 	x := newRig(t)
-	c, _ := x.ready("alice")
+	c, s := x.ready("alice")
 	v := x.wilds(c, "tangle")
 	if v.Epoch.Kind != "still" || v.Epoch.GeneratorVersion != 3 || v.Epoch.Season != "0" || v.Epoch.EndsAt != nil {
 		t.Fatalf("still epoch %+v", v.Epoch)
@@ -233,8 +232,8 @@ func TestWildsNearMakesEpochsAndChunks(t *testing.T) {
 	if n.Center.Cx != 0 || n.Center.Cy != -1 || n.Center.Realm != "hearthwick" || n.Center.Layer != 0 || n.Radius != 2 {
 		t.Fatalf("window %+v %d", n.Center, n.Radius)
 	}
-	if r := n.Frontier.Rect; r.MinCx != -5 || r.MinCy != -8 || r.MaxCx != 5 || r.MaxCy != 7 {
-		t.Fatalf("frontier %+v", r)
+	if r := n.Border.Rect; r.MinCx != -4096 || r.MinCy != -4096 || r.MaxCx != 4096 || r.MaxCy != 4096 {
+		t.Fatalf("border %+v", r)
 	}
 	// The window around (0,-1) is chunks -2..2 by -3..1: the Tangle's nine
 	// (made with the still epoch), the fixed block's top row of five (lots,
@@ -269,12 +268,9 @@ func TestWildsNearMakesEpochsAndChunks(t *testing.T) {
 	if again.Still.Id != n.Still.Id || again.Wick.Id != n.Wick.Id || before != count(t, x.db, sum) {
 		t.Fatal("a second read wrote")
 	}
-	// Off the grid: refused, and nothing is made. East and west of the lot
-	// columns' reach, past the south limit, the clipped north-west corner and
-	// north of the Whitequiet's reach.
-	for _, at := range [][2]int{{6, 0}, {3, 8}, {-7, 1}, {-5, -4}, {0, -9}} {
-		x.near(c, at[0], at[1], 409)
-	}
+	// Past sight or the border: refused, and nothing is made.
+	x.near(c, 0, 40, 409)
+	x.near(c, wilds.BorderChunks()+1, 0, 409)
 	for _, path := range []string{"0", "0/-1/2", "x/1", "01/1", "0/-01", ""} {
 		if w := x.rawHTTP("GET", "/api/wilds/near/"+path, nil, c); w.Code != 404 {
 			t.Fatal(path, w.Code)
@@ -302,29 +298,16 @@ func TestWildsNearMakesEpochsAndChunks(t *testing.T) {
 	if w := x.rawHTTP("GET", "/api/wilds/region/inner-1", nil, c); w.Code != 404 {
 		t.Fatal("the region read is gone", w.Code)
 	}
-	// The corner of the frontier: a window cut by its edges, with the
-	// glimpse past them (within two chunks, never south of the village edge).
+	// Where the frontier's corner was (0.8–0.13): a whole window of
+	// generated land, read from where it lies.
+	x.putAt(s.AccountID, -4, -8)
 	corner := x.near(c, -4, -8, 200)
-	if len(corner.Entities) != 9*4 {
-		t.Fatal("corner window", len(corner.Entities))
+	if len(corner.Chunks) != 25 || len(corner.Entities) != 25*4 {
+		t.Fatal("corner window", len(corner.Chunks), len(corner.Entities))
 	}
-	glimpsed := map[[2]int32]bool{}
-	for _, g := range corner.Glimpse {
-		k := [2]int32{g.Chunk.Cx, g.Chunk.Cy}
-		if glimpsed[k] || frontier.Inside("", int(k[0]), int(k[1])) || k[0] < -8 || k[1] < -12 || k[0] > 0 || k[1] > -4 || wilds.NearestFootprint(int(k[0]), int(k[1])) > 5 || g.Land == "" {
-			t.Fatalf("glimpse %+v", g)
-		}
-		glimpsed[k] = true
-	}
-	// Within four of the centre and two of the actual reach union (the west
-	// lot column at cx -2 no longer reaches (-8, -4)).
-	if len(glimpsed) != 25 || count(t, x.db, "SELECT count(*) FROM wilds_chunks WHERE cx<-4 OR cy<-8") != 0 {
-		t.Fatal("glimpse made chunks or missed some", len(glimpsed))
-	}
-	south := x.near(c, 4, 0, 200)
-	for _, g := range south.Glimpse {
-		if g.Chunk.Cy > 7 {
-			t.Fatal("glimpse beyond the southern frontier", g)
+	for _, ch := range corner.Chunks {
+		if ch.Source != location.SourceGenerated.String() {
+			t.Fatal("corner chunk", ch)
 		}
 	}
 }
@@ -369,13 +352,15 @@ func TestWildsConcurrentFirstReadsMakeOneEpoch(t *testing.T) {
 
 func TestWildsChunkRoute(t *testing.T) {
 	x := newRig(t)
-	c, _ := x.ready("alice")
+	c, s := x.ready("alice")
 	v := x.wilds(c, "tangle")
 	w := x.rawHTTP("GET", "/api/wilds/chunk/"+v.Epoch.Id+"/0/1/-1", nil, c)
 	if w.Code != 200 || w.Header().Get("Content-Type") != "application/x-protobuf" || w.Header().Get("Cache-Control") != "private, max-age=31536000, immutable" {
 		t.Fatal(w.Code, w.Header())
 	}
-	// A wick chunk nobody has read yet is made by the chunk route too.
+	// A wick chunk nobody has read yet is made by the chunk route too (read
+	// from near it: reads answer within sight).
+	x.putAt(s.AccountID, 4, -6)
 	if m := x.chunk(c, v.near.Wick.Id, 0, 4, -8, 200); m.Cx != 4 || m.Cy != -8 || m.EpochId != v.near.Wick.Id {
 		t.Fatal("on-demand chunk", m.Cx, m.Cy)
 	}
@@ -554,8 +539,8 @@ func TestWildsClaimReach(t *testing.T) {
 			t.Fatal(kind, code)
 		}
 		beyond := at(e, 0)
-		beyond.X += 24 * 16 * 8
-		if _, code := x.claim(c, s, kind+"-beyond", v.Epoch.Id, e, 0, beyond, 409); code != "beyond-frontier" {
+		beyond.X = float64((wilds.BorderChunks()+1)*24*16 + 8)
+		if _, code := x.claim(c, s, kind+"-beyond", v.Epoch.Id, e, 0, beyond, 409); code != "beyond-border" {
 			t.Fatal(kind, code)
 		}
 		if _, code := x.claim(c, s, kind+"-far", v.Epoch.Id, e, 0, at(e, 4), 409); code != "too-far-away" {

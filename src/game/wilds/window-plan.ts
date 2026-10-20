@@ -5,21 +5,21 @@
  * standing in something solid steps to. The scene runtime is ./window.ts.
  */
 import { CHUNK_PX, CHUNK_TILES, chunkKey } from './coords.ts'
-import type { FrontierRect } from './store.ts'
+import type { ChunkRect } from './store.ts'
 
 export interface WindowPlan {
   center: { cx: number; cy: number }
-  /** The 3×3 around the hero inside the frontier: ground, collision, props, entities, sites. */
+  /** The 3×3 around the hero on the grid: ground, collision, props, entities, sites. */
   attach: string[]
-  /** The 3×3's chunks past the frontier: painted as the drift, solid. */
+  /** The 3×3's chunks past the world border: painted as the drift, solid. */
   drift: string[]
-  /** The 5×5 inside the frontier: fetched and decoded (bodies and the near read). */
+  /** The 5×5 on the grid: fetched and decoded (bodies and the near read). */
   fetch: string[]
   /** The fetched ring outside the 3×3: only their landmarks are drawn (seen from a chunk away). */
   ring: string[]
 }
 
-/** The window around chunk (cx, cy); `inside` is the frontier. */
+/** The window around chunk (cx, cy); `inside` is the grid (the border and the fixed footprints). */
 export function planWindow(cx: number, cy: number, inside: (cx: number, cy: number) => boolean): WindowPlan {
   const attach: string[] = []
   const drift: string[] = []
@@ -43,9 +43,9 @@ export function planWindow(cx: number, cy: number, inside: (cx: number, cy: numb
 }
 
 /**
- * A chunk can be painted once every neighbour inside the frontier is known
+ * A chunk can be painted once every neighbour on the grid is known
  * (the painter reads two tiles past each edge), so its image joins theirs.
- * Neighbours past the frontier are always known: they read as the drift.
+ * Neighbours past the border are always known: they read as the drift.
  */
 export function paintable(cx: number, cy: number, inside: (cx: number, cy: number) => boolean, known: (cx: number, cy: number) => boolean): boolean {
   if (!known(cx, cy)) return false
@@ -84,8 +84,8 @@ export function crossed(center: { cx: number; cy: number } | null, at: { cx: num
   return !center || center.cx !== at.cx || center.cy !== at.cy
 }
 
-/** Pixels past the frontier's edge (0 inside it). */
-export function frontierDistance(f: FrontierRect, wx: number, wy: number): number {
+/** Pixels past a chunk rectangle's edge (0 inside it). */
+export function rectDistance(f: ChunkRect, wx: number, wy: number): number {
   const x0 = f.minCx * CHUNK_PX
   const y0 = f.minCy * CHUNK_PX
   const x1 = (f.maxCx + 1) * CHUNK_PX
@@ -95,7 +95,7 @@ export function frontierDistance(f: FrontierRect, wx: number, wy: number): numbe
   return Math.max(dx, dy)
 }
 
-/** Which sides of a drift chunk face the frontier (an inside chunk across that edge). */
+/** Which sides of a drift chunk face the grid (an inside chunk across that edge). */
 export function veilEdges(cx: number, cy: number, inside: (cx: number, cy: number) => boolean): ('north' | 'south' | 'east' | 'west')[] {
   const out: ('north' | 'south' | 'east' | 'west')[] = []
   if (inside(cx, cy - 1)) out.push('north')
@@ -109,11 +109,9 @@ export function veilEdges(cx: number, cy: number, inside: (cx: number, cy: numbe
  * The chunks beside the hero's that are walled off: every one of the eight
  * around (cx, cy) that isn't walkable (attached, so drawn and its collision
  * in). The drift and land not yet loaded are solid (decision 3): without a
- * wall only the world's bounds, the reach's bounding rectangle, would hold
- * the hero, and its clipped corners and a held slack's square leave
- * stretches inside the rectangle that are past the frontier. The hero's own
- * chunk is never walled, so a reach that shrank under them can't trap them;
- * the turning moves them (world-turning.ts).
+ * wall, a hero who outwalks the loading would step onto land not drawn yet.
+ * The hero's own chunk is never walled, so nothing can trap them; the
+ * turning moves them (world-turning.ts).
  */
 export function walledChunks(cx: number, cy: number, walkable: (cx: number, cy: number) => boolean): string[] {
   const out: string[] = []

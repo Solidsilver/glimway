@@ -9,7 +9,7 @@ import { freshPlayer } from './home-helpers'
  * window of chunks moving with the hero. Out through the Commons gate,
  * through the Tangle and into the Whitequiet and beyond, across chunk edges
  * with no scene change and no long frames; a reload puts you back where you
- * stood; the drift at the frontier stops you and says why.
+ * stood; the drift past the world border stops you and says why.
  * SCREENS=1 saves images to .agent/screens/.
  */
 
@@ -248,7 +248,7 @@ const DRIFT_SEED = 'e2e-drift'
 const CORRIDOR = 4
 
 /**
- * A straight corridor up to the frontier's north edge in the attached
+ * A straight corridor up to the world border's north edge in the attached
  * chunks, nearest the hero first: a column whose edge-row tile and the
  * CORRIDOR - 1 tiles below it are open, with the columns either side open
  * too (room for the hero's body), by the map's data and by the collision
@@ -272,15 +272,15 @@ async function northCorridor(page: Page, edgeTy: number): Promise<{ tx: number; 
   }, [edgeTy, CORRIDOR] as const)
 }
 
-test('the drift at the frontier stops you, and says so the first time', async ({ page }) => {
+test('the drift past the world border stops you, and says so the first time', async ({ page }) => {
   test.setTimeout(150_000)
   await freshPlayer(page)
-  // The frontier's land is the wick's: both clocks a day or more from its turning.
+  // The border's land is the wick's: both clocks a day or more from its turning.
   await wickSlack(page)
   await pinWorld(page, DRIFT_SEED)
-  // The north edge of the frontier is cy -8 (three chunks past the Whitequiet).
-  const edge = -8 * S
-  const frontierTop = edge * TILE
+  // The north edge of the world is the border's top row (cy -4096).
+  const edge = -4096 * S
+  const borderTop = edge * TILE
   let corridor: Awaited<ReturnType<typeof northCorridor>> = null
   const tried: string[] = []
   for (const cx of [0, -3, 3]) {
@@ -290,7 +290,7 @@ test('the drift at the frontier stops you, and says so the first time', async ({
     expect(w.drift.length, 'past the edge is the drift').toBeGreaterThan(0)
     corridor = await northCorridor(page, edge)
     if (corridor) break
-    tried.push(`no corridor around chunk ${cx},-8: ${await diagnose(page)}`)
+    tried.push(`no corridor around chunk ${cx},-4096: ${await diagnose(page)}`)
   }
   expect(corridor, `a straight open corridor up to the north edge (seed ${DRIFT_SEED}): ${tried.join(' | ')}`).not.toBeNull()
 
@@ -303,11 +303,11 @@ test('the drift at the frontier stops you, and says so the first time', async ({
   await waitForLive(page)
   await page.keyboard.down('ArrowUp')
   try {
-    await expectToast(page, /The Whitequiet closes in here\. Only a lit camp pushes it back\./, { timeout: 8_000 })
+    await expectToast(page, /The land fades to white here, and goes no further\./, { timeout: 8_000 })
   } finally {
     await page.keyboard.up('ArrowUp')
   }
-  expect((await player(page)).y, 'the hero never passes the frontier').toBeGreaterThanOrEqual(frontierTop)
+  expect((await player(page)).y, 'the hero never passes the border').toBeGreaterThanOrEqual(borderTop)
   await shot(page, '63-open-map-drift-desktop')
   await settled(page, { area: 'outdoors' })
 })

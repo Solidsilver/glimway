@@ -75,7 +75,7 @@ test('every refusal reads in plain words, with the tool or material named', () =
   assert.equal(say('wrong-tool', { action: 'chop' }), "You'd need an axe for this.");
   assert.equal(say('insufficient-materials', { material: 'timber' }), "You're out of timber.");
   assert.equal(say('not-on-water'), 'Not on water. Cross at a ford.');
-  assert.equal(say('beyond-frontier'), loadWilds().words.drift);
+  assert.equal(say('beyond-border'), loadWilds().words.drift);
   for (const code of ['already-cleared', 'not-clearable', 'already-laid', 'cannot-lay-here', 'not-your-path', 'too-far-away', 'offline', 'busy', 'epoch-ended', 'not-in-wilds']) {
     const text = say(code);
     assert.ok(text.length > 5 && text.length < 90, `${code}: ${text}`);

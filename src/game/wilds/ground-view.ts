@@ -8,7 +8,7 @@
 import type { GroundChange } from '../../lib/gen/glimway/v1/wilds_pb.js'
 import { CHUNK_TILES, chunkKey } from './coords.ts'
 import { effectiveTerrain, type ChunkTerrain } from './terrain.ts'
-import { chunkTerrain, groundChanges, insideNamedFrontier } from './store.ts'
+import { chunkTerrain, groundChanges, insideNamedBorder } from './store.ts'
 import { nearestOpen } from './window-plan.ts'
 import { TERRAIN, TILE } from '../../lib/tile.ts'
 import { loadWilds } from '../../lib/wilds/data.ts'
@@ -22,7 +22,7 @@ export function changesSig(changes: readonly GroundChange[]): string {
 
 /** A chunk with its changes applied, or null when it isn't loaded (or lies past the frontier). */
 export function effectiveChunk(cx: number, cy: number): ChunkTerrain | null {
-  if (!insideNamedFrontier(cx, cy)) return null
+  if (!insideNamedBorder(cx, cy)) return null
   const base = chunkTerrain(cx, cy)
   if (!base) return null
   const key = chunkKey(cx, cy)

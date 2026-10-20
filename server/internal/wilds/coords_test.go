@@ -25,10 +25,9 @@ type coordVectors struct {
 		Ring      int
 		Cell      [2]int
 	}
-	Frontier struct {
-		Rect   [4]int
-		Chunks int
-		New    int
+	Border struct {
+		Chunks          int
+		Inside, Outside [][2]int
 	}
 }
 
@@ -66,8 +65,21 @@ func TestCoordVectors(t *testing.T) {
 			fp = p.GetId()
 		}
 		x, y := CellOf(cx, cy)
-		if fp != c.Footprint || Tier(cx, cy) != c.Tier || EpochKindAt(cx, cy) != c.EpochKind || Ring(cx, cy) != c.Ring || [2]int{x, y} != c.Cell {
+		if fp != c.Footprint || Tier(cx, cy) != c.Tier || EpochKindAt(cx, cy) != c.EpochKind || Ring(cx, cy) != c.Ring || [2]int{x, y} != c.Cell || InsideBorder(cx, cy) != c.Inside {
 			t.Errorf("chunk %v: footprint %q tier %d epoch %s ring %d cell %d,%d", c.Chunk, fp, Tier(cx, cy), EpochKindAt(cx, cy), Ring(cx, cy), x, y)
+		}
+	}
+	if v.Border.Chunks != BorderChunks() {
+		t.Errorf("border %d chunks; content %d", v.Border.Chunks, BorderChunks())
+	}
+	for _, c := range v.Border.Inside {
+		if !InsideBorder(c[0], c[1]) {
+			t.Errorf("%v: past the border", c)
+		}
+	}
+	for _, c := range v.Border.Outside {
+		if InsideBorder(c[0], c[1]) {
+			t.Errorf("%v: inside the border", c)
 		}
 	}
 }

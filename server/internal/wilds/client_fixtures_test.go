@@ -63,17 +63,20 @@ func TestClientFixtures(t *testing.T) {
 	}{{"tangle", 0, -1}, {"whitequiet-0-5", 0, -5}, {"whitequiet-1-5", 1, -5}, {"whitequiet-0-4", 0, -4}, {"whitequiet-1-4", 1, -4}} {
 		want[f.name], _ = gen(f.cx, f.cy)
 	}
-	// The Beyond: the first chunk (north to south, west to east) with a dark
-	// lamp stone, and the first with a ford.
+	// The Beyond: of the chunks with a dark lamp stone, the one with the most
+	// decor (the client's gathering tests fell its trees), and the first chunk
+	// (north to south, west to east) with a ford, along the Lantern Road.
+	roadDecor := -1
 	ford := groundID("ford")
-	for cy := -8; cy <= 0 && (want["road"] == nil || want["ford"] == nil); cy++ {
-		for cx := -4; cx <= 4; cx++ {
-			if !insideReach(cx, cy) || EpochKindAt(cx, cy) != EpochWick || NearestFootprint(cx, cy) == 0 {
+	for cy := -8; cy <= 0; cy++ {
+		for cx := -4; cx <= 16; cx++ {
+			if EpochKindAt(cx, cy) != EpochWick || NearestFootprint(cx, cy) == 0 || FixedFootprintAt(cx, cy) != nil {
 				continue
 			}
 			b, ch := gen(cx, cy)
 			for _, s := range ch.Sites {
-				if s.Kind == SiteLampStone && want["road"] == nil {
+				if s.Kind == SiteLampStone && len(ch.Decor) > roadDecor {
+					roadDecor = len(ch.Decor)
 					want["road"] = b
 				}
 			}
@@ -116,10 +119,10 @@ func TestRiverCrossingFixtures(t *testing.T) {
 		cx, cy  int
 		hasFord bool
 	}{
-		{"ford-bend", -4, -4, true},
-		{"ford-bend-east", -3, -4, false}, // the dry east bank
-		{"ford-diagonal-west", -5, 2, true},
-		{"ford-diagonal-east", -4, 2, true},
+		{"ford-bend", -4, -5, true},
+		{"ford-bend-east", -3, -5, true},
+		{"ford-diagonal-west", -5, -6, true},
+		{"ford-diagonal-east", -4, -6, true},
 	} {
 		t.Run(f.name, func(t *testing.T) {
 			ch, err := GenerateV3(e, f.cx, f.cy, nil)
@@ -159,3 +162,4 @@ func TestRiverCrossingFixtures(t *testing.T) {
 		})
 	}
 }
+

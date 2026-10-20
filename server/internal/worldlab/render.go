@@ -372,9 +372,9 @@ func overlayColour(o Options, c color.RGBA, cx, cy, tx, ty, unit int, river, roa
 			c = color.RGBA{100, 215, 220, 255}
 		}
 	}
-	if enabled(o, "frontier") {
-		x0, y0, x1, y1 := wilds.FrontierRect()
-		// The rectangle is diagnostic, not a generation or clipping boundary.
+	if enabled(o, "border") {
+		x0, y0, x1, y1 := wilds.BorderRect()
+		// The world border (0.14): nothing is made past it.
 		if ((cx == x0 && tx == 0) || (cx == x1 && tx == unit-1)) && cy >= y0 && cy <= y1 || ((cy == y0 && ty == 0) || (cy == y1 && ty == unit-1)) && cx >= x0 && cx <= x1 {
 			c = color.RGBA{255, 70, 65, 255}
 		}

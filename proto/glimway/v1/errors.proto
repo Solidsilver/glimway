@@ -241,6 +241,7 @@ enum ErrorCode {
   ERROR_CODE_ALREADY_LAID = 227;
   ERROR_CODE_NOT_YOUR_PATH = 228;
   ERROR_CODE_CANNOT_LAY_HERE = 229;
+  // Past the 0.8–0.13 frontier; nothing answers it since 0.14 (beyond-sight, beyond-border).
   ERROR_CODE_BEYOND_FRONTIER = 230;
   // 0.12 Lot lanterns (hearthwick-2.md 6).
   ERROR_CODE_LANTERN_FULL = 231;
@@ -271,4 +272,7 @@ enum ErrorCode {
   ERROR_CODE_NOT_IN_WORLD = 251;
   // 0.13 The Wick Tree's weekly sap (lamps.md 2.5).
   ERROR_CODE_ALREADY_TAPPED = 252;
+  // 0.14 The wide world: reads only near the reader, and the world border.
+  ERROR_CODE_BEYOND_SIGHT = 253;
+  ERROR_CODE_BEYOND_BORDER = 254;
 }

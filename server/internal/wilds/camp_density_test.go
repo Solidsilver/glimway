@@ -3,24 +3,25 @@ package wilds
 import "testing"
 
 // TestCampDensity counts camps per 100 generated chunks on fixed seeds, in
-// the ten by ten chunks round home and in ten by ten at the frontier's far
-// corner, and keeps the open Wilds from filling up with camps again (the
+// the ten by ten chunks round home, ten by ten at home's far corner (the old
+// frontier's), and ten by ten far south and far east (0.14: the open world),
+// and keeps the open Wilds from filling up with camps again (the
 // owner, 2026-10-20: "too many camps and creatures"). Camp glades are
 // counted apart: their camp is the glade's own fight, with its chest.
 func TestCampDensity(t *testing.T) {
 	gx, gy := gateTile()
 	hx, hy := ChunkOf(gx, gy)
-	_, _, maxCx, maxCy := frontierChunks()
+	_, _, maxCx, maxCy := homeRect()
 	areas := []struct {
 		name   string
 		cx, cy int
-	}{{"home", hx - 5, hy - 5}, {"far", maxCx - 9, maxCy - 9}}
+	}{{"home", hx - 5, hy - 5}, {"far", maxCx - 9, maxCy - 9}, {"far south", -5, 40}, {"far east", 300, -5}}
 	for _, a := range areas {
 		chunks, camps, glades := 0, 0, 0
 		for _, w := range v3Worlds(3) {
 			for cy := a.cy; cy < a.cy+10; cy++ {
 				for cx := a.cx; cx < a.cx+10; cx++ {
-					if FixedFootprintAt(cx, cy) != nil || !InsideReach(cx, cy) {
+					if FixedFootprintAt(cx, cy) != nil {
 						continue
 					}
 					ch, err := GenerateV3(epochFor(w[0], w[1], cx, cy), cx, cy, nil)

@@ -15,12 +15,12 @@ func TestOutdoorsPresenceV4Grammar(t *testing.T) {
 		t.Fatal(presenceProtocol)
 	}
 	for _, room := range []string{"outdoors:0:0", "outdoors:-1:-1", "outdoors:-1:1", "outdoors:1:2", "in:home:0", "in:commons:yard"} {
-		if !validPresenceRoom("", room) {
+		if !validPresenceRoom(room) {
 			t.Error("refused", room)
 		}
 	}
-	for _, room := range []string{"wilds", "wilds:0:0", "outdoors", "outdoors:00:0", "outdoors:-0:0", "outdoors:+1:0", "outdoors:6:4", "outdoors:6:0", "outdoors:0:0:0", "commons", "home:0", "village"} {
-		if validPresenceRoom("", room) {
+	for _, room := range []string{"wilds", "wilds:0:0", "outdoors", "outdoors:00:0", "outdoors:-0:0", "outdoors:+1:0", "outdoors:4097:4", "outdoors:0:-4097", "outdoors:0:0:0", "commons", "home:0", "village"} {
+		if validPresenceRoom(room) {
 			t.Error("accepted", room)
 		}
 	}

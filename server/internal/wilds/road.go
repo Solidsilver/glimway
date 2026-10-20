@@ -31,7 +31,7 @@ type lampMark struct {
 func newRoad(seed string) *road {
 	data := contentRules().GetRoad()
 	S := chunkSize()
-	rng := NewRng(Hash(seed, GeneratorV3, "lantern-road"))
+	rng := NewRng(landformHash(seed, "lantern-road"))
 	var ox, oy int
 	for _, p := range contentRules().Places {
 		if p.GetId() != data.GetFromPlace() {

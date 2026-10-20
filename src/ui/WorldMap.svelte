@@ -659,7 +659,7 @@
         <li><span class="swatch" style={`background:#86a35e`} aria-hidden="true"></span>{MAP_LABELS.legendWalked}</li>
         <li><span class="swatch" style={`background:${css(MAP_COLOURS.parchment)}`} aria-hidden="true"></span>{MAP_LABELS.legendBlank}</li>
         <li><span class="swatch" style={`background:#dfe0c2`} aria-hidden="true"></span>{MAP_LABELS.legendBeyond}</li>
-        <li><span class="swatch dash" aria-hidden="true"></span>{MAP_LABELS.frontier}</li>
+        <li><span class="swatch dash" aria-hidden="true"></span>{MAP_LABELS.border}</li>
         <li><span class="swatch way" aria-hidden="true"></span>{MAP_LABELS.ways}</li>
         <li><span class="swatch found" aria-hidden="true"></span>{MAP_LABELS.foundByLegend}</li>
         <li><span class="swatch seen" aria-hidden="true"></span>{MAP_LABELS.seen}</li>

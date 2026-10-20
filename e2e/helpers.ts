@@ -254,7 +254,7 @@ export async function chunkWhole(page: Page, at: { tx: number; ty: number }, tim
 
 /**
  * The whole window whole: every chunk of the 3×3 around the hero (inside the
- * frontier) attached and built. Centred on the hero's chunk first: a placed
+ * world border) attached and built. Centred on the hero's chunk first: a placed
  * hero is recentred on a later frame, and until then `ready` speaks for the
  * old window (review 2026-10-11).
  */

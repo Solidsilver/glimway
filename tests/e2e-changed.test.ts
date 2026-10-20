@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
 
-for (const path of ['server/internal/api/open_map_paths.go', 'server/internal/api/open_map.go', 'server/internal/chunks/effective.go', 'server/internal/store/chunks.go', 'server/internal/wildsgen/wildsgen.go', 'server/internal/frontier/frontier.go', 'server/internal/worldchange/worldchange.go', 'content/wilds.json', 'content/wilds.go']) {
+for (const path of ['server/internal/api/open_map_paths.go', 'server/internal/api/open_map.go', 'server/internal/chunks/effective.go', 'server/internal/store/chunks.go', 'server/internal/wildsgen/wildsgen.go', 'server/internal/api/sight.go', 'server/internal/worldchange/worldchange.go', 'content/wilds.json', 'content/wilds.go']) {
   test(`changed selector maps ${path} to the open map domain`, () => {
     const output = execFileSync(process.execPath, ['scripts/e2e-changed.ts', '--list'], { encoding: 'utf8', env: { ...process.env, E2E_CHANGED: path } })
     for (const spec of ['open-map.spec.ts', 'paths.spec.ts', 'rumour.spec.ts']) assert.ok(output.includes(`e2e/${spec}`), `${spec}: ${output}`)
@@ -164,10 +164,10 @@ for (const [file, want, smoke] of [
   ['content/story.json', ['quest.spec.ts', 'camps.spec.ts', 'rumour.spec.ts'], true],
   ['src/content/quests/keepers-hand.ts', ['quest.spec.ts', 'camps.spec.ts', 'rumour.spec.ts'], true],
   ['server/internal/api/common_ways.go', ['paths.spec.ts'], false],
-  ['server/internal/api/frontier_reach.go', ['camps.spec.ts', 'lot-lantern.spec.ts', 'land-chip.spec.ts', 'paths.spec.ts'], false],
+  ['server/internal/api/border_settle.go', ['camps.spec.ts', 'lot-lantern.spec.ts', 'land-chip.spec.ts', 'paths.spec.ts'], false],
   ['server/internal/api/claim_rules.go', ['camps.spec.ts', 'lot-lantern.spec.ts', 'land-chip.spec.ts', 'paths.spec.ts'], false],
   ['server/internal/store/holds.go', ['camps.spec.ts', 'lot-lantern.spec.ts', 'land-chip.spec.ts', 'paths.spec.ts'], false],
-  ['server/internal/store/reach.go', ['camps.spec.ts', 'lot-lantern.spec.ts', 'land-chip.spec.ts', 'paths.spec.ts'], false],
+  ['server/internal/store/place_move.go', ['camps.spec.ts', 'lot-lantern.spec.ts', 'land-chip.spec.ts', 'paths.spec.ts'], false],
   ['server/internal/store/commons.go', ['camps.spec.ts', 'lot-lantern.spec.ts', 'land-chip.spec.ts', 'paths.spec.ts'], false],
   ['src/lib/lamp-naming.ts', ['camps.spec.ts'], false],
   ['src/content/lamp-naming.ts', ['camps.spec.ts'], false],

@@ -20,7 +20,6 @@ import (
 
 	"glimway/content"
 	"glimway/server/internal/chunks"
-	"glimway/server/internal/frontier"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/store"
 	"glimway/server/internal/wilds"
@@ -109,7 +108,7 @@ type pathSpot struct {
 }
 
 // spotFor reads the world tile (x, y) for a path operation: inside the
-// frontier, within reach of the player (paths.reachTiles).
+// world border, within reach of the player (paths.reachTiles).
 func (a *Server) spotFor(ctx context.Context, tx *sql.Tx, s *store.Snapshot, x, y int32, targetEpoch string, now int64) (*pathSpot, error) {
 	S := chunkSize()
 	p := &pathSpot{x: int(x), y: int(y)}
@@ -118,8 +117,8 @@ func (a *Server) spotFor(ctx context.Context, tx *sql.Tx, s *store.Snapshot, x, 
 	if location.SourceOf(p.cx, p.cy).Kind != location.SourceGenerated {
 		return nil, fail(409, "not-in-wilds")
 	}
-	if !frontier.Inside(s.WorldID, p.cx, p.cy) {
-		return nil, fail(409, "beyond-frontier")
+	if !wilds.InsideBorder(p.cx, p.cy) {
+		return nil, fail(409, "beyond-border")
 	}
 	if err := nearWithin(*s, p.x, p.y, int(content.WildsRules.GetPaths().GetReachTiles())); err != nil {
 		return nil, err
@@ -483,7 +482,7 @@ func (w *pathWorld) eff(cx, cy int) *chunks.Effective {
 	if v, ok := w.effs[k]; ok {
 		return v
 	}
-	if w.err != nil || !frontier.Inside(w.world, cx, cy) || location.SourceOf(cx, cy).Kind != location.SourceGenerated {
+	if w.err != nil || !wilds.InsideBorder(cx, cy) || location.SourceOf(cx, cy).Kind != location.SourceGenerated {
 		return nil
 	}
 	e := w.ep.of(cx, cy)

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"glimway/content"
 	"glimway/server/internal/chunks"
-	"glimway/server/internal/frontier"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/land"
 	"glimway/server/internal/location"
@@ -159,8 +158,8 @@ func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req 
 		if location.SourceOf(cx, cy).Kind != location.SourceGenerated {
 			return fail(409, "cannot-gather-here")
 		}
-		if !frontier.Inside(s.WorldID, cx, cy) {
-			return fail(409, "beyond-frontier")
+		if !wilds.InsideBorder(cx, cy) {
+			return fail(409, "beyond-border")
 		}
 		if req.Target == "tangle-tree" && wilds.FootprintAt(cx, cy) != wilds.Footprint("tangle") {
 			return fail(409, "cannot-gather-here")

@@ -73,7 +73,7 @@ function chunk() { return create(wilds.WorldChunkSchema, { epochId: 'epoch', rea
 test('packed chunks validate identity, bodies, decor and places on binary decode (open-map.md 2.5)', async () => {
   const c = chunk(); assert.deepEqual(decodeChunk(toBinary(wilds.WorldChunkSchema, c)), c);
   assert.equal(entityIn(c, 'node:1:0:0')!.material, 'timber'); assert.deepEqual(decorAt(c, 2, 3), [0]);
-  // Signed coordinates, anywhere: the frontier moves, chunks don't.
+  // Signed coordinates, anywhere: chunks don't move.
   c.cx = -40; c.cy = -9; validateChunk(c);
   // An old version, an unknown land, a tier past content are refused.
   const refused: [string, (x: ReturnType<typeof chunk>) => void][] = [
@@ -202,9 +202,9 @@ test('the open map contract 8 shapes decode through the facade (open-map.md 2.4,
   fake.responses.set('/api/wilds/near/-2/-4', [get('glimway.v1.WildsNearResult', 'valid-near')]);
   const near = await fake.api.near(-2, -4);
   assert.deepEqual([near.still!.kind, near.wick!.kind, near.center!.cx, near.center!.cy, near.radius], ['still', 'wick', -2, -4, 2]);
-  assert.deepEqual(near.frontier!.rect, create(wilds.WildsChunkRectSchema, { minCx: -6, minCy: -8, maxCx: 4, maxCy: 7 }));
+  assert.deepEqual(near.border!.rect, create(wilds.WildsChunkRectSchema, { minCx: -4096, minCy: -4096, maxCx: 4096, maxCy: 4096 }));
   assert.equal(near.ground[0]!.changes!.changes[1]!.change, 'stone');
-  assert.deepEqual([near.glimpse[0]!.land, near.glimpse[0]!.river, near.ways[0]!.name], ['meadow', true, "Fixture's way"]);
+  assert.equal(near.ways[0]!.name, "Fixture's way");
   // A window answered for another chunk is refused.
   fake.responses.set('/api/wilds/near/0/0', [get('glimway.v1.WildsNearResult', 'valid-near')]);
   await assert.rejects(fake.api.near(0, 0), { code: 'bad-response' });
@@ -240,17 +240,17 @@ test('the near read refuses a window, ground or way that breaks its contract (re
     ['ground in another realm', (j) => { g(j).chunk.realm = 'elsewhere'; }],
     ['ground on another layer', (j) => { g(j).chunk.layer = 1; }],
     ['ground outside the window', (j) => { g(j).chunk.cx = 1; }],
-    ['ground outside the frontier', (j) => { j.frontier.rect.minCx = -1; }],
+    ['ground past the border', (j) => { j.border.rect.minCx = -1; }],
     ['ground on the still epoch outside the Tangle', (j) => { g(j).epoch = 'still-epoch'; }],
     ['a Tangle chunk on the wick epoch', (j) => tangle(j, 'wick-epoch')],
     ['the same chunk twice', (j) => { j.ground.push(structuredClone(g(j))); }],
     ['window in another realm', (j) => { j.center.realm = 'elsewhere'; }],
     ['window on another layer', (j) => { j.center.layer = 1; }],
     ['radius not 2', (j) => { j.radius = 0; }],
-    ['frontier bounds out of order', (j) => { j.frontier.rect.minCy = 1; }],
-    ['window outside the frontier', (j) => { j.frontier.rect.maxCx = -3; }],
+    ['border bounds out of order', (j) => { j.border.rect.minCy = 4097; }],
+    ['no border', (j) => { delete j.border; }],
+    ['window past the border', (j) => { j.border.rect.maxCx = -3; }],
     ['one epoch twice', (j) => { j.wick.id = j.still.id; }],
-    ['glimpse inside the frontier', (j) => { j.glimpse[0].chunk.cx = -4; }],
     ['way path with a gap', (j) => { j.ways[0].path.splice(5, 1); }],
     ['way sign off its end', (j) => { j.ways[0].signA = { x: 0, y: 0 }; }],
     ['way sign on its path', (j) => { j.ways[0].signB = structuredClone(j.ways[0].path.at(-2)); }],

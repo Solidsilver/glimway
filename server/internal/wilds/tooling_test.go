@@ -29,9 +29,12 @@ func TestToolContentReload(t *testing.T) {
 	if err := json.Unmarshal(original, &doc); err != nil {
 		t.Fatal(err)
 	}
-	// Reordering vocabularies is legal. A stale cached index now points to a
-	// different ID, catching incomplete resets that weight-only tuning misses.
-	for _, key := range []string{"grounds", "decor", "lands"} {
+	// Reordering the grounds and decor is legal. A stale cached index now
+	// points to a different ID, catching incomplete resets that weight-only
+	// tuning misses. Not the lands: they are drawn by weight in list order,
+	// so their order is part of the world (it passed at this chunk by chance
+	// before the landform got its own version, 0.14).
+	for _, key := range []string{"grounds", "decor"} {
 		a := doc[key].([]any)
 		for i, j := 0, len(a)-1; i < j; i, j = i+1, j-1 {
 			a[i], a[j] = a[j], a[i]
@@ -59,7 +62,7 @@ func TestToolContentReload(t *testing.T) {
 			t.Fatal(err)
 		}
 		if base.Grounds[int(g)].ID != content.WildsRules.Grounds[int(after.Ground[i])].GetId() {
-			t.Fatalf("stale ground lookup at tile %d", i)
+			t.Fatalf("stale ground lookup at tile %d: %s, now %s", i, base.Grounds[int(g)].ID, content.WildsRules.Grounds[int(after.Ground[i])].GetId())
 		}
 	}
 	if err := ConfigureForTools(original); err != nil {

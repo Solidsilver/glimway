@@ -54,7 +54,7 @@ func countRows(t *testing.T, s *Store, q string, args ...any) int {
 
 // Epochs by kind (open-map.md 2.3): the still epoch is made with the
 // Tangle's nine chunks; a wick epoch's chunks are made the first time each
-// is read, only inside the frontier and in the epoch their coordinates call
+// is read, only inside the world border and in the epoch their coordinates call
 // for. At the turning the next wick epoch takes over and the ended one goes
 // with everything under it; the still epoch stays.
 func TestChunksEpochsAndOnDemand(t *testing.T) {
@@ -114,12 +114,12 @@ func TestChunksEpochsAndOnDemand(t *testing.T) {
 			world, epoch  string
 			layer, cx, cy int32
 		}{
-			{"world-b", wick.Id, 0, -4, -8}, // another world's epoch
-			{"world-a", wick.Id, 0, 6, 0},   // outside the frontier
-			{"world-a", wick.Id, 0, 0, 1},   // south of it
-			{"world-a", wick.Id, 0, 0, -1},  // a Tangle chunk under the wick
-			{"world-a", still.Id, 0, 0, -4}, // a Whitequiet chunk under the still epoch
-			{"world-a", wick.Id, 1, 2, -6},  // another layer
+			{"world-b", wick.Id, 0, -4, -8},  // another world's epoch
+			{"world-a", wick.Id, 0, 4097, 0}, // past the border
+			{"world-a", wick.Id, 0, 0, 1},    // the town (fixed)
+			{"world-a", wick.Id, 0, 0, -1},   // a Tangle chunk under the wick
+			{"world-a", still.Id, 0, 0, -4},  // a Whitequiet chunk under the still epoch
+			{"world-a", wick.Id, 1, 2, -6},   // another layer
 			{"world-a", "nope", 0, 2, -6},
 		} {
 			if _, err := c.Chunk(ctx, tx, bad.world, bad.epoch, bad.layer, bad.cx, bad.cy); !errors.Is(err, sql.ErrNoRows) {

@@ -48,7 +48,7 @@ func TestRenderFrontierPNG(t *testing.T) {
 func renderFrontier(t testing.TB, seed, season string) *image.RGBA {
 	const px = 3
 	S := chunkSize()
-	minCx, minCy, maxCx, maxCy := frontierChunks()
+	minCx, minCy, maxCx, maxCy := homeRect()
 	W, H := (maxCx-minCx+1)*S*px, (maxCy-minCy+1)*S*px
 	img := image.NewRGBA(image.Rect(0, 0, W, H))
 	ids := map[Ground]string{}
@@ -212,7 +212,7 @@ func TestRenderEdgesPNG(t *testing.T) {
 				if vertical {
 					nx, ny = c[0]+1, c[1]
 				}
-				if !insideReach(nx, ny) || !insideReach(c[0]+1, c[1]+1) || ny > 0 || c[1]+1 > 0 ||
+				if !insideHome(nx, ny) || !insideHome(c[0]+1, c[1]+1) || ny > 0 || c[1]+1 > 0 ||
 					FootprintAt(c[0], c[1]) != nil || FootprintAt(nx, ny) != nil || FootprintAt(c[0]+1, c[1]+1) != nil {
 					continue
 				}

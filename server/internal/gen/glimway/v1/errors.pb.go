@@ -262,6 +262,7 @@ const (
 	ErrorCode_ERROR_CODE_ALREADY_LAID    ErrorCode = 227
 	ErrorCode_ERROR_CODE_NOT_YOUR_PATH   ErrorCode = 228
 	ErrorCode_ERROR_CODE_CANNOT_LAY_HERE ErrorCode = 229
+	// Past the 0.8–0.13 frontier; nothing answers it since 0.14 (beyond-sight, beyond-border).
 	ErrorCode_ERROR_CODE_BEYOND_FRONTIER ErrorCode = 230
 	// 0.12 Lot lanterns (hearthwick-2.md 6).
 	ErrorCode_ERROR_CODE_LANTERN_FULL ErrorCode = 231
@@ -292,6 +293,9 @@ const (
 	ErrorCode_ERROR_CODE_NOT_IN_WORLD  ErrorCode = 251
 	// 0.13 The Wick Tree's weekly sap (lamps.md 2.5).
 	ErrorCode_ERROR_CODE_ALREADY_TAPPED ErrorCode = 252
+	// 0.14 The wide world: reads only near the reader, and the world border.
+	ErrorCode_ERROR_CODE_BEYOND_SIGHT  ErrorCode = 253
+	ErrorCode_ERROR_CODE_BEYOND_BORDER ErrorCode = 254
 )
 
 // Enum value maps for ErrorCode.
@@ -550,6 +554,8 @@ var (
 		250: "ERROR_CODE_NOT_YOUR_CAMP",
 		251: "ERROR_CODE_NOT_IN_WORLD",
 		252: "ERROR_CODE_ALREADY_TAPPED",
+		253: "ERROR_CODE_BEYOND_SIGHT",
+		254: "ERROR_CODE_BEYOND_BORDER",
 	}
 	ErrorCode_value = map[string]int32{
 		"ERROR_CODE_UNSPECIFIED":               0,
@@ -805,6 +811,8 @@ var (
 		"ERROR_CODE_NOT_YOUR_CAMP":             250,
 		"ERROR_CODE_NOT_IN_WORLD":              251,
 		"ERROR_CODE_ALREADY_TAPPED":            252,
+		"ERROR_CODE_BEYOND_SIGHT":              253,
+		"ERROR_CODE_BEYOND_BORDER":             254,
 	}
 )
 
@@ -840,7 +848,7 @@ var File_glimway_v1_errors_proto protoreflect.FileDescriptor
 const file_glimway_v1_errors_proto_rawDesc = "" +
 	"\n" +
 	"\x17glimway/v1/errors.proto\x12\n" +
-	"glimway.v1*\x9f>\n" +
+	"glimway.v1*\xdc>\n" +
 	"\tErrorCode\x12\x1a\n" +
 	"\x16ERROR_CODE_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17ERROR_CODE_INVALID_JSON\x10\x01\x12\"\n" +
@@ -1095,7 +1103,9 @@ const file_glimway_v1_errors_proto_rawDesc = "" +
 	"\x19ERROR_CODE_INVALID_NAMING\x10\xf9\x01\x12\x1d\n" +
 	"\x18ERROR_CODE_NOT_YOUR_CAMP\x10\xfa\x01\x12\x1c\n" +
 	"\x17ERROR_CODE_NOT_IN_WORLD\x10\xfb\x01\x12\x1e\n" +
-	"\x19ERROR_CODE_ALREADY_TAPPED\x10\xfc\x01B1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
+	"\x19ERROR_CODE_ALREADY_TAPPED\x10\xfc\x01\x12\x1c\n" +
+	"\x17ERROR_CODE_BEYOND_SIGHT\x10\xfd\x01\x12\x1d\n" +
+	"\x18ERROR_CODE_BEYOND_BORDER\x10\xfe\x01B1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
 
 var (
 	file_glimway_v1_errors_proto_rawDescOnce sync.Once

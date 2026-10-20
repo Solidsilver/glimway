@@ -71,8 +71,6 @@ type Wilds struct {
 	LandSizes *WildsLandSizes `protobuf:"bytes,19,opt,name=land_sizes,json=landSizes,proto3" json:"land_sizes,omitempty"`
 	// Per tier of difficulty, numbered 1..n without gaps (code rule).
 	Tiers []*WildsTier `protobuf:"bytes,20,rep,name=tiers,proto3" json:"tiers,omitempty"`
-	// The 0.8 bound before lamps (decision 3).
-	Frontier *WildsFrontier `protobuf:"bytes,21,opt,name=frontier,proto3" json:"frontier,omitempty"`
 	// Paths players make (decisions 5, 7; section 3).
 	Paths *WildsPaths `protobuf:"bytes,22,opt,name=paths,proto3" json:"paths,omitempty"`
 	// The Wend (decision 12).
@@ -89,7 +87,11 @@ type Wilds struct {
 	// In-world lines (design 2.9).
 	Words *WildsWords `protobuf:"bytes,28,opt,name=words,proto3" json:"words,omitempty"`
 	// The parts Elara's rumour is built from (decision 19, design 2.10).
-	Rumour        *WildsRumour `protobuf:"bytes,29,opt,name=rumour,proto3" json:"rumour,omitempty"`
+	Rumour *WildsRumour `protobuf:"bytes,29,opt,name=rumour,proto3" json:"rumour,omitempty"`
+	// The world border (0.14): how far the world goes.
+	Border *WildsBorder `protobuf:"bytes,30,opt,name=border,proto3" json:"border,omitempty"`
+	// The world map's window (0.14).
+	Map           *WildsMap `protobuf:"bytes,31,opt,name=map,proto3" json:"map,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -257,13 +259,6 @@ func (x *Wilds) GetTiers() []*WildsTier {
 	return nil
 }
 
-func (x *Wilds) GetFrontier() *WildsFrontier {
-	if x != nil {
-		return x.Frontier
-	}
-	return nil
-}
-
 func (x *Wilds) GetPaths() *WildsPaths {
 	if x != nil {
 		return x.Paths
@@ -316,6 +311,20 @@ func (x *Wilds) GetWords() *WildsWords {
 func (x *Wilds) GetRumour() *WildsRumour {
 	if x != nil {
 		return x.Rumour
+	}
+	return nil
+}
+
+func (x *Wilds) GetBorder() *WildsBorder {
+	if x != nil {
+		return x.Border
+	}
+	return nil
+}
+
+func (x *Wilds) GetMap() *WildsMap {
+	if x != nil {
+		return x.Map
 	}
 	return nil
 }
@@ -1694,34 +1703,33 @@ func (x *WildsTier) GetNodeYieldBonus() int32 {
 	return 0
 }
 
-// The 0.8 frontier (decision 3, design 2.1): chunks within Chebyshev
-// distance `reach` of a footprint, and no further south than `south_limit`.
-// It is enforced at run time, never generated (design 2.2). Held land
-// pushes it out (lamps.md 2.2): every chunk within Chebyshev distance
-// `held_slack` of a held chunk is inside too, still no further south.
-type WildsFrontier struct {
+// The world border (0.14, docs/planning/wide-world/synthesis.md): every
+// chunk with |cx| and |cy| at most `chunks` exists, made when first read;
+// nothing past it does, and nobody walks there. It may only widen (land
+// already made never moves). The last `veil_chunks` chunks inside it fade
+// to the pale veil the border is drawn as.
+type WildsBorder struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Reach         int32                  `protobuf:"varint,1,opt,name=reach,proto3" json:"reach,omitempty"`
-	SouthLimit    *int32                 `protobuf:"zigzag32,2,opt,name=south_limit,json=southLimit,proto3,oneof" json:"south_limit,omitempty"`
-	HeldSlack     int32                  `protobuf:"varint,3,opt,name=held_slack,json=heldSlack,proto3" json:"held_slack,omitempty"`
+	Chunks        int32                  `protobuf:"varint,1,opt,name=chunks,proto3" json:"chunks,omitempty"`
+	VeilChunks    int32                  `protobuf:"varint,2,opt,name=veil_chunks,json=veilChunks,proto3" json:"veil_chunks,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *WildsFrontier) Reset() {
-	*x = WildsFrontier{}
+func (x *WildsBorder) Reset() {
+	*x = WildsBorder{}
 	mi := &file_glimway_content_v1_wilds_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *WildsFrontier) String() string {
+func (x *WildsBorder) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*WildsFrontier) ProtoMessage() {}
+func (*WildsBorder) ProtoMessage() {}
 
-func (x *WildsFrontier) ProtoReflect() protoreflect.Message {
+func (x *WildsBorder) ProtoReflect() protoreflect.Message {
 	mi := &file_glimway_content_v1_wilds_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1733,28 +1741,68 @@ func (x *WildsFrontier) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use WildsFrontier.ProtoReflect.Descriptor instead.
-func (*WildsFrontier) Descriptor() ([]byte, []int) {
+// Deprecated: Use WildsBorder.ProtoReflect.Descriptor instead.
+func (*WildsBorder) Descriptor() ([]byte, []int) {
 	return file_glimway_content_v1_wilds_proto_rawDescGZIP(), []int{19}
 }
 
-func (x *WildsFrontier) GetReach() int32 {
+func (x *WildsBorder) GetChunks() int32 {
 	if x != nil {
-		return x.Reach
+		return x.Chunks
 	}
 	return 0
 }
 
-func (x *WildsFrontier) GetSouthLimit() int32 {
-	if x != nil && x.SouthLimit != nil {
-		return *x.SouthLimit
+func (x *WildsBorder) GetVeilChunks() int32 {
+	if x != nil {
+		return x.VeilChunks
 	}
 	return 0
 }
 
-func (x *WildsFrontier) GetHeldSlack() int32 {
+// The world map (0.14): beyond the chunks you've walked, it shows the land
+// within `glimpse_chunks` of where you stand at glimpse detail (its main
+// land and whether a river crosses it).
+type WildsMap struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	GlimpseChunks int32                  `protobuf:"varint,1,opt,name=glimpse_chunks,json=glimpseChunks,proto3" json:"glimpse_chunks,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WildsMap) Reset() {
+	*x = WildsMap{}
+	mi := &file_glimway_content_v1_wilds_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WildsMap) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WildsMap) ProtoMessage() {}
+
+func (x *WildsMap) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_content_v1_wilds_proto_msgTypes[20]
 	if x != nil {
-		return x.HeldSlack
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WildsMap.ProtoReflect.Descriptor instead.
+func (*WildsMap) Descriptor() ([]byte, []int) {
+	return file_glimway_content_v1_wilds_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *WildsMap) GetGlimpseChunks() int32 {
+	if x != nil {
+		return x.GlimpseChunks
 	}
 	return 0
 }
@@ -1770,7 +1818,7 @@ type WildsClearTool struct {
 
 func (x *WildsClearTool) Reset() {
 	*x = WildsClearTool{}
-	mi := &file_glimway_content_v1_wilds_proto_msgTypes[20]
+	mi := &file_glimway_content_v1_wilds_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1782,7 +1830,7 @@ func (x *WildsClearTool) String() string {
 func (*WildsClearTool) ProtoMessage() {}
 
 func (x *WildsClearTool) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_content_v1_wilds_proto_msgTypes[20]
+	mi := &file_glimway_content_v1_wilds_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1795,7 +1843,7 @@ func (x *WildsClearTool) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WildsClearTool.ProtoReflect.Descriptor instead.
 func (*WildsClearTool) Descriptor() ([]byte, []int) {
-	return file_glimway_content_v1_wilds_proto_rawDescGZIP(), []int{20}
+	return file_glimway_content_v1_wilds_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *WildsClearTool) GetDecor() string {
@@ -1827,7 +1875,7 @@ type WildsLayKind struct {
 
 func (x *WildsLayKind) Reset() {
 	*x = WildsLayKind{}
-	mi := &file_glimway_content_v1_wilds_proto_msgTypes[21]
+	mi := &file_glimway_content_v1_wilds_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1839,7 +1887,7 @@ func (x *WildsLayKind) String() string {
 func (*WildsLayKind) ProtoMessage() {}
 
 func (x *WildsLayKind) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_content_v1_wilds_proto_msgTypes[21]
+	mi := &file_glimway_content_v1_wilds_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1852,7 +1900,7 @@ func (x *WildsLayKind) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WildsLayKind.ProtoReflect.Descriptor instead.
 func (*WildsLayKind) Descriptor() ([]byte, []int) {
-	return file_glimway_content_v1_wilds_proto_rawDescGZIP(), []int{21}
+	return file_glimway_content_v1_wilds_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *WildsLayKind) GetKind() string {
@@ -1894,7 +1942,7 @@ type WildsWalkSpeed struct {
 
 func (x *WildsWalkSpeed) Reset() {
 	*x = WildsWalkSpeed{}
-	mi := &file_glimway_content_v1_wilds_proto_msgTypes[22]
+	mi := &file_glimway_content_v1_wilds_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1906,7 +1954,7 @@ func (x *WildsWalkSpeed) String() string {
 func (*WildsWalkSpeed) ProtoMessage() {}
 
 func (x *WildsWalkSpeed) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_content_v1_wilds_proto_msgTypes[22]
+	mi := &file_glimway_content_v1_wilds_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1919,7 +1967,7 @@ func (x *WildsWalkSpeed) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WildsWalkSpeed.ProtoReflect.Descriptor instead.
 func (*WildsWalkSpeed) Descriptor() ([]byte, []int) {
-	return file_glimway_content_v1_wilds_proto_rawDescGZIP(), []int{22}
+	return file_glimway_content_v1_wilds_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *WildsWalkSpeed) GetGround() string {
@@ -1955,7 +2003,7 @@ type WildsPaths struct {
 
 func (x *WildsPaths) Reset() {
 	*x = WildsPaths{}
-	mi := &file_glimway_content_v1_wilds_proto_msgTypes[23]
+	mi := &file_glimway_content_v1_wilds_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1967,7 +2015,7 @@ func (x *WildsPaths) String() string {
 func (*WildsPaths) ProtoMessage() {}
 
 func (x *WildsPaths) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_content_v1_wilds_proto_msgTypes[23]
+	mi := &file_glimway_content_v1_wilds_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1980,7 +2028,7 @@ func (x *WildsPaths) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WildsPaths.ProtoReflect.Descriptor instead.
 func (*WildsPaths) Descriptor() ([]byte, []int) {
-	return file_glimway_content_v1_wilds_proto_rawDescGZIP(), []int{23}
+	return file_glimway_content_v1_wilds_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *WildsPaths) GetClearTools() []*WildsClearTool {
@@ -2050,7 +2098,7 @@ type WildsRiver struct {
 
 func (x *WildsRiver) Reset() {
 	*x = WildsRiver{}
-	mi := &file_glimway_content_v1_wilds_proto_msgTypes[24]
+	mi := &file_glimway_content_v1_wilds_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2062,7 +2110,7 @@ func (x *WildsRiver) String() string {
 func (*WildsRiver) ProtoMessage() {}
 
 func (x *WildsRiver) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_content_v1_wilds_proto_msgTypes[24]
+	mi := &file_glimway_content_v1_wilds_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2075,7 +2123,7 @@ func (x *WildsRiver) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WildsRiver.ProtoReflect.Descriptor instead.
 func (*WildsRiver) Descriptor() ([]byte, []int) {
-	return file_glimway_content_v1_wilds_proto_rawDescGZIP(), []int{24}
+	return file_glimway_content_v1_wilds_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *WildsRiver) GetName() string {
@@ -2177,7 +2225,7 @@ type WildsRoad struct {
 
 func (x *WildsRoad) Reset() {
 	*x = WildsRoad{}
-	mi := &file_glimway_content_v1_wilds_proto_msgTypes[25]
+	mi := &file_glimway_content_v1_wilds_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2189,7 +2237,7 @@ func (x *WildsRoad) String() string {
 func (*WildsRoad) ProtoMessage() {}
 
 func (x *WildsRoad) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_content_v1_wilds_proto_msgTypes[25]
+	mi := &file_glimway_content_v1_wilds_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2202,7 +2250,7 @@ func (x *WildsRoad) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WildsRoad.ProtoReflect.Descriptor instead.
 func (*WildsRoad) Descriptor() ([]byte, []int) {
-	return file_glimway_content_v1_wilds_proto_rawDescGZIP(), []int{25}
+	return file_glimway_content_v1_wilds_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *WildsRoad) GetName() string {
@@ -2294,7 +2342,7 @@ type WildsPlaceKind struct {
 
 func (x *WildsPlaceKind) Reset() {
 	*x = WildsPlaceKind{}
-	mi := &file_glimway_content_v1_wilds_proto_msgTypes[26]
+	mi := &file_glimway_content_v1_wilds_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2306,7 +2354,7 @@ func (x *WildsPlaceKind) String() string {
 func (*WildsPlaceKind) ProtoMessage() {}
 
 func (x *WildsPlaceKind) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_content_v1_wilds_proto_msgTypes[26]
+	mi := &file_glimway_content_v1_wilds_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2319,7 +2367,7 @@ func (x *WildsPlaceKind) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WildsPlaceKind.ProtoReflect.Descriptor instead.
 func (*WildsPlaceKind) Descriptor() ([]byte, []int) {
-	return file_glimway_content_v1_wilds_proto_rawDescGZIP(), []int{26}
+	return file_glimway_content_v1_wilds_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *WildsPlaceKind) GetId() string {
@@ -2392,7 +2440,7 @@ type WildsCells struct {
 
 func (x *WildsCells) Reset() {
 	*x = WildsCells{}
-	mi := &file_glimway_content_v1_wilds_proto_msgTypes[27]
+	mi := &file_glimway_content_v1_wilds_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2404,7 +2452,7 @@ func (x *WildsCells) String() string {
 func (*WildsCells) ProtoMessage() {}
 
 func (x *WildsCells) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_content_v1_wilds_proto_msgTypes[27]
+	mi := &file_glimway_content_v1_wilds_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2417,7 +2465,7 @@ func (x *WildsCells) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WildsCells.ProtoReflect.Descriptor instead.
 func (*WildsCells) Descriptor() ([]byte, []int) {
-	return file_glimway_content_v1_wilds_proto_rawDescGZIP(), []int{27}
+	return file_glimway_content_v1_wilds_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *WildsCells) GetCellChunks() int32 {
@@ -2474,7 +2522,7 @@ type WildsWords struct {
 
 func (x *WildsWords) Reset() {
 	*x = WildsWords{}
-	mi := &file_glimway_content_v1_wilds_proto_msgTypes[28]
+	mi := &file_glimway_content_v1_wilds_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2486,7 +2534,7 @@ func (x *WildsWords) String() string {
 func (*WildsWords) ProtoMessage() {}
 
 func (x *WildsWords) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_content_v1_wilds_proto_msgTypes[28]
+	mi := &file_glimway_content_v1_wilds_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2499,7 +2547,7 @@ func (x *WildsWords) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WildsWords.ProtoReflect.Descriptor instead.
 func (*WildsWords) Descriptor() ([]byte, []int) {
-	return file_glimway_content_v1_wilds_proto_rawDescGZIP(), []int{28}
+	return file_glimway_content_v1_wilds_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *WildsWords) GetDrift() string {
@@ -2597,7 +2645,7 @@ type WildsRumourLandmark struct {
 
 func (x *WildsRumourLandmark) Reset() {
 	*x = WildsRumourLandmark{}
-	mi := &file_glimway_content_v1_wilds_proto_msgTypes[29]
+	mi := &file_glimway_content_v1_wilds_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2609,7 +2657,7 @@ func (x *WildsRumourLandmark) String() string {
 func (*WildsRumourLandmark) ProtoMessage() {}
 
 func (x *WildsRumourLandmark) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_content_v1_wilds_proto_msgTypes[29]
+	mi := &file_glimway_content_v1_wilds_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2622,7 +2670,7 @@ func (x *WildsRumourLandmark) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WildsRumourLandmark.ProtoReflect.Descriptor instead.
 func (*WildsRumourLandmark) Descriptor() ([]byte, []int) {
-	return file_glimway_content_v1_wilds_proto_rawDescGZIP(), []int{29}
+	return file_glimway_content_v1_wilds_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *WildsRumourLandmark) GetDecor() string {
@@ -2651,7 +2699,7 @@ type WildsRumourCompass struct {
 
 func (x *WildsRumourCompass) Reset() {
 	*x = WildsRumourCompass{}
-	mi := &file_glimway_content_v1_wilds_proto_msgTypes[30]
+	mi := &file_glimway_content_v1_wilds_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2663,7 +2711,7 @@ func (x *WildsRumourCompass) String() string {
 func (*WildsRumourCompass) ProtoMessage() {}
 
 func (x *WildsRumourCompass) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_content_v1_wilds_proto_msgTypes[30]
+	mi := &file_glimway_content_v1_wilds_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2676,7 +2724,7 @@ func (x *WildsRumourCompass) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WildsRumourCompass.ProtoReflect.Descriptor instead.
 func (*WildsRumourCompass) Descriptor() ([]byte, []int) {
-	return file_glimway_content_v1_wilds_proto_rawDescGZIP(), []int{30}
+	return file_glimway_content_v1_wilds_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *WildsRumourCompass) GetDir() string {
@@ -2706,7 +2754,7 @@ type WildsRumourDistance struct {
 
 func (x *WildsRumourDistance) Reset() {
 	*x = WildsRumourDistance{}
-	mi := &file_glimway_content_v1_wilds_proto_msgTypes[31]
+	mi := &file_glimway_content_v1_wilds_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2718,7 +2766,7 @@ func (x *WildsRumourDistance) String() string {
 func (*WildsRumourDistance) ProtoMessage() {}
 
 func (x *WildsRumourDistance) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_content_v1_wilds_proto_msgTypes[31]
+	mi := &file_glimway_content_v1_wilds_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2731,7 +2779,7 @@ func (x *WildsRumourDistance) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WildsRumourDistance.ProtoReflect.Descriptor instead.
 func (*WildsRumourDistance) Descriptor() ([]byte, []int) {
-	return file_glimway_content_v1_wilds_proto_rawDescGZIP(), []int{31}
+	return file_glimway_content_v1_wilds_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *WildsRumourDistance) GetRing() int32 {
@@ -2772,7 +2820,7 @@ type WildsRumour struct {
 
 func (x *WildsRumour) Reset() {
 	*x = WildsRumour{}
-	mi := &file_glimway_content_v1_wilds_proto_msgTypes[32]
+	mi := &file_glimway_content_v1_wilds_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2784,7 +2832,7 @@ func (x *WildsRumour) String() string {
 func (*WildsRumour) ProtoMessage() {}
 
 func (x *WildsRumour) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_content_v1_wilds_proto_msgTypes[32]
+	mi := &file_glimway_content_v1_wilds_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2797,7 +2845,7 @@ func (x *WildsRumour) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WildsRumour.ProtoReflect.Descriptor instead.
 func (*WildsRumour) Descriptor() ([]byte, []int) {
-	return file_glimway_content_v1_wilds_proto_rawDescGZIP(), []int{32}
+	return file_glimway_content_v1_wilds_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *WildsRumour) GetStandIn() bool {
@@ -2860,7 +2908,7 @@ var File_glimway_content_v1_wilds_proto protoreflect.FileDescriptor
 
 const file_glimway_content_v1_wilds_proto_rawDesc = "" +
 	"\n" +
-	"\x1eglimway/content/v1/wilds.proto\x12\x12glimway.content.v1\x1a\x1bbuf/validate/validate.proto\"\x99\x10\n" +
+	"\x1eglimway/content/v1/wilds.proto\x12\x12glimway.content.v1\x1a\x1bbuf/validate/validate.proto\"\xdb\x10\n" +
 	"\x05Wilds\x124\n" +
 	"\x11generator_version\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02\b\x03R\x10generatorVersion\x12&\n" +
 	"\n" +
@@ -2887,8 +2935,7 @@ const file_glimway_content_v1_wilds_proto_rawDesc = "" +
 	"\x05lands\x18\x12 \x03(\v2\x1d.glimway.content.v1.WildsLandB\b\xbaH\x05\x92\x01\x02\b\x01R\x05lands\x12I\n" +
 	"\n" +
 	"land_sizes\x18\x13 \x01(\v2\".glimway.content.v1.WildsLandSizesB\x06\xbaH\x03\xc8\x01\x01R\tlandSizes\x12=\n" +
-	"\x05tiers\x18\x14 \x03(\v2\x1d.glimway.content.v1.WildsTierB\b\xbaH\x05\x92\x01\x02\b\x01R\x05tiers\x12E\n" +
-	"\bfrontier\x18\x15 \x01(\v2!.glimway.content.v1.WildsFrontierB\x06\xbaH\x03\xc8\x01\x01R\bfrontier\x12<\n" +
+	"\x05tiers\x18\x14 \x03(\v2\x1d.glimway.content.v1.WildsTierB\b\xbaH\x05\x92\x01\x02\b\x01R\x05tiers\x12<\n" +
 	"\x05paths\x18\x16 \x01(\v2\x1e.glimway.content.v1.WildsPathsB\x06\xbaH\x03\xc8\x01\x01R\x05paths\x12<\n" +
 	"\x05river\x18\x17 \x01(\v2\x1e.glimway.content.v1.WildsRiverB\x06\xbaH\x03\xc8\x01\x01R\x05river\x129\n" +
 	"\x04road\x18\x18 \x01(\v2\x1d.glimway.content.v1.WildsRoadB\x06\xbaH\x03\xc8\x01\x01R\x04road\x12M\n" +
@@ -2897,12 +2944,14 @@ const file_glimway_content_v1_wilds_proto_rawDesc = "" +
 	"\x05cells\x18\x1a \x01(\v2\x1e.glimway.content.v1.WildsCellsB\x06\xbaH\x03\xc8\x01\x01R\x05cells\x121\n" +
 	"\x10tier_ring_chunks\x18\x1b \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\x0etierRingChunks\x12<\n" +
 	"\x05words\x18\x1c \x01(\v2\x1e.glimway.content.v1.WildsWordsB\x06\xbaH\x03\xc8\x01\x01R\x05words\x12?\n" +
-	"\x06rumour\x18\x1d \x01(\v2\x1f.glimway.content.v1.WildsRumourB\x06\xbaH\x03\xc8\x01\x01R\x06rumour\x1aa\n" +
+	"\x06rumour\x18\x1d \x01(\v2\x1f.glimway.content.v1.WildsRumourB\x06\xbaH\x03\xc8\x01\x01R\x06rumour\x12?\n" +
+	"\x06border\x18\x1e \x01(\v2\x1f.glimway.content.v1.WildsBorderB\x06\xbaH\x03\xc8\x01\x01R\x06border\x126\n" +
+	"\x03map\x18\x1f \x01(\v2\x1c.glimway.content.v1.WildsMapB\x06\xbaH\x03\xc8\x01\x01R\x03map\x1aa\n" +
 	"\x0fLootTablesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x128\n" +
 	"\x05value\x18\x02 \x01(\v2\".glimway.content.v1.WildsLootTableR\x05value:\x028\x01:T\xbaHQ\x1aO\n" +
 	"\x10wilds.chunk_even\x12!chunkSize must be an even integer\x1a\x18this.chunk_size % 2 == 0B\x1a\n" +
-	"\x18_trinket_chance_permilleJ\x04\b\x04\x10\x05R\aregions\"u\n" +
+	"\x18_trinket_chance_permilleJ\x04\b\x04\x10\x05J\x04\b\x15\x10\x16R\aregionsR\bfrontier\"u\n" +
 	"\fWildsCampMix\x12)\n" +
 	"\x02id\x18\x02 \x01(\tB\x19\xbaH\x16r\x142\x12^[a-z0-9-]{1,100}$R\x02id\x12:\n" +
 	"\aenemies\x18\x01 \x03(\tB \xbaH\x1d\x92\x01\x1a\b\x01\"\x16r\x142\x12^[a-z0-9-]{1,100}$R\aenemies\"\xe8\x01\n" +
@@ -3048,14 +3097,13 @@ const file_glimway_content_v1_wilds_proto_rawDesc = "" +
 	"\x10node_yield_bonus\x18\x05 \x01(\x05B\f\xbaH\t\xc8\x01\x01\x1a\x04\x18\n" +
 	"(\x00H\x00R\x0enodeYieldBonus\x88\x01\x01:]\xbaHZ\x1aX\n" +
 	"\x10tier.chest_range\x12\"chestMax must be at least chestMin\x1a this.chest_max >= this.chest_minB\x13\n" +
-	"\x11_node_yield_bonus\"\x98\x01\n" +
-	"\rWildsFrontier\x12\x1f\n" +
-	"\x05reach\x18\x01 \x01(\x05B\t\xbaH\x06\x1a\x04\x18@(\x00R\x05reach\x12,\n" +
-	"\vsouth_limit\x18\x02 \x01(\x11B\x06\xbaH\x03\xc8\x01\x01H\x00R\n" +
-	"southLimit\x88\x01\x01\x12(\n" +
-	"\n" +
-	"held_slack\x18\x03 \x01(\x05B\t\xbaH\x06\x1a\x04\x18\x10(\x00R\theldSlackB\x0e\n" +
-	"\f_south_limit\"t\n" +
+	"\x11_node_yield_bonus\"^\n" +
+	"\vWildsBorder\x12#\n" +
+	"\x06chunks\x18\x01 \x01(\x05B\v\xbaH\b\x1a\x06\x18\x80\x80\x04(@R\x06chunks\x12*\n" +
+	"\vveil_chunks\x18\x02 \x01(\x05B\t\xbaH\x06\x1a\x04\x18@(\x00R\n" +
+	"veilChunks\"<\n" +
+	"\bWildsMap\x120\n" +
+	"\x0eglimpse_chunks\x18\x01 \x01(\x05B\t\xbaH\x06\x1a\x04\x18@(\x02R\rglimpseChunks\"t\n" +
 	"\x0eWildsClearTool\x12/\n" +
 	"\x05decor\x18\x01 \x01(\tB\x19\xbaH\x16r\x142\x12^[a-z0-9-]{1,100}$R\x05decor\x121\n" +
 	"\x06action\x18\x02 \x01(\tB\x19\xbaH\x16r\x142\x12^[a-z0-9-]{1,100}$R\x06action\"\xc0\x01\n" +
@@ -3201,7 +3249,7 @@ func file_glimway_content_v1_wilds_proto_rawDescGZIP() []byte {
 	return file_glimway_content_v1_wilds_proto_rawDescData
 }
 
-var file_glimway_content_v1_wilds_proto_msgTypes = make([]protoimpl.MessageInfo, 34)
+var file_glimway_content_v1_wilds_proto_msgTypes = make([]protoimpl.MessageInfo, 35)
 var file_glimway_content_v1_wilds_proto_goTypes = []any{
 	(*Wilds)(nil),               // 0: glimway.content.v1.Wilds
 	(*WildsCampMix)(nil),        // 1: glimway.content.v1.WildsCampMix
@@ -3222,26 +3270,27 @@ var file_glimway_content_v1_wilds_proto_goTypes = []any{
 	(*WildsSizeBand)(nil),       // 16: glimway.content.v1.WildsSizeBand
 	(*WildsLandSizes)(nil),      // 17: glimway.content.v1.WildsLandSizes
 	(*WildsTier)(nil),           // 18: glimway.content.v1.WildsTier
-	(*WildsFrontier)(nil),       // 19: glimway.content.v1.WildsFrontier
-	(*WildsClearTool)(nil),      // 20: glimway.content.v1.WildsClearTool
-	(*WildsLayKind)(nil),        // 21: glimway.content.v1.WildsLayKind
-	(*WildsWalkSpeed)(nil),      // 22: glimway.content.v1.WildsWalkSpeed
-	(*WildsPaths)(nil),          // 23: glimway.content.v1.WildsPaths
-	(*WildsRiver)(nil),          // 24: glimway.content.v1.WildsRiver
-	(*WildsRoad)(nil),           // 25: glimway.content.v1.WildsRoad
-	(*WildsPlaceKind)(nil),      // 26: glimway.content.v1.WildsPlaceKind
-	(*WildsCells)(nil),          // 27: glimway.content.v1.WildsCells
-	(*WildsWords)(nil),          // 28: glimway.content.v1.WildsWords
-	(*WildsRumourLandmark)(nil), // 29: glimway.content.v1.WildsRumourLandmark
-	(*WildsRumourCompass)(nil),  // 30: glimway.content.v1.WildsRumourCompass
-	(*WildsRumourDistance)(nil), // 31: glimway.content.v1.WildsRumourDistance
-	(*WildsRumour)(nil),         // 32: glimway.content.v1.WildsRumour
-	nil,                         // 33: glimway.content.v1.Wilds.LootTablesEntry
+	(*WildsBorder)(nil),         // 19: glimway.content.v1.WildsBorder
+	(*WildsMap)(nil),            // 20: glimway.content.v1.WildsMap
+	(*WildsClearTool)(nil),      // 21: glimway.content.v1.WildsClearTool
+	(*WildsLayKind)(nil),        // 22: glimway.content.v1.WildsLayKind
+	(*WildsWalkSpeed)(nil),      // 23: glimway.content.v1.WildsWalkSpeed
+	(*WildsPaths)(nil),          // 24: glimway.content.v1.WildsPaths
+	(*WildsRiver)(nil),          // 25: glimway.content.v1.WildsRiver
+	(*WildsRoad)(nil),           // 26: glimway.content.v1.WildsRoad
+	(*WildsPlaceKind)(nil),      // 27: glimway.content.v1.WildsPlaceKind
+	(*WildsCells)(nil),          // 28: glimway.content.v1.WildsCells
+	(*WildsWords)(nil),          // 29: glimway.content.v1.WildsWords
+	(*WildsRumourLandmark)(nil), // 30: glimway.content.v1.WildsRumourLandmark
+	(*WildsRumourCompass)(nil),  // 31: glimway.content.v1.WildsRumourCompass
+	(*WildsRumourDistance)(nil), // 32: glimway.content.v1.WildsRumourDistance
+	(*WildsRumour)(nil),         // 33: glimway.content.v1.WildsRumour
+	nil,                         // 34: glimway.content.v1.Wilds.LootTablesEntry
 }
 var file_glimway_content_v1_wilds_proto_depIdxs = []int32{
 	1,  // 0: glimway.content.v1.Wilds.camp_mixes:type_name -> glimway.content.v1.WildsCampMix
 	2,  // 1: glimway.content.v1.Wilds.entity_kinds:type_name -> glimway.content.v1.WildsEntityKindRule
-	33, // 2: glimway.content.v1.Wilds.loot_tables:type_name -> glimway.content.v1.Wilds.LootTablesEntry
+	34, // 2: glimway.content.v1.Wilds.loot_tables:type_name -> glimway.content.v1.Wilds.LootTablesEntry
 	5,  // 3: glimway.content.v1.Wilds.timers:type_name -> glimway.content.v1.WildsTimers
 	7,  // 4: glimway.content.v1.Wilds.grounds:type_name -> glimway.content.v1.WildsGround
 	8,  // 5: glimway.content.v1.Wilds.decor:type_name -> glimway.content.v1.WildsDecorKind
@@ -3249,37 +3298,38 @@ var file_glimway_content_v1_wilds_proto_depIdxs = []int32{
 	15, // 7: glimway.content.v1.Wilds.lands:type_name -> glimway.content.v1.WildsLand
 	17, // 8: glimway.content.v1.Wilds.land_sizes:type_name -> glimway.content.v1.WildsLandSizes
 	18, // 9: glimway.content.v1.Wilds.tiers:type_name -> glimway.content.v1.WildsTier
-	19, // 10: glimway.content.v1.Wilds.frontier:type_name -> glimway.content.v1.WildsFrontier
-	23, // 11: glimway.content.v1.Wilds.paths:type_name -> glimway.content.v1.WildsPaths
-	24, // 12: glimway.content.v1.Wilds.river:type_name -> glimway.content.v1.WildsRiver
-	25, // 13: glimway.content.v1.Wilds.road:type_name -> glimway.content.v1.WildsRoad
-	26, // 14: glimway.content.v1.Wilds.place_kinds:type_name -> glimway.content.v1.WildsPlaceKind
-	27, // 15: glimway.content.v1.Wilds.cells:type_name -> glimway.content.v1.WildsCells
-	28, // 16: glimway.content.v1.Wilds.words:type_name -> glimway.content.v1.WildsWords
-	32, // 17: glimway.content.v1.Wilds.rumour:type_name -> glimway.content.v1.WildsRumour
-	3,  // 18: glimway.content.v1.WildsLootTable.entries:type_name -> glimway.content.v1.WildsLootEntry
-	10, // 19: glimway.content.v1.WildsPlace.sites:type_name -> glimway.content.v1.WildsFixedSite
-	11, // 20: glimway.content.v1.WildsPlace.dealt:type_name -> glimway.content.v1.WildsDealtSite
-	12, // 21: glimway.content.v1.WildsPlace.openings:type_name -> glimway.content.v1.WildsOpening
-	14, // 22: glimway.content.v1.WildsLand.lean:type_name -> glimway.content.v1.WildsLean
-	13, // 23: glimway.content.v1.WildsLand.ground:type_name -> glimway.content.v1.WildsLandGround
-	6,  // 24: glimway.content.v1.WildsLand.decor:type_name -> glimway.content.v1.WildsWeight
-	6,  // 25: glimway.content.v1.WildsLand.materials:type_name -> glimway.content.v1.WildsWeight
-	6,  // 26: glimway.content.v1.WildsLand.camp_mixes:type_name -> glimway.content.v1.WildsWeight
-	16, // 27: glimway.content.v1.WildsLandSizes.bands:type_name -> glimway.content.v1.WildsSizeBand
-	6,  // 28: glimway.content.v1.WildsTier.camp_mixes:type_name -> glimway.content.v1.WildsWeight
-	20, // 29: glimway.content.v1.WildsPaths.clear_tools:type_name -> glimway.content.v1.WildsClearTool
-	21, // 30: glimway.content.v1.WildsPaths.lay:type_name -> glimway.content.v1.WildsLayKind
-	22, // 31: glimway.content.v1.WildsPaths.walk:type_name -> glimway.content.v1.WildsWalkSpeed
-	29, // 32: glimway.content.v1.WildsRumour.landmarks:type_name -> glimway.content.v1.WildsRumourLandmark
-	30, // 33: glimway.content.v1.WildsRumour.compass:type_name -> glimway.content.v1.WildsRumourCompass
-	31, // 34: glimway.content.v1.WildsRumour.distance:type_name -> glimway.content.v1.WildsRumourDistance
-	4,  // 35: glimway.content.v1.Wilds.LootTablesEntry.value:type_name -> glimway.content.v1.WildsLootTable
-	36, // [36:36] is the sub-list for method output_type
-	36, // [36:36] is the sub-list for method input_type
-	36, // [36:36] is the sub-list for extension type_name
-	36, // [36:36] is the sub-list for extension extendee
-	0,  // [0:36] is the sub-list for field type_name
+	24, // 10: glimway.content.v1.Wilds.paths:type_name -> glimway.content.v1.WildsPaths
+	25, // 11: glimway.content.v1.Wilds.river:type_name -> glimway.content.v1.WildsRiver
+	26, // 12: glimway.content.v1.Wilds.road:type_name -> glimway.content.v1.WildsRoad
+	27, // 13: glimway.content.v1.Wilds.place_kinds:type_name -> glimway.content.v1.WildsPlaceKind
+	28, // 14: glimway.content.v1.Wilds.cells:type_name -> glimway.content.v1.WildsCells
+	29, // 15: glimway.content.v1.Wilds.words:type_name -> glimway.content.v1.WildsWords
+	33, // 16: glimway.content.v1.Wilds.rumour:type_name -> glimway.content.v1.WildsRumour
+	19, // 17: glimway.content.v1.Wilds.border:type_name -> glimway.content.v1.WildsBorder
+	20, // 18: glimway.content.v1.Wilds.map:type_name -> glimway.content.v1.WildsMap
+	3,  // 19: glimway.content.v1.WildsLootTable.entries:type_name -> glimway.content.v1.WildsLootEntry
+	10, // 20: glimway.content.v1.WildsPlace.sites:type_name -> glimway.content.v1.WildsFixedSite
+	11, // 21: glimway.content.v1.WildsPlace.dealt:type_name -> glimway.content.v1.WildsDealtSite
+	12, // 22: glimway.content.v1.WildsPlace.openings:type_name -> glimway.content.v1.WildsOpening
+	14, // 23: glimway.content.v1.WildsLand.lean:type_name -> glimway.content.v1.WildsLean
+	13, // 24: glimway.content.v1.WildsLand.ground:type_name -> glimway.content.v1.WildsLandGround
+	6,  // 25: glimway.content.v1.WildsLand.decor:type_name -> glimway.content.v1.WildsWeight
+	6,  // 26: glimway.content.v1.WildsLand.materials:type_name -> glimway.content.v1.WildsWeight
+	6,  // 27: glimway.content.v1.WildsLand.camp_mixes:type_name -> glimway.content.v1.WildsWeight
+	16, // 28: glimway.content.v1.WildsLandSizes.bands:type_name -> glimway.content.v1.WildsSizeBand
+	6,  // 29: glimway.content.v1.WildsTier.camp_mixes:type_name -> glimway.content.v1.WildsWeight
+	21, // 30: glimway.content.v1.WildsPaths.clear_tools:type_name -> glimway.content.v1.WildsClearTool
+	22, // 31: glimway.content.v1.WildsPaths.lay:type_name -> glimway.content.v1.WildsLayKind
+	23, // 32: glimway.content.v1.WildsPaths.walk:type_name -> glimway.content.v1.WildsWalkSpeed
+	30, // 33: glimway.content.v1.WildsRumour.landmarks:type_name -> glimway.content.v1.WildsRumourLandmark
+	31, // 34: glimway.content.v1.WildsRumour.compass:type_name -> glimway.content.v1.WildsRumourCompass
+	32, // 35: glimway.content.v1.WildsRumour.distance:type_name -> glimway.content.v1.WildsRumourDistance
+	4,  // 36: glimway.content.v1.Wilds.LootTablesEntry.value:type_name -> glimway.content.v1.WildsLootTable
+	37, // [37:37] is the sub-list for method output_type
+	37, // [37:37] is the sub-list for method input_type
+	37, // [37:37] is the sub-list for extension type_name
+	37, // [37:37] is the sub-list for extension extendee
+	0,  // [0:37] is the sub-list for field type_name
 }
 
 func init() { file_glimway_content_v1_wilds_proto_init() }
@@ -3295,16 +3345,15 @@ func file_glimway_content_v1_wilds_proto_init() {
 	file_glimway_content_v1_wilds_proto_msgTypes[10].OneofWrappers = []any{}
 	file_glimway_content_v1_wilds_proto_msgTypes[12].OneofWrappers = []any{}
 	file_glimway_content_v1_wilds_proto_msgTypes[18].OneofWrappers = []any{}
-	file_glimway_content_v1_wilds_proto_msgTypes[19].OneofWrappers = []any{}
-	file_glimway_content_v1_wilds_proto_msgTypes[24].OneofWrappers = []any{}
-	file_glimway_content_v1_wilds_proto_msgTypes[27].OneofWrappers = []any{}
+	file_glimway_content_v1_wilds_proto_msgTypes[25].OneofWrappers = []any{}
+	file_glimway_content_v1_wilds_proto_msgTypes[28].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_glimway_content_v1_wilds_proto_rawDesc), len(file_glimway_content_v1_wilds_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   34,
+			NumMessages:   35,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -9082,6 +9082,25 @@
     }
   },
   {
+    "name": "glimway.v1.WildsBorder",
+    "case": "empty",
+    "json": {
+      "rect": null
+    }
+  },
+  {
+    "name": "glimway.v1.WildsBorder",
+    "case": "populated",
+    "json": {
+      "rect": {
+        "minCx": 1,
+        "minCy": 1,
+        "maxCx": 1,
+        "maxCy": 1
+      }
+    }
+  },
+  {
     "name": "glimway.v1.WildsChunk",
     "case": "empty",
     "json": {
@@ -9935,7 +9954,8 @@
     "name": "glimway.v1.WildsMapRequest",
     "case": "empty",
     "json": {
-      "explored": []
+      "explored": [],
+      "glimpse": false
     }
   },
   {
@@ -9949,7 +9969,8 @@
           "cx": 1,
           "cy": 1
         }
-      ]
+      ],
+      "glimpse": true
     }
   },
   {
@@ -9958,7 +9979,9 @@
     "json": {
       "wick": "",
       "chunks": [],
-      "lamps": []
+      "lamps": [],
+      "window": null,
+      "glimpse": []
     }
   },
   {
@@ -10054,6 +10077,24 @@
           },
           "mageLit": true
         }
+      ],
+      "window": {
+        "minCx": 1,
+        "minCy": 1,
+        "maxCx": 1,
+        "maxCy": 1
+      },
+      "glimpse": [
+        {
+          "chunk": {
+            "realm": "fixture",
+            "layer": 1,
+            "cx": 1,
+            "cy": 1
+          },
+          "land": "fixture",
+          "river": true
+        }
       ]
     }
   },
@@ -10079,7 +10120,7 @@
     "json": {
       "still": null,
       "wick": null,
-      "frontier": null,
+      "border": null,
       "center": null,
       "radius": 0,
       "entities": [],
@@ -10089,7 +10130,6 @@
       "echoes": [],
       "ground": [],
       "materials": {},
-      "glimpse": [],
       "ways": [],
       "chunks": [],
       "held": [],
@@ -10118,21 +10158,13 @@
         "endsAt": 1,
         "kind": "fixture"
       },
-      "frontier": {
+      "border": {
         "rect": {
           "minCx": 1,
           "minCy": 1,
           "maxCx": 1,
           "maxCy": 1
-        },
-        "held": [
-          {
-            "realm": "fixture",
-            "layer": 1,
-            "cx": 1,
-            "cy": 1
-          }
-        ]
+        }
       },
       "center": {
         "realm": "fixture",
@@ -10213,18 +10245,6 @@
       "materials": {
         "fixture": 1
       },
-      "glimpse": [
-        {
-          "chunk": {
-            "realm": "fixture",
-            "layer": 1,
-            "cx": 1,
-            "cy": 1
-          },
-          "land": "fixture",
-          "river": true
-        }
-      ],
       "ways": [
         {
           "id": "fixture",
@@ -10364,6 +10384,24 @@
             },
             "mageLit": true
           }
+        ],
+        "window": {
+          "minCx": 1,
+          "minCy": 1,
+          "maxCx": 1,
+          "maxCy": 1
+        },
+        "glimpse": [
+          {
+            "chunk": {
+              "realm": "fixture",
+              "layer": 1,
+              "cx": 1,
+              "cy": 1
+            },
+            "land": "fixture",
+            "river": true
+          }
         ]
       }
     }
@@ -10390,14 +10428,13 @@
         "endsAt": 1791500000,
         "kind": "wick"
       },
-      "frontier": {
+      "border": {
         "rect": {
-          "minCx": -6,
-          "minCy": -8,
-          "maxCx": 4,
-          "maxCy": 7
-        },
-        "held": []
+          "minCx": -4096,
+          "minCy": -4096,
+          "maxCx": 4096,
+          "maxCy": 4096
+        }
       },
       "center": {
         "realm": "hearthwick",
@@ -10485,18 +10522,6 @@
       "materials": {
         "stone": 4
       },
-      "glimpse": [
-        {
-          "chunk": {
-            "realm": "hearthwick",
-            "layer": 0,
-            "cx": -5,
-            "cy": -4
-          },
-          "land": "meadow",
-          "river": true
-        }
-      ],
       "ways": [
         {
           "id": "way:place:0:-2:place:1:-1",

@@ -45,7 +45,7 @@ type Config struct {
 	LoginGlobalRate  int
 	LoginWindow      time.Duration
 	// WildsGenerator makes the open map's chunks on demand, and answers the
-	// glimpse past the frontier and the wick's rumour. Nil is generator v3
+	// glimpse past the border and the wick's rumour. Nil is generator v3
 	// (wildsgen.V3); tests pass a stand-in. Stored epochs keep the version
 	// they were made by.
 	WildsGenerator chunks.Generator

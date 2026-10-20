@@ -5,7 +5,7 @@
  */
 import type { WildsMapStatus, WildsChunkKey, WildsNearResult, WorldTile } from '../gen/glimway/v1/wilds_pb.js';
 import { loadWilds } from '../wilds/data.ts';
-import { epochKindAt, insideFrontier } from '../wilds/coords.ts';
+import { epochKindAt } from '../wilds/coords.ts';
 import { onGrid, sourceOf } from '../location.ts';
 
 /** The near read always answers the 5×5 chunks around the asked one. */
@@ -21,14 +21,12 @@ export function validateNear(out: WildsNearResult, cx: number, cy: number): Wild
   if (!out.still?.id || out.still.kind !== 'still' || !out.wick?.id || out.wick.kind !== 'wick' || out.still.id === out.wick.id) throw new Error('invalid epoch authority');
   const c = out.center;
   if (!c || c.realm !== w.realm || c.layer !== 0 || c.cx !== cx || c.cy !== cy || out.radius !== NEAR_RADIUS) throw new Error('invalid near window');
-  const f = out.frontier?.rect;
-  if (!f || f.minCx > f.maxCx || f.minCy > f.maxCy) throw new Error('invalid frontier');
-  // Held chunks push the frontier out (lamps.md 2.2): this answer's own, not the last read's.
-  const reach = out.frontier!.held;
-  if (!reach.every((k) => k.realm === w.realm && k.layer === 0 && Number.isSafeInteger(k.cx) && Number.isSafeInteger(k.cy))) throw new Error('invalid frontier');
-  const inFrontier = (k: { cx: number; cy: number }) => k.cx >= f.minCx && k.cx <= f.maxCx && k.cy >= f.minCy && k.cy <= f.maxCy && insideFrontier(k.cx, k.cy, undefined, reach);
-  // A centre on the grid: inside the frontier, or on a fixed footprint (the Commons: location-seam.md 1.4).
-  if (!inFrontier(c) && !onGrid(c.cx, c.cy)) throw new Error('invalid near window');
+  const b = out.border?.rect;
+  if (!b || b.minCx > b.maxCx || b.minCy > b.maxCy) throw new Error('invalid border');
+  // The server's border: this answer's own (content may widen it before a page reloads).
+  const inBorder = (k: { cx: number; cy: number }) => k.cx >= b.minCx && k.cx <= b.maxCx && k.cy >= b.minCy && k.cy <= b.maxCy;
+  // A centre on the grid: inside the border, or on a fixed footprint (the Commons: location-seam.md 1.4).
+  if (!inBorder(c) && !onGrid(c.cx, c.cy)) throw new Error('invalid near window');
   const keyed = (k: WildsChunkKey | undefined): k is WildsChunkKey => !!k && k.realm === w.realm && k.layer === 0;
   const inWindow = (k: WildsChunkKey) => Math.abs(k.cx - cx) <= NEAR_RADIUS && Math.abs(k.cy - cy) <= NEAR_RADIUS;
   // Held chunks (roadmap 0.12) keep an older wick's land: each held epoch
@@ -41,7 +39,7 @@ export function validateNear(out: WildsNearResult, cx: number, cy: number): Wild
   for (const n of out.chunks) {
     const k = n.chunk;
     if (n.source !== 'held') continue;
-    if (!keyed(k) || !inWindow(k) || !inFrontier(k) || sourceOf(k.cx, k.cy).kind !== 'generated' || epochKindAt(k.cx, k.cy) !== 'wick' || (n.epoch !== out.wick.id && !held.includes(n.epoch))) throw new Error('invalid held chunk');
+    if (!keyed(k) || !inWindow(k) || !inBorder(k) || sourceOf(k.cx, k.cy).kind !== 'generated' || epochKindAt(k.cx, k.cy) !== 'wick' || (n.epoch !== out.wick.id && !held.includes(n.epoch))) throw new Error('invalid held chunk');
     heldAt.set(`${k.cx}:${k.cy}`, n.epoch);
   }
   // A chunk's epoch follows from its coordinates: a held chunk's pinned
@@ -59,7 +57,7 @@ export function validateNear(out: WildsNearResult, cx: number, cy: number): Wild
   const chunks = new Set<string>();
   for (const g of out.ground) {
     const k = g.chunk;
-    if (!keyed(k) || !inWindow(k) || !inFrontier(k) || sourceOf(k.cx, k.cy).kind !== 'generated' || g.epoch !== epochOf(k)) throw new Error('invalid ground chunk');
+    if (!keyed(k) || !inWindow(k) || !inBorder(k) || sourceOf(k.cx, k.cy).kind !== 'generated' || g.epoch !== epochOf(k)) throw new Error('invalid ground chunk');
     const id = `${k.cx}:${k.cy}`;
     if (chunks.has(id)) throw new Error('invalid ground chunk');
     chunks.add(id);
@@ -74,8 +72,6 @@ export function validateNear(out: WildsNearResult, cx: number, cy: number): Wild
     }
   }
 
-  // The glimpse is only ever past the frontier.
-  for (const gl of out.glimpse) if (!keyed(gl.chunk) || inFrontier(gl.chunk) || !w.lands.some((l) => l.id === gl.land)) throw new Error('invalid glimpse');
 
   const adjacent = (a: WorldTile, b: WorldTile) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y) === 1;
   for (const way of out.ways) {
@@ -122,6 +118,18 @@ export function validateMapStatus(out: WildsMapStatus, explored: readonly { cx: 
     ids.add(l.id); land(l.land);
     const k = l.land.chunk!;
     if (l.kind !== 'lot-lantern' && !keys.has(k.cx + ',' + k.cy)) throw new Error('unexplored map lamp');
+  }
+  // The window round the reader (0.14): glimpses only inside it, each chunk once, of a known land.
+  const r = out.window;
+  if (!r && out.glimpse.length) throw new Error('invalid map window');
+  if (r) {
+    if (r.minCx > r.maxCx || r.minCy > r.maxCy) throw new Error('invalid map window');
+    const glimpsed = new Set<string>();
+    for (const g of out.glimpse) {
+      const k = g.chunk;
+      if (!k || k.realm !== loadWilds().realm || k.layer !== 0 || k.cx < r.minCx || k.cx > r.maxCx || k.cy < r.minCy || k.cy > r.maxCy || !loadWilds().lands.some((l) => l.id === g.land) || glimpsed.has(k.cx + ',' + k.cy)) throw new Error('invalid glimpse');
+      glimpsed.add(k.cx + ',' + k.cy);
+    }
   }
   return out;
 }

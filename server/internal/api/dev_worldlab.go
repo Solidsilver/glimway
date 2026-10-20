@@ -15,7 +15,7 @@ import (
 // server/cmd/glimway-server/dev_routes.go): its seed, and the wick season
 // the calendar is in now, the one its wick chunks are made at. It only
 // reads, and doesn't refresh the session. World: the world's id, for
-// whether a hero may stand somewhere (location.OnGridPublished). Dev
+// whether a hero may stand somewhere (location.OnGrid). Dev
 // builds only.
 func (a *Server) DevWorldLabHere(r *http.Request) (worldlab.Here, bool) {
 	c, err := r.Cookie(CookieName)

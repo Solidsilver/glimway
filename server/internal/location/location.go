@@ -18,7 +18,6 @@ import (
 	"strings"
 
 	"glimway/content"
-	"glimway/server/internal/frontier"
 	"glimway/server/internal/wilds"
 	"regexp"
 )
@@ -201,17 +200,13 @@ func SourceOf(cx, cy int) Source {
 	return Source{Kind: SourceGenerated, EpochKind: wilds.EpochKindAt(cx, cy)}
 }
 
-// OnGrid is true for an outdoor chunk that exists: generated land may be
-// made there (frontier.Inside), or a fixed footprint covers it.
-func OnGrid(world string, cx, cy int) bool {
-	return frontier.Inside(world, cx, cy) || fixedAt(cx, cy) != nil
+// OnGrid is true for an outdoor chunk that exists: inside the world border
+// (wilds.InsideBorder), where generated land may be made, or on a fixed
+// footprint.
+func OnGrid(cx, cy int) bool {
+	return wilds.InsideBorder(cx, cy) || fixedAt(cx, cy) != nil
 }
 
-// OnGridPublished is OnGrid as committed holds make the frontier, for
-// readers outside the store's transaction (the presence socket).
-func OnGridPublished(world string, cx, cy int) bool {
-	return frontier.InsidePublished(world, cx, cy) || fixedAt(cx, cy) != nil
-}
 
 // Anchor resolves "<place>:<anchor>" ("hearthwick:arch", "hearthwick:lot:3") to
 // its space and the centre of its tile in world pixels.

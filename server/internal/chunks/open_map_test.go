@@ -6,7 +6,6 @@ import (
 
 	"glimway/server/internal/chunks"
 	"glimway/server/internal/chunks/fakegen"
-	"glimway/server/internal/frontier"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/wilds"
 
@@ -21,15 +20,15 @@ func fakeEpoch(kind string) *contract.WildsEpoch {
 	return &contract.WildsEpoch{Id: "e-" + kind, WorldSeed: "seed", Kind: kind, GeneratorVersion: 3, Season: season}
 }
 
-// Every chunk of the 0.8 frontier, made by the test generator in the epoch
+// Every chunk at home (the 0.8 frontier's shape), made by the test generator in the epoch
 // its coordinates call for, passes the open map's validator.
 func TestOpenMapChunksValidateAtSignedCoordinates(t *testing.T) {
 	g := fakegen.New()
-	x0, y0, x1, y1 := frontier.Rect("")
+	x0, y0, x1, y1 := wilds.HomeRect()
 	n := 0
 	for cy := y0; cy <= y1; cy++ {
 		for cx := x0; cx <= x1; cx++ {
-			if !frontier.Inside("", cx, cy) || wilds.FixedFootprintAt(cx, cy) != nil {
+			if !wilds.InsideHome(cx, cy) || wilds.FixedFootprintAt(cx, cy) != nil {
 				continue
 			}
 			m, err := g.Chunk(fakeEpoch(wilds.EpochKindAt(cx, cy)), int32(cx), int32(cy), nil)

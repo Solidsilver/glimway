@@ -34,13 +34,13 @@ for(const p of JSON.parse(readFileSync('content/papers.json','utf8')).papers)if(
 
 doc.positions=positions;
 writeFileSync(file,JSON.stringify(doc,null,2)+'\n');
-// Coordinate/frontier parity follows the manifest too (H4 owns the generator routes).
+// Coordinate/border parity follows the manifest too (H4 owns the generator routes).
 const c = await import('../src/lib/wilds/coords.ts');
 const coordFile='content/vectors/wilds-coords.json';
 const coords=JSON.parse(readFileSync(coordFile,'utf8'));
-for(const v of coords.chunks){const [cx,cy]=v.chunk;const cell=c.cellOf(cx,cy);Object.assign(v,{footprint:c.footprintAt(cx,cy)?.id??'',tier:c.tier(cx,cy),epochKind:c.epochKindAt(cx,cy),inside:c.insideFrontier(cx,cy),ring:c.ring(cx,cy),cell:[cell.x,cell.y]});}
-const r=c.frontierRect();let count=0,newCount=0;
-for(let cy=r.minCy;cy<=r.maxCy;cy++)for(let cx=r.minCx;cx<=r.maxCx;cx++)if(c.insideFrontier(cx,cy)){count++;if(sourceOf(cx,cy).kind==='generated'&&!c.footprintAt(cx,cy))newCount++;}
-coords.frontier={rect:[r.minCx,r.minCy,r.maxCx,r.maxCy],chunks:count,new:newCount};
-coords.comment='Hearthwick 2 reach union; regenerate with node scripts/hearthwick-location-vectors.ts.';
+for(const v of coords.chunks){const [cx,cy]=v.chunk;const cell=c.cellOf(cx,cy);Object.assign(v,{footprint:c.footprintAt(cx,cy)?.id??'',tier:c.tier(cx,cy),epochKind:c.epochKindAt(cx,cy),inside:c.insideBorder(cx,cy),ring:c.ring(cx,cy),cell:[cell.x,cell.y]});}
+const b=c.borderRect().maxCx;
+coords.border={chunks:b,inside:[[0,0],[b,b],[-b,-b],[b,-b],[-b,b],[0,b],[-b,9]],outside:[[b+1,0],[0,-b-1],[-b-1,b],[b,b+1],[-b-904,-b-904]]};
+delete coords.frontier;
+coords.comment='Hearthwick 2 coordinates and the world border; regenerate with node scripts/hearthwick-location-vectors.ts.';
 writeFileSync(coordFile,JSON.stringify(coords,null,2)+'\n');

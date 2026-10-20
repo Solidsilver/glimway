@@ -91,8 +91,8 @@ test('the ground has no tile squares: a verge in meadow paints meadow grass, and
 test('real generated fords show a connected line of stones through bends and across chunk edges', () => {
   const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]] as const;
   for (const [names, start] of [
-    [['ford-bend', 'ford-bend-east'], { tx: -74, ty: -88 }],
-    [['ford-diagonal-west', 'ford-diagonal-east'], { tx: -94, ty: 61 }],
+    [['ford-bend', 'ford-bend-east'], { tx: -73, ty: -115 }],
+    [['ford-diagonal-west', 'ford-diagonal-east'], { tx: -97, ty: -128 }],
   ] as const) {
     const chunks = names.map((name: FixtureName) => fixtureTerrain(name));
     const tile = (tx: number, ty: number) => {
@@ -122,7 +122,7 @@ test('real generated fords show a connected line of stones through bends and acr
     }
     assert.equal(reached.size, stones.length, 'the stones form a continuous walk');
     const ends = stones.filter((p) => dirs.filter(([dx, dy]) => keys.has(`${p.tx + dx},${p.ty + dy}`)).length === 1);
-    assert.equal(ends.length, 2, 'one line between the banks');
+    assert.equal(ends.length, 2, `${names[0]}: one line between the banks`);
     for (const p of ends) assert.ok(dirs.some(([dx, dy]) => !wet(p.tx + dx, p.ty + dy)), 'the line reaches dry ground');
     const split = chunks.flatMap((c) => {
       const inside = (tx: number, ty: number) => Math.floor(tx / c.size) === c.cx && Math.floor(ty / c.size) === c.cy;

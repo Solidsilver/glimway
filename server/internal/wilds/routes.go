@@ -221,9 +221,6 @@ func (w *world) port(p *content.WildsPlace, dx, dy int) (end, way pt, ok bool) {
 	default:
 		cy = y0
 	}
-	if dy > int(contentRules().GetFrontier().GetSouthLimit())-cy {
-		return pt{}, pt{}, false // nothing south of the limit
-	}
 	if p.GetEpochKind() == w.e.Kind {
 		// Same epoch: a few tiles inside, at the side's opening if it has
 		// one, else at a hashed offset.
@@ -384,7 +381,7 @@ func (w *world) findGap(k gapKey) int {
 	if k.vertical {
 		bx, by = k.cx+1, k.cy
 	}
-	if by > int(contentRules().GetFrontier().GetSouthLimit()) || FixedFootprintAt(ax, ay) != nil || FixedFootprintAt(bx, by) != nil {
+	if FixedFootprintAt(ax, ay) != nil || FixedFootprintAt(bx, by) != nil {
 		return -1
 	}
 	// An edge with a footprint's fixed opening needs no gap.

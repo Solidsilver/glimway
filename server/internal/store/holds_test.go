@@ -307,7 +307,7 @@ func TestHoldRefusals(t *testing.T) {
 	c := NewChunks(func() time.Time { return time.Unix(now, 0) }, fakegen.New())
 	wickNow(t, s, c, "world-a", now)
 	inTx(t, s, func(tx *sql.Tx) {
-		for _, at := range [][2]int32{{0, -1}, {0, -4}, {-2, 1}, {0, 2}, {9, 0}} { // the Tangle, the Whitequiet, a lot, the town, past the frontier
+		for _, at := range [][2]int32{{0, -1}, {0, -4}, {-2, 1}, {0, 2}, {4097, 0}} { // the Tangle, the Whitequiet, a lot, the town, past the border
 			if _, err := c.Hold(ctx, tx, "world-a", at[0], at[1], "lot-lantern", "1", now); !errors.Is(err, ErrNotHoldable) {
 				t.Fatalf("held %v: %v", at, err)
 			}

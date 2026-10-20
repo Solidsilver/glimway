@@ -57,7 +57,7 @@ func run(args []string, stdout io.Writer) error {
 	fs.StringVar(&o.Epoch, "epoch", defaultEpoch, "wick epoch t:<start>:<end>; still footprints use their own epoch")
 	fs.StringVar(&rect, "rect", rect, "inclusive chunk rectangle x0,y0,x1,y1")
 	fs.StringVar(&at, "at", at, "chunk coordinates cx,cy")
-	fs.StringVar(&o.Overlays, "overlays", "", "comma-separated land-cells,place-cells,tiers,wend,road,rumours,frontier,solid,reach")
+	fs.StringVar(&o.Overlays, "overlays", "", "comma-separated land-cells,place-cells,tiers,wend,road,rumours,border,solid,reach")
 	for _, name := range overlayNames {
 		fs.Bool(name, false, "enable the "+name+" overlay")
 	}

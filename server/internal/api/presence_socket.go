@@ -20,17 +20,16 @@ import (
 )
 
 // validPresenceRoom: an area, or a Wilds chunk's room "outdoors:<cx>:<cy>"
-// (signed, inside the world's frontier; open-map.md 2.4, lamps.md 2.2).
-func validPresenceRoom(world, area string) bool {
+// (signed, on the grid: inside the world border; open-map.md 2.4).
+func validPresenceRoom(area string) bool {
 	if validArea(area) {
 		return area != outdoorsArea
 	}
 	x, y, ok := wildsRoomChunk(area)
-	return ok && location.OnGridPublished(world, x, y)
+	return ok && location.OnGrid(x, y)
 }
 
-// wildsRoomChunk is the chunk a Wilds room names. Joining checks it is on
-// the world's grid (validPresenceRoom); a held chunk's slack can leave it at
+// the grid (validPresenceRoom).
 // the turning, and the room still names a Wilds chunk.
 func wildsRoomChunk(room string) (cx, cy int, ok bool) {
 	parts := strings.Split(room, ":")
@@ -48,12 +47,12 @@ func wildsRoomChunk(room string) (cx, cy int, ok bool) {
 	return x, y, true
 }
 
-// positionInsideFrontier: a Wilds world-pixel position's chunk is inside
-// the frontier.
-func positionInsideFrontier(world string, x, y float64) bool {
+// positionInsideBorder: a Wilds world-pixel position's chunk is on the
+// grid (inside the world border, or a fixed footprint).
+func positionInsideBorder(x, y float64) bool {
 	tx, ty := wilds.TileOfPixel(x, y)
 	cx, cy := wilds.ChunkOf(tx, ty)
-	return location.OnGridPublished(world, cx, cy)
+	return location.OnGrid(cx, cy)
 }
 
 // sharedRoom: two rooms see each other. An area's room sees only itself; a
@@ -302,7 +301,7 @@ func (a *Server) presenceReader(p *presencePeer) {
 			// Still standing there: a new wick's visit too (lamps.md 2.4).
 			visit = true
 		case *contract.PresenceMessage_Join:
-			if !validPresenceRoom(p.identity.World, event.Join.Area) {
+			if !validPresenceRoom(event.Join.Area) {
 				p.stop(websocket.StatusPolicyViolation, "invalid-room")
 				h.mu.Unlock()
 				return
@@ -330,12 +329,12 @@ func (a *Server) presenceReader(p *presencePeer) {
 			}
 			x, y, fx, fy := *position.X, *position.Y, *position.Facing.X, *position.Facing.Y
 			length := fx*fx + fy*fy
-			if !finitePresence(x) || !finitePresence(y) || !finitePresence(fx) || !finitePresence(fy) || math.Abs(x) > 1e6 || math.Abs(y) > 1e6 || math.Abs(length-1) > 0.01 {
+			if !finitePresence(x) || !finitePresence(y) || !finitePresence(fx) || !finitePresence(fy) || math.Abs(x) > worldPixelBound() || math.Abs(y) > worldPixelBound() || math.Abs(length-1) > 0.01 {
 				p.stop(websocket.StatusPolicyViolation, "invalid-position")
 				h.mu.Unlock()
 				return
 			}
-			// In the Wilds the position must stand inside the frontier, as
+			// In the Wilds the position must stand inside the border, as
 			// every `where` must. It needn't be in the room's own chunk:
 			// crossing a chunk edge, the join waits out its cooldown. One
 			// outside is dropped, neither kept nor relayed.
@@ -343,7 +342,7 @@ func (a *Server) presenceReader(p *presencePeer) {
 			if p.pendingJoin != "" {
 				area = p.pendingJoin
 			}
-			if _, _, inWilds := wildsRoomChunk(area); inWilds && !positionInsideFrontier(p.identity.World, x, y) {
+			if _, _, inWilds := wildsRoomChunk(area); inWilds && !positionInsideBorder(x, y) {
 				h.mu.Unlock()
 				continue
 			}

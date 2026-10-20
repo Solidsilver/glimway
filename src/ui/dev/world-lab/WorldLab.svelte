@@ -277,7 +277,7 @@
     wend: 'The Wend',
     road: 'The road',
     rumours: 'Rumours',
-    frontier: 'Frontier',
+    border: 'World border',
     solid: 'Solid',
     reach: 'Reach'
   }
