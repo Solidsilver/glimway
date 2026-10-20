@@ -44,7 +44,7 @@ func Open(path string) (*Store, error) {
 	}
 	// Apply timeout before WAL setup; CLI and service may open concurrently.
 	dsn += "?_txlock=immediate&_pragma=busy_timeout(10000)&_pragma=foreign_keys(ON)&_pragma=synchronous(FULL)"
-	db, err := sql.Open(reachDriverName, dsn)
+	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, err
 	}
@@ -55,9 +55,6 @@ func Open(path string) (*Store, error) {
 		return fail(err)
 	}
 	if err = migrate(db); err != nil {
-		return fail(err)
-	}
-	if err = loadReach(context.Background(), db); err != nil {
 		return fail(err)
 	}
 	return &Store{db}, nil
@@ -195,9 +192,9 @@ func (s *Store) Invite(ctx context.Context, world string, now int64) (string, er
 
 type Snapshot struct {
 	// Explicit server writes, including refills whose numeric value is unchanged.
-	VitalsWritten      bool                `json:"-"`
-	VitalsAt           float64             `json:"-"` // Fractional Unix seconds captured by a server operation; zero uses Persist now.
-	PlaceWritten       bool                `json:"-"`
+	VitalsWritten bool    `json:"-"`
+	VitalsAt      float64 `json:"-"` // Fractional Unix seconds captured by a server operation; zero uses Persist now.
+	PlaceWritten  bool    `json:"-"`
 	// PlaceMoved: the server chose the written place itself (a way home's
 	// landing): the client follows it (Place.moved_version).
 	PlaceMoved         bool                `json:"-"`

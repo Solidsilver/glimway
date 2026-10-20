@@ -94,8 +94,8 @@ func (a *Server) maintainState(ctx context.Context, tx *sql.Tx, s store.Snapshot
 			return false, err
 		}
 	}
-	// A turning may have shrunk the reach around where they stand.
-	moved, err := a.settleReach(ctx, tx, s, now.Unix())
+	// A save from past the world border is brought inside (border_settle.go).
+	moved, err := a.settleBorder(ctx, tx, s, now.Unix())
 	if err != nil {
 		return false, err
 	}

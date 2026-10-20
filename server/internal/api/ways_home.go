@@ -299,7 +299,7 @@ func (o *openGround) open(ctx context.Context, tx *sql.Tx, x, y int) (bool, erro
 // landBeside is open ground beside a lit lamp, inside its chunk. ok is false
 // when there is none.
 func (a *Server) landBeside(ctx context.Context, tx *sql.Tx, world string, l boundLamp, now int64) (lx, ly int, ok bool, err error) {
-	if !location.OnGrid(world, l.CX, l.CY) {
+	if !location.OnGrid(l.CX, l.CY) {
 		return 0, 0, false, nil
 	}
 	o, err := a.openGroundIn(ctx, tx, world, l.CX, l.CY, l.Camp, now)

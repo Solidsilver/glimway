@@ -20,7 +20,6 @@ import (
 	"glimway/content"
 	"glimway/server/internal/chunks"
 	"glimway/server/internal/fights"
-	"glimway/server/internal/frontier"
 	wire "glimway/server/internal/gen/glimway/v2"
 	"glimway/server/internal/location"
 	"glimway/server/internal/rules"
@@ -394,7 +393,7 @@ func (a *Server) scanFightRooms(p *presencePeer, wake bool) (covered, done bool)
 	for dy := -1; dy <= 1; dy++ {
 		for dx := -1; dx <= 1; dx++ {
 			cx, cy := pcx+dx, pcy+dy
-			if !frontier.InsidePublished(world, cx, cy) || location.SourceOf(cx, cy).Kind != location.SourceGenerated {
+			if !wilds.InsideBorder(cx, cy) || location.SourceOf(cx, cy).Kind != location.SourceGenerated {
 				continue
 			}
 			location := fightLocation{world: world, realm: content.WildsRules.GetRealm(), layer: 0, cx: int32(cx), cy: int32(cy)}

@@ -276,6 +276,9 @@ func TestNoRumourFindInHeldChunk(t *testing.T) {
 	}
 	var cx, cy int
 	fmt.Sscanf(r.Site, "rumour:%d:%d", &cx, &cy)
+	// Both stand by it: reads answer within sight.
+	x.putAt(s.AccountID, cx, cy)
+	x.putAt(b.AccountID, cx, cy)
 	held := x.near(c, cx, cy, 200).Wick
 	tx, ty := local(cx, cy, fakegen.Find)
 	find := &contract.WildsEntity{Id: r.Site, Kind: "rumour"}

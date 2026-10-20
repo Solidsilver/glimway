@@ -21,6 +21,7 @@
         "yours": false
       }
     ],
+    "glimpse": [],
     "lamps": [
       {
         "at": 1769731200,
@@ -53,7 +54,8 @@
         "y": -93
       }
     ],
-    "wick": "wick"
+    "wick": "wick",
+    "window": null
   },
   "visited": {
     "chunks": [
@@ -77,6 +79,7 @@
         "yours": false
       }
     ],
+    "glimpse": [],
     "lamps": [
       {
         "at": 1769731200,
@@ -109,6 +112,7 @@
         "y": -93
       }
     ],
-    "wick": "wick"
+    "wick": "wick",
+    "window": null
   }
 }

@@ -25,7 +25,6 @@ import (
 
 	"glimway/content"
 	"glimway/server/internal/chunks"
-	"glimway/server/internal/frontier"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/location"
 	"glimway/server/internal/ports"
@@ -40,9 +39,6 @@ import (
 
 // NearRadius: the near read covers the (2r+1)^2 chunks around its centre.
 const NearRadius = 2
-
-// glimpseReach: how far past the frontier the veil lets a glimpse through.
-const glimpseReach = 2
 
 func chunkKeyProto(cx, cy int) *contract.WildsChunkKey {
 	return &contract.WildsChunkKey{Realm: content.WildsRules.GetRealm(), Layer: 0, Cx: int32(cx), Cy: int32(cy)}
@@ -106,7 +102,8 @@ func (e openEpochs) of(cx, cy int) *contract.WildsEpoch {
 // ---------------------------------------------------------------- near read
 
 // nearRead is GET /api/wilds/near/<cx>/<cy>: the epochs (made when absent),
-// the frontier, and the changing state of the 5x5 chunks around (cx, cy).
+// the world border, and the changing state of the 5x5 chunks around (cx,
+// cy), which must be within sight of the reader (sight.go).
 // Its chunks are made on first read, like the chunk route's.
 func (a *Server) nearRead(w http.ResponseWriter, r *http.Request) error {
 	cx, cy, ok := signedPair(strings.TrimPrefix(r.URL.Path, "/api/wilds/near/"), "/")
@@ -123,13 +120,15 @@ func (a *Server) nearRead(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return chunkError(err)
 	}
-	// Only past a turning that may have let holds go is the frontier this
-	// read's to check; a refusal keeps that turning (it is upkeep, done).
-	if !location.OnGrid(s.WorldID, cx, cy) {
+	// A refusal keeps any turning this read made (it is upkeep, done).
+	if !location.OnGrid(cx, cy) || !withinSight(s, cx, cy, sightLag) {
 		if err = tx.Commit(); err != nil {
 			return err
 		}
-		return fail(409, "beyond-frontier")
+		if !location.OnGrid(cx, cy) {
+			return fail(409, "beyond-border")
+		}
+		return fail(409, "beyond-sight")
 	}
 	view, err := a.near(ctx, tx, s, ep, cx, cy, now)
 	if err != nil {
@@ -143,24 +142,20 @@ func (a *Server) nearRead(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (a *Server) near(ctx context.Context, tx *sql.Tx, s store.Snapshot, ep openEpochs, cx, cy int, now int64) (*contract.WildsNearResult, error) {
-	x0, y0, x1, y1 := frontier.Rect(s.WorldID)
-	held := frontier.Held(s.WorldID)
-	reach := &contract.WildsFrontier{Rect: &contract.WildsChunkRect{MinCx: int32(x0), MinCy: int32(y0), MaxCx: int32(x1), MaxCy: int32(y1)}, Held: make([]*contract.WildsChunkKey, 0, len(held))}
-	for _, k := range held {
-		reach.Held = append(reach.Held, chunkKeyProto(k[0], k[1]))
-	}
+	x0, y0, x1, y1 := wilds.BorderRect()
+	border := &contract.WildsBorder{Rect: &contract.WildsChunkRect{MinCx: int32(x0), MinCy: int32(y0), MaxCx: int32(x1), MaxCy: int32(y1)}}
 	out := &contract.WildsNearResult{
 		Still: proto.Clone(ep.still).(*contract.WildsEpoch), Wick: proto.Clone(ep.wick).(*contract.WildsEpoch),
-		Frontier: reach,
-		Center:   chunkKeyProto(cx, cy), Radius: NearRadius,
+		Border: border,
+		Center: chunkKeyProto(cx, cy), Radius: NearRadius,
 		Entities: []*contract.WildsEntityState{}, PersonalClaims: []*contract.WildsPersonalClaim{},
 		Discoveries: []*contract.WildsDiscovery{}, Lanterns: []*contract.WildsLantern{}, Echoes: []*contract.EchoAssignment{},
-		Ground: []*contract.ChunkGroundChanges{}, Materials: map[string]float64{}, Glimpse: []*contract.WildsGlimpse{}, Ways: []*contract.WildsWay{},
+		Ground: []*contract.ChunkGroundChanges{}, Materials: map[string]float64{}, Ways: []*contract.WildsWay{},
 		Chunks: []*contract.NearChunk{}, Held: []*contract.WildsEpoch{},
 	}
 	// The window's chunks on the grid, row-major: a fixed chunk is listed
 	// (its body comes from content, under its pseudo-epoch, and it has no
-	// state); a generated one, inside the frontier, is read for its state,
+	// state); a generated one, inside the border, is read for its state,
 	// a held one under its pinned epoch (listed in Held when not this wick).
 	type entityAt struct {
 		epoch, kind string
@@ -177,7 +172,7 @@ func (a *Server) near(ctx context.Context, tx *sql.Tx, s store.Snapshot, ep open
 				out.Chunks = append(out.Chunks, &contract.NearChunk{Chunk: chunkKeyProto(x, y), Source: src.Kind.String(), Epoch: chunks.FixedEpoch(src.Layout, src.Revision)})
 				continue
 			}
-			if !frontier.Inside(s.WorldID, x, y) {
+			if !wilds.InsideBorder(x, y) {
 				continue
 			}
 			window[[2]int{x, y}] = true
@@ -341,34 +336,6 @@ func (a *Server) near(ctx context.Context, tx *sql.Tx, s store.Snapshot, ep open
 			out.Ways = append(out.Ways, way)
 		}
 	}
-	if g := a.Config.WildsGenerator; g != nil {
-		var at []chunks.ChunkXY
-		for y := cy - NearRadius - glimpseReach; y <= cy+NearRadius+glimpseReach; y++ {
-			for x := cx - NearRadius - glimpseReach; x <= cx+NearRadius+glimpseReach; x++ {
-				// Past the reach, but within glimpseReach of it: the static
-				// frontier's, or a held chunk's slack.
-				nearHeld := slices.ContainsFunc(held, func(k [2]int) bool {
-					return max(abs(k[0]-x), abs(k[1]-y)) <= frontier.Slack()+glimpseReach
-				})
-				if frontier.Inside(s.WorldID, x, y) || y > int(content.WildsRules.GetFrontier().GetSouthLimit()) || !nearHeld && wilds.NearestFootprint(x, y) > int(content.WildsRules.GetFrontier().GetReach())+glimpseReach {
-					continue
-				}
-				at = append(at, chunks.ChunkXY{CX: int32(x), CY: int32(y)})
-			}
-		}
-		if len(at) > 0 {
-			vs, err := g.Glimpses(proto.Clone(ep.wick).(*contract.WildsEpoch), at)
-			if err != nil {
-				return nil, err
-			}
-			if len(vs) != len(at) {
-				return nil, fmt.Errorf("near read: %d glimpses for %d chunks", len(vs), len(at))
-			}
-			for i, v := range vs {
-				out.Glimpse = append(out.Glimpse, &contract.WildsGlimpse{Chunk: chunkKeyProto(int(at[i].CX), int(at[i].CY)), Land: v.Land, River: v.River})
-			}
-		}
-	}
 	// Only the occupied chunk is explored by this read; the map submits its own known list.
 	var known []*contract.WildsChunkKey
 	if s.State.Area == outdoorsArea {
@@ -453,7 +420,7 @@ func (a *Server) findPlace(ctx context.Context, tx *sql.Tx, world string, e *con
 	for dy := -1; dy <= 1; dy++ {
 		for dx := -1; dx <= 1; dx++ {
 			x, y := cx+dx, cy+dy
-			if !frontier.Inside(world, x, y) || location.SourceOf(x, y).Kind != location.SourceGenerated || ep.of(x, y).Id != e.Id {
+			if !wilds.InsideBorder(x, y) || location.SourceOf(x, y).Kind != location.SourceGenerated || ep.of(x, y).Id != e.Id {
 				continue
 			}
 			m, err := a.Config.Chunks.Chunk(ctx, tx, world, e.Id, 0, int32(x), int32(y))
@@ -592,7 +559,7 @@ func (c rumourComposition) PlayerState(ctx context.Context, tx *sql.Tx, s store.
 // wick, rolling the "rumour" table. The first to open it is its discoverer.
 func (a *Server) openRumour(ctx context.Context, tx *sql.Tx, s *store.Snapshot, e *contract.WildsEpoch, req *contract.WildsClaimRequest, now int64) (any, error) {
 	cx, cy, ok := signedPair(strings.TrimPrefix(req.EntityId, "rumour:"), ":")
-	if !ok || req.EntityId != fmt.Sprintf("rumour:%d:%d", cx, cy) || e.Kind != store.EpochWick || !frontier.Inside(s.WorldID, cx, cy) || wilds.EpochKindAt(cx, cy) != e.Kind {
+	if !ok || req.EntityId != fmt.Sprintf("rumour:%d:%d", cx, cy) || e.Kind != store.EpochWick || !wilds.InsideBorder(cx, cy) || wilds.EpochKindAt(cx, cy) != e.Kind {
 		return nil, fail(404, "entity-not-found")
 	}
 	if req.Cycle != 0 {

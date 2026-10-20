@@ -6,8 +6,6 @@ import (
 	"testing"
 
 	"glimway/server/internal/chunks"
-	"glimway/server/internal/frontier"
-	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/rules"
 )
 
@@ -117,43 +115,5 @@ func (x *rig) lapsedToSeed(s response) {
 	}
 	if carried != 0 || planted != 0 || seeds != 1 {
 		x.t.Fatalf("after the lapse: %d carried, %d planted, %d seeds in storage", carried, planted, seeds)
-	}
-}
-
-// A near read in a camp's slack, first after the turning its camp lapses
-// at, is beyond the frontier: the read judges the turning before it checks
-// the frontier, and keeps that judgement when it refuses, so straight after
-// the refusal nothing is held and the slack is gone for everyone. A read
-// first changes nothing.
-func TestNearReadAfterADueLapse(t *testing.T) {
-	for _, readFirst := range []bool{false, true} {
-		t.Run(fmt.Sprintf("readFirst=%v", readFirst), func(t *testing.T) {
-			x := newRig(t)
-			c, s := x.ready("alice")
-			x.keeper(s.AccountID)
-			ex, ey := reachColumn(t)
-			x.stack(s.AccountID, "hearth-oil", "", 1)
-			spots := x.campSpots(s.WorldID, ex, ey)
-			x.campOp(c, s, &contract.CampRequest{Action: "set", ItemId: x.carry(s.AccountID, "way-lamp"), X: int32(spots[0][0]), Y: int32(spots[0][1])}, spots[1][0], spots[1][1], 200)
-			x.near(c, ex, ey-2, 200)
-			// Guttering, empty: it lapses at the next turning.
-			if _, err := x.db.DB.Exec("UPDATE camps SET oil=0,dimming=1 WHERE world_id=?", s.WorldID); err != nil {
-				t.Fatal(err)
-			}
-			x.turnKeepingSession(s.AccountID)
-			if readFirst {
-				x.refresh(c, &s)
-			}
-			for i := range 2 {
-				x.near(c, ex, ey-2, 409)
-				var held int
-				if err := x.db.DB.QueryRow("SELECT count(*) FROM holds WHERE world_id=?", s.WorldID).Scan(&held); err != nil {
-					t.Fatal(err)
-				}
-				if held != 0 || frontier.Inside(s.WorldID, ex, ey-2) || frontier.InsidePublished(s.WorldID, ex, ey-2) {
-					t.Fatalf("after refused read %d: %d holds, reach %v, published %v", i+1, held, frontier.Inside(s.WorldID, ex, ey-2), frontier.InsidePublished(s.WorldID, ex, ey-2))
-				}
-			}
-		})
 	}
 }

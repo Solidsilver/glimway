@@ -266,7 +266,7 @@ func (h *presenceHub) allowAbility(p *presencePeer, now time.Time, event *contra
 		return false
 	}
 	a, ok := content.AbilityFor(event.GetAbility())
-	if !ok || !finitePresence(event.GetX()) || !finitePresence(event.GetY()) || math.Abs(event.GetX()) > 1e6 || math.Abs(event.GetY()) > 1e6 {
+	if !ok || !finitePresence(event.GetX()) || !finitePresence(event.GetY()) || math.Abs(event.GetX()) > worldPixelBound() || math.Abs(event.GetY()) > worldPixelBound() {
 		return false
 	}
 	// Enemy-affecting workings cannot start on safe outdoor ground. Check

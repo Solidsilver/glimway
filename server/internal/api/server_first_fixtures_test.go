@@ -285,17 +285,16 @@ func TestServerFirstWireFixtures(t *testing.T) {
 	// A fixed chunk as served: the Commons' heart (layout revision 3).
 	add("valid-fixed", chunks.Fixed(chunks.FixedEpoch("hearthwick", 4), 0, 2))
 	add("valid-near", &contract.WildsNearResult{
-		Still:    &contract.WildsEpoch{Id: "still-epoch", WorldSeed: "world-seed", Kind: "still", GeneratorVersion: 3, Season: "0", StartsAt: 1791300000},
-		Wick:     &contract.WildsEpoch{Id: "wick-epoch", WorldSeed: "world-seed", Kind: "wick", GeneratorVersion: 3, Season: "t:1791300000:1791500000", StartsAt: 1791300000, EndsAt: wrapperspb.Double(1791500000)},
-		Frontier: &contract.WildsFrontier{Rect: &contract.WildsChunkRect{MinCx: -6, MinCy: -8, MaxCx: 4, MaxCy: 7}},
-		Center:   key(-2, -4), Radius: 2,
+		Still:  &contract.WildsEpoch{Id: "still-epoch", WorldSeed: "world-seed", Kind: "still", GeneratorVersion: 3, Season: "0", StartsAt: 1791300000},
+		Wick:   &contract.WildsEpoch{Id: "wick-epoch", WorldSeed: "world-seed", Kind: "wick", GeneratorVersion: 3, Season: "t:1791300000:1791500000", StartsAt: 1791300000, EndsAt: wrapperspb.Double(1791500000)},
+		Border: &contract.WildsBorder{Rect: &contract.WildsChunkRect{MinCx: -4096, MinCy: -4096, MaxCx: 4096, MaxCy: 4096}},
+		Center: key(-2, -4), Radius: 2,
 		Entities: []*contract.WildsEntityState{{Id: "node:-2:-4:0", Epoch: "wick-epoch", Cycle: 1, State: "harvested", AvailableAt: 1791400020, By: wrapperspb.String("fixture-account"), At: wrapperspb.Double(1791400000)}}, PersonalClaims: []*contract.WildsPersonalClaim{{EntityId: "chest:-2:-4:0", At: 1791400000}},
 		Discoveries: []*contract.WildsDiscovery{{EntityId: "place:-1:-2", DiscovererId: "fixture-account", DisplayName: "Fixture", At: 1791400000, Epoch: "wick-epoch"}},
 		Lanterns:    []*contract.WildsLantern{lamp}, Echoes: []*contract.EchoAssignment{{Site: "echo:0", Member: "tam"}},
 		Ground: []*contract.ChunkGroundChanges{ground}, Materials: map[string]float64{"stone": 4},
-		Glimpse: []*contract.WildsGlimpse{{Chunk: key(-5, -4), Land: "meadow", River: true}},
-		Ways:    []*contract.WildsWay{way},
-		Chunks:  []*contract.NearChunk{{Chunk: key(-2, -4), Source: "generated", Epoch: "wick-epoch"}},
+		Ways:   []*contract.WildsWay{way},
+		Chunks: []*contract.NearChunk{{Chunk: key(-2, -4), Source: "generated", Epoch: "wick-epoch"}},
 	})
 	add("rumour", &contract.WildsRumour{Epoch: "wick-epoch", Place: "place:-1:-2", Landmark: "split-oak", Compass: "nw", Ring: 2, PastRiver: true, Site: "rumour:-3:-7"})
 	loot := &contract.WildsLoot{Materials: []*contract.WildsMaterial{{Id: "timber", Qty: 2}}, Trinket: wrapperspb.String("beeswax-candle")}

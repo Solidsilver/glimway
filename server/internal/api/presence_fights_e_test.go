@@ -9,11 +9,11 @@ import (
 	"glimway/content"
 	"glimway/server/internal/chunks"
 	"glimway/server/internal/fights"
-	"glimway/server/internal/frontier"
 	chunkwire "glimway/server/internal/gen/glimway/v1"
 	wire "glimway/server/internal/gen/glimway/v2"
 	"glimway/server/internal/location"
 	"glimway/server/internal/rules"
+	"glimway/server/internal/wilds"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -58,13 +58,13 @@ func TestFightEveryCampChunkInThe3x3Wakes(t *testing.T) {
 	want := 0
 	for dy := -1; dy <= 1; dy++ {
 		for dx := -1; dx <= 1; dx++ {
-			if frontier.Inside(p.identity.World, dx, dy) && location.SourceOf(dx, dy).Kind == location.SourceGenerated {
+			if wilds.InsideBorder(dx, dy) && location.SourceOf(dx, dy).Kind == location.SourceGenerated {
 				want++
 			}
 		}
 	}
 	if want < 2 {
-		t.Fatal("fixture has too few chunks inside the frontier", want)
+		t.Fatal("fixture has too few chunks inside the border", want)
 	}
 	joins := map[[2]int32]*wire.FightJoin{}
 	for len(joins) < want {

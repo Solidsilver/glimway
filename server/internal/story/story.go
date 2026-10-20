@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"glimway/content"
 	"glimway/server/internal/chunks"
-	"glimway/server/internal/frontier"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/location"
 	"glimway/server/internal/ports"
@@ -271,7 +270,7 @@ func (r Rules) Eligible(ctx context.Context, tx *sql.Tx, s store.Snapshot, in po
 }
 
 // EntityChunk is the chunk an entity id names ("<kind>:<cx>:<cy>:<i>",
-// signed), inside the world's frontier.
+// signed), inside the world border.
 func EntityChunk(world, id string) (cx, cy int, ok bool) {
 	parts := strings.Split(id, ":")
 	if len(parts) != 4 || len(id) > 128 {
@@ -279,7 +278,7 @@ func EntityChunk(world, id string) (cx, cy int, ok bool) {
 	}
 	x, e1 := strconv.Atoi(parts[1])
 	y, e2 := strconv.Atoi(parts[2])
-	if e1 != nil || e2 != nil || strconv.Itoa(x) != parts[1] || strconv.Itoa(y) != parts[2] || !frontier.Inside(world, x, y) {
+	if e1 != nil || e2 != nil || strconv.Itoa(x) != parts[1] || strconv.Itoa(y) != parts[2] || !wilds.InsideBorder(x, y) {
 		return 0, 0, false
 	}
 	return x, y, true

@@ -21,7 +21,6 @@ import (
 
 	"glimway/content"
 	"glimway/server/internal/chunks"
-	"glimway/server/internal/frontier"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/location"
 	"glimway/server/internal/wilds"
@@ -32,7 +31,7 @@ import (
 var ErrHeld = errors.New("chunk held")
 
 // ErrNotHoldable: only a generated wick chunk of the Beyond inside the
-// frontier can be held, by a named holder kind. A footprint's (the
+// world border can be held, by a named holder kind. A footprint's (the
 // Whitequiet's) carries this wick's story sites, which turn.
 var ErrNotHoldable = errors.New("chunk not holdable")
 
@@ -118,7 +117,7 @@ func (c *Chunks) Holds(ctx context.Context, tx *sql.Tx, world string) ([]Hold, e
 // back a release); for another holder it is ErrHeld.
 func (c *Chunks) Hold(ctx context.Context, tx *sql.Tx, world string, cx, cy int32, kind, id string, now int64) (Hold, error) {
 	x, y := int(cx), int(cy)
-	if kind == "" || location.SourceOf(x, y).Kind != location.SourceGenerated || wilds.EpochKindAt(x, y) != EpochWick || wilds.FootprintAt(x, y) != nil || !frontier.Inside(world, x, y) {
+	if kind == "" || location.SourceOf(x, y).Kind != location.SourceGenerated || wilds.EpochKindAt(x, y) != EpochWick || wilds.FootprintAt(x, y) != nil || !wilds.InsideBorder(x, y) {
 		return Hold{}, ErrNotHoldable
 	}
 	have, err := c.HoldAt(ctx, tx, world, cx, cy)
@@ -155,8 +154,7 @@ func (c *Chunks) Hold(ctx context.Context, tx *sql.Tx, world string, cx, cy int3
 	if _, err = tx.ExecContext(ctx, "INSERT INTO holds(world_id,realm,layer,cx,cy,epoch_id,holder_kind,holder_id,since) VALUES(?,?,0,?,?,?,?,?,?)", world, realm, cx, cy, e.Id, kind, id, now); err != nil {
 		return Hold{}, err
 	}
-	// The new hold pushes the frontier out now (reach.go).
-	return h, syncReach(ctx, tx, world)
+	return h, nil
 }
 
 // Release lets a hold go: its chunk stays as it is until the next turning,
@@ -244,12 +242,6 @@ func (c *Chunks) judgeHolds(ctx context.Context, tx *sql.Tx, world string, now i
 		}
 		gone = append(gone, h)
 		if err = holder.Released(ctx, tx, h, now); err != nil {
-			return nil, err
-		}
-	}
-	// What went takes its reach with it (reach.go).
-	if len(gone) > 0 {
-		if err = syncReach(ctx, tx, world); err != nil {
 			return nil, err
 		}
 	}

@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"glimway/server/internal/chunks"
-	"glimway/server/internal/frontier"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/store"
 	"glimway/server/internal/wilds"
@@ -28,17 +27,27 @@ func TestOpenMapWithGeneratorV3(t *testing.T) {
 	if gate.Still.GeneratorVersion != 3 || gate.Wick.GeneratorVersion != 3 || len(gate.Entities) == 0 {
 		t.Fatal("gate window", gate.Still, len(gate.Entities))
 	}
-	x0, y0, x1, y1 := frontier.Rect("")
-	expected := 0
+	// Every chunk at home (the old frontier's shape), read from where it
+	// lies (reads answer within sight): the windows' chunks are made.
+	x0, y0, x1, y1 := wilds.HomeRect()
+	made := map[[2]int]bool{}
 	for cy := y0; cy <= y1; cy++ {
 		for cx := x0; cx <= x1; cx++ {
-			if !frontier.Inside("", cx, cy) || wilds.FixedFootprintAt(cx, cy) != nil {
+			if !wilds.InsideHome(cx, cy) || wilds.FixedFootprintAt(cx, cy) != nil {
 				continue
 			}
+			x.putAt(s.AccountID, cx, cy)
 			x.near(c, cx, cy, 200)
-			expected++
+			for wy := cy - NearRadius; wy <= cy+NearRadius; wy++ {
+				for wx := cx - NearRadius; wx <= cx+NearRadius; wx++ {
+					if wilds.FixedFootprintAt(wx, wy) == nil {
+						made[[2]int{wx, wy}] = true
+					}
+				}
+			}
 		}
 	}
+	expected := len(made)
 	if n := count(t, x.db, "SELECT count(*) FROM wilds_chunks"); n != expected {
 		t.Fatalf("%d chunks made; want %d", n, expected)
 	}
@@ -72,7 +81,7 @@ func TestOpenMapWithGeneratorV3(t *testing.T) {
 	if largest > 6*1024 {
 		t.Fatalf("a stored chunk of %d bytes", largest)
 	}
-	t.Logf("expanded frontier stored chunks: %d bytes, the largest %d", total, largest)
+	t.Logf("home's stored chunks: %d bytes, the largest %d", total, largest)
 
 	// The rumour: in the state, and its find in the chunk it names.
 	r := x.rumourState(c)
@@ -81,6 +90,7 @@ func TestOpenMapWithGeneratorV3(t *testing.T) {
 	}
 	var cx, cy int
 	fmt.Sscanf(r.Site, "rumour:%d:%d", &cx, &cy)
+	x.putAt(s.AccountID, cx, cy)
 	m := x.chunk(c, gate.Wick.Id, 0, cx, cy, 200)
 	i := slices.IndexFunc(m.Sites, func(site *contract.StorySite) bool { return site.Id == r.Site })
 	if i < 0 || m.Sites[i].Kind != contract.SiteKind_SITE_KIND_RUMOUR {
@@ -107,6 +117,7 @@ func TestOpenMapWithGeneratorV3(t *testing.T) {
 
 	// A stone laid and lifted on open land near the gate.
 	x.give(s.AccountID, "stone", 1)
+	x.putAt(s.AccountID, 0, 0)
 	tangle := x.chunk(c, gate.Still.Id, 0, 0, 0, 200)
 	e := chunks.NewEffective(tangle, nil)
 	lay := [2]int{-1, -1}

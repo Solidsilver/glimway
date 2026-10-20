@@ -7,6 +7,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -17,6 +18,8 @@ import (
 	"glimway/server/internal/store"
 	"glimway/server/internal/wilds"
 	"glimway/server/internal/worldchange"
+
+	"google.golang.org/protobuf/proto"
 )
 
 const mapBatch = 256
@@ -42,6 +45,11 @@ func (a *Server) mapStatusRead(w http.ResponseWriter, r *http.Request) error {
 	out, err := a.mapStatus(r.Context(), tx, s, ep, req.Explored, now)
 	if err != nil {
 		return err
+	}
+	if req.Glimpse {
+		if err = a.mapWindow(s, ep, out); err != nil {
+			return err
+		}
 	}
 	if err = tx.Commit(); err != nil {
 		return err
@@ -73,7 +81,7 @@ func (a *Server) mapStatus(ctx context.Context, tx *sql.Tx, s store.Snapshot, ep
 			return nil, fail(400, "invalid-request")
 		}
 		cx, cy := int(k.Cx), int(k.Cy)
-		if seen[[2]int{cx, cy}] || !location.OnGrid(s.WorldID, cx, cy) {
+		if seen[[2]int{cx, cy}] || !location.OnGrid(cx, cy) {
 			continue
 		}
 		seen[[2]int{cx, cy}] = true
@@ -270,4 +278,41 @@ func (a *Server) chunkLand(ctx context.Context, tx *sql.Tx, world, me string, ep
 		marks = append(marks, mark)
 	}
 	return land, marks, nil
+}
+
+// mapWindow adds the land round the reader at glimpse detail (0.14: the map
+// is a window, not a frontier): the chunks within the content's
+// map.glimpseChunks of the reader's trusted chunk (sight.go), clipped to the
+// world border, and a glimpse of every generated one. In a room the window
+// is round the gate, as sight is. Glimpses never make a chunk.
+func (a *Server) mapWindow(s store.Snapshot, ep openEpochs, out *contract.WildsMapStatus) error {
+	g := a.Config.WildsGenerator
+	if g == nil {
+		return nil
+	}
+	r := int(content.WildsRules.GetMap().GetGlimpseChunks())
+	tcx, tcy := trustedChunk(s)
+	bx0, by0, bx1, by1 := wilds.BorderRect()
+	x0, y0, x1, y1 := max(tcx-r, bx0), max(tcy-r, by0), min(tcx+r, bx1), min(tcy+r, by1)
+	out.Window = &contract.WildsChunkRect{MinCx: int32(x0), MinCy: int32(y0), MaxCx: int32(x1), MaxCy: int32(y1)}
+	at := make([]chunks.ChunkXY, 0, (x1-x0+1)*(y1-y0+1))
+	for cy := y0; cy <= y1; cy++ {
+		for cx := x0; cx <= x1; cx++ {
+			if location.SourceOf(cx, cy).Kind == location.SourceGenerated {
+				at = append(at, chunks.ChunkXY{CX: int32(cx), CY: int32(cy)})
+			}
+		}
+	}
+	vs, err := g.Glimpses(proto.Clone(ep.wick).(*contract.WildsEpoch), at)
+	if err != nil {
+		return err
+	}
+	if len(vs) != len(at) {
+		return fmt.Errorf("map window: %d glimpses for %d chunks", len(vs), len(at))
+	}
+	out.Glimpse = make([]*contract.WildsGlimpse, len(at))
+	for i, v := range vs {
+		out.Glimpse[i] = &contract.WildsGlimpse{Chunk: chunkKeyProto(int(at[i].CX), int(at[i].CY)), Land: v.Land, River: v.River}
+	}
+	return nil
 }

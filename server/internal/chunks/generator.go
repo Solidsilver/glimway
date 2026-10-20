@@ -40,7 +40,7 @@ type Kept struct {
 // ChunkXY is a chunk's signed coordinates.
 type ChunkXY struct{ CX, CY int32 }
 
-// Glimpse is what the veil lets through of a chunk past the frontier.
+// Glimpse is a chunk seen at a distance, on the map's window (0.14).
 type Glimpse struct {
 	Land  string
 	River bool

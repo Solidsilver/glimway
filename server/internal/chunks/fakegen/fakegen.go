@@ -13,7 +13,6 @@ import (
 
 	"glimway/content"
 	"glimway/server/internal/chunks"
-	"glimway/server/internal/frontier"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/wilds"
 )
@@ -231,14 +230,14 @@ func PlaceKind(e *contract.WildsEpoch, px, py int) *content.WildsPlaceKind {
 	return k[wilds.Hash(e.WorldSeed, e.Season, "place", px, py)%uint32(len(k))]
 }
 
-// Cells is every place cell inside the frontier, in order.
+// Cells is every place cell at home (wilds.InsideHome), in order.
 func Cells() [][2]int {
-	x0, y0, x1, y1 := frontier.Rect("")
+	x0, y0, x1, y1 := wilds.HomeRect()
 	out := [][2]int{}
 	for cy := y0; cy <= y1; cy++ {
 		for cx := x0; cx <= x1; cx++ {
 			px, py, ok := placeCell(cx, cy)
-			if ok && frontier.Inside("", cx, cy) {
+			if ok && wilds.InsideHome(cx, cy) {
 				out = append(out, [2]int{px, py})
 			}
 		}
