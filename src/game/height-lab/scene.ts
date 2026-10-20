@@ -165,6 +165,9 @@ export class HeightLabScene extends Phaser.Scene {
       this.hud?.remove()
       this.hud = null
       perfWatch(null)
+      // Not on the display list, so the scene doesn't destroy them.
+      this.darkImg.destroy()
+      this.lantern.destroy()
     })
     cam.fadeIn(400, 12, 12, 20)
     bus.emit(EV.worldShown)
