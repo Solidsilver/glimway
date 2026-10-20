@@ -62,7 +62,9 @@ type apron struct {
 
 const apronDepth = 8 // the last tile past the edge the apron reaches
 
-var seams = sync.OnceValue(func() *seamData {
+var seams = sync.OnceValue(loadSeams)
+
+func loadSeams() *seamData {
 	S := chunkSize()
 	out := &seamData{soft: map[[2]int]softTile{}, keepOut: map[[2]int]bool{}}
 	generated := func(tx, ty int) bool {
@@ -149,7 +151,7 @@ var seams = sync.OnceValue(func() *seamData {
 		}
 	}
 	return out
-})
+}
 
 // softAt is the tile's place beside an open fixed edge, in a wick world.
 func (w *world) softAt(tx, ty int) (softTile, bool) {

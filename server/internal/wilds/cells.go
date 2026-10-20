@@ -88,13 +88,15 @@ const (
 	placeLo    = 8 // a landmark's local tile lies in [placeLo, S-1-placeLo]
 )
 
-var maxClearing = func() int {
+var maxClearing = loadMaxClearing()
+
+func loadMaxClearing() int {
 	m := 0
 	for _, k := range contentRules().PlaceKinds {
 		m = max(m, int(k.GetClearingRadius()))
 	}
 	return m
-}()
+}
 
 // place is a cell's place, or nil.
 func (w *world) place(x, y int) *Place {

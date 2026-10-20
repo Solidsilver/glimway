@@ -68,13 +68,15 @@ type keptReader struct {
 	made   map[[2]int][]baseTile
 }
 
-var groundByTerrain = func() map[string]Ground {
+var groundByTerrain = loadGroundByTerrain()
+
+func loadGroundByTerrain() map[string]Ground {
 	out := map[string]Ground{}
 	for i, t := range GroundIDs {
 		out[t] = Ground(i)
 	}
 	return out
-}()
+}
 
 func (k *keptReader) tile(tx, ty int) (bool, Ground) {
 	S := chunkSize()
