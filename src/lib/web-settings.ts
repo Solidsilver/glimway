@@ -13,6 +13,8 @@ export interface DevTools {
   hooks: boolean
   clock: boolean
   fight_fall: boolean
+  /** The world lab (src/ui/dev/world-lab): the generator from any seed, and moving the hero to a spot it shows. */
+  world_lab: boolean
 }
 
 export interface WebSettings {
@@ -56,7 +58,7 @@ export function parseWebSettings(raw: unknown): WebSettings {
   const dev = (raw as { dev?: unknown } | null)?.dev
   if (!dev || typeof dev !== 'object') return NONE
   const d = dev as Record<string, unknown>
-  return { dev: { grant: d.grant === true, hooks: d.hooks === true, clock: d.clock === true, fight_fall: d.fight_fall === true } }
+  return { dev: { grant: d.grant === true, hooks: d.hooks === true, clock: d.clock === true, fight_fall: d.fight_fall === true, world_lab: d.world_lab === true } }
 }
 
 /**

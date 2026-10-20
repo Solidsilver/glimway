@@ -124,6 +124,15 @@
   /** This player's dev tools (null: none, or a release build), from the web settings. */
   let dev = $state<DevTools | null>(devTools())
   const devPanel = $derived(DEV_TOOLS && devPanelOn(dev))
+  // The world lab (src/ui/dev/world-lab), opened from the dev panel: loaded the first time, and never in a release build.
+  let WorldLab = $state<typeof import('./ui/dev/world-lab/WorldLab.svelte').default | null>(null)
+  let worldLabOpen = $state(false)
+  function openWorldLab(): void {
+    if (!DEV_TOOLS) return
+    panel = null
+    worldLabOpen = true
+    if (!WorldLab) void import('./ui/dev/world-lab/WorldLab.svelte').then((m) => (WorldLab = m.default))
+  }
 
   let phase = $state<Phase>('loading')
   let panel = $state<Panel>(null)
@@ -1034,7 +1043,7 @@
           : undefined}
       />
     {:else if devPanel && panel === 'dev' && DevPanel}
-      <DevPanel {session} tools={dev} onClose={() => toggle('dev')} />
+      <DevPanel {session} tools={dev} onClose={() => toggle('dev')} onWorldLab={openWorldLab} />
     {:else if panel === 'menu'}
       <MenuPanel
         {session}
@@ -1049,6 +1058,9 @@
         }}
         onDev={devPanel ? () => (panel = 'dev') : undefined}
       />
+    {/if}
+    {#if DEV_TOOLS && worldLabOpen && WorldLab && dev?.world_lab}
+      <WorldLab {session} onClose={() => (worldLabOpen = false)} />
     {/if}
   {/if}
 
