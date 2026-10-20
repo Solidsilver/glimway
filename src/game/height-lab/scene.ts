@@ -1,21 +1,28 @@
 /**
- * Height lab (dev only): a hand-made 3×3-chunk area with real levels and a
- * cave, to feel climbing and going underground with no loading door.
- * Started instead of the world with `?lab=height` (../scenes/BootScene.ts);
- * the dev panel's Height lab section opens it, leaves it and switches the
- * transitions (./look.ts). Nothing here saves, sends or reads the server.
+ * Height lab (dev only): hand-made areas with real levels and caves, to
+ * feel climbing and going underground with no loading door. Started
+ * instead of the world with `?lab=height` (../scenes/BootScene.ts); the dev
+ * panel's Height lab section opens it, leaves it, picks the area and
+ * switches the transitions (./look.ts). Nothing here saves, sends or reads
+ * the server.
  *
  * Drawing, back to front, in depth bands:
- *   - the surface's ground, one image a level (fog: the image fades toward
- *     the camera's background, which is the fog colour);
- *   - the cave's ground: just above the surface's when you're outside (and
- *     hidden), above all the surface's things when you're inside;
+ *   - the surface's ground, one image a level;
+ *   - the cave's ground, one image a floor level: just above the surface's
+ *     when you're outside (and hidden), above all the surface's things when
+ *     you're inside;
  *   - things (faces, props, people), y-sorted within their layer's band.
  *     The layer you're on draws above the other one, so someone just
  *     inside a mouth shows in the arch but behind its lintel;
- *   - the cave's dark round the hero, then the climbing haze.
- * Each surface thing has a fog twin: the same image filled with the fog
- * colour on top of it, as opaque as that thing is far below you.
+ *   - the cave's dark: the world's still dark (./light.ts) with the hero's
+ *     own light taken out round them, in a render texture the size of the
+ *     view; then the crystals' glows, then the climbing haze.
+ *
+ * Fog is by level difference, both ways: the level you stand on is clear,
+ * levels above and below fade toward the fog (on the surface) or the dark
+ * (underground) with their distance from yours. Ground images fade by
+ * alpha toward the camera's background (the fog colour); each thing has a
+ * fog twin, the same image filled with the fog colour on top of it.
  */
 import Phaser from 'phaser'
 import { bus, EV } from '../events'
@@ -25,10 +32,12 @@ import { ensureTangleAtlas } from '../wilds/tangle-art'
 import { tangleFrame } from '../wilds/tangle-key'
 import { perfSpan, perfWatch } from '../perf'
 import { onSceneEnd } from '../scene-end'
-import { CAVE, SURFACE, buildLabArea, type LabArea } from './area'
-import { DARK_SIZE, FACES_KEY, FACE_TINT, drawFaces, drawGrid, drawOverlays, facePart, paintCave, paintSurface } from './art'
+import { CAVE, SURFACE, type LabArea } from './area'
+import { buildArea } from './areas'
+import { DARK_KEY, FACES_KEY, FACE_TINT, LANTERN_KEY, drawDarkMap, drawFaces, drawGrid, drawOverlays, facePart, paintCave, paintSurface } from './art'
 import { KIND, TILE_PX, findPath, move, sample, standTile, zAt, type Node, type Walker } from './levels'
-import { labLook, onLabLook, type LabLook } from './look'
+import { DARK_MAX, LIGHT_RES, LIGHT_SCALE, caveView, darkAt } from './light'
+import { fogFor, labLook, onLabLook, type LabLook } from './look'
 
 const T = TILE_PX
 const DECOR_ATLAS = 'wilds-decor-outer-Carting'
@@ -74,20 +83,22 @@ export class HeightLabScene extends Phaser.Scene {
   private movers: Mover[] = []
   private hero!: Mover
   private levelImages: { img: Phaser.GameObjects.Image; level: number }[] = []
-  private caveGround!: Phaser.GameObjects.Image
+  private caveImages: { img: Phaser.GameObjects.Image; level: number }[] = []
   private grids: Phaser.GameObjects.Graphics[] = []
-  private dark!: Phaser.GameObjects.Image
-  private darkFrame: Phaser.GameObjects.Rectangle[] = []
-  private dim!: Phaser.GameObjects.Rectangle
+  /** The dark over the view, redrawn each frame in a cave; the still dark and the hero's light it's drawn from (not on the display list). */
+  private darkRT!: Phaser.GameObjects.RenderTexture
+  private darkImg!: Phaser.GameObjects.Image
+  private lantern!: Phaser.GameObjects.Image
   private haze!: Phaser.GameObjects.Image
   private glows: { img: Phaser.GameObjects.Image; phase: number }[] = []
   private keys!: { up: Phaser.Input.Keyboard.Key[]; down: Phaser.Input.Keyboard.Key[]; left: Phaser.Input.Keyboard.Key[]; right: Phaser.Input.Keyboard.Key[] }
   private hud: HTMLDivElement | null = null
   private hudAt = 0
   private baseZoom = 3
-  /** The last look applied to the still things (layer, sky, z, look), so they're redone only when it moves. */
+  /** The last look applied to the still things (layer, view, z, look), so they're redone only when it moves. */
   private stillKey = ''
   private updateMs: number[] = []
+  private darkMs: number[] = []
   private buildMs = 0
   private paintMs = 0
   private facing = 'down'
@@ -99,8 +110,19 @@ export class HeightLabScene extends Phaser.Scene {
   create(): void {
     const t0 = performance.now()
     perfWatch(this)
+    // A restart (another area, or other daylight) runs create again on this instance.
+    this.things = []
+    this.movers = []
+    this.levelImages = []
+    this.caveImages = []
+    this.grids = []
+    this.glows = []
+    this.stillKey = ''
+    this.updateMs = []
+    this.darkMs = []
+    this.look = labLook()
     const endBuild = perfSpan('lab:build')
-    this.area = buildLabArea()
+    this.area = buildArea(this.look.area, { skyTiles: this.look.skyTiles })
     drawFaces(this)
     drawOverlays(this)
     ensureTangleAtlas(this, DECOR_ATLAS)
@@ -126,9 +148,15 @@ export class HeightLabScene extends Phaser.Scene {
     const C = Phaser.Input.Keyboard.KeyCodes
     this.keys = { up: [k(C.UP), k(C.W)], down: [k(C.DOWN), k(C.S)], left: [k(C.LEFT), k(C.A)], right: [k(C.RIGHT), k(C.D)] }
 
+    let restarting = false
     const stopLook = onLabLook((l) => {
+      const rebuild = l.area !== this.look.area || l.skyTiles !== this.look.skyTiles
       this.look = l
       this.stillKey = ''
+      if (rebuild && !restarting) {
+        restarting = true
+        this.scene.restart()
+      }
     })
     this.buildHud()
     onSceneEnd(this, () => {
@@ -162,7 +190,7 @@ export class HeightLabScene extends Phaser.Scene {
   private addThing(t: Omit<Thing, 'twin'>, twin: boolean): Thing {
     let tw: Thing['twin'] = null
     const main = t.parts[0]!.o
-    if (twin && t.layer === SURFACE && !(main instanceof Phaser.GameObjects.Text)) {
+    if (twin && !(main instanceof Phaser.GameObjects.Text)) {
       tw =
         main instanceof Phaser.GameObjects.Sprite
           ? this.add.sprite(main.x, main.y, main.texture.key, main.frame.name)
@@ -208,17 +236,17 @@ export class HeightLabScene extends Phaser.Scene {
 
   private buildCave(): void {
     const end = perfSpan('lab:paint-cave')
-    const ci = paintCave(this, this.area)
+    for (const ci of paintCave(this, this.area)) this.caveImages.push({ img: this.add.image(ci.x, ci.y, ci.key).setOrigin(0).setAlpha(0), level: ci.level })
     end()
-    this.caveGround = this.add.image(ci.x, ci.y, ci.key).setOrigin(0).setAlpha(0)
     for (const g of this.area.glows) {
       const x = g.tx * T + 8
       const y = (g.ty + 1) * T - 2
       const crystal = this.add.image(x, y, 'hl-crystal').setOrigin(0.5, 1).setTint(g.color)
       const glow = this.add.image(x, y - 5, 'hl-glow').setTint(g.color).setScale(2.2).setBlendMode(Phaser.BlendModes.ADD)
       this.glows.push({ img: glow, phase: Math.random() * Math.PI * 2 })
-      // The crystal and its glow stand above the dark: they're the light.
-      this.addThing({ parts: [{ o: crystal, dz: BAND.glow - BAND.caveIn, a: 1 }, { o: glow, dz: BAND.glow - BAND.caveIn + 1, a: 0.55 }], layer: CAVE, x, y, z: -1, seen: 0 }, false)
+      // The crystal and its glow stand above the dark: they're lights, so
+      // they show from any floor (no fog twin).
+      this.addThing({ parts: [{ o: crystal, dz: BAND.glow - BAND.caveIn, a: 1 }, { o: glow, dz: BAND.glow - BAND.caveIn + 1, a: 0.55 }], layer: CAVE, x, y, z: g.z, seen: 0 }, false)
     }
     // The level overlays, built once.
     for (const li of [SURFACE, CAVE]) {
@@ -251,11 +279,8 @@ export class HeightLabScene extends Phaser.Scene {
       const text = this.add.text(x, y - 24, label, { fontFamily: '"Pixelify Sans", monospace', fontSize: '8px', color: '#fff6e0', stroke: '#2a2030', strokeThickness: 2 }).setOrigin(0.5, 1).setResolution(4)
       parts.push({ o: text, dz: 3000, a: 1 })
     }
+    // A twin on either layer: movers cross between them.
     const thing = this.addThing({ parts, layer: node.layer, x, y, z: 0, seen: 1 }, true)
-    // A twin for the cave too: a mover can walk out onto the surface.
-    if (!thing.twin) {
-      thing.twin = this.add.sprite(x, y, sprite.texture.key, sprite.frame.name).setOrigin(0.5, 1).setScale(sprite.scaleX, sprite.scaleY).setTintFill(0xffffff).setAlpha(0)
-    }
     const m: Mover = { thing, walker: { x, y, layer: node.layer, hw: 5, fh: 4 }, sprite, anim, speed, path: null, wait: 0, stuck: 0, next }
     this.movers.push(m)
     return m
@@ -264,8 +289,7 @@ export class HeightLabScene extends Phaser.Scene {
   private buildMovers(): void {
     const a = this.area
     this.hero = this.mover(a.spawn, 'demo', 110, null, null, () => null)
-    // The remote player walks its loop: up the ramp, the switchback, the
-    // lookout, back down, through the cave and out of its second mouth.
+    // The remote player walks the area's loop (./area.ts, ./mountain.ts).
     let leg = 0
     this.mover(a.route[0]!, 'demo', 72, 0xffc6a0, 'Wren', () => {
       leg = (leg + 1) % a.route.length
@@ -287,9 +311,10 @@ export class HeightLabScene extends Phaser.Scene {
   }
 
   private buildOverlays(): void {
-    this.dark = this.add.image(0, 0, 'hl-dark').setDepth(BAND.dark).setAlpha(0)
-    for (let i = 0; i < 4; i++) this.darkFrame.push(this.add.rectangle(0, 0, 10, 10, CAVE_DARK, 0.97).setOrigin(0).setDepth(BAND.dark).setAlpha(0))
-    this.dim = this.add.rectangle(0, 0, 10, 10, CAVE_DARK, 1).setOrigin(0).setDepth(BAND.dark).setAlpha(0)
+    drawDarkMap(this, this.area)
+    this.darkImg = this.make.image({ key: DARK_KEY }, false).setOrigin(0).setScale(LIGHT_RES)
+    this.lantern = this.make.image({ key: LANTERN_KEY }, false).setOrigin(0.5)
+    this.darkRT = this.add.renderTexture(0, 0, 64, 64).setOrigin(0).setDepth(BAND.dark).setVisible(false)
     this.haze = this.add.image(0, 0, 'hl-haze').setDepth(BAND.haze).setAlpha(0)
   }
 
@@ -362,7 +387,7 @@ export class HeightLabScene extends Phaser.Scene {
     if (!m.path || !m.path.length) {
       const [tx, ty] = standTile(m.walker)
       const goal = m.next()
-      m.path = goal ? findPath(this.area.stack, { layer: m.walker.layer, tx, ty }, goal, 6000) : null
+      m.path = goal ? findPath(this.area.stack, { layer: m.walker.layer, tx, ty }, goal, 12000) : null
       m.path?.shift()
       if (!m.path) m.wait = 1
       return
@@ -410,16 +435,21 @@ export class HeightLabScene extends Phaser.Scene {
     }
   }
 
-  /** What the hero sees from where they stand. */
-  private view(): { layer: number; z: number; sky: number } {
+  /** What the hero sees from where they stand: their layer and height, the daylight there, and how far into the cave's view they are. */
+  private view(): { layer: number; z: number; sky: number; cave: number } {
     const w = this.hero.walker
     const cave = this.area.stack.layers[CAVE]!
-    return { layer: w.layer, z: this.hero.thing.z, sky: w.layer === CAVE ? sample(cave, cave.sky, w.x, w.y - 2) : 1 }
+    if (w.layer !== CAVE) return { layer: w.layer, z: this.hero.thing.z, sky: 1, cave: 0 }
+    const walked = sample(cave, this.area.walk, w.x, w.y - 2)
+    return { layer: w.layer, z: this.hero.thing.z, sky: sample(cave, cave.sky, w.x, w.y - 2), cave: caveView(walked, this.look.crossfade) }
   }
 
   private fogOf(viewZ: number, z: number): number {
-    if (this.look.fog === 'none') return 0
-    return Math.max(0, Math.min(0.72, (viewZ - z - 0.3) * 0.42))
+    return this.look.fog === 'none' ? 0 : fogFor(z - viewZ, this.look.fogStrength)
+  }
+
+  private depthOf(viewZ: number, z: number): number {
+    return this.look.depth === 'none' ? 0 : fogFor(z - viewZ, this.look.fogStrength)
   }
 
   private applyLook(dt: number): void {
@@ -431,14 +461,17 @@ export class HeightLabScene extends Phaser.Scene {
     // The background is what faded land fades to: fog outside, dark below.
     const bg = Phaser.Display.Color.Interpolate.ColorWithColor(Phaser.Display.Color.ValueToColor(fogColor), Phaser.Display.Color.ValueToColor(CAVE_DARK), 100, Math.round((1 - v.sky) * 100))
     cam.setBackgroundColor(Phaser.Display.Color.GetColor(bg.r, bg.g, bg.b))
+    // The surface fades as daylight goes (the crossfade the owner liked);
+    // the cave's floors come in over the first steps inside.
     const surfaceA = inCave ? v.sky : 1
     for (const li of this.levelImages) li.img.setAlpha(surfaceA * (inCave ? 1 : 1 - this.fogOf(v.z, li.level)))
-    this.caveGround.setDepth(inCave ? BAND.caveGroundIn : BAND.caveGroundOut).setAlpha(inCave ? Math.min(1, (1 - v.sky) * 3) : 0)
+    for (const ci of this.caveImages)
+      ci.img.setDepth((inCave ? BAND.caveGroundIn : BAND.caveGroundOut) + ci.level).setAlpha(inCave ? v.cave * (1 - this.depthOf(v.z, ci.level)) : 0)
     this.grids[0]!.setVisible(look.grid).setDepth(BAND.gridOut).setAlpha(surfaceA)
     this.grids[1]!.setVisible(look.grid && inCave).setDepth(BAND.gridIn)
 
     // Things: moving ones every frame, still ones when the view has moved.
-    const key = `${v.layer}:${v.sky.toFixed(2)}:${v.z.toFixed(2)}:${look.fog}`
+    const key = `${v.layer}:${v.sky.toFixed(2)}:${v.cave.toFixed(2)}:${v.z.toFixed(2)}:${look.fog}:${look.fogStrength}:${look.depth}`
     const still = key !== this.stillKey
     this.stillKey = key
     const moving = new Set(this.movers.map((m) => m.thing))
@@ -449,8 +482,14 @@ export class HeightLabScene extends Phaser.Scene {
       const vis = onCave ? (inCave ? 1 : t.seen) : inCave ? v.sky : 1
       for (const p of t.parts) p.o.setDepth(band + t.y + p.dz).setAlpha(vis * p.a).setVisible(vis * p.a > 0.01)
       if (t.twin) {
-        const fog = onCave || inCave ? 0 : this.fogOf(v.z, t.z)
-        t.twin.setDepth(band + t.y + t.parts[0]!.dz + 0.5).setTintFill(fogColor).setAlpha(vis * fog).setVisible(vis * fog > 0.01)
+        // Surface things fade toward the fog seen from the surface; cave
+        // things toward the dark seen from the cave; across layers, not at all.
+        const fog = !onCave && !inCave ? this.fogOf(v.z, t.z) : onCave && inCave ? this.depthOf(v.z, t.z) : 0
+        t.twin
+          .setDepth(band + t.y + t.parts[0]!.dz + 0.5)
+          .setTintFill(onCave ? CAVE_DARK : fogColor)
+          .setAlpha(vis * fog)
+          .setVisible(vis * fog > 0.01)
       }
     }
     for (const g of this.glows) {
@@ -458,24 +497,10 @@ export class HeightLabScene extends Phaser.Scene {
       if (inCave) g.img.setAlpha(0.45 + Math.sin(g.phase) * 0.12)
     }
 
-    // The cave's dark, round the hero.
-    const darkA = inCave ? 1 - v.sky : 0
     const hx = this.hero.walker.x
     const hy = this.hero.walker.y - 10
-    const lantern = look.cave !== 'dim'
-    const s = look.cave === 'wide' ? 1.8 : 1
-    this.dark.setVisible(lantern && darkA > 0).setAlpha(darkA).setPosition(hx, hy).setScale(s)
-    const half = (DARK_SIZE / 2) * s
-    const big = 4000
-    const frames: [number, number, number, number][] = [
-      [hx - half - big, hy - half - big, 2 * big + 2 * half, big],
-      [hx - half - big, hy + half, 2 * big + 2 * half, big],
-      [hx - half - big, hy - half, big, 2 * half],
-      [hx + half, hy - half, big, 2 * half]
-    ]
-    frames.forEach((f, i) => this.darkFrame[i]!.setPosition(f[0], f[1]).setSize(f[2], f[3]).setVisible(lantern && darkA > 0).setAlpha(darkA * 0.97))
     const wv = cam.worldView
-    this.dim.setVisible(!lantern && darkA > 0).setPosition(wv.x - 50, wv.y - 50).setSize(wv.width + 100, wv.height + 100).setAlpha(darkA * 0.6)
+    this.drawDark(v.cave, hx, hy, wv)
 
     // Climbing: haze at the screen's edges, and the camera eases out.
     const high = inCave ? 0 : Math.max(0, Math.min(1, v.z / 2))
@@ -486,7 +511,7 @@ export class HeightLabScene extends Phaser.Scene {
       .setAlpha(high * 0.6)
       .setPosition(wv.centerX, wv.centerY)
       .setDisplaySize(wv.width * 1.25, wv.height * 1.25)
-    const target = this.baseZoom * (look.zoom && !inCave ? 1 - 0.07 * Math.max(0, v.z) : 1)
+    const target = this.baseZoom * (look.zoom && !inCave ? 1 - 0.07 * Math.min(3, Math.max(0, v.z)) : 1)
     if (Math.abs(cam.zoom - target) > 0.001) cam.setZoom(cam.zoom + (target - cam.zoom) * Math.min(1, dt * 3))
 
     // Where the hero stands on screen, for hold-to-walk (CSS px).
@@ -495,13 +520,46 @@ export class HeightLabScene extends Phaser.Scene {
     heroScreen.y = ((this.hero.walker.y - wv.y) * cam.zoom) / r
   }
 
+  /**
+   * The cave's dark over the view: the world's still dark, less the hero's
+   * own light round them, shown as far as the view has crossed into the
+   * cave. The still dark doesn't move with the hero: walking in reveals the
+   * cave only as daylight, crystals or the hero's light reach it.
+   */
+  private drawDark(view: number, hx: number, hy: number, wv: Phaser.Geom.Rectangle): void {
+    const rt = this.darkRT
+    if (view <= 0.001) {
+      rt.setVisible(false)
+      return
+    }
+    const t0 = performance.now()
+    const x = Math.floor(wv.x) - 8
+    const y = Math.floor(wv.y) - 8
+    const w = Math.ceil(wv.width) + 16
+    const h = Math.ceil(wv.height) + 16
+    if (rt.width < w || rt.height < h) rt.resize(Math.max(rt.width, w), Math.max(rt.height, h))
+    rt.setPosition(x, y).setAlpha(view).setVisible(true)
+    rt.clear()
+    rt.draw(this.darkImg, -x, -y)
+    const s = LIGHT_SCALE[this.look.cave]
+    if (s) rt.erase(this.lantern.setScale(s), hx - x, hy - y)
+    this.darkMs.push(performance.now() - t0)
+    if (this.darkMs.length > 120) this.darkMs.shift()
+  }
+
   private updateHud(): void {
     const now = performance.now()
     if (!this.hud || now - this.hudAt < 250) return
     this.hudAt = now
     const v = this.view()
-    const ms = this.updateMs.reduce((a, b) => a + b, 0) / Math.max(1, this.updateMs.length)
-    const where = v.layer === CAVE ? `In the cave · daylight ${Math.round(v.sky * 100)}%` : `Surface · level ${v.z.toFixed(2)}`
-    this.hud.textContent = `Height lab — ${where}\nlab update ${ms.toFixed(2)} ms · ${this.children.length} objects · built in ${Math.round(this.buildMs)} ms (ground ${Math.round(this.paintMs)})`
+    const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / Math.max(1, xs.length)
+    const w = this.hero.walker
+    const here = 1 - darkAt(this.area.dark, w.x, w.y - 10) / DARK_MAX
+    const where =
+      v.layer === CAVE
+        ? `In the cave · floor ${Math.round(v.z)} · daylight ${Math.round(v.sky * 100)}% · light here ${Math.round(here * 100)}%`
+        : `Surface · level ${v.z.toFixed(2)}`
+    const dark = this.darkMs.length ? ` (dark ${avg(this.darkMs).toFixed(2)})` : ''
+    this.hud.textContent = `Height lab, ${this.area.name} — ${where}\nlab update ${avg(this.updateMs).toFixed(2)} ms${dark} · ${this.children.length} objects · built in ${Math.round(this.buildMs)} ms (ground ${Math.round(this.paintMs)})`
   }
 }

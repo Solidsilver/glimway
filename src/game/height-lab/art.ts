@@ -15,6 +15,7 @@ import { wildsLook } from '../wilds/wilds-looks.ts'
 import { fnv1a32 } from '../../lib/hash.ts'
 import { CAVE, GROUNDS, SURFACE, type LabArea } from './area.ts'
 import { DX, DY, KIND, TILE_PX, type Layer } from './levels.ts'
+import { HERO_OUTER, caveLevels, heroLight } from './light.ts'
 
 type RGB = [number, number, number]
 
@@ -149,6 +150,7 @@ function shadeSurface(area: LabArea, px: Uint8ClampedArray, W: number): void {
   const stone = hex('#a8a296')
   const ink = hex('#1d1a24')
   const dark = hex('#100c14')
+  const snow = hex('#eef2f8')
   for (let ty = 0; ty < l.h; ty++)
     for (let tx = 0; tx < l.w; tx++) {
       const i = ty * l.w + tx
@@ -161,6 +163,9 @@ function shadeSurface(area: LabArea, px: Uint8ClampedArray, W: number): void {
           // Higher land is drier and paler; the shoulder is stony.
           if (z === 1) tint(wx, wy, dry, 0.1)
           if (z >= 2) tint(wx, wy, stone, 0.32)
+          if (z >= 4) tint(wx, wy, stone, 0.25)
+          // The summit keeps old snow.
+          if (z >= 5) tint(wx, wy, snow, 0.5 + hash(wx >> 2, wy >> 2, 21) * 0.2)
           if (k === KIND.mouth) {
             // The arch's dark, a little light spilling in at its foot.
             const m = area.mouths.find((mm) => tx >= mm.x0 && tx <= mm.x1)!
@@ -284,17 +289,18 @@ export function drawFaces(scene: Phaser.Scene): void {
   for (const [name, x, y] of frames) tex.add(name, 0, x, y, T, T)
 }
 
-/** Tints for faces by the level they rise to: warm sandstone, then cool mountain rock. */
-export const FACE_TINT: Record<number, number> = { 1: 0xf0dcc0, 2: 0xc4c8d2, 3: 0xb0b4c0 }
+/** Tints for faces by the level they rise to: warm sandstone, then cool mountain rock, then pale high stone. */
+export const FACE_TINT: Record<number, number> = { 1: 0xf0dcc0, 2: 0xc4c8d2, 3: 0xb0b4c0, 4: 0xa8acb8, 5: 0xd8dce6 }
 
 // ---------------------------------------------------------------- the cave
 
 /**
- * The cave layer's ground: a stone floor (lit near the mouths), rock round
- * it with a face where it stands over the floor, still black water. Cropped
- * to the rock's bounding box.
+ * The cave layer's ground: a stone floor (lit near the mouths, a little
+ * cooler on deeper floors), rock round it with a face where it stands over
+ * the floor, drops between floors, still black water. Cut into one image a
+ * floor level, like the surface, so a level can fade with its depth.
  */
-export function paintCave(scene: Phaser.Scene, area: LabArea): LevelImage {
+export function paintCave(scene: Phaser.Scene, area: LabArea): LevelImage[] {
   const l = area.stack.layers[CAVE]!
   let x0 = l.w
   let y0 = l.h
@@ -312,12 +318,13 @@ export function paintCave(scene: Phaser.Scene, area: LabArea): LevelImage {
   const w = (x1 - x0 + 1) * T
   const h = (y1 - y0 + 1) * T
   const px = new Uint8ClampedArray(w * h * 4)
+  const lvl = caveLevels(l)
   const kindAt = (tx: number, ty: number) => (tx < 0 || ty < 0 || tx >= l.w || ty >= l.h ? KIND.none : l.kind[ty * l.w + tx]!)
   const floorish = (k: number) => k === KIND.flat || k === KIND.slope
   // Rock's distance from the floor (tiles), for its fade at the edge of what's drawn.
   const reach = (tx: number, ty: number) => {
     for (let r = 1; r <= 3; r++)
-      for (let y = ty - r; y <= ty + r; y++) for (let x = tx - r; x <= tx + r; x++) if (floorish(kindAt(x, y)) || kindAt(x, y) === KIND.water) return r
+      for (let y = ty - r; y <= ty + r; y++) for (let x = tx - r; x <= tx + r; x++) if (floorish(kindAt(x, y)) || kindAt(x, y) === KIND.water || kindAt(x, y) === KIND.face) return r
     return 4
   }
   for (let ty = y0; ty <= y1; ty++)
@@ -328,6 +335,8 @@ export function paintCave(scene: Phaser.Scene, area: LabArea): LevelImage {
       const faceBelow = k === KIND.rock && floorish(kindAt(tx, ty + 1))
       const fade = k === KIND.rock ? [255, 255, 255, 150, 0][reach(tx, ty)]! : 255
       const sky = l.sky[i]!
+      // Deeper floors are a little darker and cooler.
+      const deep = Math.max(0, -lvl[i]! - 1) * 0.07
       for (let y = 0; y < T; y++)
         for (let x = 0; x < T; x++) {
           const wx = tx * T + x
@@ -344,11 +353,20 @@ export function paintCave(scene: Phaser.Scene, area: LabArea): LevelImage {
             if (k === KIND.slope && wy % 4 === 0) rgb = rgb.map((ch) => ch * 0.85) as RGB
             // Daylight near a mouth warms and lifts the floor.
             if (sky > 0) rgb = [mix(rgb[0], 150, sky * 0.5), mix(rgb[1], 140, sky * 0.5), mix(rgb[2], 118, sky * 0.5)]
-            // Shadow at the foot of the rock wall above.
-            if (kindAt(tx, ty - 1) === KIND.rock && y < 5) rgb = rgb.map((ch) => ch * (0.55 + y * 0.09)) as RGB
+            // Shadow at the foot of a rock wall or a drop above.
+            const n = kindAt(tx, ty - 1)
+            if ((n === KIND.rock || n === KIND.face) && y < 5) rgb = rgb.map((ch) => ch * (0.55 + y * 0.09)) as RGB
+            // A pale lip where the floor drops away south.
+            if (kindAt(tx, ty + 1) === KIND.face && y >= T - 2) rgb = rgb.map((ch) => ch * (y === T - 1 ? 1.35 : 1.15)) as RGB
           } else if (k === KIND.water) {
             const glint = hash(wx >> 1, wy, 13) < 0.02
             rgb = glint ? [90, 120, 150] : [16 + (wy % 3), 26, 40]
+          } else if (k === KIND.face) {
+            // A drop between floors: banded rock, darker toward its foot.
+            const gy = l.faceRow[i]! * T + y
+            const down = gy / Math.max(1, l.faceRows[i]! * T)
+            const c = 74 - down * 30 + (hash(wx, wy, 17) - 0.5) * 12 - ((gy + (x > 8 ? 1 : 0)) % 6 === 0 ? 16 : 0)
+            rgb = [c * 0.96, c * 0.9, c * 1.06]
           } else if (faceBelow) {
             // The rock's face over the floor: strata, lighter toward the foot.
             const c = 40 + y * 2.2 + (hash(wx, wy, 14) - 0.5) * 12 - ((wy + (x > 8 ? 1 : 0)) % 5 === 0 ? 14 : 0)
@@ -357,6 +375,7 @@ export function paintCave(scene: Phaser.Scene, area: LabArea): LevelImage {
             const c = 26 + hash(wx >> 2, wy >> 2, 15) * 10 + (hash(wx, wy, 16) - 0.5) * 6
             rgb = [c, c * 0.92, c * 1.1]
           }
+          if (deep) rgb = [rgb[0] * (1 - deep), rgb[1] * (1 - deep * 0.8), rgb[2] * (1 - deep * 0.4)]
           const o = (((ty - y0) * T + y) * w + (tx - x0) * T + x) * 4
           px[o] = rgb[0]
           px[o + 1] = rgb[1]
@@ -364,20 +383,61 @@ export function paintCave(scene: Phaser.Scene, area: LabArea): LevelImage {
           px[o + 3] = fade
         }
     }
-  addPixels(scene, 'hl-cave', w, h, px)
-  return { key: 'hl-cave', x: x0 * T, y: y0 * T, level: -1 }
+  // Cut by level, each to its bounding box.
+  const boxes = new Map<number, { x0: number; y0: number; x1: number; y1: number }>()
+  for (let ty = y0; ty <= y1; ty++)
+    for (let tx = x0; tx <= x1; tx++) {
+      const i = ty * l.w + tx
+      if (l.kind[i] === KIND.none) continue
+      const z = lvl[i]!
+      const b = boxes.get(z) ?? { x0: tx, y0: ty, x1: tx, y1: ty }
+      boxes.set(z, { x0: Math.min(b.x0, tx), y0: Math.min(b.y0, ty), x1: Math.max(b.x1, tx), y1: Math.max(b.y1, ty) })
+    }
+  const out: LevelImage[] = []
+  for (const [z, b] of [...boxes].sort((a, c) => a[0] - c[0])) {
+    const cw = (b.x1 - b.x0 + 1) * T
+    const ch = (b.y1 - b.y0 + 1) * T
+    const cut = new Uint8ClampedArray(cw * ch * 4)
+    for (let ty = b.y0; ty <= b.y1; ty++)
+      for (let tx = b.x0; tx <= b.x1; tx++) {
+        const i = ty * l.w + tx
+        if (l.kind[i] === KIND.none || lvl[i] !== z) continue
+        for (let y = 0; y < T; y++) {
+          const from = (((ty - y0) * T + y) * w + (tx - x0) * T) * 4
+          cut.set(px.subarray(from, from + T * 4), (((ty - b.y0) * T + y) * cw + (tx - b.x0) * T) * 4)
+        }
+      }
+    const key = `hl-cave-${z}`
+    addPixels(scene, key, cw, ch, cut)
+    out.push({ key, x: b.x0 * T, y: b.y0 * T, level: z })
+  }
+  return out
+}
+
+/** The cave's still dark (./light.ts darkMap) as an image: one texel a LIGHT_RES px, smoothed when drawn bigger. */
+export const DARK_KEY = 'hl-darkmap'
+
+export function drawDarkMap(scene: Phaser.Scene, area: LabArea): void {
+  const m = area.dark
+  const px = new Uint8ClampedArray(m.w * m.h * 4)
+  for (let i = 0; i < m.w * m.h; i++) {
+    px[i * 4] = 7
+    px[i * 4 + 1] = 6
+    px[i * 4 + 2] = 11
+    px[i * 4 + 3] = Math.round(m.a[i]! * 255)
+  }
+  addPixels(scene, DARK_KEY, m.w, m.h, px, true)
 }
 
 // ---------------------------------------------------------------- overlays
 
-/** The dark round the hero in a cave: clear in the middle, black past it (`DARK_SIZE` px; hole edge at DARK_INNER, full dark at DARK_OUTER). */
-export const DARK_SIZE = 512
-export const DARK_INNER = 46
-export const DARK_OUTER = 110
+/** The hero's light brush: erased from the dark round them (./light.ts heroLight; LANTERN_SIZE px across, scaled for the wide light). */
+export const LANTERN_KEY = 'hl-lantern'
+export const LANTERN_SIZE = 2 * HERO_OUTER + 4
 
 /** The overlays, sprites and glows: drawn once. */
 export function drawOverlays(scene: Phaser.Scene): void {
-  if (scene.textures.exists('hl-dark')) return
+  if (scene.textures.exists(LANTERN_KEY)) return
   const radial = (key: string, size: number, alphaAt: (r: number) => number, rgb: RGB) => {
     const px = new Uint8ClampedArray(size * size * 4)
     for (let y = 0; y < size; y++)
@@ -392,7 +452,7 @@ export function drawOverlays(scene: Phaser.Scene): void {
     addPixels(scene, key, size, size, px, true)
   }
   const smooth = (t: number) => t * t * (3 - 2 * t)
-  radial('hl-dark', DARK_SIZE, (r) => smooth(Math.max(0, Math.min(1, (r - DARK_INNER) / (DARK_OUTER - DARK_INNER)))) * 0.97, [7, 6, 11])
+  radial(LANTERN_KEY, LANTERN_SIZE, (r) => heroLight('lantern', r), [255, 255, 255])
   radial('hl-haze', 256, (r) => smooth(Math.max(0, Math.min(1, (r - 55) / 90))), [255, 255, 255])
   radial('hl-glow', 64, (r) => Math.pow(Math.max(0, 1 - r / 32), 2), [255, 255, 255])
   // A crystal: a little pale shard cluster.
@@ -421,7 +481,9 @@ export function drawOverlays(scene: Phaser.Scene): void {
 
 /** The level overlay (`grid`): a tint per level, slopes green, faces red, the cave violet. */
 export function drawGrid(g: Phaser.GameObjects.Graphics, l: Layer, area: LabArea): void {
-  const colors = [0x3050ff, 0xffb030, 0xff4060]
+  const colors = [0x3050ff, 0xffb030, 0xff4060, 0x40e0ff, 0xffffff]
+  const caveColors = [0xd0a0ff, 0xa060ff, 0x7040e0, 0x4020b0, 0x200880]
+  const lvl = l.name === 'cave' ? caveLevels(l) : null
   for (let ty = 0; ty < l.h; ty++)
     for (let tx = 0; tx < l.w; tx++) {
       const i = ty * l.w + tx
@@ -429,13 +491,13 @@ export function drawGrid(g: Phaser.GameObjects.Graphics, l: Layer, area: LabArea
       if (k === KIND.none) continue
       let c = 0
       let a = 0.18
-      if (l.name === 'cave') c = k === KIND.rock ? 0x301040 : 0xa060ff
+      if (lvl) c = k === KIND.rock ? 0x301040 : k === KIND.face ? 0xff2020 : caveColors[Math.min(4, Math.max(0, -lvl[i]!))]!
       else if (k === KIND.slope) c = 0x40ff60
       else if (k === KIND.face || k === KIND.mouth) c = 0xff2020
       else {
         const z = area.top[i]!
         if (z === 0) a = 0
-        c = colors[Math.min(2, Math.max(0, z))]!
+        c = colors[Math.min(4, Math.max(0, z - 1))]!
       }
       if (a) {
         g.fillStyle(c, a)
