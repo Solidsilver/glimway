@@ -54,8 +54,10 @@
 
 ### Moral Choice with Unmoored Beasts: Defeat vs. Break the Spell
 - **Owner's call:** Allow players to **either defeat the unmoored beast outright OR break them out of their spell**, giving a real moral choice in encounters (mirroring canon §5.5's choice with the fallen):
-  - **Break the spell (Option A):** When you break the fever, a dark smoky fever-crust shatters off their back (dropping shed carapace / fever-slag / tangled tuft), their eyes return from cold violet to warm brown, they shake their head clear, and they flee into the woods.
-  - **Defeat by force:** Fight them down to the end as a standard kill for direct beast drops/trophies.
+  - **How you choose (#1 — Stagger window + Glim/Light or Working):** When fought down to low HP (~15%), the beast staggers. Since **Fingersnap** may become a spell-specific/Practice-specific working, *either* specific spellcasters/Practices can break the spell with their working, *or* any player can supply a **glim** or hold up a **light** to break the fever.
+  - **Break the spell (Option A + Redeemed Animal):** A dark smoky fever-crust shatters off their back (dropping shed carapace / fever-slag / tangled tuft), their eyes return from cold violet to warm brown, and they either flee into the woods **or turn into a peaceful ordinary animal in that chunk** for the rest of the wick.
+  - **Defeat by force:** Keep striking with your weapon through the stagger to slay them outright for direct beast drops/trophies.
+- **Full canon lore draft:** Written up in [creature-lore-argon.md](creature-lore-argon.md) (with proposed additions to `canon.md` §2.5 and replacement for §5.4).
 
 ### Rejected / Skipped Ideas
 - **Pre-fight ground warning signs around territories:** Owner passed on adding special ground decals (gouged bark, frost patches) around creature territories—keep the ground clean and simple.
