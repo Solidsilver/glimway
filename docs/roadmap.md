@@ -113,6 +113,11 @@ Owner's calls (2026-10-20):
 Scope and slicing come from a brainstorm and a height-and-caves spike
 ([planning/wide-world/](planning/wide-world/brief.md)).
 
+**Build order (owner, 2026-10-20):** walk any way; terrain and caves together (the Tops and
+below, per the height design); water (a flow map: rivers, streams, lakes, ponds, tarns); lake
+country and the woods (biomes, pins, dressing); far roads and tuning. The rules for the land:
+[land-rules.md](planning/wide-world/land-rules.md).
+
 ### 0.15 Hearths, station chains and market stalls (backbone complete)
 
 **Promise:** furnish and build your own cottage and garden from pieces you made, and sell them.

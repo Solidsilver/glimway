@@ -23,15 +23,22 @@ the roadmap and [synthesis.md](synthesis.md) (lake country used to come second).
 
 1. **Walk any way** (merged; fixes from its review in flight): open world, border, landform
    version split, world lab.
-2. **Terrain:** height, cliffs, ramps, passes (the Tops), per the height design.
+2. **Terrain and below:** height, cliffs, ramps, passes (the Tops) and caves, together, per the
+   height design.
 3. **Water:** a flow map over the real terrain gives rivers, streams, lakes, ponds and tarns.
 4. **Lake country and the woods:** biomes and pins, and the dressing rules.
-5. **Below:** caves, per the height design.
-6. **Far roads and tuning.**
+5. **Far roads and tuning.**
 
 Owner: "if we do a water flow map (and that influences lakes, ponds, rivers, streams, etc) we
 should probably do that before lake country." The cost of this order: the first new biome arrives
-in iteration 4, so playtesters see mountains and water on today's woods first.
+in iteration 4, so playtesters see mountains, caves and water on today's woods first.
+
+**Reconciled with the open world and the height design** (owner, 2026-10-20, after this file was
+first written): caves come with the terrain in iteration 2, not after the biomes (the must-have
+is climbing a mountain and walking into a cave with no door, and the height labs design them as
+one thing). These rules say what the land must look and play like; how height, cliffs, ramps,
+caves and channels are built belongs to the height design (rules 2, 6 and 16 were trimmed to
+match). Region access keeps the open world's guarantees for held land (rule 2).
 
 ## How every rule is built
 
@@ -50,10 +57,10 @@ budget (today 5 ms p95, 6 KiB), measured, not assumed.
 | # | Rule | Iter. | Status |
 |---|---|---|---|
 | 1 | Lasting skeleton, turning skin, and the way home lasts too | 1→ | **agreed** |
-| 2 | Trails are lazy walkers; reach regions, not every chunk edge | 2, 6 | **agreed** |
-| 3 | It works before it's pretty | 2, 5 | **expectation** |
-| 4 | Keep faces, ramps and mouths readable | 2, 5 | **expectation** |
-| 5 | One look for height from every side | 2, 5 | **expectation** |
+| 2 | Trails are lazy walkers; reach regions, not every chunk edge | 2, 5 | **agreed** |
+| 3 | It works before it's pretty | 2 | **expectation** |
+| 4 | Keep faces, ramps and mouths readable | 2 | **expectation** |
+| 5 | One look for height from every side | 2 | **expectation** |
 | 6 | Water never runs uphill: a flow map | 3 | **changed** |
 | 7 | Still water sits in hollows (ponds and tarns) | 3 | **stage 2** |
 | 8 | Country first, trails through it | 4 | **agreed** |
@@ -61,13 +68,13 @@ budget (today 5 ms p95, 6 KiB), measured, not assumed.
 | 10 | Biomes blend; edges are sharp only where the land explains it | 4 | **stage 2** |
 | 11 | Groves, not confetti | 4 | **stage 2** |
 | 12 | Old things get the space they need | 4 | **stage 2** |
-| 13 | Landmarks you can steer by | 4→6 | **stage 2** |
+| 13 | Landmarks you can steer by | 4→5 | **stage 2** |
 | 14 | Room to build | 4 | **stage 2** |
 | 15 | Trees thin as you climb | 4 | **stage 2** |
 | 16 | Rock comes in seams; stones fall below faces | 4 | **stage 2** |
 | 17 | Cliff feet: wet only where there's water | 4 | **stage 2** |
 | 18 | Ruins and road stones have a reason | 6 | **stage 2** |
-| 19 | Creatures live where their food and shelter are | life lane, 6 | **stage 2** |
+| 19 | Creatures live where their food and shelter are | life lane, 5 | **stage 2** |
 
 ### 1. Lasting skeleton, turning skin, and the way home lasts too
 
@@ -90,10 +97,15 @@ budget (today 5 ms p95, 6 KiB), measured, not assumed.
   and rivers at fords. A range or a river is a real barrier with a few known ways over. There are
   loops, not one funnel.
 - **How:** lasting passes and fords first; route on a coarse graph, then refine to tiles only along
-  the corridor using the height design's walking rule. Never carve a ramp to rescue a failed
-  route; pick another link. Guarantee every region can be reached (and home from it), not that
-  every chunk edge opens. Deleting today's edge gaps and adding the region check land together.
-- **Lands:** coarse access with terrain (2); fords once water exists (3); regional roads (6).
+  the corridor using the height design's walking rule. Whether trails make ramps or follow ramps
+  the terrain already has is the height design's call (owner, reconciling). Guarantee every region
+  can be reached (and home from it), not that every chunk edge opens. Deleting today's edge gaps
+  and adding the region check land together.
+- **The open world's guard** (owner, reconciling): region access must also keep every held chunk,
+  lamp, camp and town gate reachable through the openings it already has, and must never strand
+  anyone where they stand (a hero saved on ground that turns to rock still gets out). Iteration
+  2's brief proves both on real held land.
+- **Lands:** coarse access with terrain (2); fords once water exists (3); regional roads (5).
 
 ### 3. It works before it's pretty
 
@@ -132,12 +144,13 @@ from the start: it "allows for an algorithm for the placement of smaller ponds o
   may run level for a while; it never climbs. Waterfalls are where the land drops. No orphan bits
   of river.
 - **How:** its own system over the finished terrain (owner: "a drainage network as its own system
-  after terrain height is figured out"). Sol's bounded drainage solve is the starting point:
-  drainage domains on a coarse grid, a fill-and-flow pass from each domain's low point, flow
-  added up downstream, and channels carved to the result, so the channel sits below its banks.
-  Each line stores a fine water height that only falls; the drawn levels are a rounding of it.
-  Confluences share one id; width comes from the flow. Domain size, rivers crossing domains, and
-  cold-solve cost are settled in the water iteration's brief, measured in the lab.
+  after terrain height is figured out"). The rule fixes the outcome above, not the method (owner,
+  reconciling): how a channel meets the height levels (carved into them, or a water height of its
+  own) is for the height design and the water iteration's brief. Sol's bounded drainage solve is
+  the starting point: drainage domains on a coarse grid, a fill-and-flow pass from each domain's
+  low point, flow added up downstream. Confluences share one id; width comes from the flow. Domain
+  size, rivers crossing domains, and cold-solve cost are settled in that brief, measured in the
+  lab.
 - **The Wend:** owner: make it believable; it needn't stay one long wiggly line, "or [it can]
   disappear in favour of the water network, and have other rivers show up." One move before 1.0
   is fine.
@@ -220,7 +233,7 @@ from the start: it "allows for an algorithm for the placement of smaller ponds o
   hooked shore". Specials differ in shape, colour and ground, so they aren't all the same prop.
 - **How:** a landmark vocabulary with route roles; the lab counts repeats. The test is a
   playtester describing a route without coordinates.
-- **Lands:** iteration 4 onward; mostly content and tuning in 6.
+- **Lands:** iteration 4 onward; mostly content and tuning in 5.
 
 ### 14. Room to build
 
@@ -249,9 +262,9 @@ from the start: it "allows for an algorithm for the placement of smaller ponds o
 
 - **On the ground:** outcrops line up with the ridges and bend with them; loose stones pile below
   a cliff face; round stones on river banks; the odd lone boulder in a field.
-- **How:** one lasting coarse rock field with a slowly turning direction shared by ridges and
-  outcrops. Talus about 4 tiles below the face foot (on screen, below the face rows), never on a
-  ramp or a cave approach. Big outcrops last; small stones turn.
+- **How:** outcrops follow the ridges and faces the height design makes (owner, reconciling: the
+  rock doesn't steer the ridges). Talus about 4 tiles below the face foot (on screen, below the
+  face rows), never on a ramp or a cave approach. Big outcrops last; small stones turn.
 - **Lands:** iteration 4.
 
 ### 17. Cliff feet: wet only where there's water
@@ -272,7 +285,7 @@ from the start: it "allows for an algorithm for the placement of smaller ponds o
   facing the next ford or pass, with longer gaps on straight stretches.
 - **How:** terrain and resources → destinations → roads → roadside remains, all lasting plans.
   Generated lamp stones all start dark; nothing relights them for realism.
-- **Lands:** a few cues in iteration 4; roads in iteration 6.
+- **Lands:** a few cues in iteration 4; roads in iteration 5.
 
 ### 19. Creatures live where their food and shelter are
 
@@ -325,8 +338,6 @@ from the start: it "allows for an algorithm for the placement of smaller ponds o
 
 ## Still open
 
-- **The roadmap and [synthesis.md](synthesis.md)** still list the old iteration order (lake
-  country second); they need the order above.
 - **The flow map's shape** (domain size, whether rivers cross domains, how long a cold solve may
   take) is for the water iteration's brief, measured in the world lab.
 - **Creature spawning** waits on the life lane.

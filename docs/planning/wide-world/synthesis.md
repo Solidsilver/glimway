@@ -66,6 +66,9 @@ both answering [brief.md](brief.md). The height spike (`exp/height-spike`) is st
 
 3 and 4 can swap if the spike finds caves easier than cliffs.
 
+*Superseded 2026-10-20 by the owner's build order in [land-rules.md](land-rules.md): walk any way;
+terrain and caves together; water (a flow map); lake country and the woods; far roads and tuning.*
+
 ## For the owner
 
 1. **The Whitequiet.** Opus A (breathes out to the rim, a story beat in 0.14), Sol A (a crossable
