@@ -237,12 +237,9 @@ func (a *Server) chunkRead(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	defer tx.Rollback()
-	// Only land round the reader (sight.go).
-	if ok, err := chunkInSight(r.Context(), tx, s, int(n[1]), int(n[2])); err != nil {
-		return err
-	} else if !ok {
-		return fail(409, "beyond-sight")
-	}
+	// Only land round the reader is made; past it, a stored chunk (land
+	// someone walked, a held one, the Tangle, a fixed one) still reads, any
+	// other is beyond-sight (sight.go).
 	m, err := a.Config.Chunks.Chunk(r.Context(), tx, s.WorldID, parts[0], n[0], n[1], n[2])
 	if err != nil {
 		return chunkError(err)

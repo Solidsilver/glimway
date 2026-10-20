@@ -23,6 +23,7 @@ func (a *Server) begin(r *http.Request) (*sql.Tx, store.Snapshot, string, error)
 		tx.Rollback()
 		return nil, store.Snapshot{}, "", err
 	}
+	nameReader(r.Context(), id)
 	if _, err = store.ReturnDueMailTx(r.Context(), tx, a.requestTime(r.Context()).Unix(), id); err != nil {
 		tx.Rollback()
 		return nil, store.Snapshot{}, "", err

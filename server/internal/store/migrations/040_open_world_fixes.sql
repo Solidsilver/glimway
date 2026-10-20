@@ -47,3 +47,11 @@ DELETE FROM discoveries
    AND length(entity_id)-length(replace(entity_id,':',''))=3
    AND NOT EXISTS (SELECT 1 FROM holds h WHERE h.epoch_id=discoveries.epoch AND h.layer=0
      AND substr(discoveries.entity_id,instr(discoveries.entity_id,':')) LIKE ':'||h.cx||':'||h.cy||':%');
+-- Sight's anchor (api/sight.go): where the server lets a player see from,
+-- the travel it has saved (pixels) as of at, and the last place a client
+-- claimed (seen_*); a saved place other than that one is the server's.
+CREATE TABLE player_sight(
+ account_id TEXT PRIMARY KEY REFERENCES players(account_id), world_id TEXT NOT NULL,
+ x REAL NOT NULL, y REAL NOT NULL, saved REAL NOT NULL CHECK(saved>=0), at INTEGER NOT NULL,
+ seen_area TEXT NOT NULL, seen_x REAL NOT NULL, seen_y REAL NOT NULL
+);

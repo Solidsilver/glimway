@@ -109,6 +109,8 @@ type Server struct {
 	// visits are the presence socket's chunk visits written this wick
 	// (common_ways.go).
 	visits visitCache
+	// makes is each reader's budget of new chunks (sight.go).
+	makes makeBudget
 }
 
 func New(s *store.Store, h habitica.Upstream, c Config) *Server {

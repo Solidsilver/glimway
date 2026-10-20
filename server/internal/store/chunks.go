@@ -357,6 +357,12 @@ func (c *Chunks) make(ctx context.Context, tx *sql.Tx, world string, e *contract
 	if c.Generator == nil {
 		return nil, ErrGeneratorUnavailable
 	}
+	// The reader's guard (api/sight.go) may refuse to make it.
+	if g := chunks.MakeGuardOf(ctx); g != nil {
+		if err := g.AllowMake(ctx, tx, e.Kind, cx, cy); err != nil {
+			return nil, err
+		}
+	}
 	var kept []chunks.Kept
 	if e.Kind == EpochWick {
 		// Held chunks round it are kept as the Tangle is, this epoch's own

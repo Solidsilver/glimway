@@ -223,4 +223,3 @@ func mustChunk(t *testing.T, b []byte) *contract.WorldChunk {
 	}
 	return m
 }
-

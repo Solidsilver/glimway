@@ -120,8 +120,12 @@ func (a *Server) nearRead(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return chunkError(err)
 	}
+	sight, err := sightOf(ctx, tx, s, now)
+	if err != nil {
+		return err
+	}
 	// A refusal keeps any turning this read made (it is upkeep, done).
-	if !location.OnGrid(cx, cy) || !withinSight(s, cx, cy, sightLag) {
+	if !location.OnGrid(cx, cy) || !sight.within(cx, cy, sightLag) {
 		if err = tx.Commit(); err != nil {
 			return err
 		}

@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"hash/fnv"
 	"math"
@@ -505,9 +506,15 @@ func (a *Server) wakeFightRooms(p *presencePeer, world string, missing []fightLo
 		return nil, false, false
 	}
 	defer tx.Rollback()
+	// Only land round the player is made for a wake (sight.go): a chunk past
+	// their anchor, not yet stored, wakes no room until they come near.
+	ctx = chunks.WithMakeGuard(ctx, &sightGuard{a: a, account: p.identity.ID, now: func() time.Time { return now }})
 	wakes := make([]fightWake, 0, len(missing))
 	for _, location := range missing {
 		w, err := a.loadFightChunk(ctx, tx, world, location, now)
+		if errors.Is(err, errBeyondSight) {
+			continue
+		}
 		if err != nil {
 			a.logUnexpected("fight-wake", err)
 			return nil, false, false
