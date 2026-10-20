@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>World lab</title>
+<style>
+:root{color-scheme:dark;font:14px system-ui}body{margin:0;background:#181d23;color:#e6e9ef}header{padding:12px 16px;border-bottom:1px solid #475364}h1{font-size:20px;margin:0 0 10px}label{display:inline-flex;gap:5px;align-items:center;margin:3px 9px 3px 0}input,button,select{font:inherit;background:#27313c;color:inherit;border:1px solid #66758a;border-radius:3px;padding:5px}input[type=text]{width:150px}#epoch{width:240px}#rect{width:180px}button{cursor:pointer}main{display:grid;grid-template-columns:minmax(0,1fr) 320px;height:calc(100vh - 215px);min-height:400px}#viewport{overflow:hidden;background:#0e1217;position:relative;touch-action:none}canvas{position:absolute;image-rendering:pixelated;transform-origin:0 0;cursor:grab}aside{overflow:auto;padding:12px;border-left:1px solid #475364}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px ui-monospace,monospace}#status{min-height:22px;color:#b7d5e8}#legend{color:#c8cdd5;font-size:12px}.controls{display:flex;flex-wrap:wrap;align-items:center}#tile{border-top:1px solid #475364;margin-top:16px;padding-top:8px}@media(max-width:800px){main{grid-template-columns:1fr;height:auto}#viewport{height:60vh}aside{border-left:0}}
+</style>
+<header>
+<h1>World lab</h1>
+<form id="form">
+<div class="controls">
+<label>Seed <input id="seed" type="text" value="map"></label>
+<label>Epoch <input id="epoch" type="text" value="t:1795000000:1796209600"></label>
+<label>View <select id="view"><option value="atlas">Atlas · chunk glimpses</option><option value="region">Region · tiles</option><option value="chunk">Chunk · reach graph</option></select></label>
+<label>Chunk rect <input id="rect" type="text" value="-40,-60,39,19"></label>
+<label><input type="checkbox" id="compare"> Compare</label><label>Seed B <input id="seedB" type="text" placeholder="same seed"></label><span id="contentB"></span>
+<button>Render</button><button type="button" id="out">Zoom out</button><button type="button" id="in">Zoom in</button>
+</div><div id="overlays"></div>
+</form>
+<div id="status" role="status"></div>
+<div id="legend">Drag to pan · wheel or buttons to zoom across scales · click to inspect a tile · content saves re-render automatically.<br>Land cells magenta; place cells cyan; Wend blue; road gold; world border red. Entities white; sites magenta; lamps yellow; places red. Reach: cyan boundary-connected, orange isolated. Solid view: pink tiles, chunk edge red/green = solid/open share. Fixed ground: grey hatch.</div>
+</header>
+<main><div id="viewport"><canvas id="map" aria-label="Generated world map"></canvas></div><aside><strong>Stats</strong><pre id="stats">Loading…</pre><div id="tile"><strong>Tile inspector</strong><pre id="detail">Click the map.</pre></div></aside></main>
+<script>
+const $=id=>document.getElementById(id),canvas=$('map'),ctx=canvas.getContext('2d'),vp=$('viewport');
+const names=['land-cells','place-cells','tiers','wend','road','rumours','border','solid','reach'];
+for(const name of names){const label=document.createElement('label'),input=document.createElement('input');input.type='checkbox';input.value=name;input.name='overlay';label.append(input,document.createTextNode(name));$('overlays').append(label)}
+let rendered=null,revision='',zoom=1,offset=[0,0],drag=null,pending=null,sequence=0,ready=false;
+const selected=()=>[...document.querySelectorAll('[name=overlay]:checked')].map(e=>e.value).join(',');
+const rect=()=>{const a=$('rect').value.split(',').map(Number);if(a.length!==4||a.some(x=>!Number.isInteger(x)))throw Error('Rect needs four integer chunk coordinates');return a};
+function transform(){canvas.style.transform=`translate(${offset[0]}px,${offset[1]}px) scale(${zoom})`}
+function params(){return new URLSearchParams({view:$('view').value,seed:$('seed').value,epoch:$('epoch').value,rect:rect().join(','),scale:$('view').value==='atlas'?'2':$('view').value==='chunk'?'4':'1',overlays:selected(),compare:$('compare').checked?'1':'0','seed-b':$('seedB').value})}
+async function render(fit=true){
+ const seq=++sequence;if(pending)pending.abort();pending=new AbortController();$('status').textContent='Rendering…';
+ try{
+  if($('view').value==='atlas')for(const e of document.querySelectorAll('[name=overlay]'))if(e.value==='solid'||e.value==='reach')e.checked=false;
+  let r=rect();if($('view').value==='chunk'){const x=Math.floor((r[0]+r[2])/2),y=Math.floor((r[1]+r[3])/2);$('rect').value=[x,y,x,y].join(',')}
+  const q=params(),response=await fetch('/api/render?'+q,{signal:pending.signal});if(!response.ok)throw Error(await response.text());const data=await response.json();
+  const image=new Image();image.src='data:image/png;base64,'+data.png;await image.decode();if(seq!==sequence)return;
+  canvas.width=image.width;canvas.height=image.height;ctx.imageSmoothingEnabled=false;ctx.drawImage(image,0,0);rendered={...data,query:q,rect:data.stats.rect};
+  if(fit){zoom=Math.min(vp.clientWidth/canvas.width,vp.clientHeight/canvas.height)*.94;offset=[(vp.clientWidth-canvas.width*zoom)/2,(vp.clientHeight-canvas.height*zoom)/2];transform()}
+  $('stats').textContent=JSON.stringify(data.comparison??data.stats,null,2);$('status').textContent=`${data.stats.view} · ${data.stats.chunks} chunks · ${data.stats.generationMs.toFixed(1)} ms`;
+ }catch(e){if(e.name!=='AbortError')$('status').textContent=e.message}
+}
+function mapPoint(clientX,clientY){if(!rendered)return null;const box=vp.getBoundingClientRect();let x=(clientX-box.left-offset[0])/zoom;const y=(clientY-box.top-offset[1])/zoom;if(x<0||y<0||x>=canvas.width||y>=canvas.height)return null;let panel='a';if(rendered.comparison){const pw=rendered.width*rendered.scale;if(x>=pw+2&&x<2*pw+2){panel='b';x-=pw+2}else if(x>=2*pw+4){panel='b';x-=2*pw+4}else if(x>=pw)return null}const s=rendered.stats.chunkSize,unit=rendered.stats.view==='atlas'?1:s;return {panel,cx:rendered.rect[0]+x/rendered.scale/unit,cy:rendered.rect[1]+y/rendered.scale/unit}}
+function resizeView(direction,point){
+ if(!rendered)return;let r=rendered.rect;const cx=point?.cx??(r[0]+r[2]+1)/2,cy=point?.cy??(r[1]+r[3]+1)/2;
+ const current=rendered.stats.view;let view=current,span=Math.max(r[2]-r[0]+1,r[3]-r[1]+1);
+ if(direction>0){if(current==='atlas'&&span<=24){view='region';span=9}else if(current==='region'&&span<=5){view='chunk';span=1}else if(current==='chunk'){zoom*=1.5;transform();return}else span=Math.max(1,Math.floor(span/2))}
+ else {if(current==='chunk'){view='region';span=5}else if(current==='region'&&span>=16){view='atlas';span=40}else span=Math.min(current==='atlas'?1000:60,span*2)}
+ $('view').value=view;const x=Math.floor(cx-span/2),y=Math.floor(cy-span/2);$('rect').value=view==='chunk'?[Math.floor(cx),Math.floor(cy),Math.floor(cx),Math.floor(cy)].join(','):[x,y,x+span-1,y+span-1].join(',');render();
+}
+$('form').onsubmit=e=>{e.preventDefault();render()};$('in').onclick=()=>resizeView(1);$('out').onclick=()=>resizeView(-1);
+$('view').onchange=()=>{const r=rect(),x=Math.floor((r[0]+r[2])/2),y=Math.floor((r[1]+r[3])/2),n=$('view').value==='atlas'?40:$('view').value==='region'?4:0;$('rect').value=[x-n,y-n,x+n,y+n].join(',');render()};
+$('overlays').onchange=()=>render(false);
+canvas.onpointerdown=e=>{canvas.setPointerCapture(e.pointerId);drag={x:e.clientX,y:e.clientY,offset:[...offset],moved:false}};
+canvas.onpointermove=e=>{if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(Math.abs(dx)+Math.abs(dy)>4)drag.moved=true;offset=[drag.offset[0]+dx,drag.offset[1]+dy];transform()};
+canvas.onpointerup=async e=>{
+ if(!drag)return;const d=drag;drag=null;
+ if(d.moved){if(!rendered)return;const unit=rendered.stats.view==='atlas'?1:rendered.stats.chunkSize;const dx=Math.round((d.offset[0]-offset[0])/zoom/rendered.scale/unit),dy=Math.round((d.offset[1]-offset[1])/zoom/rendered.scale/unit);if(dx||dy){const r=rendered.rect;$('rect').value=[r[0]+dx,r[1]+dy,r[2]+dx,r[3]+dy].join(',');render()}return}
+ const p=mapPoint(e.clientX,e.clientY);if(!p)return;
+ if(rendered.stats.view==='atlas'){$('detail').textContent=`Chunk ${Math.floor(p.cx)},${Math.floor(p.cy)} (atlas samples its centre). Zoom in for individual tiles.`}
+ try {const q=new URLSearchParams(rendered.query),s=rendered.stats.chunkSize;const at=rendered.stats.view==='atlas'?[Math.floor(p.cx)*s+Math.floor(s/2),Math.floor(p.cy)*s+Math.floor(s/2)]:[Math.floor(p.cx*s),Math.floor(p.cy*s)];q.set('at',at.join(','));q.set('panel',p.panel);const response=await fetch('/api/tile?'+q);if(!response.ok)throw Error(await response.text());$('detail').textContent=JSON.stringify(await response.json(),null,2)}catch(e){$('detail').textContent=e.message}
+};
+canvas.onpointercancel=()=>drag=null;let wheelTimer;
+vp.addEventListener('wheel',e=>{e.preventDefault();clearTimeout(wheelTimer);const p=mapPoint(e.clientX,e.clientY);wheelTimer=setTimeout(()=>resizeView(e.deltaY<0?1:-1,p),120)},{passive:false});
+async function state(){try{const response=await fetch('/api/state');if(!response.ok)throw Error(await response.text());const data=await response.json();if(!ready){$('seed').value=data.seed;$('epoch').value=data.epoch;$('seedB').value=data.compareSeed??'';$('contentB').textContent=data.compareContent?'Content B: '+data.compareContent:'';for(const e of document.querySelectorAll('[name=overlay]'))e.checked=data.overlays.split(',').includes(e.value);ready=true;revision=data.revision;await render()}else if(data.revision!==revision){revision=data.revision;await render(false)}}catch(e){$('status').textContent=e.message}finally{setTimeout(state,1000)}}state();
+</script>
+</html>

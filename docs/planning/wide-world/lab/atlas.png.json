@@ -1,0 +1,24 @@
+{
+  "content": "content/wilds.json",
+  "contentSHA256": "3bc974bc027e31e32ffe7f7961329facdbe223c3f014940aa9e40497da5f145e",
+  "view": "atlas",
+  "seed": "map",
+  "epoch": "t:1795000000:1796209600",
+  "rect": [
+    -40,
+    -60,
+    39,
+    19
+  ],
+  "chunkSize": 24,
+  "chunks": 6400,
+  "generatedChunks": 0,
+  "fixedChunks": 0,
+  "landShareByChunkCentre": {
+    "meadow": 0.41890625,
+    "woods": 0.58109375
+  },
+  "longestAxialLandRunChunks": 53,
+  "generationMs": 41.717,
+  "note": "Land shares and axial runs sample chunk centres. Rectangles include both endpoints. Atlas never generates chunks; tile, camp, solid and reach metrics are unavailable. Blue tint marks chunks crossed by the Wend."
+}

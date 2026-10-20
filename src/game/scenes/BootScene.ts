@@ -24,6 +24,7 @@ import { chunkOfPixel, isWildsArea } from '../wilds/coords'
 import type { Session } from '../session'
 import { bus, EV } from '../events'
 import { artDensity } from '../density'
+import { DEV_TOOLS } from '../../lib/dev-tools'
 
 /**
  * Boot: loads the delivered art (the expansion atlases, the runtime pass of
@@ -153,6 +154,16 @@ export class BootScene extends Phaser.Scene {
    */
   private enter(session: Session, pending: Promise<void> | null): void {
     bus.emit(EV.loadStage, { stage: 'arrive' })
+    // The height lab (dev builds only; src/game/height-lab): `?lab=height`
+    // starts it instead of the world. A release build has none of it.
+    if (DEV_TOOLS && new URLSearchParams(location.search).get('lab') === 'height') {
+      void import('../height-lab/scene').then((m) => {
+        if (!this.sys.game) return
+        this.scene.add('HeightLab', m.HeightLabScene, false)
+        this.scene.start('HeightLab')
+      })
+      return
+    }
     const start = () => this.scene.start('World')
     const at = chunkOfPixel(session.state.position.x, session.state.position.y)
     if (!pending || !isWildsArea(session.state.area) || !fixedPlaceOf(at.cx, at.cy)) {

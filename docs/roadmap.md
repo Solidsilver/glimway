@@ -1,7 +1,8 @@
 # Roadmap
 
 *Settled 2026-10-17, at dev `fe0aab12` (0.11.2); reordered 2026-10-20 after 0.13.0 (the wide world
-comes first, everything after it moves down one).* This is the one place the release order lives.
+comes first, everything after it moves down one; the contract freeze moves to 1.0).* This is the
+one place the release order lives.
 `CHANGELOG.md` records what shipped; the design docs under `design/` hold the details each
 release builds from. When this doc and a design doc disagree about order or scope, this doc wins.
 
@@ -35,9 +36,13 @@ Land-keeping (holds, lamps, oil) is the engine that makes marks persist. It isn'
 6. **Habitica stays behind its seam.** Review rule from now on: no new Habitica call outside the
    `habitica` packages. A standalone edition (one world, two editions: economy, hero and art
    swapped) waits until the 0.14–0.17 loops are proven.
-7. **Clean breaks end at the 0.15 contract freeze.** Until then migrations stay cheap. After it,
-   persistent world schemas, chunk keys and the generator version are frozen: a player's
-   creations and the shape of the land survive upgrades.
+7. **Clean breaks are allowed until 1.0** (owner, 2026-10-20; this replaces the 0.15 contract
+   freeze). Until 1.0 we explore what the game is, and building beats keeping a stable game.
+   Playtesters know the game changes. Try not to lose what players made or built in an upgrade,
+   but a break that costs some isn't the end of the world; say so in the release notes. Rule 3 is
+   about play: nothing in the game destroys a player's things. **At 1.0** the game is released and
+   persistent world schemas, chunk keys and the generator version freeze: from then on a
+   player's creations and the shape of the land survive upgrades.
 8. **Felt debt rides inside feature releases.** Backups, flaky tests and performance hitches ship
    with the feature they'd otherwise block; they don't get a release of their own.
 9. **A docs lane runs one release ahead.** The design doc a release needs is rewritten during
@@ -89,7 +94,7 @@ way-lamps in the Wilds, with the map showing what is held, common and turning.
 **Promise:** walk as far as you like in any direction, climb mountains and go down into caves,
 all without a loading door.
 
-Owner's calls (2026-10-20), made so the shape of the world is settled before the freeze:
+Owner's calls (2026-10-20):
 
 - **Endless in every direction.** The Whitequiet's closing edge goes; a far world border (as in
   Minecraft) sits before the maths breaks down. What that means for canon §2.4 is part of the
@@ -108,7 +113,7 @@ Owner's calls (2026-10-20), made so the shape of the world is settled before the
 Scope and slicing come from a brainstorm and a height-and-caves spike
 ([planning/wide-world/](planning/wide-world/brief.md)).
 
-### 0.15 Hearths, station chains and market stalls (backbone complete, contract freeze)
+### 0.15 Hearths, station chains and market stalls (backbone complete)
 
 **Promise:** furnish and build your own cottage and garden from pieces you made, and sell them.
 
@@ -123,7 +128,7 @@ Scope and slicing come from a brainstorm and a height-and-caves spike
   household extends beyond the core is Built land on oil.
 - Two-way trading: resident buyers and async player stalls, with listing fees as a glim sink.
 - Rides along: per-chunk gathering cost.
-- **Contract freeze.** Clean breaks end here.
+- No contract freeze here any more: it moved to 1.0 (rule 7).
 
 ### 0.16 Chapter 2: Dorrit's span and the first expedition
 

@@ -1,0 +1,91 @@
+{
+  "a": {
+    "content": "content/wilds.json",
+    "contentSHA256": "3bc974bc027e31e32ffe7f7961329facdbe223c3f014940aa9e40497da5f145e",
+    "view": "region",
+    "seed": "map",
+    "epoch": "t:1795000000:1796209600",
+    "rect": [
+      -8,
+      -12,
+      7,
+      -1
+    ],
+    "chunkSize": 24,
+    "chunks": 192,
+    "generatedChunks": 192,
+    "fixedChunks": 0,
+    "landShareByChunkCentre": {
+      "meadow": 0.4114583333333333,
+      "woods": 0.5885416666666666
+    },
+    "groundShare": {
+      "bank": 0.008174189814814815,
+      "ford": 0.000244140625,
+      "meadow": 0.3711751302083333,
+      "moss": 0.033501519097222224,
+      "path": 0.11263020833333333,
+      "paving": 0.006465205439814815,
+      "road": 0.008590133101851851,
+      "trodden": 0.035698784722222224,
+      "verge": 0.11402271412037036,
+      "water": 0.00510886863425926,
+      "woods": 0.3043891059027778
+    },
+    "solidShare": 0.31650571469907407,
+    "campsPer100Chunks": 161.45833333333334,
+    "placesPer100Chunks": 9.375,
+    "longestAxialLandRunChunks": 15,
+    "unreachableWalkableTiles": 0,
+    "reachDefinition": "4-neighbour walkable components with no tile on the render boundary or beside omitted fixed ground; cropped paths leaving the view are treated as reachable. Cyan walkability-tree paths link boundary samples and markers; orange = isolated.",
+    "generationMs": 175.239,
+    "note": "Land shares and axial runs sample chunk centres. Rectangles include both endpoints. Fixed authored chunks are grey hatching and excluded from tile/camp/place metrics. Entities white; sites magenta; lamp stones yellow; rumours orange; places red."
+  },
+  "b": {
+    "content": "content/wilds.json",
+    "contentSHA256": "3bc974bc027e31e32ffe7f7961329facdbe223c3f014940aa9e40497da5f145e",
+    "view": "region",
+    "seed": "wide-world",
+    "epoch": "t:1795000000:1796209600",
+    "rect": [
+      -8,
+      -12,
+      7,
+      -1
+    ],
+    "chunkSize": 24,
+    "chunks": 192,
+    "generatedChunks": 192,
+    "fixedChunks": 0,
+    "landShareByChunkCentre": {
+      "meadow": 0.234375,
+      "woods": 0.765625
+    },
+    "groundShare": {
+      "bank": 0.008635344328703705,
+      "ford": 0.0005787037037037037,
+      "meadow": 0.21513310185185186,
+      "moss": 0.04309534143518518,
+      "path": 0.12928602430555555,
+      "paving": 0.006419994212962963,
+      "road": 0.009693287037037037,
+      "trodden": 0.03430627893518518,
+      "verge": 0.15333839699074073,
+      "water": 0.005099826388888889,
+      "woods": 0.3944137008101852
+    },
+    "solidShare": 0.40693721064814814,
+    "campsPer100Chunks": 155.20833333333334,
+    "placesPer100Chunks": 9.375,
+    "longestAxialLandRunChunks": 16,
+    "unreachableWalkableTiles": 0,
+    "reachDefinition": "4-neighbour walkable components with no tile on the render boundary or beside omitted fixed ground; cropped paths leaving the view are treated as reachable. Cyan walkability-tree paths link boundary samples and markers; orange = isolated.",
+    "generationMs": 164.168,
+    "note": "Land shares and axial runs sample chunk centres. Rectangles include both endpoints. Fixed authored chunks are grey hatching and excluded from tile/camp/place metrics. Entities white; sites magenta; lamp stones yellow; rumours orange; places red."
+  },
+  "changedUnits": 103687,
+  "changedShare": 0.9375632957175926,
+  "unit": "tiles",
+  "totalMs": 764.234,
+  "note": "Panels: A, B, changed. Tile changes compare ground ID, solidity, decor, entities, sites and places; atlas compares land and river crossing. Overlays do not affect the change mask."
+}

@@ -1,0 +1,35 @@
+{
+  "content": "content/wilds.json",
+  "contentSHA256": "3bc974bc027e31e32ffe7f7961329facdbe223c3f014940aa9e40497da5f145e",
+  "view": "chunk",
+  "seed": "map",
+  "epoch": "t:1795000000:1796209600",
+  "rect": [
+    -1,
+    -3,
+    -1,
+    -3
+  ],
+  "chunkSize": 24,
+  "chunks": 1,
+  "generatedChunks": 1,
+  "fixedChunks": 0,
+  "landShareByChunkCentre": {
+    "woods": 1
+  },
+  "groundShare": {
+    "moss": 0.057291666666666664,
+    "path": 0.12152777777777778,
+    "trodden": 0.036458333333333336,
+    "verge": 0.19444444444444445,
+    "woods": 0.5902777777777778
+  },
+  "solidShare": 0.5902777777777778,
+  "campsPer100Chunks": 100,
+  "placesPer100Chunks": 0,
+  "longestAxialLandRunChunks": 1,
+  "unreachableWalkableTiles": 0,
+  "reachDefinition": "4-neighbour walkable components with no tile on the render boundary or beside omitted fixed ground; cropped paths leaving the view are treated as reachable. Cyan walkability-tree paths link boundary samples and markers; orange = isolated.",
+  "generationMs": 6.962,
+  "note": "Land shares and axial runs sample chunk centres. Rectangles include both endpoints. Fixed authored chunks are grey hatching and excluded from tile/camp/place metrics. Entities white; sites magenta; lamp stones yellow; rumours orange; places red."
+}

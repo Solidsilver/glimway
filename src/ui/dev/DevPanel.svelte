@@ -11,6 +11,7 @@
   import { devGrant, type GrantRequest } from './dev-grant'
   import { CLOCK_STEPS, devClockAdvance } from './dev-clock'
   import { loadTimingsText } from '../loading.svelte'
+  import LabSection from '../../game/height-lab/LabSection.svelte'
 
   // Dev mode: give this account Glimway's own things through the dev
   // server's grant route, and move the server's clock. Only builds with dev
@@ -112,6 +113,7 @@
       {/each}
     </ul>
   {/if}
+  <LabSection />
   <!-- The last loads, stage by stage (src/lib/load-timings.ts); the Menu copies the same text. -->
   <section class="timings" data-testid="dev-load-timings">
     <h3 class="section-title"><Icon name="clock" size={14} /> Load timings</h3>

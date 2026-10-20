@@ -75,23 +75,27 @@ func landIndex(id string) int {
 // landGrounds are one land's grounds, resolved.
 type landGrounds struct{ floor, open, verge, path, trodden Ground }
 
-var landGround = func() []landGrounds {
+var landGround = loadLandGround()
+
+func loadLandGround() []landGrounds {
 	var out []landGrounds
 	for _, l := range contentRules().Lands {
 		g := l.GetGround()
 		out = append(out, landGrounds{groundID(g.GetFloor()), groundID(g.GetOpen()), groundID(g.GetVerge()), groundID(g.GetPath()), groundID(g.GetTrodden())})
 	}
 	return out
-}()
+}
 
 // groundSurface is each ground's surface (land, water, ford, road, laid).
-var groundSurface = func() []string {
+var groundSurface = loadGroundSurface()
+
+func loadGroundSurface() []string {
 	var out []string
 	for _, g := range contentRules().Grounds {
 		out = append(out, g.GetSurface())
 	}
 	return out
-}()
+}
 
 // The river's and road's grounds.
 var (

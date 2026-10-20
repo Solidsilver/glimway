@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import type { Browser, BrowserContext } from '@playwright/test'
-import { allow, CONTRACT, newUser, openTitleGuide, pasteAndConnect, PLACE_REPORTED_MS, reenter, routeHabitica, serverState, setHabitica, syncFromMenu, waitForWorld } from './connected'
-import { exitTo, frames, holdUntil, inCommons, parkCreatures, player, waitForWilds, waitGame, warp, wildsWindow, windowWhole } from './helpers'
+import { allow, CONTRACT, newUser, openTitleGuide, pasteAndConnect, pinWorld, PLACE_REPORTED_MS, reenter, routeHabitica, serverState, setHabitica, syncFromMenu, waitForWorld } from './connected'
+import { exitTo, frames, holdUntil, inCommons, parkCreatures, player, waitForWilds, waitGame, warp, wilds, wildsWindow, windowWhole } from './helpers'
 import { setHour } from './room-helpers'
 import { go, goLot, homes, throughGate } from './home-helpers'
 
@@ -21,6 +21,7 @@ const MOUTH_Y = 24 * TILE
 /** The arch (anchor `hearthwick:arch`), and just inside the Tangle's gate. */
 const ARCH = { tx: 2, ty: 26 }
 const GATE_IN = { tx: 2, ty: 22 }
+const SEAM_SEED = 'e2e-seam-32'
 
 type Hero = { x: number; y: number }
 const hero = (page: Page): Promise<Hero> => player(page)
@@ -135,8 +136,15 @@ test('two players see each other across the mouth', async ({ page, browser, base
 
 test('a Tangle wisp never steps past the mouth onto the Commons', async ({ page, context }) => {
   await connected(page, context)
+  // Pinned (the Tangle is still land, the same on every run): camp:0:0:0 is a
+  // wisp at world tile (3,16), six tiles in from the gate. Since a chunk asks
+  // for at most one camp, an unpinned gate chunk often has none to watch.
+  await pinWorld(page, SEAM_SEED)
   // Wake the gate's camps from just inside the Tangle, then step back onto the Commons and watch.
   await warp(page, 'outdoors', GATE_IN.tx, GATE_IN.ty)
+  await waitForWilds(page)
+  const camp = (await wilds(page)).entities.find((e) => e.id === 'camp:0:0:0')
+  expect(camp?.enemies, `the gate's camp (seed ${SEAM_SEED})`).toEqual(['wisp'])
   await frames(page, 30)
   await walkTo(page, 'ArrowDown', MOUTH_Y + 3 * TILE)
   expect(await inCommons(page)).toBe(true)
