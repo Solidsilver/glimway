@@ -121,13 +121,40 @@ func weighted(rng *Rng, weights []int) int {
 	return len(weights) - 1
 }
 
-// FrontierRect bounds the union of reach around generated and fixed places.
-// InsideReach is the membership test; the union has clipped outer corners.
-func FrontierRect() (minCx, minCy, maxCx, maxCy int) {
-	r := int(contentRules().GetFrontier().GetReach())
+// The world border (content wilds.border, 0.14): every chunk with |cx| and
+// |cy| at most BorderChunks exists; nothing past it does. One rule for every
+// read, move and save, the client's insideBorder its twin
+// (src/lib/wilds/coords.ts).
+func BorderChunks() int { return int(contentRules().GetBorder().GetChunks()) }
+
+// InsideBorder: chunk (cx, cy) is inside the world border.
+func InsideBorder(cx, cy int) bool {
+	b := BorderChunks()
+	return cx >= -b && cx <= b && cy >= -b && cy <= b
+}
+
+// BorderRect is the border's chunks, inclusive.
+func BorderRect() (minCx, minCy, maxCx, maxCy int) {
+	b := BorderChunks()
+	return -b, -b, b, b
+}
+
+// Home is the land round the footprints that the hand-shaped features near
+// Hearthwick are laid in: the Wend's course, and the places the rumour picks
+// from. It is the 0.8 frontier's old shape (homeReach chunks round every
+// footprint, no further south than homeSouth), and limits nothing else:
+// generation, reads and walking go on past it to the border.
+const (
+	homeReach = 3
+	homeSouth = 7
+)
+
+// homeRect bounds home; insideHome is its membership (the union has
+// clipped outer corners).
+func homeRect() (minCx, minCy, maxCx, maxCy int) {
 	first := true
 	add := func(x0, y0, x1, y1 int) {
-		x0, y0, x1, y1 = x0-r, y0-r, x1+r, y1+r
+		x0, y0, x1, y1 = x0-homeReach, y0-homeReach, x1+homeReach, y1+homeReach
 		if first {
 			minCx, minCy, maxCx, maxCy = x0, y0, x1, y1
 			first = false
@@ -141,15 +168,10 @@ func FrontierRect() (minCx, minCy, maxCx, maxCy int) {
 	for _, p := range content.PlacesRules.GetFixed() {
 		add(content.FixedChunks(p))
 	}
-	return minCx, minCy, maxCx, min(maxCy, int(contentRules().GetFrontier().GetSouthLimit()))
+	return minCx, minCy, maxCx, min(maxCy, homeSouth)
 }
-func frontierChunks() (int, int, int, int) { return FrontierRect() }
 
-func InsideReach(cx, cy int) bool {
-	f := contentRules().GetFrontier()
-	return cy <= int(f.GetSouthLimit()) && NearestFootprint(cx, cy) <= int(f.GetReach())
-}
-func insideReach(cx, cy int) bool { return InsideReach(cx, cy) }
+func insideHome(cx, cy int) bool { return cy <= homeSouth && NearestFootprint(cx, cy) <= homeReach }
 
 func fixedBox(p *content.FixedPlace) box {
 	S := chunkSize()
@@ -193,3 +215,8 @@ func openingMiddle(o *content.WildsOpening) (int, int) {
 		return x0 + S - 1, y0 + mid
 	}
 }
+
+// HomeRect and InsideHome are home for the fake generator (chunks/fakegen),
+// which lays its rumour cells there as this one does.
+func HomeRect() (int, int, int, int) { return homeRect() }
+func InsideHome(cx, cy int) bool     { return insideHome(cx, cy) }

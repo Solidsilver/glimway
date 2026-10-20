@@ -60,13 +60,26 @@ func (e Epoch) hash(parts ...any) uint32 {
 }
 
 // landform hashes a pass of the macro landform (the land cells and their
-// sizes, the warp of their borders, the Wend's course and width): the
-// world seed, the generator version and the pass, without the season or
-// the kind, so the still epoch and every wick epoch of a world lie on the
-// same lands and the same river (lasting geography, roadmap "Land: the
-// three tiers"; overturns open-map decision 18).
+// sizes, the warp of their borders, the Wend's course and width, the
+// Lantern Road): see landformHash. Without the season or the kind, the
+// still epoch and every wick epoch of a world lie on the same lands and the
+// same river (lasting geography, roadmap "Land: the three tiers"; overturns
+// open-map decision 18).
 func (e Epoch) landform(pass string, parts ...any) uint32 {
-	return Hash(append([]any{e.WorldSeed, e.GeneratorVersion, "landform", pass}, parts...)...)
+	return landformHash(e.WorldSeed, pass, parts...)
+}
+
+// LandformV1 is the lasting landform's own version (0.14). The landform
+// hashes it, never GeneratorVersion, so a new generator version (living
+// detail: the cells' places, routes, decor and entities, which turn every
+// wick anyway) leaves every river and ridge where it was. It is frozen at
+// 1: a landform that must change gets a new version beside this one,
+// chosen only for land nobody has seen.
+const LandformV1 = 1
+
+// landformHash is the hash of a lasting landform pass of a world.
+func landformHash(worldSeed, pass string, parts ...any) uint32 {
+	return Hash(append([]any{worldSeed, LandformV1, "landform", pass}, parts...)...)
 }
 
 // check refuses an epoch this code can't make.

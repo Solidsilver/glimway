@@ -4,9 +4,9 @@ import "glimway/content"
 
 // Pass 3, the Wend (open-map.md 2.2, decisions 2, 12 and 17). One river per
 // world, the same every wick (lasting geography): a seeded polyline that
-// enters the 0.8 frontier from one of river.enters (north or west), bends
-// through the west, and leaves at the south limit's row no further east
-// than river.leavesMaxCx, toward the mill. It never comes into the Tangle
+// enters home (world_v3.go) from one of river.enters (north or west), bends
+// through the west, and leaves home's south row no further east than
+// river.leavesMaxCx, toward the mill, then runs on south a while. It never comes into the Tangle
 // (it keeps a margin from it), and north of the Tangle it may run at most
 // in the Whitequiet's west column (which keeps it west of the Lantern Road
 // too). Water is minWidth to maxWidth tiles wide, varying smoothly; a bank
@@ -22,6 +22,9 @@ const (
 	// then stay clear of the seams' feather (seams.go).
 	riverMargin = 10
 	bankWidth   = 3 * fp / 2
+	// The Wend runs on this many chunks south past home, in steps.
+	wendTailChunks = 30
+	wendTailStep   = 6
 )
 
 type river struct {
@@ -72,14 +75,14 @@ func newRiver(w *world) *river {
 	data := contentRules().GetRiver()
 	S := chunkSize()
 	rng := NewRng(w.e.landform("wend"))
-	minCx, minCy, _, maxCy := frontierChunks()
+	minCx, minCy, _, maxCy := homeRect()
 	X0, Y0, Y1 := minCx*S, minCy*S, (maxCy+1)*S-1
 	bounds := newRiverBounds()
-	// The northern reach is narrower than the town/lots reach. Enter through
+	// Home's north is narrower than its town/lots part. Enter through
 	// its actual west edge, while leaving two chunks west of the lots.
-	northWest := int(contentRules().Places[0].GetCx()) - int(contentRules().GetFrontier().GetReach())
+	northWest := int(contentRules().Places[0].GetCx()) - homeReach
 	for _, p := range contentRules().Places {
-		northWest = min(northWest, int(p.GetCx())-int(contentRules().GetFrontier().GetReach()))
+		northWest = min(northWest, int(p.GetCx())-homeReach)
 	}
 	entryX := northWest * S
 	at := func(x, y int) pt { return tileCentre(x, y) }
@@ -105,8 +108,8 @@ func newRiver(w *world) *river {
 	lo, hi := int(data.GetMinWidth()), int(data.GetMaxWidth())
 	mid := at(rng.Between(X0+S, max(bounds.east(ym)-12, X0+S)), ym)
 
-	// Inside the frontier it stays east of its west edge too, so the land
-	// west of it is never a strip reached only from outside.
+	// At home it stays east of home's west edge too, so the land
+	// west of it is never a strip reached only from outside home.
 	west := X0 + S/2 + (hi+1)/2
 	fix := func(inside bool) func(pt) pt {
 		return func(p pt) pt {
@@ -115,7 +118,7 @@ func newRiver(w *world) *river {
 				p.x = tileCentre(e, y).x
 			}
 			westAt := west
-			if y < bounds.fixedTop-int(contentRules().GetFrontier().GetReach())*S {
+			if y < bounds.fixedTop-homeReach*S {
 				westAt = max(westAt, entryX+S/2+(hi+1)/2)
 			}
 			if inside && x < westAt {
@@ -132,6 +135,15 @@ func newRiver(w *world) *river {
 			piece = piece[1:]
 		}
 		pts = append(pts, piece...)
+	}
+	// Past home it runs on south, wandering, for wendTailChunks, and ends
+	// there for now: rivers of their own come with the far regions (0.14).
+	tail := NewRng(w.e.landform("wend-tail"))
+	for from, i := end, 0; i < wendTailChunks/wendTailStep; i++ {
+		x, y := from.tile()
+		next := at(clamp(x+tail.Spread(S), X0+S, bounds.east(y)-8), y+wendTailStep*S)
+		pts = append(pts, displace(from, next, 3, 220, tail, fix(false))[1:]...)
+		from = next
 	}
 	// Width wanders smoothly along the river.
 	n := noise{w.e.landform("wend-width")}
