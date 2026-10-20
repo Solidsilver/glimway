@@ -205,7 +205,7 @@ export function fits(stack: Stack, w: Walker, x: number, y: number): number {
   if (nx !== cx || ny !== cy) {
     const d = dirTo(cx, cy, nx, ny)
     if (d < 0) return -1
-    layer = step(stack, layer, cx, cy, d)
+    layer = step(stack, layer, cx, cy, d as Dir)
     if (layer < 0) return -1
   }
   if (!walkable(stack.layers[layer]!, nx, ny)) return -1
@@ -218,7 +218,7 @@ export function fits(stack: Stack, w: Walker, x: number, y: number): number {
       if (tx === nx && ty === ny) continue
       const d = dirTo(nx, ny, tx, ty)
       if (d >= 0) {
-        if (step(stack, layer, nx, ny, d) < 0) return -1
+        if (step(stack, layer, nx, ny, d as Dir) < 0) return -1
         continue
       }
       // A corner: through the side tile in x, or the one in y.

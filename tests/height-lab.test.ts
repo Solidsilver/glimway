@@ -9,7 +9,7 @@ const area = buildLabArea();
 const { stack } = area;
 const surface = stack.layers[SURFACE]!;
 const cave = stack.layers[CAVE]!;
-const at = (l: typeof surface, tx: number, ty: number) => ty * LAB_W + tx;
+const at = (_l: typeof surface, tx: number, ty: number) => ty * LAB_W + tx;
 const walker = (layer: number, tx: number, ty: number): Walker => ({ x: tx * TILE_PX + 8, y: ty * TILE_PX + 10, layer, hw: 5, fh: 4 });
 
 test('every leg of the remote player’s loop can be walked', () => {
