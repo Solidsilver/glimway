@@ -303,7 +303,7 @@ test('the drift past the world border stops you, and says so the first time', as
   await waitForLive(page)
   await page.keyboard.down('ArrowUp')
   try {
-    await expectToast(page, /The land fades to white here, and goes no further\./, { timeout: 8_000 })
+    await expectToast(page, /The land goes no further\./, { timeout: 8_000 })
   } finally {
     await page.keyboard.up('ArrowUp')
   }

@@ -86,7 +86,7 @@ export const MAP_LABELS = {
   retry: 'Try again',
   you: 'You',
   gate: 'Commons gate',
-  border: 'The edge of the world',
+  border: 'The world’s edge',
   road: 'The Lantern Road',
   cutStone: 'The lamp stone with words cut in its side',
   river: 'The Wend',
