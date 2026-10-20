@@ -50,7 +50,7 @@ import {
   type Node,
   type Stack
 } from './levels.ts'
-import { DAYLIGHT, LIGHT_RES, caveAmbient, caveLevels, caveStops, crystalLight, daylight, type Glow } from './light.ts'
+import { DAYLIGHT, LIGHT_RES, caveAmbient, caveLevels, caveStops, crystalLight, daylight, openAir, type Glow } from './light.ts'
 import { Lighting } from './lighting.ts'
 
 export { CAVE, SURFACE }
@@ -107,18 +107,21 @@ export interface LabArea {
   walk: Float32Array
   /** The cave layer's ambient light per tile (r, g, b), what stops light, and floor levels (./light.ts). */
   ambient: Float32Array
+  /** Open air per tile, 0–1: the land seen out of the mouths (./light.ts openAir). */
+  air: Float32Array
   stops: Uint8Array
   levels: Int8Array
 }
 
 /** An area as authored: everything but what's worked out from it (light). */
-export type AreaPlan = Omit<LabArea, 'walk' | 'ambient' | 'stops' | 'levels'>
+export type AreaPlan = Omit<LabArea, 'walk' | 'ambient' | 'air' | 'stops' | 'levels'>
 
 /** Work out an authored area's light: daylight from its mouths, open air, what stops light. */
 export function lightArea(plan: AreaPlan, opts: AreaOptions): LabArea {
   const walk = daylight(plan.stack, opts.skyTiles)
   const cave = plan.stack.layers[CAVE]!
-  return { ...plan, walk, ambient: caveAmbient(plan.stack, plan.top), stops: caveStops(cave), levels: caveLevels(cave) }
+  const air = openAir(plan.stack, plan.top)
+  return { ...plan, walk, ambient: caveAmbient(plan.stack, air), air, stops: caveStops(cave), levels: caveLevels(cave) }
 }
 
 /** The area's lighting (./lighting.ts): daylight on the surface; the cave's ambient, rock and crystals below. */

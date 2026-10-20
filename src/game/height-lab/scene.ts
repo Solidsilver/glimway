@@ -620,6 +620,8 @@ class LightView {
     lights.fill({ x0, y0, w: tex.width, h: tex.height }, this.data!.data, views)
     tex.context.putImageData(this.data!, 0, 0)
     tex.refresh()
+    // An upload resets the filter to the game's (pixel art: nearest).
+    tex.setFilter(Phaser.Textures.FilterMode.LINEAR)
     this.img.setPosition(x0 * R, y0 * R).setVisible(true)
   }
 

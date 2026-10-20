@@ -135,33 +135,42 @@ function spreadToWalls(l: Layer, field: Float32Array, dist: Int32Array): void {
 }
 
 /**
- * Open air: the surface in front of each mouth, and everything at or
- * below it that joins it without climbing. Where the cave layer has
- * nothing there, you look out of the cave at daylit land.
+ * Open air, 0–1 a tile: the land you see out of a cave's mouths. From each
+ * mouth, the surface at or below its foot that joins it without climbing,
+ * full out to OPEN_AIR.full walked tiles and gone OPEN_AIR.fade further on
+ * (so the land over a cave's far rooms, beyond the rim, isn't sunny from
+ * inside). A cliff face takes the open air of the land at its foot. Where
+ * the cave layer has nothing, you see this land, daylit.
  */
-export function openAir(stack: Stack, top: Int8Array): Uint8Array {
+export const OPEN_AIR = { full: 16, fade: 6 } as const
+
+export function openAir(stack: Stack, top: Int8Array): Float32Array {
   const size = stack.w * stack.h
-  const open = new Uint8Array(size)
+  const open = new Float32Array(size)
+  const reach = OPEN_AIR.full + OPEN_AIR.fade
   for (const [key, to] of stack.portals) {
     if (to !== CAVE) continue
     const t = key >> 2
     if (Math.floor(t / size) !== SURFACE) continue
     const start = t % size
     const level = top[start]!
-    if (open[start]) continue
+    const dist = new Map<number, number>([[start, 0]])
     const queue = [start]
-    open[start] = 1
     for (let q = 0; q < queue.length; q++) {
       const i = queue[q]!
+      const d = dist.get(i)!
+      const k = d <= OPEN_AIR.full ? 1 : 1 - (d - OPEN_AIR.full) / OPEN_AIR.fade
+      open[i] = Math.max(open[i]!, k * k * (3 - 2 * k))
+      if (d >= reach) continue
       const tx = i % stack.w
       const ty = Math.floor(i / stack.w)
-      for (let d = 0; d < 4; d++) {
-        const x = tx + DX[d]
-        const y = ty + DY[d]
+      for (let dir = 0; dir < 4; dir++) {
+        const x = tx + DX[dir]
+        const y = ty + DY[dir]
         if (x < 0 || y < 0 || x >= stack.w || y >= stack.h) continue
         const j = y * stack.w + x
-        if (open[j] || top[j]! > level) continue
-        open[j] = 1
+        if (dist.has(j) || top[j]! > level) continue
+        dist.set(j, d + 1)
         queue.push(j)
       }
     }
@@ -171,10 +180,10 @@ export function openAir(stack: Stack, top: Int8Array): Uint8Array {
   const surface = stack.layers[SURFACE]!
   const isFace = (i: number) => surface.kind[i] === KIND.face || surface.kind[i] === KIND.mouth
   for (let i = 0; i < size; i++) {
-    if (open[i] || !isFace(i)) continue
+    if (!isFace(i)) continue
     let j = i
     while (j + stack.w < size && isFace(j)) j += stack.w
-    if (open[j]) open[i] = 1
+    open[i] = Math.max(open[i]!, open[j]!)
   }
   return open
 }
@@ -190,17 +199,16 @@ export function caveStops(l: Layer): Uint8Array {
 }
 
 /** The cave layer's ambient per tile (r, g, b): cave dark plus daylight from the mouths; open air lit; the hill over you, none. */
-export function caveAmbient(stack: Stack, top: Int8Array): Float32Array {
+export function caveAmbient(stack: Stack, air: Float32Array): Float32Array {
   const cave = stack.layers[CAVE]!
-  const air = openAir(stack, top)
   const size = stack.w * stack.h
   const out = new Float32Array(size * 3)
   for (let i = 0; i < size; i++) {
     for (let c = 0; c < 3; c++) {
       let v: number
       // Nothing, or the cave's rock where it lies behind a sunny cliff
-      // face (the rock round an arch): what shows there is the open air's.
-      if (cave.kind[i] === KIND.none || (cave.kind[i] === KIND.rock && air[i])) v = air[i] ? DAYLIGHT[c]! : 0
+      // face (the rock round an arch, not painted): the open air's light.
+      if (cave.kind[i] === KIND.none || (cave.kind[i] === KIND.rock && air[i]! > 0)) v = air[i]! * DAYLIGHT[c]!
       else v = CAVE_AMBIENT[c]! + cave.sky[i]! * DAYLIGHT[c]!
       out[i * 3 + c] = Math.min(1, v)
     }

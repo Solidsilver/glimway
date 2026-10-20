@@ -295,11 +295,16 @@ export const FACE_TINT: Record<number, number> = { 1: 0xf0dcc0, 2: 0xc4c8d2, 3: 
 // ---------------------------------------------------------------- the cave
 
 /**
- * The cave layer's ground: a stone floor (lit near the mouths, a little
- * cooler on deeper floors), rock round it with a face where it stands over
- * the floor, drops between floors, still black water. Cut into one image a
- * floor level, like the surface, so a level can fade with its depth.
+ * The cave layer's ground: a stone floor (a little cooler on deeper
+ * floors), rock round it with a face where it stands over the floor, drops
+ * between floors, still black water. Cut into one image a floor level, like
+ * the surface, so a level can fade with its depth. Painted as it looks in
+ * full light: the light (./lighting.ts) darkens it. Rock that lies over a
+ * sunny cliff face (round an arch) isn't painted: you see the face.
  */
+/** The cave's colours in full light (they were painted dark for the old dimmer). */
+const ALBEDO = 1.45
+
 export function paintCave(scene: Phaser.Scene, area: LabArea): LevelImage[] {
   const l = area.stack.layers[CAVE]!
   let x0 = l.w
@@ -331,10 +336,9 @@ export function paintCave(scene: Phaser.Scene, area: LabArea): LevelImage[] {
     for (let tx = x0; tx <= x1; tx++) {
       const i = ty * l.w + tx
       const k = l.kind[i]
-      if (k === KIND.none) continue
+      if (k === KIND.none || (k === KIND.rock && area.air[i]! > 0)) continue
       const faceBelow = k === KIND.rock && floorish(kindAt(tx, ty + 1))
       const fade = k === KIND.rock ? [255, 255, 255, 150, 0][reach(tx, ty)]! : 255
-      const sky = l.sky[i]!
       // Deeper floors are a little darker and cooler.
       const deep = Math.max(0, -lvl[i]! - 1) * 0.07
       for (let y = 0; y < T; y++)
@@ -351,8 +355,6 @@ export function paintCave(scene: Phaser.Scene, area: LabArea): LevelImage[] {
             const c = joint ? base * 0.7 : base
             rgb = [c * 0.92, c * 0.9, c * 1.05]
             if (k === KIND.slope && wy % 4 === 0) rgb = rgb.map((ch) => ch * 0.85) as RGB
-            // Daylight near a mouth warms and lifts the floor.
-            if (sky > 0) rgb = [mix(rgb[0], 150, sky * 0.5), mix(rgb[1], 140, sky * 0.5), mix(rgb[2], 118, sky * 0.5)]
             // Shadow at the foot of a rock wall or a drop above.
             const n = kindAt(tx, ty - 1)
             if ((n === KIND.rock || n === KIND.face) && y < 5) rgb = rgb.map((ch) => ch * (0.55 + y * 0.09)) as RGB
@@ -375,6 +377,7 @@ export function paintCave(scene: Phaser.Scene, area: LabArea): LevelImage[] {
             const c = 26 + hash(wx >> 2, wy >> 2, 15) * 10 + (hash(wx, wy, 16) - 0.5) * 6
             rgb = [c, c * 0.92, c * 1.1]
           }
+          if (k !== KIND.water) rgb = rgb.map((ch) => ch * ALBEDO) as RGB
           if (deep) rgb = [rgb[0] * (1 - deep), rgb[1] * (1 - deep * 0.8), rgb[2] * (1 - deep * 0.4)]
           const o = (((ty - y0) * T + y) * w + (tx - x0) * T + x) * 4
           px[o] = rgb[0]

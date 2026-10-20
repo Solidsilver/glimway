@@ -123,9 +123,11 @@ test('the sunny surface stays lit in the cave’s view: the valley and the cliff
   for (const [a, rows, faces] of [[area, [40, 71], [37, 39]], [mtn, [74, 95], [71, 73]]] as const) {
     const l = areaLighting(a);
     const s = a.stack.layers[SURFACE]!;
+    // Near a mouth (as far as a view from inside reaches): fully lit.
+    const near = (tx: number, ty: number) => a.mouths.some((m) => Math.abs(tx - m.x0) + Math.abs(ty - (m.arch[1] + 1)) <= 14);
     for (let ty = rows[0]; ty <= rows[1]; ty++)
       for (let tx = 0; tx < a.stack.w; tx++) {
-        if (a.stack.layers[CAVE]!.kind[ty * a.stack.w + tx] !== KIND.none) continue;
+        if (a.stack.layers[CAVE]!.kind[ty * a.stack.w + tx] !== KIND.none || !near(tx, ty)) continue;
         const p = px(tx, ty);
         assert.ok(l.level(CAVE, p.x, p.y) > 0.99, `${a.name}: open valley at ${tx},${ty} is lit (${l.level(CAVE, p.x, p.y)})`);
       }
@@ -134,7 +136,8 @@ test('the sunny surface stays lit in the cave’s view: the valley and the cliff
     for (let ty = faces[0]; ty <= faces[1]; ty++)
       for (let tx = 0; tx < a.stack.w; tx++) {
         const i = ty * a.stack.w + tx;
-        if (s.kind[i] !== KIND.face || a.stack.layers[CAVE]!.kind[i] !== KIND.none) continue;
+        const ck = a.stack.layers[CAVE]!.kind[i];
+        if (s.kind[i] !== KIND.face || !near(tx, faces[1] + 1) || ck === KIND.flat || ck === KIND.slope) continue;
         // A face is open only if the land at its foot is.
         let j = i;
         while (s.kind[j] === KIND.face) j += a.stack.w;
@@ -145,6 +148,8 @@ test('the sunny surface stays lit in the cave’s view: the valley and the cliff
       }
     assert.ok(faceTiles > 10, `${a.name}: faces checked (${faceTiles})`);
   }
+  // The plateau beyond the shoulder chamber's rim, far from both mouths, isn't sunny from inside.
+  assert.ok(lit.level(CAVE, px(14, 30).x, px(14, 30).y) < 0.05, 'the land over the cave, far from a mouth, is dark from inside');
 });
 
 test('the light lines up with the world: a light is brightest at itself, and fill() is at()', () => {
