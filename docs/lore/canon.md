@@ -97,19 +97,36 @@ The chronicle's "slow drift" (paths wandering a few feet a season) is history, n
 it ended with the Two Storms (2.1). Today, between turnings, land stays put. Seasons change how
 the land looks and feels, not how fast it moves.
 
-### 2.4 The Whitequiet [shipped]
+### 2.4 The Whitequiet [shipped as a place; the biome later]
 
-The pale, silent land at the edge of what anyone holds. Inside its edge, land nobody has walked
-yet comes into view as you walk it. The edge itself cannot be walked through: only held land, a
-lit camp fed with oil or a lot's lit backland, pushes it back, and the edge draws in again when
-that light goes dark. Relighting a
-lamp stone or walking a path doesn't move it. The Whitequiet keeps what it is given: lost
-objects and impressions of people surface there as **trinkets** and **Echoes** (2.7).
+*Draft, 2026-10-20, written from the owner's own words with the ideas partner. The owner edits.*
 
-*In the game:* the frontier (reach is the static frontier plus slack around live holds), drawn
-as the veil; and the Whitequiet region north of the Tangle, past the Tangle crossing, which turns
-every wick. Player text calls the frontier "the Whitequiet's edge", not "the drift". The winter mark is called **Quiet**; "the White Quiet" as a name for winter or for the
-drift's preserving state is retired in favour of the Whitequiet.
+The pale, hushed country where the land has **stopped trying**. In the green Wilds the weekly
+Turning is the hurting earth still trying: each wick it reaches again for its trees, streams and
+seasons. In the Whitequiet it has given up that hard work. It forgets itself, and it forgets
+those who walk into it, which is why people so often get lost there. It is a sad place: part of
+the earth that has given up.
+
+It is where the Unyoking's curse came nearest to winning. Fallbrine wanted a world with no need
+for work (2.2), and the Whitequiet is that world: nothing is tended, nothing is mended, and
+nothing asks to be. It lulls whoever enters toward a dreamy, sleepy end. The land is not angry;
+it has been overcome. Waking any of it again takes more than a lamp: an old memory to start
+from, stronger light, and living work brought in from the waking woods *[later]*.
+
+What it hasn't forgotten stands out. The **trinkets** and **Echoes** that surface there (2.7)
+are the last stubborn sparks of human care and unfinished work, warm against the pale grass,
+because they still remember who they belong to.
+
+The Whitequiet is one land among many, not the edge of the world. The world does have an edge,
+very far off, where the land simply goes no further; it has no story.
+
+*In the game:* today, the Whitequiet region north of the Tangle, past the Tangle crossing, which
+turns every wick. *[later, 0.14]* a land of its own: thick pale fog, faint paths that lead
+nowhere, losing your way once unmoored, hollows that hold Echoes, and no fights. Walking with a
+friend keeps you both from losing your way; falling asleep there costs a few glims and sends the
+outing's forage to Pell's crate. The world's border is "the world's edge" in player text. The
+winter mark is called **Quiet**; "the White Quiet" as a name for winter or for the drift's
+preserving state is retired in favour of the Whitequiet.
 
 ### 2.5 The Dark [later, mostly]
 
@@ -689,7 +706,7 @@ of the Measure (now the Unyoking); the Old Ways as the Dark's temptation (now th
 | the Dark, the Draught | "the Draught" only in Keepers' writing |
 | fret, frets | Lower case |
 | unmoored | Lower case, for players and beasts |
-| the Whitequiet, the Whitequiet's edge | One word, always. The frontier is "the Whitequiet's edge" in player text, never "the drift" |
+| the Whitequiet | One word, always. A land of its own, never an edge. The world's border is "the world's edge" in player text, never "the drift" or "the Whitequiet's edge" |
 | the Tangle, the Tangle crossing, Dorrit's Span | |
 | the Commons | The name players see. "The Carters' Apron" only in old carters' speech and old texts |
 | the north arch | Lower case in prose; "the Tangle Arch" is the same arch |
