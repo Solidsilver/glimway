@@ -9,6 +9,12 @@
 const PREFIX = 'glimway-walked:'
 /** Wicks kept on the device (older ones are dropped as new ones start). */
 const KEEP = 3
+/**
+ * Chunks kept walked a wick: the most recent. Each new chunk rewrites the
+ * record, so an endless walk would grow it (and the map's load) without
+ * end; this many is hours of riding.
+ */
+export const WALKED_MAX = 8192
 
 interface Walked {
   walked: string[]
@@ -73,6 +79,7 @@ export function markWalked(wick: string, chunk: string): void {
   const rec = read(wick)
   if (rec.walked.includes(chunk)) return
   rec.walked.push(chunk)
+  if (rec.walked.length > WALKED_MAX) rec.walked.splice(0, rec.walked.length - WALKED_MAX)
   write(wick, rec)
 }
 

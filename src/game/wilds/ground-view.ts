@@ -13,6 +13,12 @@ import { nearestOpen } from './window-plan.ts'
 import { TERRAIN, TILE } from '../../lib/tile.ts'
 import { loadWilds } from '../../lib/wilds/data.ts'
 
+/**
+ * Each chunk's ground with its changes, by chunk, oldest first: at most
+ * GROUND_CHUNKS (a long walk would keep every chunk it crossed); one let go
+ * is worked out again when read.
+ */
+const GROUND_CHUNKS = 256
 const cache = new Map<string, { base: ChunkTerrain; changes: readonly GroundChange[]; sig: string; effective: ChunkTerrain }>()
 
 /** The changes' signature: a chunk whose changes moved is repainted. */
@@ -31,7 +37,9 @@ export function effectiveChunk(cx: number, cy: number): ChunkTerrain | null {
   if (had && had.base === base && had.changes === changes) return had.effective
   const sig = changesSig(changes)
   const effective = had && had.base === base && had.sig === sig ? had.effective : effectiveTerrain(base, changes)
+  cache.delete(key)
   cache.set(key, { base, changes, sig, effective })
+  while (cache.size > GROUND_CHUNKS) cache.delete(cache.keys().next().value!)
   return effective
 }
 

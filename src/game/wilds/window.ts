@@ -60,8 +60,9 @@ import { paintTable } from './ground-table.ts'
 import { chunkOrigin } from './terrain.ts'
 import { fnv1a32 } from '../../lib/hash.ts'
 import { TILE } from '../../lib/tile.ts'
-import { chunkTerrain, insideNamedBorder, landRevision, loadWildsChunk, NEAR_MAX_AGE_MS, placeKey, refreshLand, refreshNear, wildsEpoch, wildsBorder, wildsView } from './store.ts'
+import { chunkEpoch, chunkTerrain, insideNamedBorder, landRevision, loadWildsChunk, NEAR_MAX_AGE_MS, placeKey, refreshLand, refreshNear, wildsEpoch, wildsBorder, wildsView } from './store.ts'
 import { markSeen, markWalked } from './walked.ts'
+import { pinAround, unpinChunks } from './chunks.ts'
 import { LandHere } from './land-here.ts'
 import { perfSpan, perfTime, perfWithout } from '../perf.ts'
 import { addAll, destroyAll, destroyStatics, enableStatics, looseImage } from '../area/bulk.ts'
@@ -143,6 +144,9 @@ function fixedMark(): string | null {
 
 /** Paint timings (ms), newest last, for the playtest hooks and the budget report. */
 const PAINT_LOG_MAX = 64
+/** How far round the hero's chunk the cache keeps chunks pinned: the 3×3, the slack it keeps and the paint's neighbours. */
+const PIN_CHUNKS = 3
+
 /** How long a frame spends building attached chunks (ms; open-map.md 4's budget is 8 for all the window's work). */
 const BUILD_MS = 4
 
@@ -420,6 +424,8 @@ export class WildsWindow {
     const session = this.deps.session
     const wick = wildsEpoch('wick').id
     if (insideNamedBorder(cx, cy) && wick) markWalked(wick, chunkKey(cx, cy))
+    // The window and the neighbours its paint reads stay in memory (./chunks.ts).
+    pinAround(cx, cy, PIN_CHUNKS)
     // Drift the reach has grown over (a camp set) goes now: the land is attached in its place.
     for (const [key, d] of this.drifts) if (plan.attach.includes(key)) {
       d.destroy()
@@ -831,6 +837,12 @@ export class WildsWindow {
       const sig = this.sigOf(cx, cy)
       if (c.sig === sig) continue
       const t = effectiveChunk(cx, cy)
+      // Let go from memory in the same epoch is not a change: the chunk
+      // stands, and its body is read again.
+      if (!t && chunkEpoch(cx, cy)?.id === c.terrain.epochId) {
+        this.load(key)
+        continue
+      }
       const sameEpoch = !!t && t.epochId === c.terrain.epochId
       // A tile changed on the edge: the chunk across it redraws its own edge tile's art.
       const beyond = (tx: number, ty: number) => this.attached.get(chunkKey(Math.floor(tx / CHUNK_TILES), Math.floor(ty / CHUNK_TILES)))?.relay(tx, ty)
@@ -929,6 +941,7 @@ export class WildsWindow {
   private destroy(): void {
     if (this.gone) return
     this.gone = true
+    unpinChunks()
     this.landHere.clear()
     bus.off(EV.fixedReady, this.onFixedReady)
     this.release()

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { TERRAIN } from '../src/lib/tile.ts';
 import { MAP_COLOURS, fitLabels, mapBounds, mapEdges, mapFrame, mapPicture, type MapInput } from '../src/lib/wilds/map-model.ts';
 import { mapChunkKeys } from '../src/game/wilds/map-data.ts';
-import { forgetWalked, markSeen, markWalked, seenAt, seenLandmarks, walkedChunks } from '../src/game/wilds/walked.ts';
+import { WALKED_MAX, forgetWalked, markSeen, markWalked, seenAt, seenLandmarks, walkedChunks } from '../src/game/wilds/walked.ts';
 import { displayArea, setWildsLand, areaInfo } from '../src/content/world.ts';
 
 const WINDOW = { minCx: -6, minCy: -8, maxCx: 4, maxCy: 7 };
@@ -182,4 +182,14 @@ test('a label wholly off screen (yours too) never pushes out one that shows', ()
   // A label partly on screen still counts.
   const edge = { kind: 'way' as const, text: 'A way on the edge', x: 2, y: 60 };
   assert.deepEqual(fitLabels([edge], 1, { w: 100, h: 100 }).map((l) => l.kind), ['way']);
+});
+
+test('a wick keeps the most recent WALKED_MAX chunks walked', () => {
+  forgetWalked();
+  for (let i = 0; i < WALKED_MAX + 10; i++) markWalked('wick-long', `${i}:0`);
+  const walked = walkedChunks('wick-long');
+  assert.equal(walked.length, WALKED_MAX);
+  assert.equal(walked[0], '10:0');
+  assert.equal(walked.at(-1), `${WALKED_MAX + 9}:0`);
+  forgetWalked();
 });

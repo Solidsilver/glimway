@@ -34,11 +34,31 @@ const chunkKey = (epochId: string, cx: number, cy: number) => `${PREFIX}${epochI
 /**
  * Decoded chunks, by key, oldest first. With the world open (0.14) a long
  * walk would fill it without end, so it keeps the MEMORY_CHUNKS used most
- * lately (a load that finds one moves it to the back); IndexedDB keeps the
- * rest of the wick.
+ * lately (a load that finds one moves it to the back) and those pinned
+ * under the scene (pinAround); IndexedDB keeps the rest of the wick.
  */
 export const MEMORY_CHUNKS = 1024;
 const memory = new Map<string, ChunkTerrain>();
+
+/**
+ * The chunks the scene stands on: the window round the hero and the
+ * neighbours its paint reads (pinAround). Eviction passes them by, however
+ * many others a long walk or the map loads (the scene reads its own with
+ * cachedTerrain every frame, which never refreshes an entry's age).
+ */
+let pinned: { minCx: number; minCy: number; maxCx: number; maxCy: number } | null = null;
+
+/** Pin the chunks within r of (cx, cy), of any epoch, in place of the last pinned. */
+export function pinAround(cx: number, cy: number, r: number): void {
+  pinned = { minCx: cx - r, minCy: cy - r, maxCx: cx + r, maxCy: cy + r };
+}
+
+/** Let the pinned chunks go (the scene ended). */
+export function unpinChunks(): void {
+  pinned = null;
+}
+
+const isPinned = (t: ChunkTerrain) => !!pinned && t.cx >= pinned.minCx && t.cx <= pinned.maxCx && t.cy >= pinned.minCy && t.cy <= pinned.maxCy;
 /** In-flight loads, so two callers share one fetch. */
 const loading = new Map<string, Promise<ChunkTerrain>>();
 /** Fixed chunks, whole, by key; and their in-flight loads. */
@@ -158,7 +178,13 @@ export async function pruneChunks(currentEpochs: readonly string[], fixedEpochs:
 function keep(key: string, terrain: ChunkTerrain): ChunkTerrain {
   memory.delete(key);
   memory.set(key, terrain);
-  while (memory.size > MEMORY_CHUNKS) memory.delete(memory.keys().next().value!);
+  // The oldest go first, never a pinned one (nor the one just kept).
+  if (memory.size > MEMORY_CHUNKS) {
+    for (const [k, t] of memory) {
+      if (memory.size <= MEMORY_CHUNKS) break;
+      if (k !== key && !isPinned(t)) memory.delete(k);
+    }
+  }
   return terrain;
 }
 
