@@ -40,9 +40,14 @@ changes level. Argon's build order is the base; Sol's cautions are folded in.*
 
 ## Later, for iteration 2
 
-- **Mouth direction:** Argon wants every mouth to face south (a notch on other flanks); Sol wants
-  mouths to have identity, bounds and orientation. Owner to decide when iteration 2 is briefed.
-- **Ramp length:** Argon would cap a generated ramp at one level with a landing between. Owner to
-  decide then.
+- **Mouth direction (owner, 2026-10-20):** mouths have identity, bounds and an orientation (Sol).
+  Built and planned caves face south, toward the camera, where the arch and stonework read.
+  Natural caves mostly face south, sometimes east or west (side-on art, rarer). Nothing opens
+  north: it would hide behind the hill. Where a north opening would go, natural caves use a
+  **sink**, a hole in flat ground or a slope with a rough ramp down, readable from any side.
+- **Ramp length (owner, 2026-10-20):** multi-level ramps are allowed (no one-level cap). Long
+  straight staircases and square spiral stairs fit built caves; natural caves may wander down for
+  a while, or split before reaching a larger room (if they reach one at all). Landings and bends
+  are still welcome where they help, but they aren't a rule.
 - Both responses' iteration 2 lists (bounded plans and halos, roof clearance, float light heights,
   chunk caches, visibility vs light vs access) feed that brief.
