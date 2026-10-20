@@ -89,6 +89,7 @@ export class HeightLabScene extends Phaser.Scene {
   private stillKey = ''
   private updateMs: number[] = []
   private buildMs = 0
+  private paintMs = 0
   private facing = 'down'
 
   constructor() {
@@ -148,12 +149,14 @@ export class HeightLabScene extends Phaser.Scene {
   // ---------------------------------------------------------------- build
 
   private buildGround(): void {
+    const t0 = performance.now()
     const end = perfSpan('lab:paint-surface')
     for (const li of paintSurface(this, this.area)) {
       const img = this.add.image(li.x, li.y, li.key).setOrigin(0).setDepth(BAND.ground + li.level)
       this.levelImages.push({ img, level: li.level })
     }
     end()
+    this.paintMs = performance.now() - t0
   }
 
   private addThing(t: Omit<Thing, 'twin'>, twin: boolean): Thing {
@@ -499,6 +502,6 @@ export class HeightLabScene extends Phaser.Scene {
     const v = this.view()
     const ms = this.updateMs.reduce((a, b) => a + b, 0) / Math.max(1, this.updateMs.length)
     const where = v.layer === CAVE ? `In the cave · daylight ${Math.round(v.sky * 100)}%` : `Surface · level ${v.z.toFixed(2)}`
-    this.hud.textContent = `Height lab — ${where}\nlab update ${ms.toFixed(2)} ms · ${this.children.length} objects · built in ${Math.round(this.buildMs)} ms`
+    this.hud.textContent = `Height lab — ${where}\nlab update ${ms.toFixed(2)} ms · ${this.children.length} objects · built in ${Math.round(this.buildMs)} ms (ground ${Math.round(this.paintMs)})`
   }
 }
