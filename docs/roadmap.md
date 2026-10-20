@@ -98,7 +98,9 @@ Owner's calls (2026-10-20), made so the shape of the world is settled before the
   is climbing a mountain and walking into a cave or a large opening below ground with no
   transition. Looks to try: a cave fades everything around you to black; a mountain fades the land
   below to fog or sky. The height stays sparse (see [ideas.md](ideas.md)).
-- **New biomes**, iterated on and refined over several rounds. An emptier world is fine for now:
+- **New biomes**, iterated on and refined over several rounds, **lake country among the first**
+  (moved here from 0.17). The biome layer leaves room for many more; which ones comes from its own
+  brainstorm once these first biomes land. An emptier world is fine for now:
   later content releases add points of interest and hand-made places.
 - The owner wants to iterate on world generation itself, so a fast way to see what the generator
   makes is part of the work.
@@ -141,7 +143,7 @@ Scope and slicing come from a brainstorm and a height-and-caves spike
 
 **Promise:** a complete new place: shores to fish, clay to fire, and shallow caves to explore.
 
-*2026-10-20:* lake generation and the first caves may arrive with 0.14's biomes and caves; what
+*2026-10-20:* lake country as a biome moves to 0.14, and the first caves arrive with it; what
 stays here (fishing, the kiln, delves) is settled after the 0.14 brainstorm.
 
 - Lake country generation on the lasting landform; wild fishing (`design/fishing.md`); Aldo's kiln
