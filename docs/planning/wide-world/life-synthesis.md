@@ -48,3 +48,15 @@
 - **Iteration 4 (below):** cave life.
 - **Iteration 5:** the Whitequiet's life, danger on the map, the lamp reaction, tuning walks.
 - **Later, a creatures release:** herds that roam, bats, predators, taming, mounts, day and night.
+
+## Owner's answers (2026-10-20)
+
+1. **Far danger: a mix.** Danger rises with distance from people (town, held camps, lit lamps),
+   and also climbs slowly with distance from home in wide bands, so the far reaches bite harder.
+   A far camp makes its area safer, but the deep wilds stay deep.
+2. **Clearing lasts until the turning.** A beaten territory stays quiet for the rest of the wick;
+   a few marked practice sites refill quickly for anyone who wants a fight.
+3. **The Whitequiet has no fights.** Its danger is getting unmoored and lost.
+4. **Lore: beetles are unmoored beasts** (beaten, the fever breaks and they flee) **and wisps are
+   things of the Dark** (they disperse). The owner writes the canon words.
+5. Animals run on the client from a shared clock while they're harmless (orchestrator's pick).
