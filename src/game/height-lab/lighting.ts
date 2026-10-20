@@ -259,17 +259,22 @@ export class Lighting {
       const ws = this.wSrc[vi]!
       wb.fill(v.weight, 0, nt)
       ws.fill(v.weight, 0, nt)
-      if (portal)
-        for (let y = 0; y < rect.h; y++) {
-          const ty = Math.floor((rect.y0 + y) / per)
-          if (ty < 0 || ty >= this.h) continue
-          for (let x = 0; x < rect.w; x++) {
-            const tx = Math.floor((rect.x0 + x) / per)
-            if (tx < 0 || tx >= this.w || !portal.mask[ty * this.w + tx]) continue
-            wb[y * rect.w + x] = v.layer === portal.layer ? 1 : 0
-            ws[y * rect.w + x] = 1
+      if (portal) {
+        // Tile by tile over the box: a masked tile's texels.
+        const tx0 = Math.max(0, Math.floor(rect.x0 / per))
+        const ty0 = Math.max(0, Math.floor(rect.y0 / per))
+        const tx1 = Math.min(this.w - 1, Math.floor((rect.x0 + rect.w - 1) / per))
+        const ty1 = Math.min(this.h - 1, Math.floor((rect.y0 + rect.h - 1) / per))
+        for (let ty = ty0; ty <= ty1; ty++)
+          for (let tx = tx0; tx <= tx1; tx++) {
+            if (!portal.mask[ty * this.w + tx]) continue
+            for (let y = Math.max(0, ty * per - rect.y0); y < Math.min(rect.h, (ty + 1) * per - rect.y0); y++)
+              for (let x = Math.max(0, tx * per - rect.x0); x < Math.min(rect.w, (tx + 1) * per - rect.x0); x++) {
+                wb[y * rect.w + x] = v.layer === portal.layer ? 1 : 0
+                ws[y * rect.w + x] = 1
+              }
           }
-        }
+      }
       if (depth && depth.layer === v.layer && depth.weight > 0 && depth.cap > 0 && this.levels[v.layer]) {
         const { lev, mat } = this.levelMap(v.layer)
         for (let y = 0; y < rect.h; y++) {
