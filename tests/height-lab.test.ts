@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CAVE, DEFAULT_AREA_OPTIONS, SURFACE, buildLabArea, routeLegs, LAB_W } from '../src/game/height-lab/area.ts';
+import { CAVE, DEFAULT_AREA_OPTIONS, SURFACE, areaLighting, buildLabArea, routeLegs, LAB_W } from '../src/game/height-lab/area.ts';
 import { DEEP, MOUNTAIN_W, asciiLayer, buildMountain } from '../src/game/height-lab/mountain.ts';
-import { DARK_MAX, HERO_OUTER, LIGHT_SCALE, caveLevels, caveView, darkAt, shownDark } from '../src/game/height-lab/light.ts';
+import { HERO_LIGHT, caveLevels, caveView, type HeroLight } from '../src/game/height-lab/light.ts';
+import { Lighting, sightLine } from '../src/game/height-lab/lighting.ts';
 import { fogFor } from '../src/game/height-lab/look.ts';
 import { E, KIND, N, S, TILE_PX, findPath, move, step, zAt, sample, type Layer, type Walker } from '../src/game/height-lab/levels.ts';
 
@@ -73,51 +74,186 @@ test('the chamber lies under the plateau and the shoulder, and has a second way 
   assert.equal(step(stack, CAVE, 50, 20, E), CAVE, 'the climbing tunnel meets its flat end');
 });
 
-// ---------------------------------------------------------------- round 2: light, fog, the mountain and its deep cave
+const mtn = buildMountain(DEFAULT_AREA_OPTIONS);
+
+// ---------------------------------------------------------------- round 2–3: light, fog, the mountain and its deep cave
 
 const px = (tx: number, ty: number) => ({ x: tx * TILE_PX + 8, y: ty * TILE_PX + 8 });
+const lit = areaLighting(area);
+const heroAt = (l: Lighting, kind: HeroLight, p: { x: number; y: number }) => {
+  l.add({ id: 'hero', x: p.x, y: p.y, layer: CAVE, z: 0, ...HERO_LIGHT[kind], moving: true });
+};
 
 test('cave light belongs to the world: the same at a point wherever the hero stands', () => {
   // Where the hero might be: on the arch, a tile in, halfway, in the chamber.
   const heroes = [px(30, 39), px(30, 37), px(30, 33), px(33, 24)];
   const points: { x: number; y: number }[] = [];
   for (let ty = 14; ty < 42; ty += 3) for (let tx = 20; tx < 56; tx += 3) points.push(px(tx, ty));
+  const l = areaLighting(area);
   for (const p of points) {
     const seen = new Set<number>();
-    for (const h of heroes) {
-      // Away from the hero's own light, only the world's light counts.
-      if (Math.hypot(p.x - h.x, p.y - h.y) < HERO_OUTER * LIGHT_SCALE.wide + 1) continue;
-      for (const light of ['lantern', 'wide', 'dim'] as const) seen.add(Math.round(shownDark(area.dark, p.x, p.y, h, light, 1) * 1e6));
-    }
-    assert.ok(seen.size <= 1, `one dark at ${p.x},${p.y}, got ${[...seen]}`);
+    for (const h of heroes)
+      for (const kind of ['lantern', 'wide', 'dim'] as const) {
+        // Away from the hero's own light, only the world's light counts.
+        if (Math.hypot(p.x - h.x, p.y - h.y) < HERO_LIGHT[kind].radius + 1) continue;
+        heroAt(l, kind, h);
+        seen.add(Math.round(l.level(CAVE, p.x, p.y) * 1e6));
+      }
+    assert.ok(seen.size <= 1, `one light at ${p.x},${p.y}, got ${[...seen]}`);
   }
 });
 
-test('just inside the mouth, the cave beyond is already dark; daylight lies at the mouth', () => {
-  // The owner's screenshot: a tile in, daylight still high. The cave's view is in.
-  const walked = sample(cave, area.walk, px(30, 37).x, px(30, 37).y);
-  const view = caveView(walked, 1);
-  assert.equal(view, 1, `a tile in, the cave's view is in (walked ${walked})`);
-  assert.ok(sample(cave, cave.sky, px(30, 37).x, px(30, 37).y) > 0.6, 'daylight is still strong there');
-  const hero = px(30, 37);
-  assert.ok(shownDark(area.dark, px(32, 24).x, px(32, 24).y, hero, 'lantern', view) > 0.85, 'the chamber is dark');
-  assert.ok(shownDark(area.dark, px(46, 20).x, px(46, 20).y, hero, 'lantern', view) > 0.85, 'the far tunnel is dark');
-  assert.ok(darkAt(area.dark, px(31, 39).x, px(31, 39).y) < 0.3, 'the arch is lit by day');
-  assert.ok(darkAt(area.dark, px(30, 44).x, px(30, 44).y) < 0.05, 'the valley outside is open air');
-  // The hero's own light clears the dark round them.
-  assert.ok(shownDark(area.dark, px(33, 24).x, px(33, 24).y, px(33, 24), 'lantern', 1) < 0.05);
-});
-
-test('crystals light the rock round them; the crossfade is the view, not a dimmer', () => {
-  const g = area.glows[0]!;
-  const near = darkAt(area.dark, px(g.tx, g.ty).x, px(g.tx, g.ty).y);
-  assert.ok(near < 0.5, `a crystal's own tile is lit (dark ${near})`);
-  assert.ok(darkAt(area.dark, px(g.tx + 2, g.ty).x, px(g.tx + 2, g.ty).y) < darkAt(area.dark, px(g.tx + 6, g.ty).x, px(g.tx + 6, g.ty).y), 'brighter nearer');
+test('daylight spills into the mouth and fades along the tunnel; the cave beyond is dark', () => {
+  const at = (tx: number, ty: number) => lit.level(CAVE, px(tx, ty).x, px(tx, ty).y);
+  // The shoulder's mouth: arch rows 38–39, the tunnel north from there.
+  assert.ok(at(30, 39) > 0.9, `the arch is in daylight (${at(30, 39)})`);
+  assert.ok(at(30, 37) > 0.5, `a tile in, still bright (${at(30, 37)})`);
+  assert.ok(at(30, 37) > at(30, 35) && at(30, 35) > at(30, 33), 'fading as it goes in');
+  assert.ok(at(46, 20) < 0.15, `the far tunnel is dark (${at(46, 20)})`);
+  // The crossfade is the view coming in over a few steps, not a dimmer.
   for (const tiles of [1, 3]) {
     assert.equal(caveView(0, tiles), 0);
     assert.equal(caveView(tiles, tiles), 1);
     assert.equal(caveView(tiles * 5, tiles), 1, 'and stays in, however deep');
   }
+  assert.ok(caveView(1, 3) > 0 && caveView(1, 3) < 1, 'a tile in, the view is part way');
+});
+
+test('the sunny surface stays lit in the cave’s view: the valley and the cliff round the mouth', () => {
+  for (const [a, rows, faces] of [[area, [40, 71], [37, 39]], [mtn, [74, 95], [71, 73]]] as const) {
+    const l = areaLighting(a);
+    const s = a.stack.layers[SURFACE]!;
+    // Near a mouth (as far as a view from inside reaches): fully lit.
+    const near = (tx: number, ty: number) => a.mouths.some((m) => Math.abs(tx - m.x0) + Math.abs(ty - (m.arch[1] + 1)) <= 14);
+    for (let ty = rows[0]; ty <= rows[1]; ty++)
+      for (let tx = 0; tx < a.stack.w; tx++) {
+        if (a.stack.layers[CAVE]!.kind[ty * a.stack.w + tx] !== KIND.none || !near(tx, ty)) continue;
+        const p = px(tx, ty);
+        assert.ok(l.level(CAVE, p.x, p.y) > 0.99, `${a.name}: open valley at ${tx},${ty} is lit (${l.level(CAVE, p.x, p.y)})`);
+      }
+    // The cliff faces in front of the mouth are in the sun too, away from the cave's own rock.
+    let faceTiles = 0;
+    for (let ty = faces[0]; ty <= faces[1]; ty++)
+      for (let tx = 0; tx < a.stack.w; tx++) {
+        const i = ty * a.stack.w + tx;
+        const ck = a.stack.layers[CAVE]!.kind[i];
+        if (s.kind[i] !== KIND.face || !near(tx, faces[1] + 1) || ck === KIND.flat || ck === KIND.slope) continue;
+        // A face is open only if the land at its foot is.
+        let j = i;
+        while (s.kind[j] === KIND.face) j += a.stack.w;
+        if (a.top[j]! > 0) continue;
+        faceTiles++;
+        const p = px(tx, ty);
+        assert.ok(l.level(CAVE, p.x, p.y + 4) > 0.95, `${a.name}: the face at ${tx},${ty} is lit`);
+      }
+    assert.ok(faceTiles > 10, `${a.name}: faces checked (${faceTiles})`);
+  }
+  // The cave's own rock is never sunny, except where it lies behind a cliff face round an arch.
+  for (const a of [area, mtn]) {
+    const c = a.stack.layers[CAVE]!;
+    const sf = a.stack.layers[SURFACE]!;
+    for (let i = 0; i < a.stack.w * a.stack.h; i++) {
+      if (c.kind[i] !== KIND.rock || sf.kind[i] === KIND.face || sf.kind[i] === KIND.mouth) continue;
+      assert.ok(a.ambient[i * 3]! <= 0.06 + c.sky[i]!, `${a.name}: rock at ${i % a.stack.w},${Math.floor(i / a.stack.w)} is cave rock`);
+    }
+  }
+  // The plateau beyond the shoulder chamber's rim, far from both mouths, isn't sunny from inside.
+  assert.ok(lit.level(CAVE, px(14, 30).x, px(14, 30).y) < 0.05, 'the land over the cave, far from a mouth, is dark from inside');
+});
+
+test('the light lines up with the world: a light is brightest at itself, and fill() is at()', () => {
+  // A blank world (no ambient, nothing in the way): a dim light, so nothing saturates.
+  const blank = new Lighting({ w: 20, h: 20, tile: TILE_PX, res: 4, layers: 1 });
+  blank.setAmbient(0, new Float32Array(20 * 20 * 3));
+  for (const [x, y] of [[100, 150], [163, 211], [250, 63]] as const) {
+    blank.add({ id: 'l', x, y, layer: 0, z: 0, color: 0xffffff, radius: 60, inner: 0, intensity: 0.5, moving: false });
+    let best = { v: -1, x: 0, y: 0 };
+    for (let dy = -40; dy <= 40; dy++)
+      for (let dx = -40; dx <= 40; dx++) {
+        const v = blank.level(0, x + dx, y + dy);
+        if (v > best.v + 1e-9) best = { v, x: x + dx, y: y + dy };
+      }
+    assert.ok(Math.hypot(best.x - x, best.y - y) <= blank.res, `a light at ${x},${y}: brightest ${best.x - x},${best.y - y} px off`);
+    // Round: the same a radius's half out in each direction.
+    const ring = [[30, 0], [-30, 0], [0, 30], [0, -30]].map(([dx, dy]) => blank.level(0, x + dx!, y + dy!));
+    assert.ok(Math.max(...ring) - Math.min(...ring) < 0.02, `round (${ring})`);
+    blank.remove('l');
+  }
+  // A texel of the frame's buffer is the light at its middle.
+  const l = areaLighting(area);
+  heroAt(l, 'lantern', px(30, 33));
+  const rect = { x0: 100, y0: 120, w: 40, h: 30 };
+  const out = new Uint8ClampedArray(rect.w * rect.h * 4);
+  l.fill(rect, out, [{ layer: CAVE, weight: 1 }]);
+  for (const [x, y] of [[0, 0], [17, 9], [39, 29], [21, 14]] as const) {
+    const [r, g, b] = l.at(CAVE, (rect.x0 + x + 0.5) * l.res, (rect.y0 + y + 0.5) * l.res);
+    const i = (y * rect.w + x) * 4;
+    assert.ok(Math.abs(out[i]! - r * 255) <= 1 && Math.abs(out[i + 1]! - g * 255) <= 1 && Math.abs(out[i + 2]! - b * 255) <= 1, `texel ${x},${y}`);
+    assert.equal(out[i + 3], 255);
+  }
+});
+
+test('the hero’s light lands on the hero; with none, the hero stays readable and the floor dark', () => {
+  // A dark spot: the far tunnel.
+  const spot = px(46, 20);
+  const base = lit.level(CAVE, spot.x, spot.y);
+  assert.ok(base < 0.15);
+  for (const kind of ['lantern', 'wide', 'dim'] as const) {
+    const l = areaLighting(area);
+    heroAt(l, kind, spot);
+    assert.ok(l.level(CAVE, spot.x, spot.y) > 0.6, `${kind}: lit at the hero (${l.level(CAVE, spot.x, spot.y)})`);
+    const r = HERO_LIGHT[kind].radius;
+    assert.ok(Math.abs(l.level(CAVE, spot.x, spot.y + r + 2) - lit.level(CAVE, spot.x, spot.y + r + 2)) < 1e-6, `${kind}: gone past its reach`);
+  }
+  const dim = areaLighting(area);
+  heroAt(dim, 'dim', spot);
+  assert.ok(dim.level(CAVE, spot.x, spot.y + 24) - lit.level(CAVE, spot.x, spot.y + 24) < 0.02, 'none: the floor a tile and a half off stays dark');
+  // It follows the hero.
+  const l = areaLighting(area);
+  heroAt(l, 'lantern', spot);
+  l.move('hero', spot.x - 16, spot.y);
+  assert.ok(l.level(CAVE, spot.x - 16, spot.y) > 0.6, 'moved with them');
+});
+
+test('rock stops light: a crystal lights only what it can see', () => {
+  const mlit = areaLighting(mtn);
+  const mc = mtn.stack.layers[CAVE]!;
+  for (const [i, g] of mtn.glows.entries()) {
+    const id = `crystal-${i}`;
+    const src = mlit.get(id)!;
+    const reach = Math.ceil(src.radius / TILE_PX);
+    const before = new Map<number, number>();
+    for (let ty = Math.max(1, g.ty - reach); ty <= Math.min(MOUNTAIN_W - 2, g.ty + reach); ty++)
+      for (let tx = Math.max(1, g.tx - reach); tx <= Math.min(MOUNTAIN_W - 2, g.tx + reach); tx++) before.set(ty * MOUNTAIN_W + tx, mlit.level(CAVE, px(tx, ty).x, px(tx, ty).y));
+    mlit.remove(id);
+    let shadowed = 0;
+    for (const [t, v] of before) {
+      const tx = t % MOUNTAIN_W;
+      const ty = Math.floor(t / MOUNTAIN_W);
+      const gain = v - mlit.level(CAVE, px(tx, ty).x, px(tx, ty).y);
+      // Two tiles past a wall (so the half-tile penumbra is behind us): no light at all.
+      const around = [-1, 0, 1].every((a) => [-1, 0, 1].every((b) => !sightLine(mtn.stops, MOUNTAIN_W, g.tx, g.ty, tx + a, ty + b)));
+      if (around) {
+        shadowed++;
+        assert.ok(gain < 1e-6, `crystal ${g.tx},${g.ty} reaches ${tx},${ty} through rock (${gain})`);
+      }
+    }
+    assert.ok(shadowed > 0, `crystal ${g.tx},${g.ty} has rock round it`);
+    mlit.add(src);
+    for (const [t, v] of before) assert.ok(Math.abs(mlit.level(CAVE, px(t % MOUNTAIN_W, Math.floor(t / MOUNTAIN_W)).x, px(t % MOUNTAIN_W, Math.floor(t / MOUNTAIN_W)).y) - v) < 1e-5, 'adding it back restores it');
+  }
+  assert.equal(mc.kind[57 * MOUNTAIN_W + 60], KIND.rock, 'the corridor wall north of the bend crystal');
+});
+
+test('two lights overlap: each adds, and the sum is clamped', () => {
+  const l = areaLighting(mtn);
+  // The cavern: crystals at 42,49 and 49,45 (both on floor -4); between them both reach.
+  const mid = px(45, 47);
+  const both = l.at(CAVE, mid.x, mid.y);
+  l.remove('crystal-5');
+  const one = l.at(CAVE, mid.x, mid.y);
+  assert.ok(Math.max(...both) > Math.max(...one) + 0.02, `the second adds (${both} vs ${one})`);
+  for (const c of both) assert.ok(c <= 1);
 });
 
 test('fog is the same for a level above as for a level below, and clear on your own', () => {
@@ -135,7 +271,6 @@ test('fog is the same for a level above as for a level below, and clear on your 
   assert.ok(fogFor(2, 'strong') > fogFor(2, 'light'));
 });
 
-const mtn = buildMountain(DEFAULT_AREA_OPTIONS);
 const ms = mtn.stack;
 const mSurface = ms.layers[SURFACE]!;
 const mCave = ms.layers[CAVE]!;
@@ -235,9 +370,11 @@ test('the deep cave’s legs join only where they should', () => {
 
 test('deeper floors are dark from far off; crystals light the cavern', () => {
   const cavern = px(42, 44);
-  assert.ok(darkAt(mtn.dark, px(36, 39).x, px(36, 39).y) < 0.4, 'a crystal in the cavern lights it');
-  assert.ok(darkAt(mtn.dark, px(75, 34).x, px(75, 34).y) > 0.9, 'the corridor between crystals is dark');
-  assert.ok(darkAt(mtn.dark, cavern.x, cavern.y) < DARK_MAX);
+  const mlit = areaLighting(mtn);
+  const at = (p: { x: number; y: number }) => mlit.level(CAVE, p.x, p.y);
+  assert.ok(at(px(36, 39)) > 0.6, 'a crystal in the cavern lights it');
+  assert.ok(at(px(75, 34)) < 0.1, 'the corridor between crystals is dark');
+  assert.ok(at(cavern) > 0.04);
   assert.ok(mCave.sky[DEEP.legs[0]!.ty * MOUNTAIN_W + DEEP.legs[0]!.tx]! > 0, 'daylight in the first tunnel');
   assert.equal(mCave.sky[DEEP.legs.at(-1)!.ty * MOUNTAIN_W + DEEP.legs.at(-1)!.tx], 0, 'none in the cavern');
 });

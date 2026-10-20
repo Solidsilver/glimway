@@ -37,6 +37,7 @@ import {
   ROWS_PER_LEVEL,
   S,
   SURFACE,
+  TILE_PX,
   W,
   findPath,
   newLayer,
@@ -49,7 +50,8 @@ import {
   type Node,
   type Stack
 } from './levels.ts'
-import { darkMap, daylight, stillLight, type DarkMap, type Glow } from './light.ts'
+import { DAYLIGHT, LIGHT_RES, caveAmbient, caveLevels, caveStops, crystalLight, daylight, openAir, type Glow } from './light.ts'
+import { Lighting } from './lighting.ts'
 
 export { CAVE, SURFACE }
 
@@ -103,19 +105,37 @@ export interface LabArea {
   homes: { layer: number; tx: number; ty: number; art: 'slime' | 'mushroom' }[]
   /** The cave's walked distance from the nearest mouth, per tile (./light.ts daylight). */
   walk: Float32Array
-  /** The cave's still light per tile, and the dark it leaves, as texels (./light.ts). */
-  light: Float32Array
-  dark: DarkMap
+  /** The cave layer's ambient light per tile (r, g, b), what stops light, and floor levels (./light.ts). */
+  ambient: Float32Array
+  /** Open air per tile, 0–1: the land seen out of the mouths (./light.ts openAir). */
+  air: Float32Array
+  stops: Uint8Array
+  levels: Int8Array
 }
 
 /** An area as authored: everything but what's worked out from it (light). */
-export type AreaPlan = Omit<LabArea, 'walk' | 'light' | 'dark'>
+export type AreaPlan = Omit<LabArea, 'walk' | 'ambient' | 'air' | 'stops' | 'levels'>
 
-/** Work out an authored area's light: daylight from its mouths, then its crystals and open air. */
+/** Work out an authored area's light: daylight from its mouths, open air, what stops light. */
 export function lightArea(plan: AreaPlan, opts: AreaOptions): LabArea {
   const walk = daylight(plan.stack, opts.skyTiles)
-  const light = stillLight(plan.stack, plan.top, plan.glows)
-  return { ...plan, walk, light, dark: darkMap(plan.stack, light) }
+  const cave = plan.stack.layers[CAVE]!
+  const air = openAir(plan.stack, plan.top)
+  return { ...plan, walk, ambient: caveAmbient(plan.stack, air), air, stops: caveStops(cave), levels: caveLevels(cave) }
+}
+
+/** The area's lighting (./lighting.ts): daylight on the surface; the cave's ambient, rock and crystals below. */
+export function areaLighting(area: LabArea): Lighting {
+  const { w, h } = area.stack
+  const lights = new Lighting({ w, h, tile: TILE_PX, res: LIGHT_RES, layers: 2 })
+  const day = new Float32Array(w * h * 3)
+  for (let i = 0; i < w * h; i++) day.set(DAYLIGHT, i * 3)
+  lights.setAmbient(SURFACE, day)
+  lights.setAmbient(CAVE, area.ambient)
+  lights.setOccluders(CAVE, area.stops)
+  lights.setLevels(CAVE, area.levels)
+  area.glows.forEach((g, i) => lights.add(crystalLight(g, i, TILE_PX)))
+  return lights
 }
 
 /** Walked tiles from a mouth to where daylight is gone, unless switched. */

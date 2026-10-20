@@ -15,7 +15,7 @@ import { wildsLook } from '../wilds/wilds-looks.ts'
 import { fnv1a32 } from '../../lib/hash.ts'
 import { CAVE, GROUNDS, SURFACE, type LabArea } from './area.ts'
 import { DX, DY, KIND, TILE_PX, type Layer } from './levels.ts'
-import { HERO_OUTER, caveLevels, heroLight } from './light.ts'
+import { caveLevels, sunnyFaceRock } from './light.ts'
 
 type RGB = [number, number, number]
 
@@ -295,11 +295,16 @@ export const FACE_TINT: Record<number, number> = { 1: 0xf0dcc0, 2: 0xc4c8d2, 3: 
 // ---------------------------------------------------------------- the cave
 
 /**
- * The cave layer's ground: a stone floor (lit near the mouths, a little
- * cooler on deeper floors), rock round it with a face where it stands over
- * the floor, drops between floors, still black water. Cut into one image a
- * floor level, like the surface, so a level can fade with its depth.
+ * The cave layer's ground: a stone floor (a little cooler on deeper
+ * floors), rock round it with a face where it stands over the floor, drops
+ * between floors, still black water. Cut into one image a floor level, like
+ * the surface, so a level can fade with its depth. Painted as it looks in
+ * full light: the light (./lighting.ts) darkens it. Rock that lies over a
+ * sunny cliff face (round an arch) isn't painted: you see the face.
  */
+/** The cave's colours in full light (they were painted dark for the old dimmer). */
+const ALBEDO = 1.45
+
 export function paintCave(scene: Phaser.Scene, area: LabArea): LevelImage[] {
   const l = area.stack.layers[CAVE]!
   let x0 = l.w
@@ -331,10 +336,9 @@ export function paintCave(scene: Phaser.Scene, area: LabArea): LevelImage[] {
     for (let tx = x0; tx <= x1; tx++) {
       const i = ty * l.w + tx
       const k = l.kind[i]
-      if (k === KIND.none) continue
+      if (k === KIND.none || sunnyFaceRock(area.stack, area.air, i)) continue
       const faceBelow = k === KIND.rock && floorish(kindAt(tx, ty + 1))
       const fade = k === KIND.rock ? [255, 255, 255, 150, 0][reach(tx, ty)]! : 255
-      const sky = l.sky[i]!
       // Deeper floors are a little darker and cooler.
       const deep = Math.max(0, -lvl[i]! - 1) * 0.07
       for (let y = 0; y < T; y++)
@@ -351,8 +355,6 @@ export function paintCave(scene: Phaser.Scene, area: LabArea): LevelImage[] {
             const c = joint ? base * 0.7 : base
             rgb = [c * 0.92, c * 0.9, c * 1.05]
             if (k === KIND.slope && wy % 4 === 0) rgb = rgb.map((ch) => ch * 0.85) as RGB
-            // Daylight near a mouth warms and lifts the floor.
-            if (sky > 0) rgb = [mix(rgb[0], 150, sky * 0.5), mix(rgb[1], 140, sky * 0.5), mix(rgb[2], 118, sky * 0.5)]
             // Shadow at the foot of a rock wall or a drop above.
             const n = kindAt(tx, ty - 1)
             if ((n === KIND.rock || n === KIND.face) && y < 5) rgb = rgb.map((ch) => ch * (0.55 + y * 0.09)) as RGB
@@ -375,6 +377,7 @@ export function paintCave(scene: Phaser.Scene, area: LabArea): LevelImage[] {
             const c = 26 + hash(wx >> 2, wy >> 2, 15) * 10 + (hash(wx, wy, 16) - 0.5) * 6
             rgb = [c, c * 0.92, c * 1.1]
           }
+          if (k !== KIND.water) rgb = rgb.map((ch) => ch * ALBEDO) as RGB
           if (deep) rgb = [rgb[0] * (1 - deep), rgb[1] * (1 - deep * 0.8), rgb[2] * (1 - deep * 0.4)]
           const o = (((ty - y0) * T + y) * w + (tx - x0) * T + x) * 4
           px[o] = rgb[0]
@@ -414,30 +417,11 @@ export function paintCave(scene: Phaser.Scene, area: LabArea): LevelImage[] {
   return out
 }
 
-/** The cave's still dark (./light.ts darkMap) as an image: one texel a LIGHT_RES px, smoothed when drawn bigger. */
-export const DARK_KEY = 'hl-darkmap'
-
-export function drawDarkMap(scene: Phaser.Scene, area: LabArea): void {
-  const m = area.dark
-  const px = new Uint8ClampedArray(m.w * m.h * 4)
-  for (let i = 0; i < m.w * m.h; i++) {
-    px[i * 4] = 7
-    px[i * 4 + 1] = 6
-    px[i * 4 + 2] = 11
-    px[i * 4 + 3] = Math.round(m.a[i]! * 255)
-  }
-  addPixels(scene, DARK_KEY, m.w, m.h, px, true)
-}
-
 // ---------------------------------------------------------------- overlays
 
-/** The hero's light brush: erased from the dark round them (./light.ts heroLight; LANTERN_SIZE px across, scaled for the wide light). */
-export const LANTERN_KEY = 'hl-lantern'
-export const LANTERN_SIZE = 2 * HERO_OUTER + 4
-
-/** The overlays, sprites and glows: drawn once. */
+/** The overlays and sprites (the haze, the crystal, …): drawn once. */
 export function drawOverlays(scene: Phaser.Scene): void {
-  if (scene.textures.exists(LANTERN_KEY)) return
+  if (scene.textures.exists('hl-haze')) return
   const radial = (key: string, size: number, alphaAt: (r: number) => number, rgb: RGB) => {
     const px = new Uint8ClampedArray(size * size * 4)
     for (let y = 0; y < size; y++)
@@ -452,9 +436,7 @@ export function drawOverlays(scene: Phaser.Scene): void {
     addPixels(scene, key, size, size, px, true)
   }
   const smooth = (t: number) => t * t * (3 - 2 * t)
-  radial(LANTERN_KEY, LANTERN_SIZE, (r) => heroLight('lantern', r), [255, 255, 255])
   radial('hl-haze', 256, (r) => smooth(Math.max(0, Math.min(1, (r - 55) / 90))), [255, 255, 255])
-  radial('hl-glow', 64, (r) => Math.pow(Math.max(0, 1 - r / 32), 2), [255, 255, 255])
   // A crystal: a little pale shard cluster.
   const cw = 9
   const chh = 11

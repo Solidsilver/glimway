@@ -29,7 +29,7 @@ export interface LabLook {
 }
 
 const KEY = 'glimway:height-lab-look'
-const DEFAULT: LabLook = { area: 'shoulder', fog: 'fog', fogStrength: 'medium', depth: 'darken', zoom: true, haze: true, cave: 'lantern', skyTiles: 6, crossfade: 1, grid: false }
+const DEFAULT: LabLook = { area: 'shoulder', fog: 'fog', fogStrength: 'medium', depth: 'darken', zoom: true, haze: true, cave: 'lantern', skyTiles: 6, crossfade: 3, grid: false }
 
 function read(): LabLook {
   try {

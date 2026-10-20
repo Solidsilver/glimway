@@ -1,31 +1,33 @@
 /**
- * Height lab (dev only): light in a cave, as a property of the world. Pure,
- * no Phaser, so node tests read it.
+ * Height lab (dev only): the cave's light, as a property of the world, in
+ * the terms of the lighting system (./lighting.ts). Pure, no Phaser, so
+ * node tests read it.
  *
- * The cave is dark wherever no light reaches, the same wherever the hero
- * stands. Light comes from sources placed in the world:
- *  - daylight through each mouth, fading along the floor with the walked
- *    distance from the mouth (so it follows a tunnel round its bends);
- *  - crystals, each a soft round light that rock stops;
- *  - open air: where the cave layer has nothing (in front of a mouth), you
- *    look out at the lit surface;
- *  - the hero's own light, which moves with them (./scene.ts takes it out
- *    of the dark round them each frame).
- * The first three make one still field, baked once into an image of the
- * dark (LIGHT_RES world px a texel). The scene draws that image and erases
- * the hero's light from it.
+ * What the cave gives the lighting:
+ *  - ambient per tile: a low cave dark; daylight through each mouth, fading
+ *    along the floor with the walked distance from the mouth (so it follows
+ *    a tunnel round its bends); open air (where the cave layer has nothing
+ *    in front of a mouth, and the cliff faces above that land) at full
+ *    daylight; the hill over your head (nothing, not open air) at none;
+ *  - occluders: rock stops light; floor, water and the cave's drops don't;
+ *  - levels: each tile's floor level;
+ *  - sources: the crystals (still), the hero's own light and the remote
+ *    player's lantern (moving; ./scene.ts).
  */
-import { CAVE, DX, DY, KIND, ROWS_PER_LEVEL, SURFACE, TILE_PX, step, type Dir, type Layer, type Stack } from './levels.ts'
+import { CAVE, DX, DY, KIND, ROWS_PER_LEVEL, SURFACE, step, type Dir, type Layer, type Stack } from './levels.ts'
+import type { LightSource } from './lighting.ts'
 
-/** World px a texel of the dark image. */
+/** World px a texel of the light. */
 export const LIGHT_RES = 4
 
-/** The most the dark hides (a little of the floor always shows in pitch dark). */
-export const DARK_MAX = 0.97
+/** A cave's own light where nothing reaches (a little of the floor always shows). */
+export const CAVE_AMBIENT: readonly [number, number, number] = [0.05, 0.045, 0.07]
 
-/** A crystal's light: its reach in tiles, and how bright it is at its foot. */
-export const CRYSTAL_REACH = 5.5
-export const CRYSTAL_POWER = 0.95
+/** Daylight's colour (the surface's ambient, and what spills in through a mouth). */
+export const DAYLIGHT: readonly [number, number, number] = [1, 1, 1]
+
+/** A crystal's light: its reach in px, full out to inner, how bright. */
+export const CRYSTAL = { radius: 6 * 16, inner: 10, intensity: 0.95 } as const
 
 /** A light source in the cave (tile middles; z: its floor's level). */
 export interface Glow {
@@ -34,6 +36,17 @@ export interface Glow {
   z: number
   color: number
 }
+
+/** The hero's own light: close, wide, or "none" (a faint glow that keeps the hero readable, not the floor). */
+export const HERO_LIGHT = {
+  lantern: { radius: 80, inner: 30, intensity: 1, color: 0xffe6bf },
+  wide: { radius: 144, inner: 54, intensity: 1, color: 0xffe6bf },
+  dim: { radius: 22, inner: 6, intensity: 0.6, color: 0xffe6bf }
+} as const
+export type HeroLight = keyof typeof HERO_LIGHT
+
+/** The remote player's lantern. */
+export const FRIEND_LIGHT = { radius: 64, inner: 18, intensity: 0.9, color: 0xffcf8a } as const
 
 /**
  * Walked tiles along the cave's floor from the tiles just inside a mouth
@@ -122,60 +135,106 @@ function spreadToWalls(l: Layer, field: Float32Array, dist: Int32Array): void {
 }
 
 /**
- * Open air: the surface in front of each mouth, and everything at or
- * below it that joins it without climbing. Where the cave layer has
- * nothing there, you look out of the cave at daylit land.
+ * Open air, 0–1 a tile: the land you see out of a cave's mouths. From each
+ * mouth, the surface at or below its foot that joins it without climbing,
+ * full out to OPEN_AIR.full walked tiles and gone OPEN_AIR.fade further on
+ * (so the land over a cave's far rooms, beyond the rim, isn't sunny from
+ * inside). A cliff face takes the open air of the land at its foot. Where
+ * the cave layer has nothing, you see this land, daylit.
  */
-export function openAir(stack: Stack, top: Int8Array): Uint8Array {
+export const OPEN_AIR = { full: 16, fade: 6 } as const
+
+export function openAir(stack: Stack, top: Int8Array): Float32Array {
   const size = stack.w * stack.h
-  const open = new Uint8Array(size)
+  const open = new Float32Array(size)
+  const reach = OPEN_AIR.full + OPEN_AIR.fade
   for (const [key, to] of stack.portals) {
     if (to !== CAVE) continue
     const t = key >> 2
     if (Math.floor(t / size) !== SURFACE) continue
     const start = t % size
     const level = top[start]!
-    if (open[start]) continue
+    const dist = new Map<number, number>([[start, 0]])
     const queue = [start]
-    open[start] = 1
     for (let q = 0; q < queue.length; q++) {
       const i = queue[q]!
+      const d = dist.get(i)!
+      const k = d <= OPEN_AIR.full ? 1 : 1 - (d - OPEN_AIR.full) / OPEN_AIR.fade
+      open[i] = Math.max(open[i]!, k * k * (3 - 2 * k))
+      if (d >= reach) continue
       const tx = i % stack.w
       const ty = Math.floor(i / stack.w)
-      for (let d = 0; d < 4; d++) {
-        const x = tx + DX[d]
-        const y = ty + DY[d]
+      for (let dir = 0; dir < 4; dir++) {
+        const x = tx + DX[dir]
+        const y = ty + DY[dir]
         if (x < 0 || y < 0 || x >= stack.w || y >= stack.h) continue
         const j = y * stack.w + x
-        if (open[j] || top[j]! > level) continue
-        open[j] = 1
+        if (dist.has(j) || top[j]! > level) continue
+        dist.set(j, d + 1)
         queue.push(j)
       }
     }
+  }
+  // A cliff face stands in the open air of the land at its foot: from
+  // inside a mouth you see the sunny face round the arch, not rock.
+  const surface = stack.layers[SURFACE]!
+  const isFace = (i: number) => surface.kind[i] === KIND.face || surface.kind[i] === KIND.mouth
+  for (let i = 0; i < size; i++) {
+    if (!isFace(i)) continue
+    let j = i
+    while (j + stack.w < size && isFace(j)) j += stack.w
+    open[i] = Math.max(open[i]!, open[j]!)
   }
   return open
 }
 
 /** Light passes over floor, water and the cave's own drops; rock and the nothing past it stop it. */
-function clear(l: Layer, i: number): boolean {
-  const k = l.kind[i]
-  return k === KIND.flat || k === KIND.slope || k === KIND.water || k === KIND.face
+export function caveStops(l: Layer): Uint8Array {
+  const out = new Uint8Array(l.w * l.h)
+  for (let i = 0; i < l.w * l.h; i++) {
+    const k = l.kind[i]
+    out[i] = k === KIND.flat || k === KIND.slope || k === KIND.water || k === KIND.face ? 0 : 1
+  }
+  return out
 }
 
-/** Whether a straight line between two tile middles stays over clear tiles (its ends needn't be). */
-function sightLine(l: Layer, ax: number, ay: number, bx: number, by: number): boolean {
-  const n = Math.ceil(Math.hypot(bx - ax, by - ay) * 3)
-  let last = -1
-  for (let s = 1; s < n; s++) {
-    const tx = Math.floor(ax + 0.5 + ((bx - ax) * s) / n)
-    const ty = Math.floor(ay + 0.5 + ((by - ay) * s) / n)
-    if (tx === bx && ty === by) break
-    const i = ty * l.w + tx
-    if (i === last) continue
-    last = i
-    if (!clear(l, i)) return false
+/** The cave layer's ambient per tile (r, g, b): cave dark plus daylight from the mouths; open air lit; the hill over you, none. */
+export function caveAmbient(stack: Stack, air: Float32Array): Float32Array {
+  const cave = stack.layers[CAVE]!
+  const size = stack.w * stack.h
+  const out = new Float32Array(size * 3)
+  for (let i = 0; i < size; i++) {
+    for (let c = 0; c < 3; c++) {
+      let v: number
+      // Nothing, or the cave's rock where it lies behind a sunny cliff
+      // face (the rock round an arch, not painted): the open air's light.
+      if (cave.kind[i] === KIND.none || sunnyFaceRock(stack, air, i)) v = air[i]! * DAYLIGHT[c]!
+      else v = CAVE_AMBIENT[c]! + cave.sky[i]! * DAYLIGHT[c]!
+      out[i * 3 + c] = Math.min(1, v)
+    }
   }
-  return true
+  return out
+}
+
+/** The cave's rock where it lies behind a sunny cliff face (round an arch): not painted, lit as the face. */
+export function sunnyFaceRock(stack: Stack, air: Float32Array, i: number): boolean {
+  const k = stack.layers[SURFACE]!.kind[i]
+  return stack.layers[CAVE]!.kind[i] === KIND.rock && (k === KIND.face || k === KIND.mouth) && air[i]! > 0
+}
+
+/** A crystal as a light source. */
+export function crystalLight(g: Glow, i: number, tile: number): LightSource {
+  return { id: `crystal-${i}`, x: g.tx * tile + tile / 2, y: g.ty * tile + tile / 2, layer: CAVE, z: g.z, color: g.color, ...CRYSTAL, moving: false }
+}
+
+/**
+ * How far into the cave view the hero is, 0–1: from the surface's view at
+ * the arch to the cave's over `tiles` walked tiles. This is the crossfade
+ * between the two views' light, not a dimmer: once it's 1 the light is the
+ * cave's own.
+ */
+export function caveView(walked: number, tiles: number): number {
+  return Math.max(0, Math.min(1, walked / Math.max(0.01, tiles)))
 }
 
 /** A cave tile's floor level (a drop: its foot; rock and water: the nearest floor's), for light and for drawing by level. */
@@ -218,128 +277,3 @@ export function caveLevels(l: Layer): Int8Array {
   return out
 }
 
-/**
- * The still light on each tile of the cave layer, 0–1: daylight, crystals
- * (each fading with distance, a level of height counting as two tiles, and
- * stopped by rock), and open air where the layer has nothing.
- */
-export function stillLight(stack: Stack, top: Int8Array, glows: readonly Glow[]): Float32Array {
-  const cave = stack.layers[CAVE]!
-  const size = stack.w * stack.h
-  const air = openAir(stack, top)
-  const levels = caveLevels(cave)
-  const out = new Float32Array(size)
-  const reach = Math.ceil(CRYSTAL_REACH)
-  // What's still dark after each source: 1 − light, multiplied up.
-  const dark = new Float32Array(size).fill(1)
-  for (let i = 0; i < size; i++) {
-    if (cave.kind[i] === KIND.none) dark[i] = air[i] ? 0 : 1
-    else dark[i] = 1 - cave.sky[i]!
-  }
-  for (const g of glows) {
-    for (let ty = g.ty - reach; ty <= g.ty + reach; ty++)
-      for (let tx = g.tx - reach; tx <= g.tx + reach; tx++) {
-        if (tx < 0 || ty < 0 || tx >= cave.w || ty >= cave.h) continue
-        const i = ty * cave.w + tx
-        if (cave.kind[i] === KIND.none) continue
-        const r = Math.hypot(tx - g.tx, ty - g.ty) + Math.abs(levels[i]! - g.z) * 2
-        if (r >= CRYSTAL_REACH) continue
-        if (!sightLine(cave, g.tx, g.ty, tx, ty)) continue
-        const k = 1 - r / CRYSTAL_REACH
-        dark[i] = dark[i]! * (1 - CRYSTAL_POWER * k * k)
-      }
-  }
-  for (let i = 0; i < size; i++) out[i] = 1 - dark[i]!
-  return out
-}
-
-/** The still dark as texels (LIGHT_RES px each, row by row): 0 clear, up to DARK_MAX; softened by a short blur. */
-export interface DarkMap {
-  w: number
-  h: number
-  a: Float32Array
-}
-
-export function darkMap(stack: Stack, light: Float32Array): DarkMap {
-  const per = TILE_PX / LIGHT_RES
-  const w = stack.w * per
-  const h = stack.h * per
-  let a = new Float32Array(w * h)
-  // Bilinear between tile middles.
-  for (let y = 0; y < h; y++)
-    for (let x = 0; x < w; x++) {
-      const gx = (x + 0.5) / per - 0.5
-      const gy = (y + 0.5) / per - 0.5
-      const x0 = Math.floor(gx)
-      const y0 = Math.floor(gy)
-      const fx = gx - x0
-      const fy = gy - y0
-      const at = (tx: number, ty: number) => light[Math.min(stack.h - 1, Math.max(0, ty)) * stack.w + Math.min(stack.w - 1, Math.max(0, tx))]!
-      const l = (at(x0, y0) * (1 - fx) + at(x0 + 1, y0) * fx) * (1 - fy) + (at(x0, y0 + 1) * (1 - fx) + at(x0 + 1, y0 + 1) * fx) * fy
-      a[y * w + x] = (1 - l) * DARK_MAX
-    }
-  // Two passes of a 5-texel box blur, across then down.
-  for (let pass = 0; pass < 2; pass++)
-    for (const across of [true, false]) {
-      const b = new Float32Array(w * h)
-      for (let y = 0; y < h; y++)
-        for (let x = 0; x < w; x++) {
-          let s = 0
-          let n = 0
-          for (let k = -2; k <= 2; k++) {
-            const xx = across ? x + k : x
-            const yy = across ? y : y + k
-            if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue
-            s += a[yy * w + xx]!
-            n++
-          }
-          b[y * w + x] = s / n
-        }
-      a = b
-    }
-  return { w, h, a }
-}
-
-/** The still dark at a world point (bilinear between texels). */
-export function darkAt(m: DarkMap, x: number, y: number): number {
-  const gx = x / LIGHT_RES - 0.5
-  const gy = y / LIGHT_RES - 0.5
-  const x0 = Math.floor(gx)
-  const y0 = Math.floor(gy)
-  const fx = gx - x0
-  const fy = gy - y0
-  const at = (tx: number, ty: number) => m.a[Math.min(m.h - 1, Math.max(0, ty)) * m.w + Math.min(m.w - 1, Math.max(0, tx))]!
-  return (at(x0, y0) * (1 - fx) + at(x0 + 1, y0) * fx) * (1 - fy) + (at(x0, y0 + 1) * (1 - fx) + at(x0 + 1, y0 + 1) * fx) * fy
-}
-
-/** The hero's own light, close: clear out to INNER px, gone at OUTER. Wide is the same, LIGHT_SCALE times as far; none is none. */
-export const HERO_INNER = 30
-export const HERO_OUTER = 80
-export const LIGHT_SCALE = { lantern: 1, wide: 1.8, dim: 0 } as const
-export type HeroLight = keyof typeof LIGHT_SCALE
-
-const smooth = (t: number) => t * t * (3 - 2 * t)
-
-/** How much of the dark the hero's light takes away at `r` px from them, 0–1. */
-export function heroLight(kind: HeroLight, r: number): number {
-  const s = LIGHT_SCALE[kind]
-  if (!s) return 0
-  return 1 - smooth(Math.max(0, Math.min(1, (r / s - HERO_INNER) / (HERO_OUTER - HERO_INNER))))
-}
-
-/**
- * How far into the cave view the hero is, 0–1: from the surface's view at
- * the arch to the cave's over `tiles` walked tiles. This is the crossfade
- * between the two views, not a dimmer: once it's 1 the dark is the world's.
- */
-export function caveView(walked: number, tiles: number): number {
-  return Math.max(0, Math.min(1, walked / Math.max(0.01, tiles)))
-}
-
-/**
- * The dark drawn at a world point while the hero is in the cave: the
- * still dark, less the hero's light round them, faded in with the view.
- */
-export function shownDark(m: DarkMap, x: number, y: number, hero: { x: number; y: number }, light: HeroLight, view: number): number {
-  return view * darkAt(m, x, y) * (1 - heroLight(light, Math.hypot(x - hero.x, y - hero.y)))
-}
