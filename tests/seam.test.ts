@@ -922,7 +922,7 @@ test('window shutdown destroys chunks still waiting in the drain', () => {
   const w = Object.create(WildsWindow.prototype) as InstanceType<typeof WildsWindow>;
   const dropped: string[] = [];
   const chunks = (key: string) => new Map([[key, { destroy: () => dropped.push(key) }]]);
-  Object.assign(w, { attached: chunks('generated'), fixed: chunks('fixed'), drifts: chunks('drift'),
+  Object.assign(w, { attached: chunks('generated'), fixed: chunks('fixed'), drifts: chunks('drift'), walls: new Map(),
     paints: new Map(), far: new Map(), waiters: [], landHere: { clear() {} } });
   w['destroy']();
   w['destroy']();

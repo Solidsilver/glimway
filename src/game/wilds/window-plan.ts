@@ -106,6 +106,25 @@ export function veilEdges(cx: number, cy: number, inside: (cx: number, cy: numbe
 }
 
 /**
+ * The chunks beside the hero's that are walled off: every one of the eight
+ * around (cx, cy) that isn't walkable (attached, so drawn and its collision
+ * in). The drift and land not yet loaded are solid (decision 3): without a
+ * wall only the world's bounds, the reach's bounding rectangle, would hold
+ * the hero, and its clipped corners and a held slack's square leave
+ * stretches inside the rectangle that are past the frontier. The hero's own
+ * chunk is never walled, so a reach that shrank under them can't trap them;
+ * the turning moves them (world-turning.ts).
+ */
+export function walledChunks(cx: number, cy: number, walkable: (cx: number, cy: number) => boolean): string[] {
+  const out: string[] = []
+  for (let dy = -1; dy <= 1; dy++)
+    for (let dx = -1; dx <= 1; dx++) {
+      if ((dx || dy) && !walkable(cx + dx, cy + dy)) out.push(chunkKey(cx + dx, cy + dy))
+    }
+  return out
+}
+
+/**
  * Tiles past a chunk edge the hero can walk before the row left behind
  * goes. Crossing an edge attaches the row ahead at once, but the row that
  * left the 3×3 stays until the hero is this far into the new chunk, so
