@@ -149,10 +149,17 @@ not the forgetting.
   of a valley or marsh: a **fret**. Frets can be pushed back with light, song and restoration.
   The corruption is plain to see there, unlike in the hurting but innocent Wild.
 - **Unmoored** [shipped for the player, later for beasts]. The Dark's first touch. A hero who
-  stays too long deep in the Tangle, where the Wick Tree's reach thins (2.8), or who is caught
-  in a Turning, comes **unmoored**: the world sways and pales at the edges. It passes with rest
-  on safe ground in town or at home, or at once with a remedy (a jar of turncaps; a salve eases
-  it). Wilds lamps are not safe ground. Beasts the Dark has fevered are unmoored too (5.4).
+  stays too long deep in the Tangle, where the Wick Tree's reach thins (2.8), who lingers in the
+  Whitequiet without an anchor (2.4) *[later]*, or who is caught in a Turning, comes
+  **unmoored**: the world sways and pales at the edges. It passes with rest on safe ground in
+  town or at home, or at once with a remedy (a jar of turncaps; a salve eases it). Wilds lamps
+  are not safe ground. Beasts the Dark has fevered are unmoored too (5.4).
+- **Pressure and things of the Dark** [later]. The cold from the Crack doesn't press evenly.
+  Across wide stretches of the Wilds, its **pressure** leans heavier where the earth is far from
+  tended lamps and human footsteps, and the far reaches lie deeper still; a lit lamp calms the
+  ground in its reach (the strongest light at a spot, never a stack of them). Where the Draught
+  knots round a mockery of light, wind or shadow, it forms **things of the Dark** (5.4): wisps,
+  fen-lanterns and cave shadows that were never alive and disperse when beaten.
 
 ### 2.6 Care, wear and the anchored [shipped as framing]
 
@@ -517,19 +524,48 @@ slowly hollowing out the worker. The forms:
 The temptation to take any of these is called **the Short Way**, and those who take it are
 **short-wayers**. ("The Old Ways" is kept for the paired-lamp travel working, *[later]*.)
 
-### 5.4 The fallen and the unmoored
+### 5.4 The fallen, the beasts and the things of the Dark
 
-- **The fallen** have no single name. Villagers say someone is **lost**; Keepers write that they
-  are **obsessed** or **bound**; children have their own words. In the game a fallen person goes
-  by their own name ("Hesper, at the span"), never a category. They keep their cunning, craft
-  and workings, now turned to hoarding light and hunting anyone who carries a lantern.
-- **Unmoored beasts.** Wolves, beetles and marsh creatures keep their animal nature, but the Dark
-  turns their fear and hunger against lamplight. Breaking the fever in a fight frees them to
-  flee into the woods. *[later]* The animals get an overhaul, with ordinary and corrupted
-  kinds. Until then the Wilds' beetles and wisps stay unexplained: no text says what they are.
-- **Holdouts.** A few survivors of the Company still hold out alone in remote corners of the
-  Wilds, wary, waiting to see whether the new Hearthwick keeps its word. *[later]* drop-in
-  outposts.
+*Settled with the owner, 2026-10-20 (`docs/planning/wide-world/responses/creature-lore-argon.md`).*
+
+Everything a traveller meets in the Wilds stands in its own relation to the Turning and the Dark:
+
+- **The fallen.** Fallen people have no single name. Villagers say someone is **lost**; Keepers
+  write that they are **obsessed** or **bound**; children have their own words. In the game a
+  fallen person goes by their own name ("Hesper, at the span"), never a category. They keep their
+  cunning, craft and workings, now turned to hoarding light and hunting anyone who carries a
+  lantern.
+- **Ordinary animals** [later]. Squirrels and hares in the woods, ducks and kingfishers by the
+  lakes, mountain goats on the Tops, glow-moths and blind fish in the caves. Like the trees and
+  streams, they belong to the hurting earth that still tries to remember itself every Turning.
+  They are harmless and go about their own small work: a goat climbs a real trail up a crag; a
+  kingfisher darts toward clay or a shallow spit; a cave-moth drifts toward daylight. Watching
+  them helps a traveller read the land.
+- **Unmoored beasts** [shipped as beetles; the rest later]. Beetles, boars, mire-toads,
+  marsh-crabs, rams and cave-crickets. Animals have no pride or greed for the Dark to whisper to,
+  so where the land lies far from tended light and the Dark's pressure leans in, it works on
+  their fear, hunger and confusion at the Turning. A smoky **fever-crust** gathers on them and
+  turns them against lamplight. Fought down to the point of breaking, a beast staggers, and the
+  player chooses how the fight ends:
+  - **Break the spell.** Answer the fever with a **glim**, a raised light or a **working**
+    (Fingersnap, or a Practice's calming craft). The fever-crust shatters off as shed material,
+    the animal's eyes clear, and it flees into the brush, or stays in that place as an ordinary
+    animal for the rest of the wick.
+  - **Defeat by force.** Strike through the stagger and slay the beast outright, for its intact
+    parts and trophies.
+- **Things of the Dark** [shipped as wisps; the rest later]. Wisps in the woods,
+  **fen-lanterns** in the marshes (they mimic the warm gold of a communal lamp from afar, then
+  turn cold violet up close), **draught-motes** on windy passes, and **shadow-leeches** along the
+  rim of a lantern's light in caves. They were never animals and never alive: they are knots of
+  cold from the Crack, formed round a mockery of light, wind or shadow. Nothing living is trapped
+  inside them; beaten, they disperse into cold air and ash.
+- **Creatures of the Whitequiet** [later]. In the Whitequiet the earth has stopped trying to
+  remember itself (2.4), so there is no struggle for the Dark to fever and no warmth for things
+  of the Dark to drink. The Whitequiet has no fights. Its **white moths** and **pale harts** are
+  hushed impressions of woodland life: moths spiral above buried trinkets, and a pale hart will
+  lead a slow, patient walker toward a route stone or back to living land.
+- **Holdouts** [later]. A few survivors of the Company still hold out alone in remote corners of
+  the Wilds, wary, waiting to see whether the new Hearthwick keeps its word. Drop-in outposts.
 
 ### 5.5 Choices with the fallen
 
