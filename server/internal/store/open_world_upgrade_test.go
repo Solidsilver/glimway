@@ -7,8 +7,8 @@ import (
 
 // A 0.13 database (through 038): 039 drops the stored bodies of unheld wick
 // chunks, so they are made again on the new landform. A held chunk keeps its
-// body, the still epoch keeps its chunks, and the wick's own state and
-// ground changes stay.
+// body, the still epoch keeps its chunks, and ground changes stay; 040
+// clears the remade camp's state (open_world_fixes_upgrade_test.go).
 func TestUpgradeRemakesUnheldWickChunks(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "upgrade.sqlite")
 	db := newUpgradeFixture(t, path, "038_lamps.sql", nil)
@@ -51,7 +51,7 @@ func TestUpgradeRemakesUnheldWickChunks(t *testing.T) {
 	if err = s.DB.QueryRow("SELECT count(*) FROM world_changes").Scan(&changes); err != nil || changes != 1 {
 		t.Fatalf("ground changes: %d %v", changes, err)
 	}
-	if err = s.DB.QueryRow("SELECT count(*) FROM entity_state").Scan(&states); err != nil || states != 1 {
+	if err = s.DB.QueryRow("SELECT count(*) FROM entity_state").Scan(&states); err != nil || states != 0 {
 		t.Fatalf("entity state: %d %v", states, err)
 	}
 	if err = s.DB.QueryRow("SELECT count(*) FROM wild_epochs").Scan(&epochs); err != nil || epochs != 3 {

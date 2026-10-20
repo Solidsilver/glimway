@@ -69,7 +69,7 @@ func TestNearReadsFarFromHome(t *testing.T) {
 }
 
 // Reads answer only round the reader: a near read centres within sightLag
-// chunks of the saved place, a chunk read within sightChunks. Past the
+// chunks of the anchor, a chunk is made within sightChunks. Past the
 // border nothing answers.
 func TestReadsOnlyWithinSight(t *testing.T) {
 	x := newRig(t)
@@ -108,7 +108,9 @@ func TestHeldChunkReadsFromAnywhere(t *testing.T) {
 	}
 	x.putAt(s.AccountID, 200, 200)
 	x.chunk(c, n.Wick.Id, 0, cx, cy, 200)
-	x.refusal("/api/wilds/chunk/"+n.Wick.Id+"/0/4/-7", c, "beyond-sight")
+	// Its unheld neighbour reads too, past sight, only because it is stored
+	// (sight_test.go: one nobody walked is refused).
+	x.chunk(c, n.Wick.Id, 0, cx, cy+1, 200)
 }
 
 // A saved place past the border (a save from before it, or content that

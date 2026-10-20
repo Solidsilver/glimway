@@ -15,6 +15,7 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	began := time.Now()
 	// Each transaction samples once, after beginTx holds the write lock.
 	r, clock := a.withTxClock(r)
+	r = a.withSightGuard(r)
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	// Log fixed route labels only. No bodies, headers, raw paths or query strings.

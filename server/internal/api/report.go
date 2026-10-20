@@ -109,6 +109,9 @@ func (a *Server) report(w http.ResponseWriter, r *http.Request) error {
 				s.State.PlaySeconds += math.Min(content.VitalsRules.ReportGapCap, math.Max(0, float64(now.Unix()-reportAt.Int64)))
 			}
 			if !out.PlaceIgnored {
+				if err = claimSight(ctx, tx, s, req.Place.Area, req.Place.X, req.Place.Y, now.Unix()); err != nil {
+					return err
+				}
 				s.State.Area = req.Place.Area
 				s.State.Position = rulesPosition(req.Place)
 				if a.Config.Placement != nil {

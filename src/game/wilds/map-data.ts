@@ -63,10 +63,12 @@ export interface MapLoad {
 
 /**
  * What the map keeps for one world and its epochs (a scope): the chunks
- * built (the same terrain and ground changes give back the same MapChunk and
- * revision, so the renderer keeps its raster), the last picture of each
- * chunk (one that won't load now keeps it), and places found by someone
- * else. A load holds its own scope's cache, never whichever is current.
+ * built (a chunk is the same in its epoch, so the same ground changes give
+ * back the same MapChunk and revision, and the renderer keeps its raster;
+ * only the ground drawn is kept, not the decoded body, which isn't read
+ * again), the last picture of each chunk (one that won't load now keeps
+ * it), and places found by someone else. A load holds its own scope's
+ * cache, never whichever is current.
  */
 interface ScopeCache {
   scope: string
@@ -74,7 +76,7 @@ interface ScopeCache {
   statusAt?: number
   statusVersion?: number
   known?: string
-  built: Map<string, { terrain: ChunkTerrain; changes: readonly GroundChange[]; chunk: MapChunk }>
+  built: Map<string, { changes: readonly GroundChange[]; chunk: MapChunk }>
   chunks: Map<string, MapChunk>
   located: Map<string, { id: string; kind: string; tx: number; ty: number }>
 }
@@ -173,6 +175,14 @@ export async function loadMap(session: Session, opts: { read?: boolean } = {}): 
     const epoch = epochOf(cx, cy)
     if (!epoch || !inside(cx, cy)) return
     if (ended && epoch.kind !== 'still') return
+    const id = `${epoch.id}:${key}`
+    // Built already, with the same ground changes: its body isn't read again.
+    const built = cache.built.get(id)
+    if (built && built.changes === (mapGround.get(key) ?? groundChanges(cx, cy))) {
+      chunks.push(built.chunk)
+      cache.chunks.set(key, built.chunk)
+      return
+    }
     let terrain: ChunkTerrain
     try {
       terrain = cachedTerrain(epoch.id, cx, cy) ?? (await loadChunk(link.api.operations, epoch.id, cx, cy))
@@ -187,11 +197,10 @@ export async function loadMap(session: Session, opts: { read?: boolean } = {}): 
     // The store may have moved on while the chunk came: its ground changes would be another epoch's.
     if (!live()) return void (superseded = true)
     const changes = mapGround.get(key) ?? groundChanges(cx, cy)
-    const id = `${epoch.id}:${key}`
     let b = cache.built.get(id)
-    if (!b || b.terrain !== terrain || b.changes !== changes) {
+    if (!b || b.changes !== changes) {
       const t = effectiveTerrain(terrain, changes)
-      b = { terrain, changes, chunk: { cx, cy, ground: t.ground, solid: t.solid, rev: `${id}:${++revs}` } }
+      b = { changes, chunk: { cx, cy, ground: t.ground, solid: t.solid, rev: `${id}:${++revs}` } }
       cache.built.set(id, b)
     }
     chunks.push(b.chunk)

@@ -114,6 +114,9 @@ func (a *Server) keyedOpFinalized(w http.ResponseWriter, r *http.Request, op *co
 		return err
 	}
 	if where != nil {
+		err = claimSight(ctx, tx, s, where.Area, where.X, where.Y, now)
+	}
+	if err == nil && where != nil {
 		s.PlaceWritten = true
 		s.State.Area = where.Area
 		s.State.Position = rulesPosition(where)

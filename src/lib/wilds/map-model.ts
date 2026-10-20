@@ -184,21 +184,33 @@ export function mapEdges(window: Rect): { x0: number; y0: number; x1: number; y1
   return edges;
 }
 
-/** Everything the map could show: the window round you, the fixed footprints and the glimpse. */
-export function mapBounds(input: Pick<MapInput, 'window' | 'glimpse'>): Rect {
+/**
+ * Everything the map could show: the window round you, the fixed
+ * footprints and the glimpse, and everything you know past them (the
+ * chunks walked, where you stand, the ways and the places on it), kept to
+ * the world's grid. The window limits what is glimpsed round you, never how
+ * far the map goes over land you know.
+ */
+export function mapBounds(input: Pick<MapInput, 'window' | 'glimpse' | 'chunks' | 'ways' | 'places' | 'hero'>): Rect {
+  const S = loadWilds().chunkSize;
   const b = { ...input.window };
+  const add = (cx: number, cy: number) => {
+    if (!onMapGrid(cx, cy)) return;
+    b.minCx = Math.min(b.minCx, cx);
+    b.maxCx = Math.max(b.maxCx, cx);
+    b.minCy = Math.min(b.minCy, cy);
+    b.maxCy = Math.max(b.maxCy, cy);
+  };
+  const tile = (tx: number, ty: number) => add(Math.floor(tx / S), Math.floor(ty / S));
   for (const r of fixedRects()) {
-    b.minCx = Math.min(b.minCx, r.minCx);
-    b.maxCx = Math.max(b.maxCx, r.maxCx);
-    b.minCy = Math.min(b.minCy, r.minCy);
-    b.maxCy = Math.max(b.maxCy, r.maxCy);
+    add(r.minCx, r.minCy);
+    add(r.maxCx, r.maxCy);
   }
-  for (const g of input.glimpse) {
-    b.minCx = Math.min(b.minCx, g.cx);
-    b.maxCx = Math.max(b.maxCx, g.cx);
-    b.minCy = Math.min(b.minCy, g.cy);
-    b.maxCy = Math.max(b.maxCy, g.cy);
-  }
+  for (const g of input.glimpse) add(g.cx, g.cy);
+  for (const c of input.chunks) add(c.cx, c.cy);
+  if (input.hero) tile(input.hero.tx, input.hero.ty);
+  for (const w of input.ways) for (const t of w.path) tile(t.x, t.y);
+  for (const p of input.places) if (p.seen || p.foundBy) tile(p.tx, p.ty);
   return b;
 }
 

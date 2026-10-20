@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { TERRAIN } from '../src/lib/tile.ts';
 import { MAP_COLOURS, fitLabels, mapBounds, mapEdges, mapFrame, mapPicture, type MapInput } from '../src/lib/wilds/map-model.ts';
 import { mapChunkKeys } from '../src/game/wilds/map-data.ts';
-import { forgetWalked, markSeen, markWalked, seenAt, seenLandmarks, walkedChunks } from '../src/game/wilds/walked.ts';
+import { WALKED_MAX, forgetWalked, markSeen, markWalked, seenAt, seenLandmarks, walkedChunks } from '../src/game/wilds/walked.ts';
 import { displayArea, setWildsLand, areaInfo } from '../src/content/world.ts';
 
 const WINDOW = { minCx: -6, minCy: -8, maxCx: 4, maxCy: 7 };
@@ -29,9 +29,9 @@ const pixel = (p: { width: number; rgba: Uint8ClampedArray; originTx: number; or
 
 test('the map frames what you know with a chunk round it, growing to the window round you and its glimpse', () => {
   // The window already contains all town and lot chunks.
-  assert.deepEqual(mapBounds({ window: WINDOW, glimpse: [] }), WINDOW);
+  assert.deepEqual(mapBounds(input()), WINDOW);
   const glimpse = [{ cx: -5, cy: -4, land: 'meadow', river: true }, { cx: 0, cy: -9, land: 'woods', river: false }];
-  assert.deepEqual(mapBounds({ window: WINDOW, glimpse }), { minCx: -6, minCy: -9, maxCx: 4, maxCy: 7 });
+  assert.deepEqual(mapBounds(input({ glimpse })), { minCx: -6, minCy: -9, maxCx: 4, maxCy: 7 });
   // Fresh: all four footprints plus a chunk around them.
   assert.deepEqual(mapFrame(input({ glimpse })), { minCx: -3, minCy: -6, maxCx: 3, maxCy: 5 });
   // Walked out west: the frame reaches the glimpse beside it.
@@ -52,6 +52,28 @@ test('the map frames what you know with a chunk round it, growing to the window 
   // Everything walked: the whole window and its glimpse.
   const everywhere = input({ glimpse, chunks: [chunk(-6, 2, TERRAIN.grass_b), chunk(4, -8, TERRAIN.grass_b), chunk(1, 7, TERRAIN.grass_b)] });
   assert.deepEqual(mapFrame(everywhere), mapBounds(everywhere));
+});
+
+test('walked far out and home again, the map still reaches what you know past the window round you', () => {
+  // Home-centred window; walked east to chunk 100, a place seen and a way out there.
+  const home = { minCx: -32, minCy: -32, maxCx: 32, maxCy: 32 };
+  const back = input({
+    window: home,
+    chunks: [chunk(0, 0, TERRAIN.grass_c), chunk(100, 0, TERRAIN.grass_c)],
+    places: [{ id: 'place:40:-1', kind: 'glade', tx: 110 * S + 3, ty: -2 * S, seen: true, foundBy: null }],
+    ways: [{ id: 'way', name: 'Way', a: 'x', b: 'y', path: [{ x: 50 * S, y: 40 * S }] }],
+    hero: { tx: 5, ty: 5 }
+  });
+  const b = mapBounds(back);
+  assert.equal(b.maxCx, 110, 'the seen place');
+  assert.equal(b.maxCy, 40, 'the way');
+  const f = mapFrame(back);
+  assert.ok(f.maxCx >= 100, `the frame reaches the walked chunk (maxCx ${f.maxCx})`);
+  assert.ok(f.maxCx >= 110 && f.maxCy >= 40, 'and the place and way past it');
+  // Never past the world border.
+  const edge = input({ window: home, chunks: [chunk(4096, 0, TERRAIN.grass_c), chunk(4097, 0, TERRAIN.grass_c)] });
+  assert.equal(mapBounds(edge).maxCx, 4096);
+  assert.equal(mapFrame(edge).maxCx, 4096);
 });
 
 test('walked chunks are drawn in their ground’s colours; the rest of the window is parchment, and the border is edged in the drift’s dashes', () => {
@@ -160,4 +182,14 @@ test('a label wholly off screen (yours too) never pushes out one that shows', ()
   // A label partly on screen still counts.
   const edge = { kind: 'way' as const, text: 'A way on the edge', x: 2, y: 60 };
   assert.deepEqual(fitLabels([edge], 1, { w: 100, h: 100 }).map((l) => l.kind), ['way']);
+});
+
+test('a wick keeps the most recent WALKED_MAX chunks walked', () => {
+  forgetWalked();
+  for (let i = 0; i < WALKED_MAX + 10; i++) markWalked('wick-long', `${i}:0`);
+  const walked = walkedChunks('wick-long');
+  assert.equal(walked.length, WALKED_MAX);
+  assert.equal(walked[0], '10:0');
+  assert.equal(walked.at(-1), `${WALKED_MAX + 9}:0`);
+  forgetWalked();
 });

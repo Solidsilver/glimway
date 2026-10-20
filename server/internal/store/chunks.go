@@ -357,13 +357,21 @@ func (c *Chunks) make(ctx context.Context, tx *sql.Tx, world string, e *contract
 	if c.Generator == nil {
 		return nil, ErrGeneratorUnavailable
 	}
+	// The reader's guard (api/sight.go) may refuse to make it.
+	if g := chunks.MakeGuardOf(ctx); g != nil {
+		if err := g.AllowMake(ctx, tx, e.Kind, cx, cy); err != nil {
+			return nil, err
+		}
+	}
 	var kept []chunks.Kept
 	if e.Kind == EpochWick {
-		// Held chunks round it, pinned to other wick epochs, are kept as
-		// the Tangle is; a chunk held under another epoch is never made in
-		// this one.
+		// Held chunks round it are kept as the Tangle is, this epoch's own
+		// too: a body made before a generator change (039) need not match
+		// what this one would make beside it. A chunk held under another
+		// epoch is never made in this one (one held under this epoch is
+		// read, never made, above).
 		heldAt := map[[2]int]string{}
-		rows, err := tx.QueryContext(ctx, "SELECT cx,cy,epoch_id FROM holds WHERE world_id=? AND realm=? AND layer=0 AND cx BETWEEN ? AND ? AND cy BETWEEN ? AND ? AND epoch_id!=?", world, content.WildsRules.GetRealm(), cx-1, cx+1, cy-1, cy+1, e.Id)
+		rows, err := tx.QueryContext(ctx, "SELECT cx,cy,epoch_id FROM holds WHERE world_id=? AND realm=? AND layer=0 AND cx BETWEEN ? AND ? AND cy BETWEEN ? AND ?", world, content.WildsRules.GetRealm(), cx-1, cx+1, cy-1, cy+1)
 		if err != nil {
 			return nil, err
 		}

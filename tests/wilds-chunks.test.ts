@@ -10,7 +10,8 @@ import { TERRAIN } from '../src/lib/tile.ts';
 import { epochKindAt } from '../src/lib/wilds/coords.ts';
 import { sourceOf } from '../src/lib/location.ts';
 import { DECOR_ART } from '../src/game/wilds/decor.ts';
-import { cachedTerrain, forgetChunks, loadChunk, pruneChunks } from '../src/game/wilds/chunks.ts';
+import { MEMORY_CHUNKS, cachedTerrain, forgetChunks, loadChunk, pinAround, pruneChunks, unpinChunks } from '../src/game/wilds/chunks.ts';
+import { solidAt } from '../src/game/wilds/ground-view.ts';
 import { effectiveTerrain } from '../src/game/wilds/terrain.ts';
 import { applyClaim, applyDiscovery, applyEchoSettled, applyLanterns, applyNear, chunkEpoch, chunkHeld, knownPlaces, chunkThings, groundChanges, isClaimed, readMark, refreshNear, resetWilds, takeReadRequest, wildsEpoch, wildsBorder, wildsLive, wildsStale, wildsView } from '../src/game/wilds/store.ts';
 import { bus, EV } from '../src/game/events.ts';
@@ -592,4 +593,36 @@ test('an answer for land that turned since is not applied to the new land', asyn
   assert.equal(applyEchoSettled('echo:0', old), false);
   assert.equal(wildsView()!.echoes.get('echo:0')!.settled, false);
   assert.equal(takeReadRequest(), true, 'the Wilds are read again');
+});
+
+test('the chunks under the scene stay in memory and open however many others load (review finding 6)', async () => {
+  forgetChunks();
+  resetWilds();
+  const ops = new FakeOperations();
+  const session = fakeSession(ops);
+  ops.responses.set(`/api/wilds/near/${CENTER.cx}/${CENTER.cy}`, [nearAt(CENTER.cx, CENTER.cy)]);
+  serveWindow(ops, CENTER.cx, CENTER.cy);
+  assert.equal(await refreshNear(session, CENTER.cx, CENTER.cy), true);
+  const wick = NEAR.wick.id as string;
+  const active = cachedTerrain(wick, CENTER.cx, CENTER.cy)!;
+  assert.ok(active, 'the active chunk is loaded');
+  // An open tile of it, by world tile.
+  let open: [number, number] | null = null;
+  for (let y = 0; y < active.size && !open; y++) for (let x = 0; x < active.size && !open; x++) if (!active.solid[y]![x]) open = [x, y];
+  assert.ok(open);
+  const [tx, ty] = [CENTER.cx * active.size + open[0], CENTER.cy * active.size + open[1]];
+  assert.equal(solidAt(tx, ty), false);
+  pinAround(CENTER.cx, CENTER.cy, 3);
+  // The map loads a long walk's chunks through the same cache while the
+  // scene reads its own every frame (cachedTerrain never refreshes an age).
+  const api = { chunk: async (epoch: string, _layer: number, cx: number, cy: number) => Object.assign(chunkAt('whitequiet-0-4', cx, cy), { epochId: epoch }) };
+  for (let i = 0; i < MEMORY_CHUNKS; i++) {
+    assert.ok(cachedTerrain(wick, CENTER.cx, CENTER.cy));
+    await loadChunk(api, wick, 100 + i, 50);
+  }
+  assert.equal(cachedTerrain(wick, CENTER.cx, CENTER.cy), active, 'the active chunk stayed');
+  assert.equal(solidAt(tx, ty), false, 'and its open tile stays open');
+  assert.equal(cachedTerrain(wick, 100, 50), null, 'the oldest unpinned went');
+  assert.ok(cachedTerrain(wick, 100 + MEMORY_CHUNKS - 1, 50), 'the newest stayed');
+  unpinChunks();
 });

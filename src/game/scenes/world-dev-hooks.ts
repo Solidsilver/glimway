@@ -34,8 +34,9 @@ import { devFightFall } from '../wilds/dev-fight-fall'
 import { presence } from '../presence'
 import { pathTileAt } from '../wilds/path-tile'
 import { footprintAt } from '../wilds/fixed'
-import { chunkOfPixel } from '../wilds/coords'
+import { OUTDOORS_AREA, chunkOfPixel } from '../wilds/coords'
 import { offerDevWarp } from '../dev-warp'
+import { devWarpSight } from '../wilds/dev-warp-sight'
 
 /** The scene's interaction layers the hooks read (locals of `create()`). */
 export interface WorldHookLayers {
@@ -288,14 +289,19 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
   // position follows (scene pixels, world pixels on the open map), so an
   // upload's merge never snaps the hero back.
   on('__fsDevPlace', (x, y) => {
-    ;(s['hero'].sprite.body as Phaser.Physics.Arcade.Body).reset(x, y)
-    s['safeSpot'] = null
-    s['fixedSpot'] = null
-    s['waitingFixed'] = !s['fixedReady'](x, y)
-    s['fixedWait'] = 0
-    s['commonsWaitSaid'] = false
-    s['notePosition']()
-    if (!s['waitingFixed']) s['session'].saveSoon()
+    const place = () => {
+      ;(s['hero'].sprite.body as Phaser.Physics.Arcade.Body).reset(x, y)
+      s['safeSpot'] = null
+      s['fixedSpot'] = null
+      s['waitingFixed'] = !s['fixedReady'](x, y)
+      s['fixedWait'] = 0
+      s['commonsWaitSaid'] = false
+      s['notePosition']()
+      if (!s['waitingFixed']) s['session'].saveSoon()
+    }
+    // On the open map the server's sight goes there first (a dev build's: ../wilds/dev-warp-sight.ts).
+    if (s['world'].areaId === OUTDOORS_AREA) return devWarpSight(x, y).then(place)
+    place()
   })
   // The stale sample an open conversation leaves behind (playtest 1, Silas's axe).
   on('__fsDevStalePosition', (x, y) => {
