@@ -196,6 +196,9 @@ type TileInfo struct {
 	Places        []wilds.PlaceMark `json:"placesOnTile"`
 	Fixed         string            `json:"fixed,omitempty"`
 	Stand         *[2]int           `json:"stand,omitempty"`
+	// OnGrid: the caller's world lets a hero stand in this chunk (the lab
+	// sets it from the server's frontier; a worker never does).
+	OnGrid *bool `json:"onGrid,omitempty"`
 }
 
 // Inspect reads one tile (o.Inspect, world tile coordinates).

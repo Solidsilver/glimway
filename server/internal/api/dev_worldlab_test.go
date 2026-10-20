@@ -21,7 +21,7 @@ func TestDevWorldLabHereIsTheCallersWorld(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/api/dev/worldlab/state", nil)
 	r.AddCookie(c)
 	here, ok := x.api.DevWorldLabHere(r)
-	if !ok || here.Seed != seed || !strings.HasPrefix(here.Epoch, "t:") {
+	if !ok || here.Seed != seed || here.World == "" || !strings.HasPrefix(here.Epoch, "t:") {
 		t.Fatal(here, ok)
 	}
 	if _, ok := x.api.DevWorldLabHere(httptest.NewRequest(http.MethodGet, "/api/dev/worldlab/state", nil)); ok {

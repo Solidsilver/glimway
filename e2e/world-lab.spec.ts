@@ -69,10 +69,16 @@ test('the world lab: render, inspect, diff, rules, and go here', async ({ page }
   await lab(page).getByRole('tab', { name: 'View' }).click()
   await lab(page).getByLabel(/Side by side/).uncheck()
 
-  // Go here: the hero arrives on the tile (or the nearest open one), and the lab closes.
-  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
-  await expect(heading).toBeVisible({ timeout: 20_000 })
+  // Go here: on generated ground beside the Commons (the middle is the
+  // Commons' authored ground), the hero arrives on the tile or the nearest
+  // open one, and the lab closes.
   const go = lab(page).getByRole('button', { name: 'Go here' })
+  for (const dx of [160, -160, 120, -120, 200]) {
+    await page.mouse.click(box.x + box.width / 2 + dx, box.y + box.height / 2)
+    await expect(heading).toBeVisible({ timeout: 20_000 })
+    if ((await go.isEnabled()) && !(await lab(page).getByText('Authored', { exact: true }).count())) break
+  }
+  await expect(go).toBeEnabled()
   const hint = lab(page).getByText(/^Lands on/)
   const at = (await hint.count()) ? (await hint.textContent())! : (await heading.textContent())!
   const [tx, ty] = at.match(/-?\d+/g)!.map(Number)

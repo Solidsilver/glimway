@@ -219,7 +219,7 @@
   }
 
   /** Where "go here" lands: the nearest open tile of the picked one's chunk. */
-  const target = $derived(tile ? (tile.stand ?? (tile.fixed ? tile.tile : null)) : null)
+  const target = $derived(tile && tile.onGrid !== false ? (tile.stand ?? (tile.fixed ? tile.tile : null)) : null)
   /** The picked tile isn't your world as it is now: the arrival is in your world all the same. */
   const elsewhere = $derived(!!st?.here && !!tileVersion && (tileVersion.seed !== st.here.seed || epoch !== st.here.epoch || !!tileVersion.rules))
 
@@ -261,11 +261,14 @@
     e.stopPropagation()
   }
 
+  /** A world's seed is a long hash: its start is enough to tell them apart. */
+  const short = (seed: string) => (seed.length > 14 ? seed.slice(0, 10) + '…' : seed)
+
   const panelName = ['A', 'B', 'Changed'] as const
   const paneLabel = (p: 0 | 1 | 2) => {
-    if (!versionB) return `${seed} · ${view}`
+    if (!versionB) return `${short(seed)} · ${view}`
     const v = p === 1 ? versionB : versionA
-    return p === 2 ? 'Changed' : `${panelName[p]}: ${v.seed}${v.rules ? ' · edited rules' : ''}`
+    return p === 2 ? 'Changed' : `${panelName[p]}: ${short(v.seed)}${v.rules ? ' · edited' : ''}`
   }
   const OVERLAY_TEXT: Record<string, string> = {
     'land-cells': 'Land cells',
@@ -294,8 +297,8 @@
       <button type="button" class="small" aria-label="Zoom in" onclick={() => zoomBy(1.6)}>+</button>
       {#if hero}<button type="button" class="small" onclick={() => (camera = { ...camera, x: hero.tx + 0.5, y: hero.ty + 0.5 })} title="Centre on your hero"><Icon name="pin" size={12} /> You</button>{/if}
     </div>
-    <button type="button" class="close" aria-label="Close the world lab" onclick={onClose}><Icon name="close" size={14} /></button>
   </header>
+  <button type="button" class="close" aria-label="Close the world lab" onclick={onClose}><Icon name="close" size={14} /></button>
 
   {#if failed}
     <p class="banner bad" role="alert">{failed}</p>
@@ -390,7 +393,7 @@
               <section>
                 <h3>Tile {tile.tile[0]}, {tile.tile[1]}</h3>
                 <dl>
-                  <dt>Version</dt><dd>{tileVersion?.seed}{tileVersion?.rules ? ', edited rules' : ''}</dd>
+                  <dt>Version</dt><dd title={tileVersion?.seed}>{short(tileVersion?.seed ?? '')}{tileVersion?.rules ? ', edited rules' : ''}</dd>
                   <dt>Chunk</dt><dd>{tile.chunk[0]}, {tile.chunk[1]} (at {tile.local[0]}, {tile.local[1]})</dd>
                   {#if tile.fixed}
                     <dt>Authored</dt><dd>{tile.fixed}: fixed ground, not generated</dd>
@@ -406,8 +409,10 @@
               <section>
                 <button type="button" class="primary go" disabled={!target} onclick={goHere}><Icon name="pin" size={12} /> Go here</button>
                 {#if target && (target[0] !== tile.tile[0] || target[1] !== tile.tile[1])}<p class="hint">Lands on {target[0]}, {target[1]}, the nearest open tile.</p>{/if}
-                {#if !target}<p class="hint">This chunk has no open tile to stand on.</p>{/if}
-                {#if elsewhere}<p class="hint warn">This isn’t your world as it is now (seed {st.here?.seed}, this wick, the server’s rules): you’ll arrive in your world at this tile, which may look different.</p>{/if}
+                {#if tile.onGrid === false}<p class="hint warn">Your world doesn’t reach this chunk yet: the server wouldn’t let you stand there.</p>
+                {:else if !target}<p class="hint">This chunk has no open tile to stand on.</p>
+                {:else if tile.fixed}<p class="hint">Authored ground: you land on this very tile, wall or not.</p>{/if}
+                {#if elsewhere}<p class="hint warn">This isn’t your world as it is now (seed {short(st.here?.seed ?? '')}, this wick, the server’s rules): you’ll arrive in your world at this tile, which may look different.</p>{/if}
                 {#if message}<p class="bad">{message}</p>{/if}
                 <p class="hint">Moves only your hero, like a walk: nothing else changes.</p>
               </section>
@@ -424,7 +429,7 @@
 
 {#snippet statsOf(s: Stats, name: string | null)}
   <section>
-    <h3>{name ? `${name}: ` : ''}{s.seed}{s.content === 'edited' ? ' · edited rules' : ''}</h3>
+    <h3 title={s.seed}>{name ? `${name}: ` : ''}{short(s.seed)}{s.content === 'edited' ? ' · edited rules' : ''}</h3>
     <dl>
       <dt>View</dt><dd>{s.view}, chunks {s.rect[0]},{s.rect[1]} to {s.rect[2]},{s.rect[3]}</dd>
       <dt>Chunks</dt><dd>{s.chunks.toLocaleString()}{s.generatedChunks ? ` (${s.generatedChunks.toLocaleString()} made, ${s.fixedChunks} authored)` : ''}</dd>
@@ -471,6 +476,9 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 6px 10px;
+    /* Room for the close button, top right. */
+    padding-right: 50px;
+    min-height: 40px;
   }
   h2 {
     margin: 0;
@@ -499,6 +507,9 @@
     color: var(--cream-hi);
   }
   .close {
+    position: absolute;
+    top: max(8px, env(safe-area-inset-top));
+    right: max(8px, env(safe-area-inset-right));
     min-width: 40px;
     min-height: 40px;
     padding: 0;
@@ -577,7 +588,14 @@
     min-height: 40px;
     font-size: 14px;
   }
-  .tab[aria-selected='true'] {
+  .tab:hover:not(:disabled),
+  .tab:active:not(:disabled) {
+    background: var(--wood-wash);
+    transform: none;
+    box-shadow: none;
+  }
+  .tab[aria-selected='true'],
+  .tab[aria-selected='true']:hover {
     background: var(--cream);
     color: var(--wood-dark);
     box-shadow: inset 0 -3px 0 var(--wood);

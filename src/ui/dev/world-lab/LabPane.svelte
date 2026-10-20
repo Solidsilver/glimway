@@ -267,6 +267,10 @@
     pointer-events: none;
   }
   .tag {
+    max-width: calc(100% - 90px);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     top: 6px;
     left: 6px;
     font-family: var(--font-display);

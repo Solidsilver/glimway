@@ -4,6 +4,7 @@ package main
 
 import (
 	"glimway/server/internal/api"
+	"glimway/server/internal/location"
 	"glimway/server/internal/settings"
 	"glimway/server/internal/worldlab"
 	"log"
@@ -95,7 +96,7 @@ func devWorldLab(a *api.Server) *worldlab.Lab {
 		devLog.Printf("world lab off: %v", err)
 		return nil
 	}
-	return worldlab.NewLab([]string{exe, worldLabWorker}, a.DevWorldLabHere)
+	return worldlab.NewLab([]string{exe, worldLabWorker}, a.DevWorldLabHere, location.OnGridPublished)
 }
 
 // devCommand runs a dev build's hidden commands (a world lab worker),

@@ -36,6 +36,7 @@ const (
 // Here is the caller's own world, for the lab's defaults: its seed and
 // the wick season the server is in now.
 type Here struct {
+	World string `json:"-"`
 	Seed  string `json:"seed"`
 	Epoch string `json:"epoch"`
 }
@@ -49,17 +50,20 @@ type Here struct {
 type Lab struct {
 	worker Worker
 	here   func(*http.Request) (Here, bool)
+	onGrid func(world string, cx, cy int) bool
 	slots  chan struct{}
 	cache  *cache
 	wait   time.Duration
 }
 
 // NewLab makes the lab. argv re-executes this server as a worker (its
-// entry calls RunWorker); here is the caller's world, if known.
-func NewLab(argv []string, here func(*http.Request) (Here, bool)) *Lab {
+// entry calls RunWorker); here is the caller's world, if known, and
+// onGrid whether a hero may stand in one of its chunks (nil: unknown).
+func NewLab(argv []string, here func(*http.Request) (Here, bool), onGrid func(world string, cx, cy int) bool) *Lab {
 	return &Lab{
 		worker: Worker{Argv: argv, Nice: labNiceLevel, Timeout: workerLimit, Env: []string{"GOMAXPROCS=2", "GOMEMLIMIT=768MiB"}},
 		here:   here,
+		onGrid: onGrid,
 		slots:  make(chan struct{}, labSlots),
 		cache:  newCache(cacheBytes),
 		wait:   labWait,
@@ -311,21 +315,30 @@ func (l *Lab) tile(w http.ResponseWriter, r *http.Request, req labRequest) {
 		return
 	}
 	key := cacheKey("tile", o, nil)
-	if body, ok := l.cache.get(key); ok {
-		writeLabBytes(w, body)
-		return
+	body, ok := l.cache.get(key)
+	if !ok {
+		out, err := l.run(r.Context(), o)
+		if err != nil {
+			l.fail(w, err)
+			return
+		}
+		if body, err = json.Marshal(out.Tile); err != nil {
+			labError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		l.cache.put(key, body)
 	}
-	out, err := l.run(r.Context(), o)
-	if err != nil {
-		l.fail(w, err)
-		return
+	// Whether the caller could stand there is their world's word, now: never cached.
+	if l.here != nil && l.onGrid != nil {
+		if h, ok := l.here(r); ok {
+			var info TileInfo
+			if err := json.Unmarshal(body, &info); err == nil {
+				on := l.onGrid(h.World, info.Chunk[0], info.Chunk[1])
+				info.OnGrid = &on
+				body, _ = json.Marshal(info)
+			}
+		}
 	}
-	body, err := json.Marshal(out.Tile)
-	if err != nil {
-		labError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	l.cache.put(key, body)
 	writeLabBytes(w, body)
 }
 

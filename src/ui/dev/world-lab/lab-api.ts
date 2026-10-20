@@ -86,6 +86,8 @@ export interface TileInfo {
   fixed?: string
   /** The nearest open tile in the chunk, to arrive on. */
   stand?: [number, number]
+  /** The caller's world lets a hero stand in this chunk (unknown: absent). */
+  onGrid?: boolean
 }
 
 /** One version of the world: a seed and its rules (empty: the server's own). */

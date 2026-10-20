@@ -37,7 +37,9 @@ func testLab(t *testing.T) *Lab {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return NewLab([]string{exe, "_worker"}, func(*http.Request) (Here, bool) { return Here{Seed: "here-world", Epoch: DefaultEpoch}, true })
+	return NewLab([]string{exe, "_worker"}, func(*http.Request) (Here, bool) {
+		return Here{World: "w", Seed: "here-world", Epoch: DefaultEpoch}, true
+	}, func(world string, cx, _ int) bool { return world == "w" && cx > -5 })
 }
 
 func post(t *testing.T, l *Lab, name string, body any) *httptest.ResponseRecorder {
@@ -182,8 +184,13 @@ func TestLabVariantIsolation(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &info); err != nil || w.Code != 200 {
 		t.Fatal(w.Code, w.Body.String())
 	}
-	if info.Chunk != [2]int{-4, -8} || info.Ground == "" || info.Stand == nil {
+	if info.Chunk != [2]int{-4, -8} || info.Ground == "" || info.Stand == nil || info.OnGrid == nil || !*info.OnGrid {
 		t.Fatalf("tile %+v", info)
+	}
+	// Outside the caller's world: no standing there.
+	far := post(t, l, "tile", map[string]any{"seed": "lab-test", "epoch": DefaultEpoch, "at": []int{-140, -169}})
+	if err := json.Unmarshal(far.Body.Bytes(), &info); err != nil || info.OnGrid == nil || *info.OnGrid {
+		t.Fatal("a chunk off the caller's grid:", far.Body.String())
 	}
 	tile["rules"] = tunedRules(t)
 	if w := post(t, l, "tile", tile); w.Code != 200 {
