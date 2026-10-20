@@ -54,7 +54,7 @@ const (
 const lampCamp = "camp"
 
 // fightQuiet is how long after the last blow aimed at you, or the last you
-// swung into a fight, before either way home works (tuning).
+// landed on an enemy, before either way home works (tuning).
 const fightQuiet = 8 * time.Second
 
 // wayHome is the carried item a way home uses, and its use (content).
@@ -75,7 +75,8 @@ func wayHome(use string) (*content.ItemDef, *contentv1.UseEffect) {
 // ------------------------------------------------------------ fights
 
 // markFought stamps an account as fighting now: an enemy wound up or locked
-// its aim on them, or they swung or cast into a fight room. Callers hold h.mu.
+// its aim on them, or a blow of theirs landed on one. A swing into empty air
+// isn't a fight, even inside a camp's room (a whole chunk). Callers hold h.mu.
 func (h *presenceHub) markFought(id string, now time.Time) {
 	if h.foughtAt == nil {
 		h.foughtAt = map[string]time.Time{}

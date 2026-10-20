@@ -70,6 +70,7 @@ import { WildsMarks } from '../wilds/marks'
 import { WildsCamps } from '../wilds/camps'
 import { WildsCommunalLamps } from '../wilds/communal-lamps'
 import { WaysHome } from '../ways-home'
+import { fightingYou } from '../../lib/ways-home'
 import { watchRumour } from '../rumour-watch'
 import { loadWilds } from '../../lib/wilds/data'
 import { displayArea, setWildsLand } from '../../content/world'
@@ -613,7 +614,7 @@ export class WorldScene extends Phaser.Scene {
     this.waysHome = new WaysHome(this, {
       session: this.session,
       hero: () => this.hero.sprite,
-      threatened: () => enemiesNearForSync(this.world.areaId, { x: this.hero.sprite.x, y: this.hero.sprite.y }, this.enemies.enemies),
+      threatened: () => fightingYou(this.world.areaId, this.hero.sprite, this.enemies.enemies),
       transitioning: () => this.transitioning,
       notePosition: () => this.notePosition(),
       reducedMotion: this.reducedMotion

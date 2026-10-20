@@ -204,7 +204,7 @@ export const HOME_ERRORS: Table = {
  * where it might worry someone.
  */
 export const WAYS_HOME_ERRORS: Table = {
-  'in-a-fight': 'Not in a fight. Get clear first, then hold still.',
+  'in-a-fight': 'Not while something’s fighting you. Get clear, then hold still.',
   'pouch-unbound': 'Your pouch isn’t bound to a lamp yet. Stand by one and bind it.',
   'lamp-elsewhere': 'That lamp burns in another world. Your pouch is safe; bind it to a lamp here.',
   'lamp-packed': 'That lamp’s packed away at Pell’s. Your pouch is safe; bind it to another.',

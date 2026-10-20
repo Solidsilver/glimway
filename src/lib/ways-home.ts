@@ -9,6 +9,8 @@
 import type { WaysHomeBinding } from './gen/glimway/v1/lamps_pb.js'
 import { itemDef } from './items.ts'
 import { MAP_LAMPS } from '../content/map-lamps.ts'
+import { ENEMY_TUNING } from './enemies.ts'
+import { at } from './location.ts'
 
 export type WayHome = 'turncap' | 'pouch'
 
@@ -30,6 +32,42 @@ export function pauseMs(way: WayHome): number {
 
 /** How far the hero may drift (px) before the pause lets go: a nudge, never a step. */
 export const STILL_PX = 4
+
+/** An enemy as the fight rule reads it (src/game/entities/fight-rules.ts EnemyState). */
+export interface FightingEnemy {
+  readonly type: 'wisp' | 'beetle' | 'guardian'
+  readonly x: number
+  readonly y: number
+  readonly state: string
+  readonly dead: boolean
+  readonly parked?: boolean
+}
+
+/** How close (px) an enemy mid-attack, or the warden, makes it a fight: the sync gate's radius. */
+export const FIGHT_NEAR_PX = 200
+
+/** Mid-fight phases: winding up, attacking, or getting over one. */
+const ATTACKING = new Set(['telegraph', 'lunge', 'sweep', 'recover', 'stunned'])
+
+/**
+ * Whether something is fighting the hero, so a way home won't start or
+ * hold: an enemy winding up, attacking or getting over one within
+ * FIGHT_NEAR_PX, an awake warden that close, or any creature inside its own
+ * aggro range (it comes for whoever stands there). A creature wandering by
+ * its camp further off, or a dead one dissolving, isn't a fight (playtest
+ * 2026-10-20: any creature within 12 tiles refused the turncap). Open-map
+ * safe ground is never one. The server keeps the last word (api/ways_home.go
+ * inFight): an enemy's wind-up at you, or a blow of yours that landed.
+ */
+export function fightingYou(area: string, hero: { x: number; y: number }, enemies: readonly FightingEnemy[]): boolean {
+  if (area === 'outdoors' && at(area, hero.x, hero.y).safe) return false
+  return enemies.some((e) => {
+    if (e.dead || e.parked) return false
+    const d = Math.hypot(e.x - hero.x, e.y - hero.y)
+    if (e.type === 'guardian' || ATTACKING.has(e.state)) return d < FIGHT_NEAR_PX
+    return d < ENEMY_TUNING[e.type].aggro
+  })
+}
 
 export type PauseState = 'holding' | 'moved' | 'fight' | 'done'
 
@@ -84,7 +122,7 @@ function spoken(b: Pick<WaysHomeBinding, 'lampName' | 'kind'>): string {
 export const WAYS_HOME_LINES = {
   start: { turncap: 'The turncap leans for home. Hold still…', pouch: 'The ash warms in your hand. Hold still…' } as Record<WayHome, string>,
   moved: 'You moved, and the pull let go. You still have it.',
-  fight: 'Not in a fight. Get clear first.',
+  fight: 'Not while something’s fighting you. Get clear first.',
   arrived: { turncap: 'Back at the north arch. The turncap’s spent.' } as Record<'turncap', string>,
   arrivedBeside: (b: Pick<WaysHomeBinding, 'lampName' | 'kind'>) => `Beside ${spoken(b)}. The ash is spent.`,
   /** A way home that answered after its caller heard `pending` (or after a reload). */

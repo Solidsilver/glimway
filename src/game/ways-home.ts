@@ -19,7 +19,7 @@ import type { Session } from './session.ts'
 export interface WaysHomeDeps {
   session: Session
   hero: () => { x: number; y: number }
-  /** Enemies close enough that this is a fight (the sync gate's rule). */
+  /** Something is fighting the hero (src/lib/ways-home.ts fightingYou). */
   threatened: () => boolean
   /** A scene change is under way: nothing starts. */
   transitioning: () => boolean

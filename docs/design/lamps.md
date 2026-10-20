@@ -126,8 +126,10 @@ content use and resolved at use; it isn't spent on safe town ground. One binding
 covers every pouch they carry: bind at a lit camp way-lamp or communal lamp within reach, pouch
 in the pack. Lot lanterns take no binding. The landing is open ground within two tiles of the
 lamp, in its chunk, in front of it first. "In a fight" is the presence hub's: an enemy wound up
-or aimed at you, or you swung or cast into a fight room, in the last 8 s. The client holds the
-pause and lets go if you move or enemies close in; the server doesn't time it.
+or aimed at you (or your Echo), or a swing or cast of yours landed on one, in the last 8 s; a
+swing into empty air near a camp doesn't count. The client holds the pause and lets go if you
+move or something fights you: a creature inside its aggro range, or one winding up, attacking
+or recovering within 200 px (src/lib/ways-home.ts fightingYou). The server doesn't time it.
 
 ## 2. The build
 
