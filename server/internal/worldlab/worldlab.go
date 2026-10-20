@@ -329,4 +329,3 @@ func (wk Worker) Run(ctx context.Context, o Options) (Result, error) {
 	err = json.Unmarshal(stdout.Bytes(), &out)
 	return out, err
 }
-

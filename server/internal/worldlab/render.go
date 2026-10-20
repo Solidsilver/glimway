@@ -509,8 +509,8 @@ func reach(img *image.RGBA, walk, valid []bool, w, h, scale int, paint bool, anc
 }
 
 type DiffStats struct {
-	A            Stats `json:"a"`
-	B            Stats `json:"b"`
+	A            Stats   `json:"a"`
+	B            Stats   `json:"b"`
 	Changed      int     `json:"changedUnits"`
 	Share        float64 `json:"changedShare"`
 	Unit         string  `json:"unit"`
