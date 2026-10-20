@@ -21,7 +21,8 @@ caves, etc.").
 Terrain first, then water over it, then the living dressing. This replaces the iteration order in
 the roadmap and [synthesis.md](synthesis.md) (lake country used to come second).
 
-1. **Walk any way** (in flight): open world, border, landform version split, world lab.
+1. **Walk any way** (merged; fixes from its review in flight): open world, border, landform
+   version split, world lab.
 2. **Terrain:** height, cliffs, ramps, passes (the Tops), per the height design.
 3. **Water:** a flow map over the real terrain gives rivers, streams, lakes, ponds and tarns.
 4. **Lake country and the woods:** biomes and pins, and the dressing rules.
@@ -78,8 +79,8 @@ budget (today 5 ms p95, 6 KiB), measured, not assumed.
   and big historical landmarks live on lasting plans (landform seed and version). Ordinary trees,
   forage, creatures and lesser paths turn. Held and fixed land stay as they are. Player things are
   overlays generated land never moves.
-- **Lands:** iteration 1 (split the landform version); each later iteration puts its new features
-  on lasting plans.
+- **Lands:** iteration 1 split the landform version (`LandformV1`, merged); each later iteration
+  puts its new features on lasting plans.
 
 ### 2. Trails are lazy walkers; reach regions, not every chunk edge
 
@@ -338,5 +339,6 @@ from the start: it "allows for an algorithm for the placement of smaller ponds o
 - **The flow map moved up**: Sol offered it as an iteration 5 option; the owner made water its own
   iteration, right after terrain.
 - Otherwise Sol's corrections hold up. I checked the claims I could against the code (woods
-  `thicketPermille` 1000, three-chunk place cells, the landform hash still including
-  `GeneratorVersion`, lamp stones on the road), and they match.
+  `thicketPermille` 1000, three-chunk place cells, the landform hash including
+  `GeneratorVersion`, lamp stones on the road), and they match. (Orchestrator: this branch was
+  cut before the open world merged; that lane split the landform hash out as `LandformV1`.)
