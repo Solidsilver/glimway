@@ -384,13 +384,20 @@ export function paintCave(scene: Phaser.Scene, area: LabArea, style: CaveStyle):
       const faceBelow = k === KIND.rock && floorish(kindAt(tx, ty + 1))
       const rim = k === KIND.rock ? [1, 1, 1, 0.75, 0.55][reach(tx, ty)]! : 1
       const climb = k === KIND.slope ? slopeAxis(l, i) : null
-      const isRough = rough(i)
       for (let y = 0; y < T; y++)
         for (let x = 0; x < T; x++) {
           const wx = tx * T + x
           const wy = ty * T + y
           let rgb: RGB
           if (floorish(k)) {
+            // Where cut stone meets rough rock the edge is ragged, not a tile's.
+            let isRough = rough(i)
+            for (let d = 0; d < 4; d++) {
+              const j = (ty + DY[d]) * l.w + tx + DX[d]
+              if (!floorish(kindAt(tx + DX[d], ty + DY[d])) || rough(j) === isRough) continue
+              const off = d === 0 ? y : d === 1 ? T - 1 - x : d === 2 ? T - 1 - y : x
+              if (off < 5 && hash(wx >> 1, wy >> 1, 48) < (5 - off) / 10) isRough = !isRough
+            }
             // Along the climb (px, rising uphill) and across it.
             const a = climb ? (climb.up === 0 ? -wy : climb.up === 2 ? wy : climb.up === 1 ? wx : -wx) : 0
             const across = climb ? (climb.up === 0 || climb.up === 2 ? wx : wy) : 0
@@ -399,30 +406,32 @@ export function paintCave(scene: Phaser.Scene, area: LabArea, style: CaveStyle):
               const wc = worley(wx, wy, 7, 41)
               const crack = wc.f2 - wc.f1 < 0.95
               let c = 58 + hash(wc.cell, 0, 42) * 22 + (hash(wx, wy, 43) - 0.5) * 9 + noise1(wx + wy * 0.7, 23, 44) * 8
-              if (crack) c *= climb ? 0.74 : 0.62
+              if (crack) c *= climb ? 0.82 : 0.62
               if (climb) {
                 // Ribs across the climb, wobbling: a pale crest, shadow below it.
-                const ph = (((a + Math.round((noise1(across, 5, 45) - 0.5) * 5)) % 6) + 6) % 6
-                if (ph === 5) c *= 1.22
-                else if (ph === 4) c *= 0.7
-                else if (ph === 3) c *= 0.86
+                const ph = (((a + Math.round((noise1(across, 6, 45) - 0.5) * 6)) % 7) + 7) % 7
+                if (ph === 6) c *= 1.32
+                else if (ph === 5) c *= 1.12
+                else if (ph === 4) c *= 0.6
+                else if (ph === 3) c *= 0.8
                 // Scree: loose pebbles with a shadow under each.
                 if (hash(wx, wy, 46) < 0.03) c = Math.max(c, 82) * 1.2
                 else if (hash(wx, wy - 1, 46) < 0.03) c *= 0.7
               }
               rgb = [c * 0.99, c * 0.94, c * 0.9]
             } else if (climb) {
-              // Cut stairs: a step every 5 px of the climb; a crease at its foot, a pale nosing at its top, blocks along each.
-              const P = 5
+              // Cut stairs: a step every 8 px of the climb (two a tile); a crease at its foot, a pale nosing at its top, blocks along each.
+              const P = 8
               const step = Math.floor(a / P)
               const ph = ((a % P) + P) % P
               const block = Math.floor((across + (step % 2) * 4) / 8)
               const joint = (across + (step % 2) * 4) % 8 === 0
               let c = 68 + hash(block, step, 11) * 16 + (hash(wx, wy, 12) - 0.5) * 7
-              if (ph === 0) c *= 0.58
-              else if (ph === 1) c *= 0.82
-              else if (ph === P - 1) c *= 1.2
-              else if (joint) c *= 0.75
+              if (ph === 0) c *= 0.55
+              else if (ph === 1) c *= 0.78
+              else if (ph === P - 1) c *= 1.25
+              else if (ph === P - 2) c *= 1.08
+              else if (joint) c *= 0.72
               rgb = [c * 0.92, c * 0.9, c * 1.05]
             } else {
               // Flagged stone: cells of 5 px with dark joints, faint noise.

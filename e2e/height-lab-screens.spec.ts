@@ -19,21 +19,21 @@ const CAVE = 1
 const SURFACE = 0
 
 type Look = { area?: 'shoulder' | 'mountain'; cave?: 'lantern' | 'wide' | 'dim'; skyTiles?: number; caveStyle?: 'mixed' | 'built' | 'rough'; darkness?: number }
-type LabState = { area: string; look: Look; layer: number; z: number; sky: number; cave: number; light: number; lightMs: number }
+type LabState = { area: string; look: Look; built: Look; layer: number; z: number; sky: number; cave: number; light: number; lightMs: number }
 type Lab = { put: (layer: number, tx: number, ty: number) => void; look: (l: Look) => void; state: () => LabState }
 
 const labState = (page: Page) => page.evaluate(() => (window as unknown as { __fsLab: Lab }).__fsLab.state())
 
 async function setLook(page: Page, look: Look): Promise<void> {
   await page.evaluate((l) => (window as unknown as { __fsLab: Lab }).__fsLab.look(l), look)
-  // Some switches rebuild the scene: wait until the new one has them.
+  // Some switches rebuild the scene: wait until a scene built with them is up.
   for (const [k, v] of Object.entries(look) as [keyof Look, unknown][])
     await expect
       .poll(() => page.evaluate((key) => {
         const lab = (window as unknown as { __fsLab?: Lab }).__fsLab
         if (!lab) return undefined
         const st = lab.state()
-        return key === 'area' ? st.area : st.look[key]
+        return key === 'area' || key === 'skyTiles' || key === 'caveStyle' ? st.built[key] : st.look[key]
       }, k), { timeout: 30_000 })
       .toBe(v)
 }

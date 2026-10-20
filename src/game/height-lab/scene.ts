@@ -85,6 +85,8 @@ interface Mover {
 export class HeightLabScene extends Phaser.Scene {
   private area!: LabArea
   private look: LabLook = labLook()
+  /** What this scene was built with (the switches that rebuild it), for the screenshot spec. */
+  private built: Pick<LabLook, 'area' | 'skyTiles' | 'caveStyle'> = { area: 'shoulder', skyTiles: 6, caveStyle: 'mixed' }
   private things: Thing[] = []
   private movers: Mover[] = []
   private hero!: Mover
@@ -129,6 +131,7 @@ export class HeightLabScene extends Phaser.Scene {
     this.updateMs = []
     this.lightMs = []
     this.look = labLook()
+    this.built = { area: this.look.area, skyTiles: this.look.skyTiles, caveStyle: this.look.caveStyle }
     const endBuild = perfSpan('lab:build')
     this.area = buildArea(this.look.area, { skyTiles: this.look.skyTiles })
     drawFaces(this)
@@ -479,11 +482,13 @@ export class HeightLabScene extends Phaser.Scene {
     // crossfade the owner liked). The surface stays drawn: in the cave's
     // view the light decides what of it shows (open air lit, the hill over
     // you dark). The floor under each arch is always there, under the
-    // cave's image, so it doesn't change as you cross.
+    // cave's image and under the surface's things (someone standing in
+    // front of a mouth stays in front of it), so it doesn't change as you
+    // cross.
     for (const li of this.levelImages) li.img.setAlpha(inCave ? 1 : 1 - this.fogOf(v.z, li.level))
     const caveBand = inCave ? BAND.caveGroundIn : BAND.caveGroundOut
     this.caveImage!.setDepth(caveBand).setAlpha(inCave ? v.cave : 0).setVisible(inCave && v.cave > 0.001)
-    for (const m of this.mouthImages) m.setDepth(caveBand - 1)
+    for (const m of this.mouthImages) m.setDepth(BAND.caveGroundOut - 1)
     this.grids[0]!.setVisible(look.grid).setDepth(BAND.gridOut)
     this.grids[1]!.setVisible(look.grid && inCave).setDepth(BAND.gridIn)
 
@@ -582,10 +587,10 @@ export class HeightLabScene extends Phaser.Scene {
   }
 
   /** The lab's state, for the screenshot spec. */
-  state(): { area: string; look: LabLook; layer: number; z: number; sky: number; cave: number; light: number; lightMs: number } {
+  state(): { area: string; look: LabLook; built: Pick<LabLook, 'area' | 'skyTiles' | 'caveStyle'>; layer: number; z: number; sky: number; cave: number; light: number; lightMs: number } {
     const v = this.view()
     const avg = this.lightMs.reduce((a, b) => a + b, 0) / Math.max(1, this.lightMs.length)
-    return { area: this.look.area, look: this.look, ...v, light: this.lightAtHero(), lightMs: avg }
+    return { area: this.built.area, look: this.look, built: this.built, ...v, light: this.lightAtHero(), lightMs: avg }
   }
 
   private updateHud(): void {
