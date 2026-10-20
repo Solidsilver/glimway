@@ -143,17 +143,21 @@ export function buildMountain(opts: AreaOptions): LabArea {
   // from them (the drop from the ledge into the cavern), then its ramps.
   const caveTop = new Int8Array(w * h)
   const mask = new Uint8Array(w * h)
-  const dig = (z: number) => (tx: number, ty: number) => {
+  // The way in from the east mouth is cut stone (stairs on its ramp);
+  // from the bend east on, and the west mouth's way, it's rough rock.
+  const cut = G['cave-floor']
+  const rough = G['cave-rough']
+  const dig = (z: number, ground: number = rough) => (tx: number, ty: number) => {
     const i = idx(cave, tx, ty)
     caveTop[i] = z
     mask[i] = 1
-    cave.ground[i] = G['cave-floor']
+    cave.ground[i] = ground
   }
   // In from the east mouth, down to -1, east and down to -2.
-  rect(dig(0), 56, 67, 57, 73)
-  rect(dig(-1), 56, 62, 57, 66) // ramp A (carved below)
-  rect(dig(-1), 56, 58, 57, 61)
-  rect(dig(-1), 58, 58, 68, 59)
+  rect(dig(0, cut), 56, 67, 57, 73)
+  rect(dig(-1, cut), 56, 62, 57, 66) // ramp A (carved below)
+  rect(dig(-1, cut), 56, 58, 57, 61)
+  rect(dig(-1, cut), 58, 58, 68, 59)
   rect(dig(-2), 69, 58, 74, 59) // ramp B
   // North under the saddle at -2; the dead-end branch east and down to -3.
   rect(dig(-2), 75, 28, 76, 59)
@@ -171,12 +175,11 @@ export function buildMountain(opts: AreaOptions): LabArea {
   rect(dig(-4), 40, 51, 41, 64) // ramp E
   rect(dig(0), 40, 65, 41, 73)
   deriveFaces(cave, caveTop, mask)
-  const floor = G['cave-floor']
-  ramp(cave, 56, 62, 57, 66, S, -1, 0, floor)
-  ramp(cave, 69, 58, 74, 59, W, -2, -1, floor)
-  ramp(cave, 85, 52, 88, 53, W, -3, -2, floor)
-  ramp(cave, 26, 32, 27, 43, N, -4, -2, floor)
-  ramp(cave, 40, 51, 41, 64, S, -4, 0, floor)
+  ramp(cave, 56, 62, 57, 66, S, -1, 0, cut)
+  ramp(cave, 69, 58, 74, 59, W, -2, -1, rough)
+  ramp(cave, 85, 52, 88, 53, W, -3, -2, rough)
+  ramp(cave, 26, 32, 27, 43, N, -4, -2, rough)
+  ramp(cave, 40, 51, 41, 64, S, -4, 0, rough)
   // Pillars and a still pool in the cavern.
   for (const [tx, ty] of [[35, 41], [36, 41], [35, 42], [50, 42], [51, 42], [47, 49], [33, 46]] as const) {
     setClosed(cave, tx, ty, KIND.rock)
