@@ -17,8 +17,9 @@ const (
 // Kept is a kept neighbour: a stored chunk of another epoch beside the one
 // being made (in 0.8, a Tangle chunk beside a wick chunk). Only its two
 // edge tiles facing the new chunk are read. Held is set for a held chunk
-// (a wick chunk pinned to an older wick epoch): its coordinates say wick,
-// but the new chunk treats it as kept, as it does the Tangle.
+// (a wick chunk pinned by a hold, this epoch's or an older one): its
+// coordinates say wick, but the new chunk treats it as kept, as it does the
+// Tangle.
 type Kept struct {
 	CX, CY int
 	Chunk  *contract.WorldChunk
@@ -28,7 +29,7 @@ type Kept struct {
 // GenerateV3 makes one chunk of the open map: a pure function of (e, cx,
 // cy), plus kept neighbours' stored edges at a seam. Pass every neighbour
 // (diagonals too) whose EpochKindAt differs from e.Kind, and every held
-// neighbour pinned to another epoch; a missing one is read as generator v3
+// neighbour (this epoch's holds too); a missing one is read as generator v3
 // makes it, which is exact while it was made by v3 (a held one must be
 // passed). The frontier is the caller's to check: this makes any chunk.
 func GenerateV3(e Epoch, cx, cy int, kept []Kept) (Chunk, error) {

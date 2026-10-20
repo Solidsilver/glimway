@@ -160,5 +160,9 @@
   {
     "name": "039_open_world.sql",
     "sha256": "eeebd8133837bf7ff475cde9bceec83e1371f48d71c80e8f9d640b272d9848ca"
+  },
+  {
+    "name": "040_open_world_fixes.sql",
+    "sha256": "300a696af825ffa262ec2155886a852c5e9da6a729bbf221adcfe812507ba23b"
   }
 ]
