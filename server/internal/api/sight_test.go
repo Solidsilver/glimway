@@ -66,7 +66,7 @@ func TestSightFollowsWalkingAndRiding(t *testing.T) {
 	s = x.reportPx(c, s, px, py)
 	// Ride east 5 minutes on laid stone (155 × 1.15), then walk north-west.
 	for _, leg := range []struct {
-		vx, vy float64
+		vx, vy  float64
 		reports int
 	}{{155 * 1.15, 0, 30}, {-110 / math.Sqrt2, -110 / math.Sqrt2, 12}, {0, 155, 12}} {
 		for range leg.reports {

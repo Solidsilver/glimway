@@ -63,6 +63,7 @@ import { OUTDOORS_AREA, isWildsArea, chunkOfPixel, chunkKey } from '../wilds/coo
 import { contentPosition } from '../../lib/location'
 import { holdOnSafe, stopAtEdge } from '../safe-barrier'
 import { prepareWilds, wildsBorder } from '../wilds/store'
+import { devWarpSight } from '../wilds/dev-warp-sight'
 import { WildsWindow, onWindow } from '../wilds/window'
 import { followBorder, waitingFixedAt } from '../wilds/wilds-world'
 import { WildsPaths } from '../wilds/paths'
@@ -1287,7 +1288,9 @@ export class WorldScene extends Phaser.Scene {
   /** Dev: straight to a world tile of the open map (its chunks load while the screen is dark). */
   private warpWilds(tx: number, ty: number): void {
     if (this.transitioning) return
-    this.moveTo({ area: OUTDOORS_AREA, position: tileCenter(tx, ty) }, { entry: { tx, ty } }, { inDark: () => prepareWilds(this.session, 0) })
+    const at = tileCenter(tx, ty)
+    // The server moves its sight there first (dev builds), so the land there reads.
+    this.moveTo({ area: OUTDOORS_AREA, position: at }, { entry: { tx, ty } }, { inDark: async () => { await devWarpSight(at.x, at.y); return prepareWilds(this.session, 0) } })
   }
 
   /**

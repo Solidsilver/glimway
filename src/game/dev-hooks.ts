@@ -166,7 +166,7 @@ export interface FsHooks {
   /** Speak the naming to the warden; `force` skips the opening and reach rules. */
   __fsDevSpeakNaming: (force?: boolean) => boolean
   /** Set the hero down at a spot in this area (no scene restart); the save follows. */
-  __fsDevPlace: (x: number, y: number) => void
+  __fsDevPlace: (x: number, y: number) => void | Promise<void>
   /** Write a spot into the save without moving the hero. */
   __fsDevStalePosition: (x: number, y: number) => void
   /** Take the saved-position sample every frame. */
