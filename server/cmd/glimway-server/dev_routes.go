@@ -96,7 +96,9 @@ func devWorldLab(a *api.Server) *worldlab.Lab {
 		devLog.Printf("world lab off: %v", err)
 		return nil
 	}
-	return worldlab.NewLab([]string{exe, worldLabWorker}, a.DevWorldLabHere, location.OnGridPublished)
+	// Every world has the same grid now (the world border, 0.14).
+	onGrid := func(_ string, cx, cy int) bool { return location.OnGrid(cx, cy) }
+	return worldlab.NewLab([]string{exe, worldLabWorker}, a.DevWorldLabHere, onGrid)
 }
 
 // devCommand runs a dev build's hidden commands (a world lab worker),
