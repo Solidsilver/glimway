@@ -72,13 +72,61 @@ curl -fsS https://glimway.example.org/api/calendar
 ```
 
 Point DNS at the host first so Caddy can obtain a certificate. The module runs
-`glimway-server` on localhost:8090 and a Caddy static file server (`glimway`) on
+`glimway-server` on localhost:8090 and a static web listener (`glimway`) on
 localhost:4173. Its optional HTTPS Caddy virtual host proxies `/api/*` and `/ws`
 to the backend and everything else to the static listener. It preserves paths
 and Host, and Caddy handles WebSocket upgrades. Compression is kept off `/ws`.
 State is mode 0700 under `/var/lib/glimway-server`, owned by `glimway-server`.
 The backend and backups use `ProtectSystem=strict`, private temporary storage,
 and kernel/device restrictions with explicit writable data directories.
+
+### What serves the web app
+
+The static listener is the server binary's static-only mode,
+`glimway-server -listen 127.0.0.1:4173 -static-dir <webPackage> serve-static`:
+the same handler the Docker image uses (`server/cmd/glimway-server/static.go`),
+with no database and no settings. It runs as the web user with
+`ProtectSystem=strict`, `NoNewPrivileges` and the other unit hardening, and
+answers 404 for `/api` and `/ws` (your proxy sends those to the backend).
+A plain file server is no good here: every file in the Nix store is dated
+1970, so it sends no `ETag` or `Last-Modified` and browsers download every
+file on every launch. The static-only mode sends:
+
+| Files | `Cache-Control` | Validator |
+| --- | --- | --- |
+| Vite's hashed `/assets/<name>-<hash>.*` | `public, max-age=31536000, immutable` | content `ETag` |
+| everything else (the stable-name art under `/assets/fingersnap/`, icons) | `public, max-age=0, must-revalidate` | content `ETag` (SHA-256, hashed once per file) |
+| `index.html`, other pages, `version.json` | `no-store` | |
+
+There is no `Last-Modified`: the 1970 date would be the same for every
+release. A returning player's browser asks for each art file with
+`If-None-Match` and gets a 304 while it is unchanged; a release that changes
+the file changes its ETag, so the browser downloads the new one. Pages and
+`version.json` are never cached, so a new release (and its update notice)
+shows up at once. Behind Caddy's `encode`, a compressed response's ETag gets
+a `-zstd` or `-gzip` suffix; Caddy takes it off `If-None-Match` again, so
+the 304s still work.
+
+To check the headers after a deploy (glim-dev shown; the live site is the
+same):
+
+```sh
+art=https://glim-dev.solidsilver.dev/assets/fingersnap/runtime-pass/manifest.json
+curl -sSI "$art"
+# 200, Cache-Control: public, max-age=0, must-revalidate, Etag: "<sha256>"
+etag=$(curl -sSI "$art" | tr -d '\r' | sed -n 's/^[Ee][Tt]ag: //p')
+curl -sS -o /dev/null -w '%{http_code}\n' -H "If-None-Match: $etag" "$art"
+# 304
+js=$(curl -sS https://glim-dev.solidsilver.dev/ | grep -o '/assets/index-[^"]*\.js' | head -1)
+curl -sSI "https://glim-dev.solidsilver.dev$js" | grep -i cache-control
+# public, max-age=31536000, immutable
+curl -sSI https://glim-dev.solidsilver.dev/ | grep -i cache-control
+curl -sSI https://glim-dev.solidsilver.dev/version.json | grep -i cache-control
+# no-store (both)
+```
+
+In the game, Menu → Copy load timings on a second launch should show the art
+"from cache" or "checked with the server (304)", not "downloaded".
 
 ### Options
 
@@ -333,7 +381,8 @@ nh os switch -U glimway-dev
 ```
 
 This only moves the `glimway-dev` input; the live input stays pinned. Check
-`curl -fsS https://glim-dev.solidsilver.dev/api/health`.
+`curl -fsS https://glim-dev.solidsilver.dev/api/health`, and the web's cache
+headers ([What serves the web app](#what-serves-the-web-app)).
 
 Migrations past the last release can still change before it ships. A dev
 database that ran a pending migration which was later edited or folded into

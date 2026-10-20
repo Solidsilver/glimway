@@ -102,6 +102,12 @@ func run(args []string) error {
 	if *presenceFlush != 0 && *presenceFlush != 50 && *presenceFlush != 100 {
 		return fmt.Errorf("invalid -presence-flush-ms (want 0, 50, or 100)")
 	}
+	if cmd := f.Args(); len(cmd) > 0 && cmd[0] == "serve-static" {
+		if len(cmd) != 1 || *staticDir == "" {
+			return fmt.Errorf("usage: -static-dir DIR [-listen ADDR] serve-static")
+		}
+		return serveStatic(*addr, *staticDir)
+	}
 	// The settings: defaults, the file, GLIMWAY_* variables, then flags.
 	conf, err := settings.Load(*configPath, envLookup, devBuild)
 	if err != nil {

@@ -109,6 +109,10 @@ let
   invalidState = evaluate { enable = true; stateDirectory = "../game"; };
   env = cfg: cfg.systemd.services.glimway-server.environment;
   service = cfg: cfg.systemd.services.glimway-server.serviceConfig;
+  webService = cfg: cfg.systemd.services.glimway.serviceConfig;
+  devWebService = cfg: cfg.systemd.services.glimway-dev.serviceConfig;
+  # A package's store path as plain text, to look for in a unit's ExecStart.
+  path = p: builtins.unsafeDiscardStringContext (toString p);
   assertionsPass = cfg: lib.all (a: a.assertion) cfg.assertions;
   configs = [ defaults legacy custom scheduled disabled live dev both proxied devOn ];
   isDev = p: p.passthru.devTools or false;
@@ -216,6 +220,21 @@ assert lib.attrNames proxied.services.caddy.virtualHosts == [ "https://fsnap.exa
 assert lib.hasInfix "reverse_proxy 127.0.0.1:8091" proxied.services.caddy.virtualHosts."https://glim-dev.example.org".extraConfig;
 assert lib.hasInfix "reverse_proxy 127.0.0.1:4174" proxied.services.caddy.virtualHosts."https://glim-dev.example.org".extraConfig;
 assert lib.hasInfix "reverse_proxy 127.0.0.1:8090" proxied.services.caddy.virtualHosts."https://fsnap.example.org".extraConfig;
+# The web units run the server's static-only mode (cache headers, content
+# ETags), never a plain file server, on webPort, hardened, as the web user.
+assert lib.all (web: lib.hasInfix "glimway-server" web.ExecStart && lib.hasSuffix ''"serve-static"'' web.ExecStart
+    && !(lib.hasInfix "caddy" web.ExecStart) && web.NoNewPrivileges && web.ProtectSystem == "strict"
+    && web.ProtectHome == "read-only")
+  [ (webService live) (webService legacy) (devWebService dev) ];
+assert lib.hasInfix ''"-listen" "127.0.0.1:4173" "-static-dir" "${path live.services.glimway.webPackage}"'' (webService live).ExecStart;
+assert lib.hasInfix ''"-listen" "127.0.0.1:4174" "-static-dir" "${path dev.services.glimway-dev.webPackage}"'' (devWebService dev).ExecStart;
+assert lib.hasInfix ''"-static-dir" "/srv/glimway/dist"'' (webService legacy).ExecStart;
+assert lib.hasInfix (path live.services.glimway.package) (webService live).ExecStart;
+assert lib.hasInfix (path dev.services.glimway-dev.package) (devWebService dev).ExecStart;
+assert (webService custom).User == "game" && (webService custom).Group == "games";
+# The managed proxy still sends other paths to the web unit's listener.
+assert lib.hasInfix "reverse_proxy 127.0.0.1:4173" custom.services.caddy.virtualHosts."https://game.example.org".extraConfig
+  && lib.hasInfix ''"-listen" "127.0.0.1:4173"'' (webService custom).ExecStart;
 pkgs.runCommand "glimway-nixos-module-evaluation" {
   # Force systemd unit generation as well as module options (no Linux build).
   report = builtins.unsafeDiscardStringContext (builtins.toJSON {
