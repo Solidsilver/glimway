@@ -1,0 +1,1433 @@
+{
+ "r4-s-ghost1-east-ramp-top": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 1,
+  "sky": 0.18750000558793545,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.8641666690508525
+ },
+ "r4-s-ghost2-east-ramp-mid": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 0.10000000149011612,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 1.469166672229767
+ },
+ "r4-s-ghost3-north-ramp-entry": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 0,
+  "sky": 0.8541666492819786,
+  "cave": 0.2916666666666667,
+  "light": 1,
+  "lightMs": 1.403333338101705
+ },
+ "r4-s-north-down-1": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 0,
+  "sky": 0.9374999925494194,
+  "cave": 0.125,
+  "light": 1,
+  "lightMs": 1.0366666694482167
+ },
+ "r4-s-north-down-2": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 0,
+  "sky": 0.7708333283662796,
+  "cave": 0.4583333333333333,
+  "light": 1,
+  "lightMs": 0.9350000182787578
+ },
+ "r4-s-north-down-3": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": -0.10000000149011612,
+  "sky": 0.654166685044765,
+  "cave": 0.6916666666666677,
+  "light": 1,
+  "lightMs": 0.9558333396911621
+ },
+ "r4-s-north-down-4": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": -0.5,
+  "sky": 0.3541666753590107,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.8666666567325592
+ },
+ "r4-s-north-down-5": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": -0.8999999761581421,
+  "sky": 0.054166668280959604,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.7899999916553497
+ },
+ "r4-s-north-down-6": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": -1,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.7175000051657359
+ },
+ "r4-s-north-up-1": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": -0.8999999761581421,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.6533333420753479
+ },
+ "r4-s-north-up-2": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": -0.5,
+  "sky": 0.28750000856816793,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.6416666726271312
+ },
+ "r4-s-north-up-3": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": -0.10000000149011612,
+  "sky": 0.704166677594185,
+  "cave": 0.5916666666666662,
+  "light": 1,
+  "lightMs": 0.6558333257834117
+ },
+ "r4-s-north-up-4": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 0,
+  "sky": 0.8541666492819786,
+  "cave": 0.2916666666666667,
+  "light": 1,
+  "lightMs": 0.6758333345254263
+ },
+ "r4-s-east-down-1": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 1,
+  "sky": 0.4375000037252903,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.6491666853427887
+ },
+ "r4-s-east-down-2": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 1,
+  "sky": 0.20416667275130773,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.6391666730244955
+ },
+ "r4-s-east-down-3": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 0.9149253595231186,
+  "sky": 0.13750000409781982,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.6274999896685283
+ },
+ "r4-s-east-down-4": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 0.4000000059604645,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.6274999856948853
+ },
+ "r4-s-east-down-5": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 0.053488372890062516,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.6041666626930237
+ },
+ "r4-s-east-down-6": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": -0.0850746281333821,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.6099999964237213
+ },
+ "r4-s-east-down-7": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": -0.6000000238418579,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.6191666662693024
+ },
+ "r4-s-east-down-8": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": -1,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.612500011920929
+ },
+ "r4-s-east-up-1": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": -0.8999999860922495,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.643333351612091
+ },
+ "r4-s-east-up-2": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": -0.053488372890062516,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.6383333305517832
+ },
+ "r4-s-east-up-3": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 0.946511618619741,
+  "sky": 0.17083333842456316,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.6175000011920929
+ },
+ "r4-s-east-up-4": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 1,
+  "sky": 0.4375000037252903,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.6116666734218598
+ },
+ "r4-s-chamber-rough": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": -1,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.6291666805744172
+ },
+ "r4-m-a-down-1": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 0.18750000558793545,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.8678571368966784
+ },
+ "r4-m-a-down-2": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.6991525443933778
+ },
+ "r4-m-a-down-3": {
+  "area": "mountain",
+  "layer": 1,
+  "z": -0.10000000149011612,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.5491666694482168
+ },
+ "r4-m-a-down-4": {
+  "area": "mountain",
+  "layer": 1,
+  "z": -0.30000001192092896,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.5591666579246521
+ },
+ "r4-m-a-down-5": {
+  "area": "mountain",
+  "layer": 1,
+  "z": -0.699999988079071,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.5633333305517833
+ },
+ "r4-m-a-down-6": {
+  "area": "mountain",
+  "layer": 1,
+  "z": -0.8999999761581421,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.5508333325386048
+ },
+ "r4-m-a-down-7": {
+  "area": "mountain",
+  "layer": 1,
+  "z": -1,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.5391666531562805
+ },
+ "r4-m-a-up-1": {
+  "area": "mountain",
+  "layer": 1,
+  "z": -1,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.5491666634877522
+ },
+ "r4-m-a-up-2": {
+  "area": "mountain",
+  "layer": 1,
+  "z": -0.5,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.5466666718324026
+ },
+ "r4-m-a-up-3": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.5350000103314717
+ },
+ "r4-m-a-up-4": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 0.10416666977107525,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.5208333452542623
+ },
+ "r4-m-b-1": {
+  "area": "mountain",
+  "layer": 1,
+  "z": -1,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.5208333353201549
+ },
+ "r4-m-b-2": {
+  "area": "mountain",
+  "layer": 1,
+  "z": -1.3333333730697632,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.5300000011920929
+ },
+ "r4-m-b-3": {
+  "area": "mountain",
+  "layer": 1,
+  "z": -1.622093019097352,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.521666673819224
+ },
+ "r4-m-b-4": {
+  "area": "mountain",
+  "layer": 1,
+  "z": -2,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.5108333428700765
+ },
+ "r4-m-e-up-1": {
+  "area": "mountain",
+  "layer": 1,
+  "z": -4,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.5558333436648051
+ },
+ "r4-m-e-up-2": {
+  "area": "mountain",
+  "layer": 1,
+  "z": -3.2857143878936768,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.607500014702479
+ },
+ "r4-m-e-up-3": {
+  "area": "mountain",
+  "layer": 1,
+  "z": -2.7142856121063232,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.5883333404858907
+ },
+ "r4-m-e-up-4": {
+  "area": "mountain",
+  "layer": 1,
+  "z": -2.4285714626312256,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.5608333249886831
+ },
+ "r4-m-e-up-5": {
+  "area": "mountain",
+  "layer": 1,
+  "z": -1.8571428060531616,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.5424999793370565
+ },
+ "r4-m-e-up-6": {
+  "area": "mountain",
+  "layer": 1,
+  "z": -1,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.5316666603088379
+ },
+ "r4-m-e-up-7": {
+  "area": "mountain",
+  "layer": 1,
+  "z": -0.4285714328289032,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.5325000147024791
+ },
+ "r4-m-e-up-8": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.5350000242392222
+ },
+ "r4-m-e-up-9": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.5300000051657359
+ },
+ "r4-m-e-down-1": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.5374999980131785
+ },
+ "r4-m-e-down-2": {
+  "area": "mountain",
+  "layer": 1,
+  "z": -0.7142857313156128,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.5350000063578287
+ },
+ "r4-m-e-down-3": {
+  "area": "mountain",
+  "layer": 1,
+  "z": -1.8571428060531616,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.5225000003973643
+ },
+ "r4-m-e-down-4": {
+  "area": "mountain",
+  "layer": 1,
+  "z": -3,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.5558333237965901
+ },
+ "r4-m-ledge": {
+  "area": "mountain",
+  "layer": 1,
+  "z": -2,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.5683333257834117
+ },
+ "r4-m-ledge-west": {
+  "area": "mountain",
+  "layer": 1,
+  "z": -2,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.5291666686534882
+ },
+ "r4-m-ramp-d-mid": {
+  "area": "mountain",
+  "layer": 1,
+  "z": -2.9166667461395264,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.5274999936421713
+ },
+ "r4-m-ledge-dark0": {
+  "area": "mountain",
+  "layer": 1,
+  "z": -2,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.506666652361552
+ },
+ "r4-m-ledge-dark90": {
+  "area": "mountain",
+  "layer": 1,
+  "z": -2,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.5199999948342641
+ },
+ "r4-m-built-ramp-b": {
+  "area": "mountain",
+  "layer": 1,
+  "z": -1.4166666467984517,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.7196428435189384
+ },
+ "r4-m-built-ramp-e": {
+  "area": "mountain",
+  "layer": 1,
+  "z": -1.8571428060531616,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.6436974821972246
+ },
+ "r4-m-rough-ramp-a": {
+  "area": "mountain",
+  "layer": 1,
+  "z": -0.5,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.7392857202461788
+ },
+ "r4-m-rough-cavern": {
+  "area": "mountain",
+  "layer": 1,
+  "z": -4,
+  "sky": 0,
+  "cave": 1,
+  "light": 1,
+  "lightMs": 0.6775000055631002
+ },
+ "r4-mouth-m-east-sky3-lantern-out2": {
+  "area": "mountain",
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.6385964719872725
+ },
+ "r4-mouth-m-east-sky3-lantern-out1": {
+  "area": "mountain",
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.5680672240858319
+ },
+ "r4-mouth-m-east-sky3-lantern-portal": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.5066666722297668
+ },
+ "r4-mouth-m-east-sky3-lantern-in1": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 0.7083333507180214,
+  "cave": 0.2916666666666667,
+  "light": 1,
+  "lightMs": 0.9149999896685282
+ },
+ "r4-mouth-m-east-sky3-lantern-in2": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 0.3750000111758709,
+  "cave": 0.625,
+  "light": 1,
+  "lightMs": 1.1758333325386048
+ },
+ "r4-mouth-m-east-sky3-lantern-in3": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 0.0416666679084301,
+  "cave": 0.9583333333333334,
+  "light": 1,
+  "lightMs": 0.9866666674613953
+ },
+ "r4-mouth-m-west-sky3-lantern-out2": {
+  "area": "mountain",
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.8558333396911622
+ },
+ "r4-mouth-m-west-sky3-lantern-out1": {
+  "area": "mountain",
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.6783333400885264
+ },
+ "r4-mouth-m-west-sky3-lantern-portal": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.523333340883255
+ },
+ "r4-mouth-m-west-sky3-lantern-in1": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 0.7083333507180214,
+  "cave": 0.2916666666666667,
+  "light": 1,
+  "lightMs": 0.6183333496252695
+ },
+ "r4-mouth-m-west-sky3-lantern-in2": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 0.3750000111758709,
+  "cave": 0.625,
+  "light": 1,
+  "lightMs": 0.8458333412806193
+ },
+ "r4-mouth-m-west-sky3-lantern-in3": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 0.0416666679084301,
+  "cave": 0.9583333333333334,
+  "light": 1,
+  "lightMs": 0.8375000019868215
+ },
+ "r4-mouth-s-first-sky3-lantern-out2": {
+  "area": "shoulder",
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.773684213035985
+ },
+ "r4-mouth-s-first-sky3-lantern-out1": {
+  "area": "shoulder",
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.7831932737045929
+ },
+ "r4-mouth-s-first-sky3-lantern-portal": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 0,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.7199999829133351
+ },
+ "r4-mouth-s-first-sky3-lantern-in1": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 0,
+  "sky": 0.7083333507180214,
+  "cave": 0.2916666666666667,
+  "light": 1,
+  "lightMs": 0.8274999777475993
+ },
+ "r4-mouth-s-first-sky3-lantern-in2": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": -0.10000000149011612,
+  "sky": 0.3750000111758709,
+  "cave": 0.625,
+  "light": 1,
+  "lightMs": 0.999999980131785
+ },
+ "r4-mouth-s-first-sky3-lantern-in3": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": -0.30000001192092896,
+  "sky": 0.0416666679084301,
+  "cave": 0.9583333333333334,
+  "light": 1,
+  "lightMs": 0.9408333241939545
+ },
+ "r4-mouth-s-second-sky3-lantern-out2": {
+  "area": "shoulder",
+  "layer": 0,
+  "z": 1,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.8141666889190674
+ },
+ "r4-mouth-s-second-sky3-lantern-out1": {
+  "area": "shoulder",
+  "layer": 0,
+  "z": 1,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.6675000230471293
+ },
+ "r4-mouth-s-second-sky3-lantern-portal": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 1,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.5241666734218597
+ },
+ "r4-mouth-s-second-sky3-lantern-in1": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 1,
+  "sky": 0.7083333507180214,
+  "cave": 0.2916666666666667,
+  "light": 1,
+  "lightMs": 0.6216666618982951
+ },
+ "r4-mouth-s-second-sky3-lantern-in2": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 1,
+  "sky": 0.3750000111758709,
+  "cave": 0.625,
+  "light": 1,
+  "lightMs": 0.8508333464463552
+ },
+ "r4-mouth-s-second-sky3-lantern-in3": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 1,
+  "sky": 0.0416666679084301,
+  "cave": 0.9583333333333334,
+  "light": 1,
+  "lightMs": 0.8500000079472859
+ },
+ "r4-mouth-m-east-sky3-dim-out2": {
+  "area": "mountain",
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.3285714260169438
+ },
+ "r4-mouth-m-east-sky3-dim-out1": {
+  "area": "mountain",
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.3237288058814356
+ },
+ "r4-mouth-m-east-sky3-dim-portal": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.3083333114782969
+ },
+ "r4-mouth-m-east-sky3-dim-in1": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 0.7083333507180214,
+  "cave": 0.2916666666666667,
+  "light": 1,
+  "lightMs": 0.46166665156682335
+ },
+ "r4-mouth-m-east-sky3-dim-in2": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 0.3750000111758709,
+  "cave": 0.625,
+  "light": 0.9114583469927311,
+  "lightMs": 0.5591666559378307
+ },
+ "r4-mouth-m-east-sky3-dim-in3": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 0.0416666679084301,
+  "cave": 0.9583333333333334,
+  "light": 0.6645833340473473,
+  "lightMs": 0.4708333373069763
+ },
+ "r4-mouth-m-west-sky3-dim-out2": {
+  "area": "mountain",
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.39250001311302185
+ },
+ "r4-mouth-m-west-sky3-dim-out1": {
+  "area": "mountain",
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.3216666658719381
+ },
+ "r4-mouth-m-west-sky3-dim-portal": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.3333333333333333
+ },
+ "r4-mouth-m-west-sky3-dim-in1": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 0.7083333507180214,
+  "cave": 0.2916666666666667,
+  "light": 1,
+  "lightMs": 0.43083334565162656
+ },
+ "r4-mouth-m-west-sky3-dim-in2": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 0.3750000111758709,
+  "cave": 0.625,
+  "light": 0.9114583469927311,
+  "lightMs": 0.5266666789849599
+ },
+ "r4-mouth-m-west-sky3-dim-in3": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 0.0416666679084301,
+  "cave": 0.9583333333333334,
+  "light": 0.6645833340473473,
+  "lightMs": 0.5274999996026357
+ },
+ "r4-mouth-s-first-sky3-dim-out2": {
+  "area": "shoulder",
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.5410714277199337
+ },
+ "r4-mouth-s-first-sky3-dim-out1": {
+  "area": "shoulder",
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.5050420160053157
+ },
+ "r4-mouth-s-first-sky3-dim-portal": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 0,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.4674999932448069
+ },
+ "r4-mouth-s-first-sky3-dim-in1": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 0,
+  "sky": 0.7083333507180214,
+  "cave": 0.2916666666666667,
+  "light": 1,
+  "lightMs": 0.5833333333333334
+ },
+ "r4-mouth-s-first-sky3-dim-in2": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": -0.10000000149011612,
+  "sky": 0.3750000111758709,
+  "cave": 0.625,
+  "light": 0.9114583469927311,
+  "lightMs": 0.6550000170866649
+ },
+ "r4-mouth-s-first-sky3-dim-in3": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": -0.30000001192092896,
+  "sky": 0.0416666679084301,
+  "cave": 0.9583333333333334,
+  "light": 0.6645833340473473,
+  "lightMs": 0.6275000015894572
+ },
+ "r4-mouth-s-second-sky3-dim-out2": {
+  "area": "shoulder",
+  "layer": 0,
+  "z": 1,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.5183333257834116
+ },
+ "r4-mouth-s-second-sky3-dim-out1": {
+  "area": "shoulder",
+  "layer": 0,
+  "z": 1,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.3566666583220164
+ },
+ "r4-mouth-s-second-sky3-dim-portal": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 1,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.337500003973643
+ },
+ "r4-mouth-s-second-sky3-dim-in1": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 1,
+  "sky": 0.7083333507180214,
+  "cave": 0.2916666666666667,
+  "light": 1,
+  "lightMs": 0.4208333432674408
+ },
+ "r4-mouth-s-second-sky3-dim-in2": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 1,
+  "sky": 0.3750000111758709,
+  "cave": 0.625,
+  "light": 0.9114583469927311,
+  "lightMs": 0.5349999924500783
+ },
+ "r4-mouth-s-second-sky3-dim-in3": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 1,
+  "sky": 0.0416666679084301,
+  "cave": 0.9583333333333334,
+  "light": 0.6645833340473473,
+  "lightMs": 0.5424999952316284
+ },
+ "r4-mouth-m-east-sky10-lantern-out2": {
+  "area": "mountain",
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.5228070167073032
+ },
+ "r4-mouth-m-east-sky10-lantern-out1": {
+  "area": "mountain",
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.5228813583567992
+ },
+ "r4-mouth-m-east-sky10-lantern-portal": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.41499998768170676
+ },
+ "r4-mouth-m-east-sky10-lantern-in1": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 0.9124999791383743,
+  "cave": 0.2916666666666667,
+  "light": 1,
+  "lightMs": 0.6283333321412404
+ },
+ "r4-mouth-m-east-sky10-lantern-in2": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 0.8125000074505806,
+  "cave": 0.625,
+  "light": 1,
+  "lightMs": 0.8333333591620128
+ },
+ "r4-mouth-m-east-sky10-lantern-in3": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 0.7124999910593033,
+  "cave": 0.9583333333333334,
+  "light": 1,
+  "lightMs": 0.6900000154972077
+ },
+ "r4-mouth-m-west-sky10-lantern-out2": {
+  "area": "mountain",
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.6191666702429454
+ },
+ "r4-mouth-m-west-sky10-lantern-out1": {
+  "area": "mountain",
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.5483333428700765
+ },
+ "r4-mouth-m-west-sky10-lantern-portal": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.4508333464463552
+ },
+ "r4-mouth-m-west-sky10-lantern-in1": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 0.9124999791383743,
+  "cave": 0.2916666666666667,
+  "light": 1,
+  "lightMs": 0.5350000103314717
+ },
+ "r4-mouth-m-west-sky10-lantern-in2": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 0.8125000074505806,
+  "cave": 0.625,
+  "light": 1,
+  "lightMs": 0.7666666487852732
+ },
+ "r4-mouth-m-west-sky10-lantern-in3": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 0.7124999910593033,
+  "cave": 0.9583333333333334,
+  "light": 1,
+  "lightMs": 0.7941666543483734
+ },
+ "r4-mouth-s-first-sky10-lantern-out2": {
+  "area": "shoulder",
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.7249999855245862
+ },
+ "r4-mouth-s-first-sky10-lantern-out1": {
+  "area": "shoulder",
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.6999999885885124
+ },
+ "r4-mouth-s-first-sky10-lantern-portal": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 0,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.5783333301544189
+ },
+ "r4-mouth-s-first-sky10-lantern-in1": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 0,
+  "sky": 0.9124999791383743,
+  "cave": 0.2916666666666667,
+  "light": 1,
+  "lightMs": 0.6974999984105428
+ },
+ "r4-mouth-s-first-sky10-lantern-in2": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": -0.10000000149011612,
+  "sky": 0.8125000074505806,
+  "cave": 0.625,
+  "light": 1,
+  "lightMs": 0.8608333170413971
+ },
+ "r4-mouth-s-first-sky10-lantern-in3": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": -0.30000001192092896,
+  "sky": 0.7124999910593033,
+  "cave": 0.9583333333333334,
+  "light": 1,
+  "lightMs": 0.8224999884764354
+ },
+ "r4-mouth-s-second-sky10-lantern-out2": {
+  "area": "shoulder",
+  "layer": 0,
+  "z": 1,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.7249999980131785
+ },
+ "r4-mouth-s-second-sky10-lantern-out1": {
+  "area": "shoulder",
+  "layer": 0,
+  "z": 1,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.560833336909612
+ },
+ "r4-mouth-s-second-sky10-lantern-portal": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 1,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.4449999948342641
+ },
+ "r4-mouth-s-second-sky10-lantern-in1": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 1,
+  "sky": 0.9124999791383743,
+  "cave": 0.2916666666666667,
+  "light": 1,
+  "lightMs": 0.5216666678587596
+ },
+ "r4-mouth-s-second-sky10-lantern-in2": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 1,
+  "sky": 0.8125000074505806,
+  "cave": 0.625,
+  "light": 1,
+  "lightMs": 0.7616666714350383
+ },
+ "r4-mouth-s-second-sky10-lantern-in3": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 1,
+  "sky": 0.7124999910593033,
+  "cave": 0.9583333333333334,
+  "light": 1,
+  "lightMs": 0.7616666734218598
+ },
+ "r4-mouth-m-east-sky10-dim-out2": {
+  "area": "mountain",
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.3192982422678094
+ },
+ "r4-mouth-m-east-sky10-dim-out1": {
+  "area": "mountain",
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.29495797237428295
+ },
+ "r4-mouth-m-east-sky10-dim-portal": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.26916666428248087
+ },
+ "r4-mouth-m-east-sky10-dim-in1": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 0.9124999791383743,
+  "cave": 0.2916666666666667,
+  "light": 1,
+  "lightMs": 0.40166666110356647
+ },
+ "r4-mouth-m-east-sky10-dim-in2": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 0.8125000074505806,
+  "cave": 0.625,
+  "light": 1,
+  "lightMs": 0.48833332657814027
+ },
+ "r4-mouth-m-east-sky10-dim-in3": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 0.7124999910593033,
+  "cave": 0.9583333333333334,
+  "light": 1,
+  "lightMs": 0.4291666845480601
+ },
+ "r4-mouth-m-west-sky10-dim-out2": {
+  "area": "mountain",
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.3733333567778269
+ },
+ "r4-mouth-m-west-sky10-dim-out1": {
+  "area": "mountain",
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.2958333392937978
+ },
+ "r4-mouth-m-west-sky10-dim-portal": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.2883333206176758
+ },
+ "r4-mouth-m-west-sky10-dim-in1": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 0.9124999791383743,
+  "cave": 0.2916666666666667,
+  "light": 1,
+  "lightMs": 0.39916666547457375
+ },
+ "r4-mouth-m-west-sky10-dim-in2": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 0.8125000074505806,
+  "cave": 0.625,
+  "light": 1,
+  "lightMs": 0.4983333349227905
+ },
+ "r4-mouth-m-west-sky10-dim-in3": {
+  "area": "mountain",
+  "layer": 1,
+  "z": 0,
+  "sky": 0.7124999910593033,
+  "cave": 0.9583333333333334,
+  "light": 1,
+  "lightMs": 0.5099999964237213
+ },
+ "r4-mouth-s-first-sky10-dim-out2": {
+  "area": "shoulder",
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.4750000238418579
+ },
+ "r4-mouth-s-first-sky10-dim-out1": {
+  "area": "shoulder",
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.45378153264021676
+ },
+ "r4-mouth-s-first-sky10-dim-portal": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 0,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.4474999964237213
+ },
+ "r4-mouth-s-first-sky10-dim-in1": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 0,
+  "sky": 0.9124999791383743,
+  "cave": 0.2916666666666667,
+  "light": 1,
+  "lightMs": 0.5591666440169016
+ },
+ "r4-mouth-s-first-sky10-dim-in2": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": -0.10000000149011612,
+  "sky": 0.8125000074505806,
+  "cave": 0.625,
+  "light": 1,
+  "lightMs": 0.6224999964237213
+ },
+ "r4-mouth-s-first-sky10-dim-in3": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": -0.30000001192092896,
+  "sky": 0.7124999910593033,
+  "cave": 0.9583333333333334,
+  "light": 1,
+  "lightMs": 0.5616666754086812
+ },
+ "r4-mouth-s-second-sky10-dim-out2": {
+  "area": "shoulder",
+  "layer": 0,
+  "z": 1,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.4616666754086812
+ },
+ "r4-mouth-s-second-sky10-dim-out1": {
+  "area": "shoulder",
+  "layer": 0,
+  "z": 1,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.3324999988079071
+ },
+ "r4-mouth-s-second-sky10-dim-portal": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 1,
+  "sky": 1,
+  "cave": 0,
+  "light": 1,
+  "lightMs": 0.3191666583220164
+ },
+ "r4-mouth-s-second-sky10-dim-in1": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 1,
+  "sky": 0.9124999791383743,
+  "cave": 0.2916666666666667,
+  "light": 1,
+  "lightMs": 0.41166666547457376
+ },
+ "r4-mouth-s-second-sky10-dim-in2": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 1,
+  "sky": 0.8125000074505806,
+  "cave": 0.625,
+  "light": 1,
+  "lightMs": 0.498333336909612
+ },
+ "r4-mouth-s-second-sky10-dim-in3": {
+  "area": "shoulder",
+  "layer": 1,
+  "z": 1,
+  "sky": 0.7124999910593033,
+  "cave": 0.9583333333333334,
+  "light": 1,
+  "lightMs": 0.4916666686534882
+ }
+}
