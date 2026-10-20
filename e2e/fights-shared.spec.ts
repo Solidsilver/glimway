@@ -53,13 +53,13 @@ test('two players share wind-ups, menus, reconnect, confirmed deaths and persona
   test.skip(!process.env.CI && process.env.E2E_SHARED_FIGHTS !== '1', 'set E2E_SHARED_FIGHTS=1 to run the two-client fight gate locally')
   test.setTimeout(240_000)
   await freshPlayer(page, 'Tansy')
-  await pinWorld(page, 'e2e-shared-fights')
+  await pinWorld(page, 'e2e-shared-fights-99')
   await page.goto('/?perf=1')
   await page.getByTestId('continue-world').click()
   await waitForLive(page)
   await enterCamp(page, { tx: 12, ty: -12 })
-  // Seed e2e-shared-fights, generator v3, still epoch (the Tangle never turns):
-  // camp:0:-1:0 is one wisp at world tile (13,-15), in this chunk, and the
+  // Seed e2e-shared-fights-99, generator v3, still epoch (the Tangle never turns):
+  // camp:0:-1:0 is one wisp at world tile (12,-15), in this chunk, and the
   // nearest other camp is 22 tiles off, so no second camp joins the fight.
   // Pinned by id, not by dump order.
   const pinned = (await wilds(page)).entities.find(e => e.id === 'camp:0:-1:0')
