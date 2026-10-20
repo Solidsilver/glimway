@@ -216,10 +216,27 @@ export function caveAmbient(stack: Stack, air: Float32Array): Float32Array {
   return out
 }
 
-/** The cave's rock where it lies behind a sunny cliff face (round an arch): not painted, lit as the face. */
+/**
+ * The cave's rock where it lies behind a sunny cliff face round an arch:
+ * not painted, lit as the face. Not where a tunnel runs just behind the
+ * face's top (the face's rows are then the tunnel's south wall, seen from
+ * inside), unless it's right beside the arch.
+ */
 export function sunnyFaceRock(stack: Stack, air: Float32Array, i: number): boolean {
-  const k = stack.layers[SURFACE]!.kind[i]
-  return stack.layers[CAVE]!.kind[i] === KIND.rock && (k === KIND.face || k === KIND.mouth) && air[i]! > 0
+  const surface = stack.layers[SURFACE]!
+  const cave = stack.layers[CAVE]!
+  const isFace = (j: number) => surface.kind[j] === KIND.face || surface.kind[j] === KIND.mouth
+  if (cave.kind[i] !== KIND.rock || !isFace(i) || !(air[i]! > 0)) return false
+  const w = stack.w
+  const tx = i % w
+  const ty = Math.floor(i / w)
+  for (let y = ty - 1; y <= ty + 1; y++)
+    for (let x = tx - 1; x <= tx + 1; x++) if (x >= 0 && y >= 0 && x < w && y < stack.h && surface.kind[y * w + x] === KIND.mouth) return true
+  // Up the face to its top, then the tile behind it.
+  let j = i
+  while (j - w >= 0 && isFace(j)) j -= w
+  const k = cave.kind[j]
+  return k !== KIND.flat && k !== KIND.slope && k !== KIND.water
 }
 
 /** A crystal as a light source. */
@@ -237,25 +254,34 @@ export function caveView(walked: number, tiles: number): number {
   return Math.max(0, Math.min(1, walked / Math.max(0.01, tiles)))
 }
 
-/** A cave tile's floor level (a drop: its foot; rock and water: the nearest floor's), for light and for drawing by level. */
-export function caveLevels(l: Layer): Int8Array {
-  const out = new Int8Array(l.w * l.h)
+/**
+ * A cave tile's floor level, smooth: a flat floor's height; a ramp's at its
+ * middle (its open edges' mean), so levels change evenly along every ramp
+ * with no step at whole levels; a drop's down its face; rock and water the
+ * nearest floor's. For light (a level's difference costs reach) and the
+ * depth darkening (./lighting.ts).
+ */
+export function caveLevels(l: Layer): Float32Array {
+  const out = new Float32Array(l.w * l.h)
   const known = new Uint8Array(l.w * l.h)
   const queue: number[] = []
   for (let i = 0; i < l.w * l.h; i++) {
     const k = l.kind[i]
     let z = Number.NaN
-    if (k === KIND.flat) z = Math.round(l.edge[i * 4]!)
+    if (k === KIND.flat) z = l.edge[i * 4]!
     else if (k === KIND.slope) {
-      let lo = Infinity
+      let sum = 0
+      let n = 0
       for (let d = 0; d < 4; d++) {
         const e = l.edge[i * 4 + d]!
-        if (!Number.isNaN(e)) lo = Math.min(lo, e)
+        if (Number.isNaN(e)) continue
+        sum += e
+        n++
       }
-      z = Math.floor(lo + 0.001)
-    } else if (k === KIND.face) z = l.faceTop[i]! - l.faceRows[i]! / ROWS_PER_LEVEL
+      z = sum / n
+    } else if (k === KIND.face) z = l.faceTop[i]! - (l.faceRow[i]! + 0.5) / ROWS_PER_LEVEL
     if (Number.isNaN(z)) continue
-    out[i] = Math.round(z)
+    out[i] = z
     known[i] = 1
     queue.push(i)
   }

@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CAVE, DEFAULT_AREA_OPTIONS, SURFACE, areaLighting, buildLabArea, routeLegs, LAB_W } from '../src/game/height-lab/area.ts';
 import { DEEP, MOUNTAIN_W, asciiLayer, buildMountain } from '../src/game/height-lab/mountain.ts';
-import { HERO_LIGHT, caveLevels, caveView, type HeroLight } from '../src/game/height-lab/light.ts';
-import { Lighting, sightLine } from '../src/game/height-lab/lighting.ts';
+import { HERO_LIGHT, caveLevels, caveView, sunnyFaceRock, type HeroLight } from '../src/game/height-lab/light.ts';
+import { Lighting, depthDark, sightLine } from '../src/game/height-lab/lighting.ts';
 import { fogFor } from '../src/game/height-lab/look.ts';
 import { E, KIND, N, S, TILE_PX, findPath, move, step, zAt, sample, type Layer, type Walker } from '../src/game/height-lab/levels.ts';
 
@@ -357,7 +357,8 @@ test('the deep cave’s legs join only where they should', () => {
     }
   }
   assert.equal(joins, 2, 'the branch meets the main way once, two tiles wide');
-  assert.deepEqual([...new Set([...seen].map((i) => mLevels[i]!))].sort((a, b) => a - b), [-3, -2]);
+  for (const i of seen) assert.ok(mLevels[i]! >= -3 && mLevels[i]! <= -2, `the branch is between -3 and -2 (${mLevels[i]})`);
+  assert.ok([...seen].some((i) => mLevels[i] === -3) && [...seen].some((i) => mLevels[i] === -2), 'both its floors');
   // The other way out: from the cavern, up to the west mouth, never past the east one.
   const out = findPath(ms, node(CAVE, DEEP.legs.at(-1)!), { layer: SURFACE, tx: DEEP.mouthOut.x0, ty: 78 })!;
   assert.ok(out);
@@ -377,4 +378,85 @@ test('deeper floors are dark from far off; crystals light the cavern', () => {
   assert.ok(at(cavern) > 0.04);
   assert.ok(mCave.sky[DEEP.legs[0]!.ty * MOUNTAIN_W + DEEP.legs[0]!.tx]! > 0, 'daylight in the first tunnel');
   assert.equal(mCave.sky[DEEP.legs.at(-1)!.ty * MOUNTAIN_W + DEEP.legs.at(-1)!.tx], 0, 'none in the cavern');
+});
+
+test('cave levels are smooth along every ramp: no step at a whole level, for the floor or the light', () => {
+  // Ramp E (4 levels over 14 tiles) and ramp A, tile by tile down, and within a tile.
+  for (const [tx, y0, y1] of [[40, 51, 64], [56, 62, 66]] as const) {
+    let last = Number.NaN;
+    for (let ty = y0 - 1; ty <= y1 + 1; ty++) {
+      const z = mLevels[ty * MOUNTAIN_W + tx]!;
+      if (!Number.isNaN(last)) assert.ok(Math.abs(z - last) <= 0.31, `ramp at ${tx}: ${last} to ${z} at row ${ty}`);
+      last = z;
+    }
+  }
+  // The hero's light walking down ramp E: the light a tile ahead changes evenly, with no jump at a half level.
+  const l = areaLighting(mtn);
+  const w = walker(CAVE, 40, 52);
+  l.add({ id: 'hero', x: w.x, y: w.y - 10, layer: CAVE, z: zAt(ms, w), ...HERO_LIGHT.lantern, moving: true });
+  let prev = Number.NaN;
+  let worst = 0;
+  for (let y = 52 * TILE_PX; y <= 63 * TILE_PX; y += 1) {
+    w.y = y;
+    l.move('hero', w.x, w.y - 10, CAVE, zAt(ms, w));
+    const v = l.level(CAVE, w.x + 0.5 * TILE_PX, w.y + 2 * TILE_PX);
+    if (!Number.isNaN(prev)) worst = Math.max(worst, Math.abs(v - prev));
+    prev = v;
+  }
+  // (Its height rounded, as before, a step there jumped by 0.7.)
+  assert.ok(worst < 0.05, `a pixel's walk changes the light ahead by at most ${worst}`);
+});
+
+test('depth darkens other levels, never tints them, and leaves your own clear', () => {
+  const l = areaLighting(mtn);
+  // From the ledge (-2), the cavern below (-4), lit by its crystals.
+  const ledge = px(DEEP.ledge.tx, DEEP.ledge.ty);
+  const cavern = px(36, 39);
+  const texel = (p: { x: number; y: number }, z: number, cap: number) => {
+    const rect = { x0: Math.floor(p.x / l.res), y0: Math.floor(p.y / l.res), w: 1, h: 1 };
+    const out = new Uint8ClampedArray(4);
+    l.fill(rect, out, [{ layer: CAVE, weight: 1 }], { depth: { layer: CAVE, z, cap, weight: 1 } });
+    return [out[0]!, out[1]!, out[2]!];
+  };
+  const clear = texel(cavern, -4, 0.6);
+  const dark = texel(cavern, -2, 0.6);
+  assert.ok(Math.max(...dark) < Math.max(...clear) * 0.45, `two levels off is darker (${dark} vs ${clear})`);
+  // Neutral: every channel by the same factor (to rounding).
+  const k = dark.map((c, i) => c / clear[i]!);
+  assert.ok(Math.max(...k) - Math.min(...k) < 0.03, `no tint (${k})`);
+  assert.deepEqual(texel(ledge, -2, 0.6), texel(ledge, -2, 0), 'your own level is clear');
+  assert.equal(depthDark(1, 0.6), depthDark(-1, 0.6));
+  assert.ok(depthDark(0.5, 0.6) > 0 && depthDark(0.5, 0.6) < depthDark(1, 0.6) && depthDark(1, 0.6) < depthDark(2, 0.6));
+  assert.ok(Math.abs(depthDark(3, 0.6) - 0.6) < 1e-9, 'the cap, two levels off and more');
+});
+
+test('a mouth\'s arch shows the cave\'s light from outside; the valley stays in daylight', () => {
+  const l = areaLighting(mtn);
+  const m = mtn.mouths[0]!;
+  const rect = { x0: (m.x0 * TILE_PX) / l.res - 8, y0: (m.lintel * TILE_PX) / l.res, w: 24, h: 24 };
+  const out = new Uint8ClampedArray(rect.w * rect.h * 4);
+  l.fill(rect, out, [{ layer: CAVE, weight: 0 }, { layer: SURFACE, weight: 1 }], { portal: { layer: CAVE, mask: mtn.arches } });
+  const texelAt = (wx: number, wy: number) => out[((Math.floor(wy / l.res) - rect.y0) * rect.w + Math.floor(wx / l.res) - rect.x0) * 4]!;
+  // The arch's top row, a tile from the daylight's start: the cave's light, not daylight.
+  const inArch = { x: m.x0 * TILE_PX + 8, y: m.arch[0] * TILE_PX + 6 };
+  assert.ok(Math.abs(texelAt(inArch.x, inArch.y) - l.at(CAVE, (Math.floor(inArch.x / l.res) + 0.5) * l.res, (Math.floor(inArch.y / l.res) + 0.5) * l.res)[0] * 255) <= 1, 'the cave\'s light in the arch');
+  assert.ok(texelAt(inArch.x, inArch.y) < 250, 'darker than daylight in there');
+  // The face beside the arch and the valley in front: daylight.
+  assert.equal(texelAt((m.x0 - 1) * TILE_PX + 4, m.arch[0] * TILE_PX + 8), 255);
+  assert.equal(texelAt(m.x0 * TILE_PX + 8, (m.arch[1] + 2) * TILE_PX + 8), 255);
+});
+
+test('the rock south of a tunnel that runs behind a cliff\'s top is the tunnel\'s wall, not sunny', () => {
+  for (let tx = 41; tx <= 50; tx++)
+    for (let ty = 22; ty <= 24; ty++) {
+      const i = ty * LAB_W + tx;
+      if (cave.kind[i] !== KIND.rock) continue;
+      assert.ok(!sunnyFaceRock(stack, area.air, i), `${tx},${ty} is the east tunnel's wall`);
+    }
+  // Round the arches it still is: the face you see out of a mouth.
+  for (const a of [area, mtn])
+    for (const m of a.mouths) {
+      const i = m.arch[0] * a.stack.w + m.x0 - 1;
+      if (a.stack.layers[CAVE]!.kind[i] === KIND.rock) assert.ok(sunnyFaceRock(a.stack, a.air, i), `${a.name}: beside the arch at ${m.x0}`);
+    }
 });
