@@ -53,7 +53,7 @@ test('an account switch clears the grant at once, and a stale answer is dropped'
   const w: Partial<FsHooks> = {};
   const gate = gatedHooks(w);
   const off = onWebSettings((s) => gate.set(!!s.dev?.hooks));
-  const grant: WebSettings = { dev: { grant: true, hooks: true, clock: false, fight_fall: false } };
+  const grant: WebSettings = { dev: { grant: true, hooks: true, clock: false, fight_fall: false, world_lab: false } };
   const answer = (body: WebSettings) => (async () => new Response(JSON.stringify(body))) as typeof fetch;
   await loadWebSettings(answer(grant));
   gate.expose('__fsHeld', () => 1);

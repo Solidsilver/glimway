@@ -54,6 +54,10 @@
 # (live; GLIMWAY_SERVER_DEV_FIGHT_FALL)
 # fight_fall = false
 
+# The world lab: the Wilds generator drawn from any seed, with edited rules tried in worker processes, and moving your hero to a spot it shows.
+# (live; GLIMWAY_SERVER_DEV_WORLD_LAB)
+# world_lab = false
+
 # [web] The web client's settings: the server hands them to each signed-in player (GET /api/web-settings), so a change needs no new web build.
 
 # [web.dev] Dev mode's client tools.

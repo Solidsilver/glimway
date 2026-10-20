@@ -23,3 +23,20 @@ func TestProductionBuildHasNoDevRoutes(t *testing.T) {
 		}
 	}
 }
+
+// Nor the world lab, nor its worker command.
+func TestProductionBuildHasNoWorldLab(t *testing.T) {
+	inner := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusTeapot) })
+	for _, path := range []string{"/api/dev/worldlab/state", "/api/dev/worldlab/render"} {
+		r := httptest.NewRequest(http.MethodGet, path, nil)
+		r.RemoteAddr = "127.0.0.1:5000"
+		w := httptest.NewRecorder()
+		devRoutes(nil, nil)(inner).ServeHTTP(w, r)
+		if w.Code != http.StatusTeapot {
+			t.Fatal("the world lab answered in a production build:", path, w.Code)
+		}
+	}
+	if ok, _ := devCommand([]string{"_worldlab-worker"}); ok {
+		t.Fatal("a production build ran the world lab's worker")
+	}
+}

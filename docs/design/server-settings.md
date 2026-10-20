@@ -36,7 +36,7 @@ Docker or under NixOS. Dev mode is its first user. How to run it:
 | Table | Read by | For |
 |---|---|---|
 | `[dev]` | both sides | Whether dev mode is on (`enable`) and for whom (`accounts`) |
-| `[server.*]` | the server | The server's own settings: `[server.login]`, `[server.dev]` (grant, clock, fight_fall) |
+| `[server.*]` | the server | The server's own settings: `[server.login]`, `[server.dev]` (grant, clock, fight_fall, world_lab) |
 | `[web.*]` | the web client | Settings the server hands each player: `[web.dev]` (hooks) |
 
 Dev mode is split this way because who gets it is one decision both sides
@@ -71,7 +71,7 @@ Every setting is marked `apply:"live"` or `apply:"restart"`.
 | Setting | Applies |
 |---|---|
 | `dev.enable`, `dev.accounts` | live |
-| `server.dev.grant`, `server.dev.clock`, `server.dev.fight_fall` | live |
+| `server.dev.grant`, `server.dev.clock`, `server.dev.fight_fall`, `server.dev.world_lab` | live |
 | `web.dev.hooks` | live (the player reloads the page) |
 | `server.login.concurrency`, `server.login.rate`, `server.login.global_rate` | restart |
 

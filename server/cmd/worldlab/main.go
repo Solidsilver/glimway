@@ -1,8 +1,8 @@
-// Worldlab is a standalone, database-free view of the wilderness generator.
+// Worldlab is a standalone, database-free view of the wilderness generator
+// (server/internal/worldlab; docs/planning/wide-world/lab/README.md).
 package main
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -10,44 +10,26 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"runtime"
-	"strconv"
-	"strings"
 	"time"
 
-	"glimway/content"
-	"glimway/server/internal/wilds"
+	"glimway/server/internal/worldlab"
 )
 
-const defaultEpoch = "t:1795000000:1796209600"
+const defaultEpoch = worldlab.DefaultEpoch
 
-type options struct {
-	CompareSeed    string  `json:"compareSeed,omitempty"`
-	CompareContent string  `json:"compareContent,omitempty"`
-	Inspect        *[2]int `json:"inspect,omitempty"`
-	View           string  `json:"view"`
-	Seed           string  `json:"seed"`
-	Epoch          string  `json:"epoch"`
-	Rect           [4]int  `json:"rect"`
-	Scale          int     `json:"scale"`
-	Workers        int     `json:"workers"`
-	Overlays       string  `json:"overlays"`
-	Content        string  `json:"content,omitempty"`
-	Raw            []byte  `json:"raw,omitempty"`
-	Signatures     bool    `json:"signatures,omitempty"`
-}
+type (
+	options   = worldlab.Options
+	result    = worldlab.Result
+	diffStats = worldlab.DiffStats
+	tileInfo  = worldlab.TileInfo
+)
 
-type result struct {
-	Comparison *diffStats `json:"comparison,omitempty"`
-	Tile       *tileInfo  `json:"tile,omitempty"`
-	PNG        []byte     `json:"png"`
-	Stats      stats      `json:"stats"`
-	Signatures []uint64   `json:"signatures,omitempty"`
-	Width      int        `json:"width"`
-	Height     int        `json:"height"`
-	Scale      int        `json:"scale"`
-}
+var (
+	overlayNames = worldlab.OverlayNames
+	coordinates  = worldlab.Coordinates
+	validate     = worldlab.Validate
+)
 
 func main() {
 	if err := run(os.Args[1:], os.Stdout); err != nil {
@@ -61,29 +43,7 @@ func run(args []string, stdout io.Writer) error {
 		return errors.New("usage: worldlab atlas|region|chunk|diff|serve [flags] [out.png]; use <command> -h for flags")
 	}
 	if args[0] == "_worker" {
-		var o options
-		if err := json.NewDecoder(io.LimitReader(os.Stdin, 16<<20)).Decode(&o); err != nil {
-			return err
-		}
-		if len(o.Raw) > 0 {
-			if err := wilds.ConfigureForTools(o.Raw); err != nil {
-				return err
-			}
-		}
-		if err := validate(o); err != nil {
-			return err
-		}
-		var r result
-		var err error
-		if o.Inspect != nil {
-			r, err = inspect(o)
-		} else {
-			r, err = render(context.Background(), o)
-		}
-		if err != nil {
-			return err
-		}
-		return json.NewEncoder(stdout).Encode(r)
+		return worldlab.RunWorker(os.Stdin, stdout)
 	}
 	command := args[0]
 	if command != "atlas" && command != "region" && command != "chunk" && command != "diff" && command != "serve" {
@@ -181,7 +141,9 @@ func run(args []string, stdout io.Writer) error {
 		if err != nil {
 			return err
 		}
-		output, report, err = compare(a, b, time.Since(started))
+		var details diffStats
+		output, details, err = worldlab.Compare(a, b, time.Since(started))
+		report = details
 		if err != nil {
 			return err
 		}
@@ -201,128 +163,19 @@ func run(args []string, stdout io.Writer) error {
 	return err
 }
 
-func coordinates(s string, n int) ([]int, error) {
-	parts := strings.Split(s, ",")
-	if len(parts) != n {
-		return nil, fmt.Errorf("expected %d comma-separated coordinates", n)
-	}
-	out := make([]int, n)
-	for i, p := range parts {
-		v, err := strconv.Atoi(strings.TrimSpace(p))
-		if err != nil || v < -100000 || v > 100000 {
-			return nil, fmt.Errorf("coordinate %q must be an integer in -100000..100000", p)
-		}
-		out[i] = v
-	}
-	return out, nil
-}
-
-var overlayNames = []string{"land-cells", "place-cells", "tiers", "wend", "road", "rumours", "frontier", "solid", "reach"}
-
-func enabled(o options, name string) bool {
-	for _, s := range strings.Split(o.Overlays, ",") {
-		if s == name {
-			return true
-		}
-	}
-	return false
-}
-func validate(o options) error {
-	if o.View != "atlas" && o.View != "region" && o.View != "chunk" {
-		return errors.New("view must be atlas, region, or chunk")
-	}
-	for _, v := range o.Rect {
-		if v < -100000 || v > 100000 {
-			return errors.New("coordinates must be in -100000..100000")
-		}
-	}
-	w, h := o.Rect[2]-o.Rect[0]+1, o.Rect[3]-o.Rect[1]+1
-	if w <= 0 || h <= 0 {
-		return errors.New("rectangle must have x0 <= x1 and y0 <= y1")
-	}
-	if o.Workers < 1 || o.Workers > 8 {
-		return errors.New("workers must be in 1..8")
-	}
-	if o.Scale < 1 || o.Scale > 8 {
-		return errors.New("scale must be in 1..8")
-	}
-	if o.View == "chunk" && (w != 1 || h != 1) {
-		return errors.New("chunk view needs exactly one chunk")
-	}
-	units := w * h
-	limit := 1000000
-	if o.View != "atlas" {
-		units *= int(content.WildsRules.GetChunkSize()) * int(content.WildsRules.GetChunkSize())
-		limit = 2400000
-	}
-	if units > limit || units*o.Scale*o.Scale > 16000000 {
-		return errors.New("render too large: atlas <= 1M chunks, tiles <= 2.4M, scaled image <= 16M pixels")
-	}
-	if err := validateEpoch(o.Epoch); err != nil {
-		return err
-	}
-	for _, s := range strings.Split(o.Overlays, ",") {
-		if s == "" {
-			continue
-		}
-		known := false
-		for _, n := range overlayNames {
-			if n == s {
-				known = true
-			}
-		}
-		if !known {
-			return fmt.Errorf("unknown overlay %q", s)
-		}
-	}
-	if o.View == "atlas" && (enabled(o, "solid") || enabled(o, "reach")) {
-		return errors.New("solid and reach require generated tiles; use region or chunk")
-	}
-	return nil
-}
-
 // Each version lives in its own process; content-derived package globals are
 // never mutated in the HTTP server or shared between comparison panels.
 func worker(ctx context.Context, o options) (result, error) {
-	var out result
 	if o.Content != "" {
 		raw, err := os.ReadFile(o.Content)
 		if err != nil {
-			return out, fmt.Errorf("content: %w (use --content '' for embedded rules)", err)
+			return result{}, fmt.Errorf("content: %w (use --content '' for embedded rules)", err)
 		}
 		o.Raw = raw
 	}
-	input, err := json.Marshal(o)
-	if err != nil {
-		return out, err
-	}
 	exe, err := os.Executable()
 	if err != nil {
-		return out, err
+		return result{}, err
 	}
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
-	defer cancel()
-	cmd := exec.CommandContext(ctx, exe, "_worker")
-	cmd.Stdin = bytes.NewReader(input)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	raw, err := cmd.Output()
-	if err != nil {
-		return out, fmt.Errorf("render: %w: %s", err, strings.TrimSpace(stderr.String()))
-	}
-	err = json.Unmarshal(raw, &out)
-	return out, err
-}
-
-func validateEpoch(epoch string) error {
-	parts := strings.Split(epoch, ":")
-	if len(parts) != 3 || parts[0] != "t" {
-		return errors.New("epoch must be t:<start>:<end>")
-	}
-	start, e1 := strconv.ParseInt(parts[1], 10, 64)
-	end, e2 := strconv.ParseInt(parts[2], 10, 64)
-	if e1 != nil || e2 != nil || end <= start {
-		return errors.New("epoch needs integer timestamps with end > start")
-	}
-	return nil
+	return worldlab.Worker{Argv: []string{exe, "_worker"}, Timeout: 2 * time.Minute}.Run(ctx, o)
 }

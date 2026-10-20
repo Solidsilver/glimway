@@ -19,7 +19,7 @@
   // tools the server gives this player (`tools`; the Vite dev server: every
   // grant, and the clock when the server's is movable). Never anything from
   // Habitica.
-  let { session, tools, onClose }: { session: Session; tools: DevTools | null; onClose: () => void } = $props()
+  let { session, tools, onClose, onWorldLab }: { session: Session; tools: DevTools | null; onClose: () => void; onWorldLab?: () => void } = $props()
 
   const action = actionRunner()
   const all = grantables()
@@ -113,6 +113,13 @@
       {/each}
     </ul>
   {/if}
+  {#if tools?.world_lab && onWorldLab}
+    <section class="world-lab" data-testid="dev-world-lab">
+      <h3 class="section-title"><Icon name="world" size={14} /> World lab</h3>
+      <p>The Wilds generator from any seed: atlas, region and chunk, overlays, stats, a diff, an editable copy of the rules, and “go here”. It renders on this server, away from the game, and changes nothing.</p>
+      <button type="button" class="primary" onclick={onWorldLab}>Open the world lab</button>
+    </section>
+  {/if}
   <LabSection />
   <!-- The last loads, stage by stage (src/lib/load-timings.ts); the Menu copies the same text. -->
   <section class="timings" data-testid="dev-load-timings">
@@ -122,6 +129,13 @@
 </Panel>
 
 <style>
+  .world-lab {
+    margin: 4px 0 12px;
+  }
+  .world-lab p {
+    margin: 0 0 8px;
+    font-size: 13px;
+  }
   .banner {
     display: inline-flex;
     align-items: center;

@@ -35,6 +35,7 @@ import { presence } from '../presence'
 import { pathTileAt } from '../wilds/path-tile'
 import { footprintAt } from '../wilds/fixed'
 import { chunkOfPixel } from '../wilds/coords'
+import { offerDevWarp } from '../dev-warp'
 
 /** The scene's interaction layers the hooks read (locals of `create()`). */
 export interface WorldHookLayers {
@@ -162,6 +163,8 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
   // The open map's warp goes to a world tile (signed); every other area's to its tile
   // (a fixed place's own, `commons`, onto the grid: its layout tile resolved, src/lib/location.ts).
   on('__fsDevWarp', (area: AreaId, tx: number, ty: number) => (area === 'outdoors' ? s['warpWilds'](tx, ty) : s['transitionTo'](area, { tx, ty })))
+  // The world lab's "go here" (src/game/dev-warp.ts), whatever the hooks grant.
+  offerDevWarp((tx, ty) => s['warpWilds'](tx, ty), s)
   on('__fsDevInsets', (v) => {
     if (v) setPlayInsets(v)
     return { ...playInsets }

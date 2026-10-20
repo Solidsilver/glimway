@@ -54,6 +54,7 @@ type ServerDev struct {
 	Grant     *bool `toml:"grant" apply:"live" doc:"Grants: glims, materials and items from the dev panel."`
 	Clock     *bool `toml:"clock" apply:"live" doc:"Moving the server clock forward. World-wide and forward-only."`
 	FightFall *bool `toml:"fight_fall" apply:"live" doc:"Finishing a camp's fight at once."`
+	WorldLab  *bool `toml:"world_lab" apply:"live" doc:"The world lab: the Wilds generator drawn from any seed, with edited rules tried in worker processes, and moving your hero to a spot it shows."`
 }
 
 // Web is [web]: everything here reaches the client (WebFor).
@@ -80,10 +81,11 @@ type Tools struct {
 	Hooks     bool `json:"hooks"`
 	Clock     bool `json:"clock"`
 	FightFall bool `json:"fight_fall"`
+	WorldLab  bool `json:"world_lab"`
 }
 
 // Any: at least one tool is on.
-func (t Tools) Any() bool { return t.Grant || t.Hooks || t.Clock || t.FightFall }
+func (t Tools) Any() bool { return t.Grant || t.Hooks || t.Clock || t.FightFall || t.WorldLab }
 
 // Tools is the tools dev mode turns on, before the accounts list.
 func (s Settings) Tools() Tools {
@@ -92,7 +94,7 @@ func (s Settings) Tools() Tools {
 	}
 	on := func(v *bool) bool { return v == nil || *v }
 	d := s.Server.Dev
-	return Tools{Grant: on(d.Grant), Hooks: on(s.Web.Dev.Hooks), Clock: on(d.Clock), FightFall: on(d.FightFall)}
+	return Tools{Grant: on(d.Grant), Hooks: on(s.Web.Dev.Hooks), Clock: on(d.Clock), FightFall: on(d.FightFall), WorldLab: on(d.WorldLab)}
 }
 
 // ToolsFor is the tools one Habitica account gets: none unless the accounts
