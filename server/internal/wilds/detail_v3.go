@@ -892,13 +892,15 @@ func (d *detail) decorPick(land int, keep func(k DecorKind, a DecorArt) bool) (D
 
 // landmarkKinds are the place kinds' landmarks: never scattered as dressing,
 // so a landmark always means a place.
-var landmarkKinds = func() map[DecorKind]bool {
+var landmarkKinds = loadLandmarkKinds()
+
+func loadLandmarkKinds() map[DecorKind]bool {
 	out := map[DecorKind]bool{}
 	for _, k := range contentRules().PlaceKinds {
 		out[decorID(k.GetLandmark())] = true
 	}
 	return out
-}()
+}
 
 func tall(a DecorArt) bool { return a.Blocking && a.H >= 28 }
 func low(a DecorArt) bool  { return a.Blocking && a.H < 28 }

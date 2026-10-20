@@ -20,14 +20,6 @@ import (
 // GLIMWAY_MAP_SEED picks the world seed (default "map"), GLIMWAY_MAP_SEASON
 // the wick season.
 
-var groundColours = map[string]color.RGBA{
-	"woods": {38, 74, 42, 255}, "moss": {86, 128, 62, 255}, "verge": {150, 134, 90, 255},
-	"path": {176, 150, 100, 255}, "trodden": {128, 98, 62, 255}, "road": {120, 120, 112, 255},
-	"water": {40, 92, 140, 255}, "meadow": {146, 186, 92, 255}, "bank": {204, 186, 138, 255},
-	"ford": {96, 150, 186, 255}, "paving": {160, 160, 160, 255}, "laid-stone": {180, 180, 190, 255},
-	"laid-plank": {160, 120, 80, 255},
-}
-
 func TestRenderFrontierPNG(t *testing.T) {
 	out := os.Getenv("GLIMWAY_MAP_PNG")
 	if out == "" {
@@ -75,7 +67,7 @@ func renderFrontier(t testing.TB, seed, season string) *image.RGBA {
 			c := mustV3(t, seed, season, cx, cy)
 			ox, oy := (cx-minCx)*S, (cy-minCy)*S
 			for i, g := range c.Ground {
-				col := groundColours[ids[g]]
+				col := GroundColour(ids[g])
 				if c.Solid[i] {
 					col = shade(col, 6)
 				}
@@ -258,7 +250,7 @@ func TestRenderEdgesPNG(t *testing.T) {
 			ch := mustV3(t, wn.seed, wn.season, wn.cx+d[0], wn.cy+d[1])
 			bx, by := ox+(d[0]+1)*S*px, oy+(d[1]+1)*S*px
 			for k, g := range ch.Ground {
-				col := groundColours[ids[g]]
+				col := GroundColour(ids[g])
 				if ch.Solid[k] {
 					col = shade(col, 6)
 				}

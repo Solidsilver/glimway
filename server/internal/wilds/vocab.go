@@ -26,25 +26,29 @@ var (
 )
 
 // GroundIDs are the palette names of the ground ids, by value.
-var GroundIDs = func() []string {
+var GroundIDs = loadGroundIDs()
+
+func loadGroundIDs() []string {
 	out := []string{}
 	for _, g := range content.WildsRules.Grounds {
 		out = append(out, g.GetTerrain())
 	}
 	return out
-}()
+}
 
 func (g Ground) String() string { return GroundIDs[g] }
 
 // groundRank: a carve only ever raises a tile's ground (moss never paints
 // over a path).
-var groundRank = func() []int {
+var groundRank = loadGroundRank()
+
+func loadGroundRank() []int {
 	out := []int{}
 	for _, g := range content.WildsRules.Grounds {
 		out = append(out, int(g.GetRank()))
 	}
 	return out
-}()
+}
 
 // groundID is the ground with the content id; a missing one is a broken
 // build, caught at start.
@@ -84,13 +88,15 @@ var (
 )
 
 // DecorKinds are the decor kind names, by value.
-var DecorKinds = func() []string {
+var DecorKinds = loadDecorKinds()
+
+func loadDecorKinds() []string {
 	out := []string{}
 	for _, d := range content.WildsRules.Decor {
 		out = append(out, d.GetKind())
 	}
 	return out
-}()
+}
 
 func (k DecorKind) String() string { return DecorKinds[k] }
 
@@ -112,13 +118,15 @@ type DecorArt struct {
 }
 
 // DecorArts is the footprint of each kind, by value (content `decor`).
-var DecorArts = func() []DecorArt {
+var DecorArts = loadDecorArts()
+
+func loadDecorArts() []DecorArt {
 	out := []DecorArt{}
 	for _, d := range content.WildsRules.Decor {
 		out = append(out, DecorArt{int(d.GetW()), int(d.GetH()), d.GetBlocking(), d.GetFlat()})
 	}
 	return out
-}()
+}
 
 // Decor is one piece of dressing. The art stands on its tile's bottom edge,
 // centred, nudged by (OX, OY) px. Variant is 0–7 (the art seeds from it);
