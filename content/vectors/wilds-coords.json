@@ -1,5 +1,5 @@
 {
-  "comment": "Hearthwick 2 reach union; regenerate with node scripts/hearthwick-location-vectors.ts.",
+  "comment": "Hearthwick 2 coordinates and the world border; regenerate with node scripts/hearthwick-location-vectors.ts.",
   "chunkOf": [
     {
       "tile": [
@@ -386,7 +386,7 @@
       "footprint": "",
       "tier": 3,
       "epochKind": "wick",
-      "inside": false,
+      "inside": true,
       "ring": 2,
       "cell": [
         0,
@@ -401,7 +401,7 @@
       "footprint": "",
       "tier": 3,
       "epochKind": "wick",
-      "inside": false,
+      "inside": true,
       "ring": 2,
       "cell": [
         -2,
@@ -416,7 +416,7 @@
       "footprint": "",
       "tier": 3,
       "epochKind": "wick",
-      "inside": false,
+      "inside": true,
       "ring": 7,
       "cell": [
         7,
@@ -431,7 +431,7 @@
       "footprint": "",
       "tier": 3,
       "epochKind": "wick",
-      "inside": false,
+      "inside": true,
       "ring": 2,
       "cell": [
         -2,
@@ -461,7 +461,7 @@
       "footprint": "",
       "tier": 3,
       "epochKind": "wick",
-      "inside": false,
+      "inside": true,
       "ring": 2,
       "cell": [
         -2,
@@ -551,7 +551,7 @@
       "footprint": "",
       "tier": 3,
       "epochKind": "wick",
-      "inside": false,
+      "inside": true,
       "ring": 2,
       "cell": [
         -2,
@@ -566,7 +566,7 @@
       "footprint": "",
       "tier": 3,
       "epochKind": "wick",
-      "inside": false,
+      "inside": true,
       "ring": 2,
       "cell": [
         0,
@@ -574,14 +574,59 @@
       ]
     }
   ],
-  "frontier": {
-    "rect": [
-      -5,
-      -8,
-      5,
-      7
+  "border": {
+    "chunks": 4096,
+    "inside": [
+      [
+        0,
+        0
+      ],
+      [
+        4096,
+        4096
+      ],
+      [
+        -4096,
+        -4096
+      ],
+      [
+        4096,
+        -4096
+      ],
+      [
+        -4096,
+        4096
+      ],
+      [
+        0,
+        4096
+      ],
+      [
+        -4096,
+        9
+      ]
     ],
-    "chunks": 164,
-    "new": 126
+    "outside": [
+      [
+        4097,
+        0
+      ],
+      [
+        0,
+        -4097
+      ],
+      [
+        -4097,
+        4096
+      ],
+      [
+        4096,
+        4097
+      ],
+      [
+        -5000,
+        -5000
+      ]
+    ]
   }
 }

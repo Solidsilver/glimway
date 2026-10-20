@@ -1178,6 +1178,8 @@ export enum ErrorCode {
   CANNOT_LAY_HERE = 229,
 
   /**
+   * Past the 0.8–0.13 frontier; nothing answers it since 0.14 (beyond-sight, beyond-border).
+   *
    * @generated from enum value: ERROR_CODE_BEYOND_FRONTIER = 230;
    */
   BEYOND_FRONTIER = 230,
@@ -1305,6 +1307,18 @@ export enum ErrorCode {
    * @generated from enum value: ERROR_CODE_ALREADY_TAPPED = 252;
    */
   ALREADY_TAPPED = 252,
+
+  /**
+   * 0.14 The wide world: reads only near the reader, and the world border.
+   *
+   * @generated from enum value: ERROR_CODE_BEYOND_SIGHT = 253;
+   */
+  BEYOND_SIGHT = 253,
+
+  /**
+   * @generated from enum value: ERROR_CODE_BEYOND_BORDER = 254;
+   */
+  BEYOND_BORDER = 254,
 }
 
 /**

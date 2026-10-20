@@ -1001,10 +1001,12 @@
       "nodeYieldBonus": 1
     }
   ],
-  "frontier": {
-    "reach": 3,
-    "southLimit": 7,
-    "heldSlack": 3
+  "border": {
+    "chunks": 4096,
+    "veilChunks": 4
+  },
+  "map": {
+    "glimpseChunks": 32
   },
   "paths": {
     "clearTools": [
@@ -1133,7 +1135,7 @@
     "originCy": -2
   },
   "words": {
-    "drift": "The Whitequiet closes in here. Only a lit camp pushes it back.",
+    "drift": "The land fades to white here, and goes no further.",
     "turned": "The drift turned while you stood in it.",
     "lampStone": "A lamp stone, cold a long time. Its niche is black with old soot. Mara might know what it was for.",
     "needTool": "You'd need {tool} for this.",

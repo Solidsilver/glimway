@@ -1358,6 +1358,15 @@
       ]
     },
     {
+      "source": "homestead.wickSap",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        34,
+        37
+      ]
+    },
+    {
       "source": "items.pickups.well-rope-coil",
       "kind": "stand",
       "area": "hearthwick",
@@ -1409,15 +1418,6 @@
       "tile": [
         27,
         35
-      ]
-    },
-    {
-      "source": "homestead.wickSap",
-      "kind": "stand",
-      "area": "hearthwick",
-      "tile": [
-        34,
-        37
       ]
     },
     {
@@ -2298,7 +2298,7 @@
           -32769,
           -32768
         ],
-        "onGrid": true
+        "onGrid": false
       }
     ],
     "anchors": [

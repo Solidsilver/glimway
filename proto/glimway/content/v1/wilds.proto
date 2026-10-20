@@ -23,6 +23,9 @@ message Wilds {
   // footprints in `places`.
   reserved 4;
   reserved "regions";
+  // The 0.8 frontier went with 0.14: the world border replaced it.
+  reserved 21;
+  reserved "frontier";
   // Enemy vocabularies; camp mixes may name only these (code rule).
   repeated string enemy_kinds = 5 [(buf.validate.field).repeated = {
     min_items: 1
@@ -75,8 +78,6 @@ message Wilds {
   WildsLandSizes land_sizes = 19 [(buf.validate.field).required = true];
   // Per tier of difficulty, numbered 1..n without gaps (code rule).
   repeated WildsTier tiers = 20 [(buf.validate.field).repeated.min_items = 1];
-  // The 0.8 bound before lamps (decision 3).
-  WildsFrontier frontier = 21 [(buf.validate.field).required = true];
   // Paths players make (decisions 5, 7; section 3).
   WildsPaths paths = 22 [(buf.validate.field).required = true];
   // The Wend (decision 12).
@@ -94,6 +95,10 @@ message Wilds {
   WildsWords words = 28 [(buf.validate.field).required = true];
   // The parts Elara's rumour is built from (decision 19, design 2.10).
   WildsRumour rumour = 29 [(buf.validate.field).required = true];
+  // The world border (0.14): how far the world goes.
+  WildsBorder border = 30 [(buf.validate.field).required = true];
+  // The world map's window (0.14).
+  WildsMap map = 31 [(buf.validate.field).required = true];
 }
 
 // One camp's enemy roll: the old file carried a bare list of lists, which
@@ -337,15 +342,21 @@ message WildsTier {
   optional int32 node_yield_bonus = 5 [(buf.validate.field).required = true, (buf.validate.field).int32 = {gte: 0, lte: 10}];
 }
 
-// The 0.8 frontier (decision 3, design 2.1): chunks within Chebyshev
-// distance `reach` of a footprint, and no further south than `south_limit`.
-// It is enforced at run time, never generated (design 2.2). Held land
-// pushes it out (lamps.md 2.2): every chunk within Chebyshev distance
-// `held_slack` of a held chunk is inside too, still no further south.
-message WildsFrontier {
-  int32 reach = 1 [(buf.validate.field).int32 = {gte: 0, lte: 64}];
-  optional sint32 south_limit = 2 [(buf.validate.field).required = true];
-  int32 held_slack = 3 [(buf.validate.field).int32 = {gte: 0, lte: 16}];
+// The world border (0.14, docs/planning/wide-world/synthesis.md): every
+// chunk with |cx| and |cy| at most `chunks` exists, made when first read;
+// nothing past it does, and nobody walks there. It may only widen (land
+// already made never moves). The last `veil_chunks` chunks inside it fade
+// to the pale veil the border is drawn as.
+message WildsBorder {
+  int32 chunks = 1 [(buf.validate.field).int32 = {gte: 64, lte: 65536}];
+  int32 veil_chunks = 2 [(buf.validate.field).int32 = {gte: 0, lte: 64}];
+}
+
+// The world map (0.14): beyond the chunks you've walked, it shows the land
+// within `glimpse_chunks` of where you stand at glimpse detail (its main
+// land and whether a river crosses it).
+message WildsMap {
+  int32 glimpse_chunks = 1 [(buf.validate.field).int32 = {gte: 2, lte: 64}];
 }
 
 // Which decor a tool clears (by its item action, items.json `actions`).

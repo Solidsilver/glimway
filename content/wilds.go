@@ -29,7 +29,8 @@ type (
 	WildsLand           = contentv1.WildsLand
 	WildsLandSizes      = contentv1.WildsLandSizes
 	WildsTier           = contentv1.WildsTier
-	WildsFrontier       = contentv1.WildsFrontier
+	WildsBorder         = contentv1.WildsBorder
+	WildsMap            = contentv1.WildsMap
 	WildsPaths          = contentv1.WildsPaths
 	WildsRiver          = contentv1.WildsRiver
 	WildsRoad           = contentv1.WildsRoad

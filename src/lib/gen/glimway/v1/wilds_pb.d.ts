@@ -1151,12 +1151,12 @@ export declare type WildsRegionResultValid = WildsRegionResult;
 export declare const WildsRegionResultSchema: GenMessage<WildsRegionResult, {validType: WildsRegionResultValid}>;
 
 /**
- * The frontier the server enforces (open-map.md 2.6; lamps.md 2.2): the
- * content's reach around the footprints, and every chunk within the
- * content's held_slack of a held chunk (held: the world's held keys, by cy
- * then cx), no further south than south_limit. rect bounds the union.
+ * The 0.8–0.13 frontier, replaced by WildsBorder in 0.14: nothing reads or
+ * writes it. It stays defined because buf's FILE rule refuses a deleted
+ * message until a release ships without it.
  *
  * @generated from message glimway.v1.WildsFrontier
+ * @deprecated
  */
 export declare type WildsFrontier = Message<"glimway.v1.WildsFrontier"> & {
   /**
@@ -1175,8 +1175,30 @@ export declare type WildsFrontierValid = WildsFrontier;
 /**
  * Describes the message glimway.v1.WildsFrontier.
  * Use `create(WildsFrontierSchema)` to create a new message.
+ * @deprecated
  */
 export declare const WildsFrontierSchema: GenMessage<WildsFrontier, {validType: WildsFrontierValid}>;
+
+/**
+ * The world border (0.14, content wilds.border): every chunk inside rect
+ * exists, and nothing past it does. It only ever widens.
+ *
+ * @generated from message glimway.v1.WildsBorder
+ */
+export declare type WildsBorder = Message<"glimway.v1.WildsBorder"> & {
+  /**
+   * @generated from field: glimway.v1.WildsChunkRect rect = 1;
+   */
+  rect?: WildsChunkRect | undefined;
+};
+
+export declare type WildsBorderValid = WildsBorder;
+
+/**
+ * Describes the message glimway.v1.WildsBorder.
+ * Use `create(WildsBorderSchema)` to create a new message.
+ */
+export declare const WildsBorderSchema: GenMessage<WildsBorder, {validType: WildsBorderValid}>;
 
 /**
  * One player-made change to one tile (section 3). tx and ty are local to
@@ -1272,7 +1294,7 @@ export declare type ChunkGroundChangesValid = ChunkGroundChanges;
 export declare const ChunkGroundChangesSchema: GenMessage<ChunkGroundChanges, {validType: ChunkGroundChangesValid}>;
 
 /**
- * A chunk past the frontier, seen dimly through the veil (decision 22): its
+ * A chunk seen at a distance (decision 22; the map window, 0.14): its
  * main land (a content land id) and whether the Wend crosses it. Never a
  * made or stored chunk.
  *
@@ -1418,10 +1440,11 @@ export declare type WildsWayValid = WildsWay;
 export declare const WildsWaySchema: GenMessage<WildsWay, {validType: WildsWayValid}>;
 
 /**
- * GET /api/wilds/near/<cx>/<cy> (open-map.md 2.4): the epochs, the
- * frontier, and for the (2*radius+1)^2 chunks around (cx, cy) every state
- * the chunk bodies don't carry. Entity states, claims, discoveries and
- * lanterns name their epoch (or their entity's chunk, which picks it).
+ * GET /api/wilds/near/<cx>/<cy> (open-map.md 2.4): the epochs, the world
+ * border, and for the (2*radius+1)^2 chunks around (cx, cy) every state the
+ * chunk bodies don't carry. Entity states, claims, discoveries and lanterns
+ * name their epoch (or their entity's chunk, which picks it). The centre
+ * must be within sight of the reader (api/sight.go), else `beyond-sight`.
  *
  * @generated from message glimway.v1.WildsNearResult
  */
@@ -1437,9 +1460,9 @@ export declare type WildsNearResult = Message<"glimway.v1.WildsNearResult"> & {
   wick?: WildsEpoch | undefined;
 
   /**
-   * @generated from field: glimway.v1.WildsFrontier frontier = 3;
+   * @generated from field: glimway.v1.WildsBorder border = 18;
    */
-  frontier?: WildsFrontier | undefined;
+  border?: WildsBorder | undefined;
 
   /**
    * @generated from field: glimway.v1.WildsChunkKey center = 4;
@@ -1487,13 +1510,6 @@ export declare type WildsNearResult = Message<"glimway.v1.WildsNearResult"> & {
    * @generated from field: map<string, double> materials = 12;
    */
   materials: { [key: string]: number };
-
-  /**
-   * The chunks within 2 outside the frontier that border the window.
-   *
-   * @generated from field: repeated glimway.v1.WildsGlimpse glimpse = 13;
-   */
-  glimpse: WildsGlimpse[];
 
   /**
    * Ways with a tile in the window.
@@ -1712,6 +1728,13 @@ export declare const HomesteadLandSchema: GenMessage<HomesteadLand, {validType: 
  * callers submit only explored keys, in batches of at most 256. This read
  * neither generates terrain nor credits presence. No capabilities ride here.
  *
+ * glimpse asks for the land round the reader too (0.14: the map is a
+ * window, not a frontier): window is the chunks within the content's
+ * wilds.map.glimpseChunks of the reader's trusted chunk, clipped to the
+ * world border, and glimpse names every generated chunk in it at glimpse
+ * detail (land and river, never a made chunk). Outside the Wilds both are
+ * empty.
+ *
  * @generated from message glimway.v1.WildsMapRequest
  */
 export declare type WildsMapRequest = Message<"glimway.v1.WildsMapRequest"> & {
@@ -1719,6 +1742,11 @@ export declare type WildsMapRequest = Message<"glimway.v1.WildsMapRequest"> & {
    * @generated from field: repeated glimway.v1.WildsChunkKey explored = 1;
    */
   explored: WildsChunkKey[];
+
+  /**
+   * @generated from field: bool glimpse = 2;
+   */
+  glimpse: boolean;
 };
 
 export declare type WildsMapRequestValid = WildsMapRequest;
@@ -1749,6 +1777,16 @@ export declare type WildsMapStatus = Message<"glimway.v1.WildsMapStatus"> & {
    * @generated from field: repeated glimway.v1.MapLamp lamps = 3;
    */
   lamps: MapLamp[];
+
+  /**
+   * @generated from field: glimway.v1.WildsChunkRect window = 4;
+   */
+  window?: WildsChunkRect | undefined;
+
+  /**
+   * @generated from field: repeated glimway.v1.WildsGlimpse glimpse = 5;
+   */
+  glimpse: WildsGlimpse[];
 };
 
 export declare type WildsMapStatusValid = WildsMapStatus;

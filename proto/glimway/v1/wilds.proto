@@ -153,11 +153,16 @@ message WildsRegionResult {
   repeated WildsDiscovery discoveries = 4; repeated WildsLantern lanterns = 5;
   map<string,double> materials = 6; repeated EchoAssignment echoes = 7;
 }
-// The frontier the server enforces (open-map.md 2.6; lamps.md 2.2): the
-// content's reach around the footprints, and every chunk within the
-// content's held_slack of a held chunk (held: the world's held keys, by cy
-// then cx), no further south than south_limit. rect bounds the union.
-message WildsFrontier { WildsChunkRect rect = 1; repeated WildsChunkKey held = 2; }
+// The 0.8–0.13 frontier, replaced by WildsBorder in 0.14: nothing reads or
+// writes it. It stays defined because buf's FILE rule refuses a deleted
+// message until a release ships without it.
+message WildsFrontier {
+  option deprecated = true;
+  WildsChunkRect rect = 1; repeated WildsChunkKey held = 2;
+}
+// The world border (0.14, content wilds.border): every chunk inside rect
+// exists, and nothing past it does. It only ever widens.
+message WildsBorder { WildsChunkRect rect = 1; }
 
 // One player-made change to one tile (section 3). tx and ty are local to
 // the chunk the changes are stored under. change is "cleared", "stone" or
@@ -169,7 +174,7 @@ message GroundChanges { repeated GroundChange changes = 1; }
 // One chunk's changes as the near read and the path operations carry them.
 message ChunkGroundChanges { WildsChunkKey chunk = 1; string epoch = 2; GroundChanges changes = 3; }
 
-// A chunk past the frontier, seen dimly through the veil (decision 22): its
+// A chunk seen at a distance (decision 22; the map window, 0.14): its
 // main land (a content land id) and whether the Wend crosses it. Never a
 // made or stored chunk.
 message WildsGlimpse { WildsChunkKey chunk = 1; string land = 2; bool river = 3; }
@@ -203,12 +208,15 @@ message WildsWay {
   repeated WorldTile path = 9; WorldTile sign_a = 10; WorldTile sign_b = 11;
 }
 
-// GET /api/wilds/near/<cx>/<cy> (open-map.md 2.4): the epochs, the
-// frontier, and for the (2*radius+1)^2 chunks around (cx, cy) every state
-// the chunk bodies don't carry. Entity states, claims, discoveries and
-// lanterns name their epoch (or their entity's chunk, which picks it).
+// GET /api/wilds/near/<cx>/<cy> (open-map.md 2.4): the epochs, the world
+// border, and for the (2*radius+1)^2 chunks around (cx, cy) every state the
+// chunk bodies don't carry. Entity states, claims, discoveries and lanterns
+// name their epoch (or their entity's chunk, which picks it). The centre
+// must be within sight of the reader (api/sight.go), else `beyond-sight`.
 message WildsNearResult {
-  WildsEpoch still = 1; WildsEpoch wick = 2; WildsFrontier frontier = 3;
+  reserved 3, 13;
+  reserved "frontier", "glimpse";
+  WildsEpoch still = 1; WildsEpoch wick = 2; WildsBorder border = 18;
   WildsChunkKey center = 4; uint32 radius = 5;
   repeated WildsEntityState entities = 6; repeated WildsPersonalClaim personal_claims = 7;
   repeated WildsDiscovery discoveries = 8; repeated WildsLantern lanterns = 9;
@@ -216,8 +224,6 @@ message WildsNearResult {
   repeated EchoAssignment echoes = 10;
   repeated ChunkGroundChanges ground = 11;
   map<string,double> materials = 12;
-  // The chunks within 2 outside the frontier that border the window.
-  repeated WildsGlimpse glimpse = 13;
   // Ways with a tile in the window.
   repeated WildsWay ways = 14;
   // Every chunk of the window on the grid (location.OnGrid), row-major:
@@ -254,12 +260,21 @@ message HomesteadLand { uint32 width = 1; uint32 height = 2; repeated string cel
 // Read-only map status. Exploration is device-local, as for map terrain:
 // callers submit only explored keys, in batches of at most 256. This read
 // neither generates terrain nor credits presence. No capabilities ride here.
-message WildsMapRequest { repeated WildsChunkKey explored = 1; }
+//
+// glimpse asks for the land round the reader too (0.14: the map is a
+// window, not a frontier): window is the chunks within the content's
+// wilds.map.glimpseChunks of the reader's trusted chunk, clipped to the
+// world border, and glimpse names every generated chunk in it at glimpse
+// detail (land and river, never a made chunk). Outside the Wilds both are
+// empty.
+message WildsMapRequest { repeated WildsChunkKey explored = 1; bool glimpse = 2; }
 message WildsMapStatus {
   string wick = 1;
   repeated ChunkLandStatus chunks = 2;
   // Explored lamps and the reader's own lot lantern (its known fixed stake).
   repeated MapLamp lamps = 3;
+  WildsChunkRect window = 4;
+  repeated WildsGlimpse glimpse = 5;
 }
 message ChunkLandStatus {
   WildsChunkKey chunk = 1;

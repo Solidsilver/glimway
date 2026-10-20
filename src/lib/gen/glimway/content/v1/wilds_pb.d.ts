@@ -158,13 +158,6 @@ export declare type Wilds = Message<"glimway.content.v1.Wilds"> & {
   tiers: WildsTier[];
 
   /**
-   * The 0.8 bound before lamps (decision 3).
-   *
-   * @generated from field: glimway.content.v1.WildsFrontier frontier = 21;
-   */
-  frontier?: WildsFrontier | undefined;
-
-  /**
    * Paths players make (decisions 5, 7; section 3).
    *
    * @generated from field: glimway.content.v1.WildsPaths paths = 22;
@@ -220,6 +213,20 @@ export declare type Wilds = Message<"glimway.content.v1.Wilds"> & {
    * @generated from field: glimway.content.v1.WildsRumour rumour = 29;
    */
   rumour?: WildsRumour | undefined;
+
+  /**
+   * The world border (0.14): how far the world goes.
+   *
+   * @generated from field: glimway.content.v1.WildsBorder border = 30;
+   */
+  border?: WildsBorder | undefined;
+
+  /**
+   * The world map's window (0.14).
+   *
+   * @generated from field: glimway.content.v1.WildsMap map = 31;
+   */
+  map?: WildsMap | undefined;
 };
 
 /**
@@ -370,13 +377,6 @@ export declare type WildsValid = Message<"glimway.content.v1.Wilds"> & {
   tiers: WildsTierValid[];
 
   /**
-   * The 0.8 bound before lamps (decision 3).
-   *
-   * @generated from field: glimway.content.v1.WildsFrontier frontier = 21;
-   */
-  frontier: WildsFrontierValid;
-
-  /**
    * Paths players make (decisions 5, 7; section 3).
    *
    * @generated from field: glimway.content.v1.WildsPaths paths = 22;
@@ -432,6 +432,20 @@ export declare type WildsValid = Message<"glimway.content.v1.Wilds"> & {
    * @generated from field: glimway.content.v1.WildsRumour rumour = 29;
    */
   rumour: WildsRumourValid;
+
+  /**
+   * The world border (0.14): how far the world goes.
+   *
+   * @generated from field: glimway.content.v1.WildsBorder border = 30;
+   */
+  border: WildsBorderValid;
+
+  /**
+   * The world map's window (0.14).
+   *
+   * @generated from field: glimway.content.v1.WildsMap map = 31;
+   */
+  map: WildsMapValid;
 };
 
 /**
@@ -1513,62 +1527,55 @@ export declare type WildsTierValid = Message<"glimway.content.v1.WildsTier"> & {
 export declare const WildsTierSchema: GenMessage<WildsTier, {validType: WildsTierValid}>;
 
 /**
- * The 0.8 frontier (decision 3, design 2.1): chunks within Chebyshev
- * distance `reach` of a footprint, and no further south than `south_limit`.
- * It is enforced at run time, never generated (design 2.2). Held land
- * pushes it out (lamps.md 2.2): every chunk within Chebyshev distance
- * `held_slack` of a held chunk is inside too, still no further south.
+ * The world border (0.14, docs/planning/wide-world/synthesis.md): every
+ * chunk with |cx| and |cy| at most `chunks` exists, made when first read;
+ * nothing past it does, and nobody walks there. It may only widen (land
+ * already made never moves). The last `veil_chunks` chunks inside it fade
+ * to the pale veil the border is drawn as.
  *
- * @generated from message glimway.content.v1.WildsFrontier
+ * @generated from message glimway.content.v1.WildsBorder
  */
-export declare type WildsFrontier = Message<"glimway.content.v1.WildsFrontier"> & {
+export declare type WildsBorder = Message<"glimway.content.v1.WildsBorder"> & {
   /**
-   * @generated from field: int32 reach = 1;
+   * @generated from field: int32 chunks = 1;
    */
-  reach: number;
+  chunks: number;
 
   /**
-   * @generated from field: optional sint32 south_limit = 2;
+   * @generated from field: int32 veil_chunks = 2;
    */
-  southLimit?: number | undefined;
-
-  /**
-   * @generated from field: int32 held_slack = 3;
-   */
-  heldSlack: number;
+  veilChunks: number;
 };
 
+export declare type WildsBorderValid = WildsBorder;
+
 /**
- * The 0.8 frontier (decision 3, design 2.1): chunks within Chebyshev
- * distance `reach` of a footprint, and no further south than `south_limit`.
- * It is enforced at run time, never generated (design 2.2). Held land
- * pushes it out (lamps.md 2.2): every chunk within Chebyshev distance
- * `held_slack` of a held chunk is inside too, still no further south.
- *
- * @generated from message glimway.content.v1.WildsFrontier
+ * Describes the message glimway.content.v1.WildsBorder.
+ * Use `create(WildsBorderSchema)` to create a new message.
  */
-export declare type WildsFrontierValid = Message<"glimway.content.v1.WildsFrontier"> & {
-  /**
-   * @generated from field: int32 reach = 1;
-   */
-  reach: number;
+export declare const WildsBorderSchema: GenMessage<WildsBorder, {validType: WildsBorderValid}>;
 
+/**
+ * The world map (0.14): beyond the chunks you've walked, it shows the land
+ * within `glimpse_chunks` of where you stand at glimpse detail (its main
+ * land and whether a river crosses it).
+ *
+ * @generated from message glimway.content.v1.WildsMap
+ */
+export declare type WildsMap = Message<"glimway.content.v1.WildsMap"> & {
   /**
-   * @generated from field: optional sint32 south_limit = 2;
+   * @generated from field: int32 glimpse_chunks = 1;
    */
-  southLimit: number;
-
-  /**
-   * @generated from field: int32 held_slack = 3;
-   */
-  heldSlack: number;
+  glimpseChunks: number;
 };
 
+export declare type WildsMapValid = WildsMap;
+
 /**
- * Describes the message glimway.content.v1.WildsFrontier.
- * Use `create(WildsFrontierSchema)` to create a new message.
+ * Describes the message glimway.content.v1.WildsMap.
+ * Use `create(WildsMapSchema)` to create a new message.
  */
-export declare const WildsFrontierSchema: GenMessage<WildsFrontier, {validType: WildsFrontierValid}>;
+export declare const WildsMapSchema: GenMessage<WildsMap, {validType: WildsMapValid}>;
 
 /**
  * Which decor a tool clears (by its item action, items.json `actions`).

@@ -1623,7 +1623,7 @@ func (x *WildsLanternResult) GetLanterns() []*WildsLantern {
 }
 
 // The path operations (open-map.md section 3), each in one transaction and
-// refused outside the frontier. x and y are a world tile within
+// refused past the world border. x and y are a world tile within
 // paths.reachTiles of the hero. kind is "stone" or "plank".
 // POST /api/wilds/clear: open a clearable decor tile with the right tool.
 type WildsClearRequest struct {
