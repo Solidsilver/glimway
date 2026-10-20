@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { CONTRACT, accountOf, pinWorld, readApiGet, served, serverState, sql, wickSlack } from './connected'
+import { CONTRACT, accountOf, pinWorld, readApiGet, seeFrom, served, serverState, sql, wickSlack } from './connected'
 import { waitForWilds, warp } from './helpers'
 import { freshPlayer } from './home-helpers'
 import { decodeChunk } from '../src/lib/api/chunks.ts'
@@ -16,10 +16,12 @@ import type { WorldChunk } from '../src/lib/gen/glimway/v1/wilds_pb.js'
 const S = 24
 const LAMP_STONE = 7
 
-/** Every chunk of the frontier with a lamp stone, as the server serves them. */
+/** Every chunk near home (cx -4..4, cy -8..0) with a lamp stone, as the server serves them. */
 async function stoneChunks(page: Page): Promise<WorldChunk[]> {
   const epochs = new Map<string, string>()
+  const see = await seeFrom(page)
   for (const [cx, cy] of [[-2, -6], [3, -6], [-2, -1], [3, -1]]) {
+    see(cx, cy)
     const res = await page.request.get(`/api/wilds/near/${cx}/${cy}`, CONTRACT)
     expect(res.ok()).toBe(true)
     const near = (await res.json()) as { still: { id: string }; wick: { id: string } }
@@ -29,6 +31,7 @@ async function stoneChunks(page: Page): Promise<WorldChunk[]> {
   const out: WorldChunk[] = []
   for (let cy = -8; cy <= 0; cy++)
     for (let cx = -4; cx <= 4; cx++) {
+      see(cx, cy)
       const res = await page.request.get(`/api/wilds/chunk/${encodeURIComponent(epochs.get(epochKindAt(cx, cy))!)}/0/${cx}/${cy}`, { headers: { ...CONTRACT.headers, Accept: 'application/x-protobuf' } })
       expect(res.ok(), `chunk ${cx},${cy}`).toBe(true)
       const c = decodeChunk(new Uint8Array(await res.body()))
@@ -59,7 +62,7 @@ test('relit road stones and the quest stone draw their open-map frames', async (
     return null
   }
   const quest = siteOf(cut)
-  expect(quest, 'the quest stone lies in the frontier').not.toBeNull()
+  expect(quest, 'the quest stone lies near home').not.toBeNull()
   // Another stone, two chunks or more away, so its 3×3 doesn't take in the quest stone.
   const other = chunks.flatMap((c) => c.sites.filter((s) => s.kind === LAMP_STONE).map((s) => siteOf(s.id)!)).find((o) => Math.max(Math.abs(o.c.cx - quest!.c.cx), Math.abs(o.c.cy - quest!.c.cy)) >= 2)
   expect(other, 'a second road stone').toBeDefined()

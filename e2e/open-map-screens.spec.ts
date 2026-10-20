@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { CONTRACT, pinWorld } from './connected'
+import { CONTRACT, pinWorld, seeFrom } from './connected'
 import { waitForWilds, warp, wildsWindow } from './helpers'
 import { freshPlayer } from './home-helpers'
 import { decodeChunk } from '../src/lib/api/chunks.ts'
@@ -10,8 +10,8 @@ import type { WorldChunk } from '../src/lib/gen/glimway/v1/wilds_pb.js'
  * The open map on screen, from a real world (generator v3 on the Go
  * server): the gate, the Tangle, the seam where the Tangle meets the
  * Whitequiet, meadow, the Wend at a ford, the Lantern Road with a dark lamp
- * stone, a landmark, and the drift at the frontier with the glimpse past it.
- * The whole frontier is read first (near reads and chunk bodies) to find
+ * stone, a landmark, and the drift past the world border under its veil.
+ * The land near home is read first (near reads and chunk bodies) to find
  * each. SCREENS=1 saves the images to .agent/screens/.
  */
 
@@ -33,10 +33,12 @@ async function shot(page: Page, name: string): Promise<void> {
  */
 const pinScreensWorld = (page: Page) => pinWorld(page, 'open-map-screens')
 
-/** Every chunk of the 0.8 frontier, as the server serves them. */
-async function frontierChunks(page: Page): Promise<WorldChunk[]> {
+/** Every chunk near home (cx -4..4, cy -8..0, the 0.8 frontier's north), as the server serves them. */
+async function homeChunks(page: Page): Promise<WorldChunk[]> {
   const epochs = new Map<string, string>()
+  const see = await seeFrom(page)
   for (const [cx, cy] of [[-2, -6], [3, -6], [-2, -1], [3, -1]]) {
+    see(cx, cy)
     const res = await page.request.get(`/api/wilds/near/${cx}/${cy}`, CONTRACT)
     expect(res.ok()).toBe(true)
     const near = (await res.json()) as { still: { id: string }; wick: { id: string } }
@@ -47,6 +49,7 @@ async function frontierChunks(page: Page): Promise<WorldChunk[]> {
   for (let cy = -8; cy <= 0; cy++)
     for (let cx = -4; cx <= 4; cx++) {
       const epoch = epochs.get(epochKindAt(cx, cy))!
+      see(cx, cy)
       const res = await page.request.get(`/api/wilds/chunk/${encodeURIComponent(epoch)}/0/${cx}/${cy}`, { headers: { ...CONTRACT.headers, Accept: 'application/x-protobuf' } })
       expect(res.ok(), `chunk ${cx},${cy}`).toBe(true)
       out.push(decodeChunk(new Uint8Array(await res.body())))
@@ -79,7 +82,7 @@ for (const [device, vp] of [['desktop', { width: 1200, height: 760 }], ['phone',
     await page.setViewportSize(vp)
     await freshPlayer(page)
     await pinScreensWorld(page)
-    const chunks = await frontierChunks(page)
+    const chunks = await homeChunks(page)
     expect(chunks.length).toBe(81)
 
     await visit(page, { tx: 2, ty: 22 }, `70-open-map-gate-${device}`)
@@ -88,7 +91,7 @@ for (const [device, vp] of [['desktop', { width: 1200, height: 760 }], ['phone',
     await visit(page, { tx: 12, ty: -2 * S + 1 }, `72-open-map-seam-${device}`)
 
     const meadow = chunks.find((c) => c.land === 'meadow' && tileOf(c, 'grass_c'))
-    expect(meadow, 'some meadow in the frontier').toBeDefined()
+    expect(meadow, 'some meadow near home').toBeDefined()
     await visit(page, tileOf(meadow!, 'grass_c')!, `73-open-map-meadow-${device}`)
 
     const ford = chunks.find((c) => tileOf(c, 'water_b'))
@@ -136,8 +139,8 @@ for (const [device, vp] of [['desktop', { width: 1200, height: 760 }], ['phone',
       await visit(page, world(pond, e.tx, e.ty + 2), `69-open-map-pond-${device}`)
     }
 
-    // The drift: the frontier's west edge, half-way up, with the glimpse past it.
-    await visit(page, { tx: -4 * S + 2, ty: -4 * S + 12 }, `77-open-map-drift-${device}`)
+    // The drift: past the world border's west edge (0.14), under its pale veil.
+    await visit(page, { tx: -4096 * S + 2, ty: 12 }, `77-open-map-drift-${device}`)
     expect((await wildsWindow(page))!.drift.length).toBeGreaterThan(0)
   })
 }
@@ -146,7 +149,7 @@ test('walking the Lantern Road across chunk edges keeps the frames steady', asyn
   test.setTimeout(180_000)
   await freshPlayer(page)
   await pinScreensWorld(page)
-  const chunks = await frontierChunks(page)
+  const chunks = await homeChunks(page)
   // The road's paving tiles, in world tiles; walk from its southernmost to the farthest along it.
   const paving = new Set<string>()
   for (const c of chunks) {

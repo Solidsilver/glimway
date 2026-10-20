@@ -381,3 +381,18 @@ export async function syncFromMenu(page: Page): Promise<void> {
   await page.keyboard.press('Escape')
   await page.getByRole('button', { name: 'Sync character' }).click()
 }
+
+/**
+ * Test-only lever for reading land through the API (0.14): chunk and near
+ * reads answer only within sight of the reader's saved place
+ * (server/internal/api/sight.go). Returns a function that puts the page's
+ * saved place in the middle of chunk (cx, cy), at its version, so the next
+ * read sees from there; call it before each read, since the page's own
+ * reports (every 10 s) put it back where the hero stands.
+ */
+export async function seeFrom(page: Page): Promise<(cx: number, cy: number) => void> {
+  const account = ((await serverState(page)).body.accountId as string).replace(/'/g, "''")
+  return (cx, cy) => {
+    sql(`UPDATE player_place SET area='outdoors', x=${(cx * 24 + 12) * 16}, y=${(cy * 24 + 12) * 16} WHERE account_id='${account}';`)
+  }
+}
