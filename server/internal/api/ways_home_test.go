@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"net/http"
 	"slices"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"glimway/content"
 	"glimway/server/internal/chunks"
@@ -419,5 +421,49 @@ func TestOnlyAPlaceTheServerChoseIsAMove(t *testing.T) {
 	env, _ = x.call("/api/story/mark", mark, c, 200)
 	if got := env.GetState().GetPlace(); got.GetMovedVersion() != p.GetMovedVersion() || got.GetPlaceSetVersion() <= p.GetMovedVersion() {
 		t.Fatalf("an operation after the landing: %+v", got)
+	}
+}
+
+// Only a blow that lands is a fight: a slash into empty air inside a camp's
+// room (the whole chunk), its wisp out of reach, doesn't mark you; one
+// that hits the wisp does
+// (playtest 2026-10-20: E swings when there's nothing to use, and a swing
+// anywhere near a camp refused the turncap for eight seconds).
+func TestOnlyALandedSwingIsAFight(t *testing.T) {
+	var ms atomic.Int64
+	ms.Store(100000)
+	h := newPresenceHub(nil, func() time.Time { return time.UnixMilli(ms.Load()) })
+	a := &Server{presence: h}
+	p := unitFightPeer(t, h)
+	addUnitFightRoom(t, a, p, 1, 0, 200)
+	swing := func(counter uint32, facing float64) *wire.FightSwingResult {
+		h.mu.Lock()
+		h.handleFightSwing(p, &wire.FightSwing{Kind: wire.FightSwingKind_FIGHT_SWING_KIND_SLASH, X: 0, Y: 112, Facing: &wire.FightFacing{X: facing}, SwingCounter: counter, SeenTick: 1000})
+		h.mu.Unlock()
+		return queuedFightResult(t, p)
+	}
+	if r := swing(1, 1); r.RefusedReason != 0 || slices.ContainsFunc(r.Hits, landed) {
+		t.Fatalf("the empty swing: %v", r)
+	}
+	if a.inFight(p.identity.ID) {
+		t.Fatal("a swing into empty air inside a camp's room is a fight")
+	}
+	ms.Add(1000)
+	addUnitFightRoom(t, a, p, 2, -1, -10)
+	if r := swing(2, -1); !slices.ContainsFunc(r.Hits, landed) {
+		t.Fatalf("the swing at the wisp: %v", r)
+	}
+	if !a.inFight(p.identity.ID) {
+		t.Fatal("a swing that landed isn't a fight")
+	}
+}
+
+// An enemy winding up at your Echo (decoy:<account>) is a fight of yours.
+func TestAWindUpAtYourEchoIsAFight(t *testing.T) {
+	x := newRig(t)
+	room := &presenceFightRoom{handle: 1}
+	x.api.fightOutputs([]fights.Emitted{{Tag: room, Output: fights.Output{Message: &wire.FightEvent{Room: 1, Kind: wire.FightEventKind_FIGHT_EVENT_KIND_AIM_LOCK, Enemy: proto.Uint32(1), Target: proto.String("decoy:alice")}}}})
+	if !x.api.inFight("alice") {
+		t.Fatal("an aim lock at your Echo isn't a fight")
 	}
 }

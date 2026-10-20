@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"hash/fnv"
 	"math"
+	"slices"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -246,9 +248,10 @@ func (a *Server) fightOutputs(batch []fights.Emitted) {
 		h.mu.Lock()
 		for _, it := range chunk {
 			room, out := it.room, it.out
-			// An enemy winding up or locking its aim on someone: they're in a fight.
+			// An enemy winding up or locking its aim on someone (or on their
+			// Echo, decoy:<account>): they're in a fight.
 			if e, ok := out.Message.(*wire.FightEvent); ok && e.Target != nil && (e.Kind == wire.FightEventKind_FIGHT_EVENT_KIND_WINDUP_START || e.Kind == wire.FightEventKind_FIGHT_EVENT_KIND_AIM_LOCK) {
-				h.markFought(e.GetTarget(), h.now())
+				h.markFought(strings.TrimPrefix(e.GetTarget(), "decoy:"), h.now())
 			}
 			for p := range room.viewers {
 				if p.fightRooms[room.handle] != room || p.detached || out.Observer != "" && out.Observer != p.fightToken {
@@ -772,9 +775,6 @@ func (h *presenceHub) handleFightSwing(p *presencePeer, s *wire.FightSwing) {
 	if attack.Flight != nil {
 		attack.Flight.Seal()
 	}
-	if pending > 0 {
-		h.markFought(p.identity.ID, now)
-	}
 	h.answerFight(p, s.SwingCounter, crit, s.Predicted, replies, pending)
 }
 
@@ -828,9 +828,6 @@ func (h *presenceHub) handleFightCast(p *presencePeer, event *wire.PresenceAbili
 	}
 	if c.Flight != nil {
 		c.Flight.Seal()
-	}
-	if pending > 0 && damage > 0 {
-		h.markFought(p.identity.ID, h.now())
 	}
 	h.answerFight(p, cast.SwingCounter, crit, cast.Predicted, replies, pending)
 }
@@ -887,10 +884,13 @@ func (h *presenceHub) fightGround(p *presencePeer, x, y float64) fights.Ground {
 }
 
 // answerFight gathers the rooms that took a swing or cast off h.mu and sends
-// its one FightSwingResult, with a row for every prediction.
+// its one FightSwingResult, with a row for every prediction. A blow that
+// landed on something puts its player in a fight (markFought); one into
+// empty air doesn't, even inside a camp's room.
 func (h *presenceHub) answerFight(p *presencePeer, counter uint32, crit bool, predicted []*wire.FightTarget, replies chan []*wire.FightHitRow, pending int) {
 	ctx := p.ctx
 	token := p.fightToken
+	id := p.identity.ID
 	predicted = append([]*wire.FightTarget(nil), predicted...)
 	h.fightGathers.Add(1)
 	go func() {
@@ -921,7 +921,10 @@ func (h *presenceHub) answerFight(p *presencePeer, counter uint32, crit bool, pr
 		})
 		h.mu.Lock()
 		defer h.mu.Unlock()
-		if h.peers[p.identity.ID] == p && p.fightToken == token {
+		if slices.ContainsFunc(hits, landed) {
+			h.markFought(id, h.now())
+		}
+		if h.peers[id] == p && p.fightToken == token {
 			h.send(p, &wire.FightSwingResult{SwingCounter: counter, Crit: crit, Hits: hits})
 		}
 	}()
@@ -952,4 +955,9 @@ func gatherFightHits(ctx context.Context, replies <-chan []*wire.FightHitRow, pe
 		}
 	}
 	return hits, true
+}
+
+// landed: a row that hit (refused rows deal nothing).
+func landed(row *wire.FightHitRow) bool {
+	return row.RefusedReason == wire.FightRefusedReason_FIGHT_REFUSED_REASON_UNSPECIFIED
 }
