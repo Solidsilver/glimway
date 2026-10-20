@@ -60,3 +60,16 @@
 4. **Lore: beetles are unmoored beasts** (beaten, the fever breaks and they flee) **and wisps are
    things of the Dark** (they disperse). The owner writes the canon words.
 5. Animals run on the client from a shared clock while they're harmless (orchestrator's pick).
+
+## Later calls with the ideas partner (owner, 2026-10-20)
+
+From [ideas-partner-argon.md](responses/ideas-partner-argon.md):
+
+6. **Defeat or break the spell.** An unmoored beast can be fought down for its drops, or freed:
+   the fever breaks, it sheds a fever-crust and flees. This replaces answer 4's "beaten, the fever
+   breaks". How a player chooses to break the spell is still open; the owner takes it back to the
+   ideas partner.
+7. **Falling asleep in the Whitequiet spends glims.** A handful burn for warmth and are gone, and
+   the outing's forage washes to Pell's crate (a clerk's fee to collect). A currency cost as a
+   penalty isn't item loss under roadmap rule 3; things players placed or made are still never
+   destroyed.
