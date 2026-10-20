@@ -88,6 +88,7 @@ export const MAP_LABELS = {
   gate: 'Commons gate',
   frontier: 'The Whitequiet’s edge',
   road: 'The Lantern Road',
+  cutStone: 'The lamp stone with words cut in its side',
   river: 'The Wend',
   ways: 'Ways',
   places: 'Places',

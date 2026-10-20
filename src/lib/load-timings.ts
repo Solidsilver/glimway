@@ -143,32 +143,45 @@ export interface ResourceLike {
   startTime: number
   transferSize?: number
   encodedBodySize?: number
+  /** The HTTP status, where the browser reports it (not Safari); 0 when it can't say. */
+  responseStatus?: number
+}
+
+/** A transfer this size or less is taken for headers only (a 304) where the status is unknown: hardly any art file is this small. */
+const HEADER_BYTES = 1024
+
+/**
+ * How one file came: from the cache with no request, checked with the
+ * server and kept (a 304), or downloaded. By the status where the browser
+ * names it; else by `transferSize` (bytes over the wire, headers included):
+ * 0 is the cache; less than the body, or no more than headers (Safari's 304
+ * names no body; a tiny file's headers outweigh it), is a revalidation;
+ * otherwise a download.
+ */
+function cameFrom(e: ResourceLike): 'cached' | 'checked' | 'downloaded' {
+  const t = e.transferSize!
+  if (t === 0) return 'cached'
+  if (e.responseStatus === 304) return 'checked'
+  if (e.responseStatus) return 'downloaded'
+  return t < e.encodedBodySize! || t <= HEADER_BYTES ? 'checked' : 'downloaded'
 }
 
 /**
- * Where the art came from: the memory or disk cache with no request, checked
- * with the server and kept (a 304), or downloaded. From `transferSize`
- * (bytes over the wire, headers included): 0 is the cache; less than the
- * body is a revalidation; otherwise a download. A browser that doesn't
- * report sizes says so.
+ * Where the art came from (cameFrom, file by file), and the bytes over the
+ * wire. A browser that doesn't report sizes says so.
  */
 export function artCacheSummary(entries: readonly ResourceLike[]): string {
   if (!entries.length) return 'no art requests seen'
   const sized = entries.filter((e) => typeof e.transferSize === 'number' && typeof e.encodedBodySize === 'number' && (e.transferSize > 0 || e.encodedBodySize > 0))
   if (!sized.length) return `${entries.length} files, cache unknown (this browser doesn't report transfer sizes)`
-  let cached = 0
-  let checked = 0
-  let downloaded = 0
+  const n = { cached: 0, checked: 0, downloaded: 0 }
   let wire = 0
   for (const e of sized) {
-    const t = e.transferSize!
-    wire += t
-    if (t === 0) cached++
-    else if (t < e.encodedBodySize!) checked++
-    else downloaded++
+    wire += e.transferSize!
+    n[cameFrom(e)]++
   }
   const unknown = entries.length - sized.length
-  return `${entries.length} files: ${cached} from cache, ${checked} checked with the server (304), ${downloaded} downloaded${unknown ? `, ${unknown} unknown` : ''}; ${(wire / 1_000_000).toFixed(1)} MB over the wire`
+  return `${entries.length} files: ${n.cached} from cache, ${n.checked} checked with the server (304), ${n.downloaded} downloaded${unknown ? `, ${unknown} unknown` : ''}; ${(wire / 1_000_000).toFixed(1)} MB over the wire`
 }
 
 /** A short device line from the user agent: "iPhone, iOS 18.1, installed app". */

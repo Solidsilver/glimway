@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { create } from '@bufbuild/protobuf';
 import { CommunalLampViewSchema, LampNamingSchema } from '../src/lib/gen/glimway/v1/lamps_pb.js';
 import { HOMESTEAD_DATA } from '../src/lib/homestead.ts';
-import { COMMUNAL_LAMP_LABEL, canLift, canRelight, communalLampLines, communalLampName, darkStoneLines, lampTiles, lampsNear, litStone, relightCost } from '../src/lib/communal-lamps.ts';
+import { COMMUNAL_LAMP_LABEL, canLift, canRelight, communalLampLines, communalLampName, cutStoneMark, darkStoneLines, lampTiles, lampsNear, litStone, relightCost } from '../src/lib/communal-lamps.ts';
 
 const lamp = (o: Partial<{ id: string; kind: string; cx: number; cy: number; x: number; y: number; setterId: string; setterName: string; visited: boolean }> = {}) =>
   create(CommunalLampViewSchema, { id: 'lamp-stone:2:-1', kind: 'stone', cx: 2, cy: -1, x: 49, y: -16, setterId: 'alice', setterName: 'Alice', visited: true, ...o });
@@ -88,4 +88,16 @@ test('road stones resolve the open-map pass frames by state, and the quest stone
   }
   // The route stone's lamp fills the left half of its 2-tile canvas, the stone's own canvas.
   assert.equal(atlas.frames['route-stone-dark']!.canvas.w * ROUTE_STONE_ORIGIN_X * 2, atlas.frames['lamp-stone-dark']!.canvas.w);
+});
+
+test('the map marks the Keeper’s-hand stone only while the cut waits to be copied', () => {
+  const stone = 'lamp-stone:0:-6';
+  // Before the quest, and once the cut is copied: no mark.
+  assert.equal(cutStoneMark({}, stone, 24), null);
+  assert.equal(cutStoneMark({ 'keepers-hand': 'copy-cut' }, stone, 24), null);
+  // At copy-cut (the reached step is hear-mara): the chunk's middle from the id, or the stone's own tile when its land is known.
+  assert.deepEqual(cutStoneMark({ 'keepers-hand': 'hear-mara' }, stone, 24), { tx: 12, ty: -132 });
+  assert.deepEqual(cutStoneMark({ 'keepers-hand': 'hear-mara' }, stone, 24, (cx, cy) => ({ tx: cx * 24 + 3, ty: cy * 24 + 20 })), { tx: 3, ty: -124 });
+  assert.equal(cutStoneMark({ 'keepers-hand': 'hear-mara' }, '', 24), null);
+  assert.equal(cutStoneMark({ 'keepers-hand': 'hear-mara' }, 'post:abc', 24), null);
 });

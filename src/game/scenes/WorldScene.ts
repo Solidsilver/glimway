@@ -62,8 +62,8 @@ import { fingerInBracken } from '../../lib/quests'
 import { OUTDOORS_AREA, isWildsArea, chunkOfPixel, chunkKey } from '../wilds/coords'
 import { contentPosition } from '../../lib/location'
 import { holdOnSafe, stopAtEdge } from '../safe-barrier'
-import { prepareWilds } from '../wilds/store'
-import { WildsWindow } from '../wilds/window'
+import { prepareWilds, wildsFrontier } from '../wilds/store'
+import { WildsWindow, onWindow } from '../wilds/window'
 import { followFrontier, waitingFixedAt } from '../wilds/wilds-world'
 import { WildsPaths } from '../wilds/paths'
 import { WildsMarks } from '../wilds/marks'
@@ -1143,6 +1143,10 @@ export class WorldScene extends Phaser.Scene {
     if (!this.travel.relocate(p)) return
     this.safeSpot = null
     if (isWildsArea(p.area) && this.world.open) {
+      // Standing where the reach no longer is (it shrank at a turning), the
+      // world moved them to the nearest open ground in it: they hear why.
+      const was = chunkOfPixel(this.hero.sprite.x, this.hero.sprite.y)
+      if (wildsFrontier() && !onWindow(was.cx, was.cy)) bus.emit(EV.toast, { text: loadWilds().words.turned, icon: 'map', kind: 'thought' })
       const at = this.world.open.standAt(p.x, p.y)
       if (at && Math.hypot(at.x - this.hero.sprite.x, at.y - this.hero.sprite.y) < 24 * TILE) {
         this.hero.sprite.setPosition(at.x, at.y)
