@@ -92,3 +92,5 @@ both answering [brief.md](brief.md). The height spike (`exp/height-spike`) is st
 4. **Let biomes reach home.** The land round Hearthwick and the Tangle may change once when 0.14
    lands (fixed places and held land stay).
 5. Height model: waits for the spike.
+6. **The contract freeze moves to 1.0** (roadmap rule 7). "Before the freeze" above now means
+   before 1.0; clean breaks stay allowed until then.
