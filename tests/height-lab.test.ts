@@ -148,6 +148,15 @@ test('the sunny surface stays lit in the cave’s view: the valley and the cliff
       }
     assert.ok(faceTiles > 10, `${a.name}: faces checked (${faceTiles})`);
   }
+  // The cave's own rock is never sunny, except where it lies behind a cliff face round an arch.
+  for (const a of [area, mtn]) {
+    const c = a.stack.layers[CAVE]!;
+    const sf = a.stack.layers[SURFACE]!;
+    for (let i = 0; i < a.stack.w * a.stack.h; i++) {
+      if (c.kind[i] !== KIND.rock || sf.kind[i] === KIND.face || sf.kind[i] === KIND.mouth) continue;
+      assert.ok(a.ambient[i * 3]! <= 0.06 + c.sky[i]!, `${a.name}: rock at ${i % a.stack.w},${Math.floor(i / a.stack.w)} is cave rock`);
+    }
+  }
   // The plateau beyond the shoulder chamber's rim, far from both mouths, isn't sunny from inside.
   assert.ok(lit.level(CAVE, px(14, 30).x, px(14, 30).y) < 0.05, 'the land over the cave, far from a mouth, is dark from inside');
 });

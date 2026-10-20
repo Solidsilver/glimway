@@ -15,7 +15,7 @@ import { wildsLook } from '../wilds/wilds-looks.ts'
 import { fnv1a32 } from '../../lib/hash.ts'
 import { CAVE, GROUNDS, SURFACE, type LabArea } from './area.ts'
 import { DX, DY, KIND, TILE_PX, type Layer } from './levels.ts'
-import { caveLevels } from './light.ts'
+import { caveLevels, sunnyFaceRock } from './light.ts'
 
 type RGB = [number, number, number]
 
@@ -336,7 +336,7 @@ export function paintCave(scene: Phaser.Scene, area: LabArea): LevelImage[] {
     for (let tx = x0; tx <= x1; tx++) {
       const i = ty * l.w + tx
       const k = l.kind[i]
-      if (k === KIND.none || (k === KIND.rock && area.air[i]! > 0)) continue
+      if (k === KIND.none || sunnyFaceRock(area.stack, area.air, i)) continue
       const faceBelow = k === KIND.rock && floorish(kindAt(tx, ty + 1))
       const fade = k === KIND.rock ? [255, 255, 255, 150, 0][reach(tx, ty)]! : 255
       // Deeper floors are a little darker and cooler.

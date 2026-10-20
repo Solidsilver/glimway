@@ -208,12 +208,18 @@ export function caveAmbient(stack: Stack, air: Float32Array): Float32Array {
       let v: number
       // Nothing, or the cave's rock where it lies behind a sunny cliff
       // face (the rock round an arch, not painted): the open air's light.
-      if (cave.kind[i] === KIND.none || (cave.kind[i] === KIND.rock && air[i]! > 0)) v = air[i]! * DAYLIGHT[c]!
+      if (cave.kind[i] === KIND.none || sunnyFaceRock(stack, air, i)) v = air[i]! * DAYLIGHT[c]!
       else v = CAVE_AMBIENT[c]! + cave.sky[i]! * DAYLIGHT[c]!
       out[i * 3 + c] = Math.min(1, v)
     }
   }
   return out
+}
+
+/** The cave's rock where it lies behind a sunny cliff face (round an arch): not painted, lit as the face. */
+export function sunnyFaceRock(stack: Stack, air: Float32Array, i: number): boolean {
+  const k = stack.layers[SURFACE]!.kind[i]
+  return stack.layers[CAVE]!.kind[i] === KIND.rock && (k === KIND.face || k === KIND.mouth) && air[i]! > 0
 }
 
 /** A crystal as a light source. */
