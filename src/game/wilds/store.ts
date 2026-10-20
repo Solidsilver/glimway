@@ -40,6 +40,7 @@ import type { WildsClaimResult } from '../../lib/gen/glimway/v1/operations_pb.js
 import { epochKindAt } from '../../lib/wilds/coords.ts';
 import { sourceOf } from '../../lib/location.ts';
 import { NEAR_RADIUS } from '../../lib/api/near.ts';
+import { ApiError } from '../../lib/api/errors.ts';
 import type { WildsEpochKind } from '../../lib/wilds/types.ts';
 import { EV, bus } from '../events.ts';
 import { gameNow } from '../clock.ts';
@@ -638,7 +639,18 @@ export async function refreshNear(session: Session, cx: number, cy: number, maxA
     if (view && !view.stale && at !== undefined && Date.now() - at < maxAgeMs) return true;
     const since = readMark();
     try {
-      const res = await link.api.operations.near(cx, cy);
+      let res: WildsNearResult;
+      try {
+        res = await link.api.operations.near(cx, cy);
+      } catch (e) {
+        // Reads answer only near the place the world last heard (0.14,
+        // server/internal/api/sight.go). After a jump (a warp, or outrunning
+        // the 10 s report) it trails: send the place now and ask once more.
+        if (!(e instanceof ApiError && e.code === 'beyond-sight') || !current()) throw e;
+        await link.flush();
+        if (!current()) return false;
+        res = await link.api.operations.near(cx, cy);
+      }
       if (!current()) return false;
       const priorWick = view?.wick.id ?? '';
       const turned = applyNear(res, since, link);

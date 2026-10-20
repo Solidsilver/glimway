@@ -100,7 +100,7 @@ test('cooldown readout counts down in whole seconds and clamps at zero', () => {
 })
 
 test('claim and relight refusals have domain copy, while unknown codes retain transport wording', () => {
-  for (const code of ['already-lit', 'lantern-not-found', 'beyond-frontier', 'entity-not-found', 'world-access-denied', 'epoch-ended', 'invalid-request']) {
+  for (const code of ['already-lit', 'lantern-not-found', 'beyond-border', 'beyond-sight', 'entity-not-found', 'world-access-denied', 'epoch-ended', 'invalid-request']) {
     assert.ok(WILDS_CLAIM_ERRORS[code], `missing copy for ${code}`)
     assert.notEqual(wildsClaimError(code), WILDS_CLAIM_ERRORS.unknown)
   }

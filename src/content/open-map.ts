@@ -86,7 +86,7 @@ export const MAP_LABELS = {
   retry: 'Try again',
   you: 'You',
   gate: 'Commons gate',
-  frontier: 'The Whitequiet’s edge',
+  border: 'The edge of the world',
   road: 'The Lantern Road',
   cutStone: 'The lamp stone with words cut in its side',
   river: 'The Wend',
@@ -116,7 +116,7 @@ export const MAP_LABELS = {
   zoom: 'Zoom {pct}%',
   legendWalked: 'Walked land',
   legendBlank: 'Not walked yet',
-  legendBeyond: 'Past the Whitequiet’s edge',
+  legendBeyond: 'The land round you, seen from afar',
 } as const;
 
 /**

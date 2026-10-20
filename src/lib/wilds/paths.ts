@@ -136,7 +136,7 @@ export function refusalText(code: string, ctx: { action?: string; material?: str
   if (code === 'wrong-tool') return fill(w.needTool, { tool: toolWord(ctx.action ?? 'dig') });
   if (code === 'insufficient-materials') return fill(w.needMaterial, { material: ctx.material ?? 'stone' });
   if (code === 'not-on-water') return w.notOnWater;
-  if (code === 'beyond-frontier') return w.drift;
+  if (code === 'beyond-border') return w.drift;
   return ctx.extra[code] ?? ctx.extra.unknown ?? 'That didn’t take.';
 }
 
