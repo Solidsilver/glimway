@@ -311,3 +311,7 @@ export function sample(l: Layer, field: Float32Array, x: number, y: number): num
   const bottom = at(x0, y0 + 1) * (1 - fx) + at(x0 + 1, y0 + 1) * fx
   return top * (1 - fy) + bottom * fy
 }
+
+/** The layers' indexes in a lab area's stack: the surface, and the cave below it (one layer for all its floors). */
+export const SURFACE = 0
+export const CAVE = 1
