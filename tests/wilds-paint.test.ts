@@ -12,7 +12,7 @@ import { terrainOf, type ChunkTerrain } from '../src/game/wilds/terrain.ts';
 import { decodeChunk } from '../src/lib/api/chunks.ts';
 import { toBinary } from '@bufbuild/protobuf';
 import { WorldChunkSchema } from '../src/lib/gen/glimway/v1/wilds_pb.js';
-import { frontierDistance } from '../src/game/wilds/window-plan.ts';
+import { rectDistance } from '../src/game/wilds/window-plan.ts';
 import { chunkAt, fixtureTerrain } from './wilds-fixture.ts';
 
 const S = 24;
@@ -113,7 +113,7 @@ test('the open map’s grounds each paint as their own kind', () => {
   assert.equal(paintOf(t('laid-stone')).cat, 'laid');
   assert.equal(paintOf(t('laid-plank')).cat, 'laid');
   assert.deepEqual(paintOf(t('path')), { cat: 'moss', trail: 1 });
-  assert.equal(paintOf(null).cat, 'woods', 'nothing known (past the frontier): deep woods');
+  assert.equal(paintOf(null).cat, 'woods', 'nothing known (past the border): deep woods');
   // A meadow is lighter than the woods floor it borders.
   const lum = (c: number[]) => c[0]! * 0.3 + c[1]! * 0.59 + c[2]! * 0.11;
   assert.ok(lum(G.meadow[3]!) > lum(G.woods[3]!));
@@ -135,18 +135,18 @@ test('painting a chunk: the budget (8 ms on the owner’s phone) — measured he
   const f = { minCx: -4, minCy: -8, maxCx: 4, maxCy: 0 };
   const start = performance.now();
   paintDrift(drift, 5 * PX, -4 * PX, PX, PX, G, { land: 'meadow', river: true }, SEED);
-  fogDrift(drift, 5 * PX, -4 * PX, PX, PX, (wx, wy) => frontierDistance(f, wx, wy));
+  fogDrift(drift, 5 * PX, -4 * PX, PX, PX, (wx, wy) => rectDistance(f, wx, wy));
   tc.diagnostic(`drift paint per chunk (node): ${(performance.now() - start).toFixed(1)} ms`);
   // A guard against a painter gone quadratic, not the phone budget itself (see the report).
   assert.ok(median < 400, `${median} ms`);
 });
 
-test('the drift fogs into the void, deeper the further past the frontier', () => {
+test('the drift fogs into the void, deeper the further past the edge', () => {
   const drift = new Uint8ClampedArray(PX * 4);
   const f = { minCx: -4, minCy: -8, maxCx: 4, maxCy: 0 };
   paintDrift(drift, 5 * PX, -4 * PX, PX, 1, G, null, SEED);
   const before = drift.slice();
-  fogDrift(drift, 5 * PX, -4 * PX, PX, 1, (wx, wy) => frontierDistance(f, wx, wy));
+  fogDrift(drift, 5 * PX, -4 * PX, PX, 1, (wx, wy) => rectDistance(f, wx, wy));
   const off = (i: number, from: Uint8ClampedArray) => Math.abs(from[i * 4]! - VOID[0]) + Math.abs(from[i * 4 + 1]! - VOID[1]) + Math.abs(from[i * 4 + 2]! - VOID[2]);
   // At the edge the land still shows; half a chunk out it is all but the void.
   for (let i = PX / 2; i < PX; i++) assert.ok(off(i, drift) <= 6, `pixel ${i} is fog`);

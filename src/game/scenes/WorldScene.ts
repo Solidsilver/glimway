@@ -62,9 +62,9 @@ import { fingerInBracken } from '../../lib/quests'
 import { OUTDOORS_AREA, isWildsArea, chunkOfPixel, chunkKey } from '../wilds/coords'
 import { contentPosition } from '../../lib/location'
 import { holdOnSafe, stopAtEdge } from '../safe-barrier'
-import { prepareWilds, wildsFrontier } from '../wilds/store'
+import { prepareWilds, wildsBorder } from '../wilds/store'
 import { WildsWindow, onWindow } from '../wilds/window'
-import { followFrontier, waitingFixedAt } from '../wilds/wilds-world'
+import { followBorder, waitingFixedAt } from '../wilds/wilds-world'
 import { WildsPaths } from '../wilds/paths'
 import { WildsMarks } from '../wilds/marks'
 import { WildsCamps } from '../wilds/camps'
@@ -520,7 +520,7 @@ export class WorldScene extends Phaser.Scene {
 
     // Arcade's world bounds default to the canvas size, which is larger than
     // small maps — without this the hero can walk off the map edge. On the
-    // open map they are the frontier (open-map.md 2.6): the drift is solid.
+    // open map they are the world border (0.14): past it is solid.
     if (open) this.physics.world.setBounds(open.bounds.x, open.bounds.y, open.bounds.w, open.bounds.h)
     else this.physics.world.setBounds(0, 0, this.world.widthPx, this.world.heightPx)
     this.cameras.main.startFollow(this.hero.sprite, true, 0.12, 0.12)
@@ -829,7 +829,7 @@ export class WorldScene extends Phaser.Scene {
     this.camps?.update()
     this.communalLamps?.update()
     this.waysHome.update()
-    this.followFrontier()
+    this.followBorder()
     this.checkDrift()
     this.updateDiscoveries()
     this.checkExits()
@@ -1019,20 +1019,19 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /**
-   * Held land moves the frontier (lamps.md 2.2): when a near read names a
-   * new one, the hero's bounds and the camera's follow it.
+   * The world border (0.14) may widen with content: when a near read names
+   * a new one, the hero's bounds and the camera's follow it.
    */
-  private followFrontier(): void {
+  private followBorder(): void {
     const open = this.world.open
-    if (!open || !followFrontier(open)) return
+    if (!open || !followBorder(open)) return
     this.physics.world.setBounds(open.bounds.x, open.bounds.y, open.bounds.w, open.bounds.h)
     this.camera.reframe()
   }
 
   /**
-   * The drift at the frontier (open-map.md 2.6): pushing against the
-   * frontier's edge, the hero stops (the bounds hold them) and, the first
-   * time, says why. The south edge is the village's, not the drift's.
+   * The world border (0.14): pushing against its edge, on any side, the
+   * hero stops (the bounds hold them) and, the first time, says why.
    */
   private checkDrift(): void {
     const open = this.world.open
@@ -1046,7 +1045,8 @@ export class WorldScene extends Phaser.Scene {
     const pushing =
       (v.x < -0.3 && x - b.x <= body.width / 2 + near) ||
       (v.x > 0.3 && b.x + b.w - x <= body.width / 2 + near) ||
-      (v.y < -0.3 && y - b.y <= body.height + near)
+      (v.y < -0.3 && y - b.y <= body.height + near) ||
+      (v.y > 0.3 && b.y + b.h - y <= near)
     if (!pushing) return
     this.driftSaid = true
     bus.emit(EV.toast, { text: loadWilds().words.drift, icon: 'map', kind: 'thought' })
@@ -1146,7 +1146,7 @@ export class WorldScene extends Phaser.Scene {
       // Standing where the reach no longer is (it shrank at a turning), the
       // world moved them to the nearest open ground in it: they hear why.
       const was = chunkOfPixel(this.hero.sprite.x, this.hero.sprite.y)
-      if (wildsFrontier() && !onWindow(was.cx, was.cy)) bus.emit(EV.toast, { text: loadWilds().words.turned, icon: 'map', kind: 'thought' })
+      if (wildsBorder() && !onWindow(was.cx, was.cy)) bus.emit(EV.toast, { text: loadWilds().words.turned, icon: 'map', kind: 'thought' })
       const at = this.world.open.standAt(p.x, p.y)
       if (at && Math.hypot(at.x - this.hero.sprite.x, at.y - this.hero.sprite.y) < 24 * TILE) {
         this.hero.sprite.setPosition(at.x, at.y)

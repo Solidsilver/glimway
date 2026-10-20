@@ -12,13 +12,13 @@ import { sourceOf } from '../src/lib/location.ts';
 import { DECOR_ART } from '../src/game/wilds/decor.ts';
 import { cachedTerrain, forgetChunks, loadChunk, pruneChunks } from '../src/game/wilds/chunks.ts';
 import { effectiveTerrain } from '../src/game/wilds/terrain.ts';
-import { applyClaim, applyDiscovery, applyEchoSettled, applyLanterns, applyNear, chunkEpoch, chunkHeld, knownPlaces, chunkThings, groundChanges, isClaimed, readMark, refreshNear, resetWilds, takeReadRequest, wildsEpoch, wildsFrontier, wildsLive, wildsStale, wildsView } from '../src/game/wilds/store.ts';
+import { applyClaim, applyDiscovery, applyEchoSettled, applyLanterns, applyNear, chunkEpoch, chunkHeld, knownPlaces, chunkThings, groundChanges, isClaimed, readMark, refreshNear, resetWilds, takeReadRequest, wildsEpoch, wildsBorder, wildsLive, wildsStale, wildsView } from '../src/game/wilds/store.ts';
 import { bus, EV } from '../src/game/events.ts';
 import type { Session } from '../src/game/session.ts';
 import { chunkAt, fixtureChunk, fixtureTerrain } from './wilds-fixture.ts';
 
 const fixtures = JSON.parse(readFileSync(new URL('../server/internal/api/testdata/server-first.json', import.meta.url), 'utf8')) as { name: string; case: string; json: JsonValue }[];
-/** The near read O-A's contract ships (centre (-2, -4), the 0.8 frontier), as the server writes it. */
+/** The near read O-A's contract ships (centre (-2, -4), the world border), as the server writes it. */
 const NEAR = fixtures.find((f) => f.case === 'valid-near')!.json as Record<string, any>;
 const CENTER = { cx: NEAR.center.cx as number, cy: NEAR.center.cy as number };
 
@@ -97,9 +97,9 @@ function nearAt(cx: number, cy: number, edit: (j: Record<string, any>) => void =
   return j as JsonValue;
 }
 
-/** Answer every chunk of the window around (cx, cy) inside the frontier, each in its epoch (the Tangle's still, else the wick's). */
+/** Answer every chunk of the window around (cx, cy) inside the border, each in its epoch (the Tangle's still, else the wick's). */
 function serveWindow(ops: FakeOperations, cx: number, cy: number, wick = NEAR.wick.id as string): void {
-  const f = NEAR.frontier.rect;
+  const f = NEAR.border.rect;
   for (let y = cy - 2; y <= cy + 2; y++)
     for (let x = cx - 2; x <= cx + 2; x++) {
       if (x < f.minCx || x > f.maxCx || y < f.minCy || y > f.maxCy) continue;
@@ -123,8 +123,8 @@ test('a near read loads its window, each chunk in its epoch, and merges bodies w
   assert.equal(await refreshNear(session, CENTER.cx, CENTER.cy), true);
   assert.equal(wildsEpoch('still').id, NEAR.still.id);
   assert.equal(wildsEpoch('wick').id, NEAR.wick.id);
-  assert.deepEqual(wildsFrontier(), { minCx: -6, minCy: -8, maxCx: 4, maxCy: 7 });
-  // The window is 5×5; all of it lies inside the frontier here. The Tangle's
+  assert.deepEqual(wildsBorder(), { minCx: -4096, minCy: -4096, maxCx: 4096, maxCy: 4096 });
+  // The window is 5×5; all of it lies inside the border. The Tangle's
   // chunks come in the still epoch, the rest in the wick's.
   const fetched = ops.calls.filter((c) => c.path.startsWith('/api/wilds/chunk/')).map((c) => c.path)
   assert.equal(fetched.length, 25);
@@ -142,7 +142,6 @@ test('a near read loads its window, each chunk in its epoch, and merges bodies w
   assert.deepEqual(view.echoes.get('echo:0'), { member: 'tam', settled: false });
   assert.ok(isClaimed('chest:-2:-4:0'));
   assert.deepEqual(groundChanges(-2, -4).map((c) => c.change), ['cleared', 'stone']);
-  assert.deepEqual(view.glimpse.get('-5,-4'), { land: 'meadow', river: true });
   assert.equal(view.ways.size, 1);
   assert.equal(view.lanterns.size, 1);
   // A claim's answer moves the view.
@@ -183,7 +182,7 @@ test('a near read in Hearthwick fetches no generated chunk of the fixed footprin
   const session = fakeSession(ops);
   const town = { cx: 0, cy: 2 };
   // The fixture's window-bound rows lie around (-2, -4): none of them here.
-  ops.responses.set(`/api/wilds/near/${town.cx}/${town.cy}`, [nearAt(town.cx, town.cy, (j) => Object.assign(j, { entities: [], ground: [], glimpse: [], ways: [], lanterns: [] }))]);
+  ops.responses.set(`/api/wilds/near/${town.cx}/${town.cy}`, [nearAt(town.cx, town.cy, (j) => Object.assign(j, { entities: [], ground: [], ways: [], lanterns: [] }))]);
   serveWindow(ops, town.cx, town.cy);
   assert.equal(await refreshNear(session, town.cx, town.cy), true);
   const fetched = ops.calls.filter((c) => c.path.startsWith('/api/wilds/chunk/')).map((c) => c.path.split('/').slice(-2).map(Number));
@@ -208,7 +207,6 @@ test('a read replaces only its own window: states, claims and changes elsewhere 
     j.ground = [];
     j.lanterns = [];
     j.discoveries = [];
-    j.glimpse = [];
   })]);
   serveWindow(ops, 0, -4);
   assert.equal(await refreshNear(session, 0, -4), true);
@@ -216,7 +214,6 @@ test('a read replaces only its own window: states, claims and changes elsewhere 
   assert.equal(isClaimed('chest:-2:-4:0'), false);
   assert.deepEqual(groundChanges(-2, -4), []);
   assert.equal(wildsView()!.lanterns.size, 1, 'a lantern outside the window stays');
-  assert.deepEqual(wildsView()!.glimpse.get('-5,-4'), { land: 'meadow', river: true }, 'what was glimpsed stays');
 });
 
 /** The near fixture with its centre chunk held in an older wick (roadmap 0.12): listed as held, its ground and state under that epoch. */

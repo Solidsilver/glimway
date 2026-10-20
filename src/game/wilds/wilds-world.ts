@@ -4,36 +4,31 @@
  * collision, scenery, workable pieces, entities, sites, and the fixed
  * footprints' pieces and ways out (the Commons: location-seam.md 4) arrive
  * per chunk as the window attaches them (./window.ts). What's left here: the
- * grid (the frontier and the fixed footprints) as the bounds, and the ground
+ * grid (the world border and the fixed footprints) as the bounds, and the ground
  * lookups across both.
  */
 import { TILE } from '../../lib/tile.ts'
 import type { WorldData } from '../worlds.ts'
 import { CHUNK_PX, CHUNK_TILES, OUTDOORS_AREA } from './coords.ts'
 import { groundAt, solidAt } from './ground-view.ts'
-import { wildsFrontier } from './store.ts'
-import { frontierRect } from '../../lib/wilds/coords.ts'
+import { wildsBorder } from './store.ts'
+import { borderRect } from '../../lib/wilds/coords.ts'
 import { PLACES, fixedChunks } from '../../lib/places.ts'
 import { anchorTile, fixedGroundAt, fixedPlaceOf, fixedSolidAt, fixedStand, footprintAt } from './fixed.ts'
 import { nearestOpen } from './window-plan.ts'
 
-/** How far past the frontier the camera may look (the drift and its glimpse), in px. */
+/** How far past the border the camera may look (the pale drift), in px. */
 export const DRIFT_VIEW_PX = 12 * TILE
 
-/** The frontier in world px: the near read's rectangle, else the content's (before a read). */
-export function frontierBounds(): { x: number; y: number; w: number; h: number } {
-  const f = wildsFrontier() ?? contentFrontier()
+/** The world border in world px: the near read's rectangle, else the content's (before a read). */
+export function borderBounds(): { x: number; y: number; w: number; h: number } {
+  const f = wildsBorder() ?? borderRect()
   return { x: f.minCx * CHUNK_PX, y: f.minCy * CHUNK_PX, w: (f.maxCx - f.minCx + 1) * CHUNK_PX, h: (f.maxCy - f.minCy + 1) * CHUNK_PX }
 }
 
-/** The 0.8 frontier from content (within `reach` of a footprint, no further south than `southLimit`). */
-function contentFrontier(): { minCx: number; minCy: number; maxCx: number; maxCy: number } {
-  return frontierRect()
-}
-
-/** The grid in world px: the frontier and every fixed footprint (the Commons south of the gate). */
+/** The grid in world px: the border and every fixed footprint (inside it). */
 export function gridBounds(): { x: number; y: number; w: number; h: number } {
-  const f = frontierBounds()
+  const f = borderBounds()
   let x0 = f.x
   let y0 = f.y
   let x1 = f.x + f.w
@@ -133,13 +128,13 @@ function viewOf(b: { x: number; y: number; w: number; h: number }): { x: number;
 }
 
 /**
- * Held land moves the frontier (lamps.md 2.2): a camp set pushes it out,
- * a turning may pull it in. Bring the open world's bounds and look to the
- * near read's frontier; true when they changed. Before a read (or just
- * after the turning forgot the last) they stay as they are.
+ * The world border may only widen (content), and the near read names the
+ * server's. Bring the open world's bounds and look to it; true when they
+ * changed. Before a read (or just after the turning forgot the last) they
+ * stay as they are.
  */
-export function followFrontier(open: NonNullable<WorldData['open']>): boolean {
-  if (!wildsFrontier()) return false
+export function followBorder(open: NonNullable<WorldData['open']>): boolean {
+  if (!wildsBorder()) return false
   const b = gridBounds()
   const o = open.bounds
   if (b.x === o.x && b.y === o.y && b.w === o.w && b.h === o.h) return false

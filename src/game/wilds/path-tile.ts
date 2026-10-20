@@ -9,7 +9,7 @@ import { loadWilds } from '../../lib/wilds/data.ts'
 import { chunkOf, localOf } from '../../lib/wilds/coords.ts'
 import type { PathTile } from '../../lib/wilds/paths.ts'
 import type { WildsSurface } from '../../lib/wilds/types.ts'
-import { chunkTerrain, groundChanges, insideNamedFrontier } from './store.ts'
+import { chunkTerrain, groundChanges, insideNamedBorder } from './store.ts'
 import type { ChunkTerrain } from './terrain.ts'
 
 /** The ground's surface by terrain id (content `grounds`). */
@@ -36,7 +36,7 @@ function indexOf(t: ChunkTerrain): { decor: Map<string, string[]>; occupied: Set
 /** One world tile as the path rules read it (null where its chunk isn't loaded or lies past the frontier). */
 export function pathTileAt(tx: number, ty: number): PathTile | null {
   const { cx, cy } = chunkOf(tx, ty)
-  if (!insideNamedFrontier(cx, cy)) return null
+  if (!insideNamedBorder(cx, cy)) return null
   const t = chunkTerrain(cx, cy)
   if (!t) return null
   const { lx, ly } = localOf(tx, ty)

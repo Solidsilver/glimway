@@ -2,7 +2,8 @@
  * What the world map draws (docs/design/world-map.md 2, 4; open-map.md 2.8),
  * gathered from the open map's store and this device: the chunks you've walked this wick
  * (src/game/wilds/walked.ts) and the Tangle always, each with its ground
- * changes; the glimpse past the frontier; named ways; places, the landmarks
+ * changes; the window round you at glimpse detail (the map read's, 0.14);
+ * named ways; places, the landmarks
  * you've seen and who found what first; and where you stand.
  *
  * Chunk bodies come from memory, then the device's chunk cache, then the
@@ -20,7 +21,7 @@ import type { MapChunk, MapInput, MapPlace } from '../../lib/wilds/map-model.ts'
 import type { Session } from '../session.ts'
 import { cachedTerrain, loadChunk } from './chunks.ts'
 import { chunkKey, chunkOfPixel, isWildsArea, parseChunkKey } from './coords.ts'
-import { epochKindAt } from '../../lib/wilds/coords.ts'
+import { borderRect, epochKindAt } from '../../lib/wilds/coords.ts'
 import { sourceOf } from '../../lib/location.ts'
 import { gameNow } from '../clock.ts'
 import { effectiveTerrain, type ChunkTerrain } from './terrain.ts'
@@ -100,7 +101,7 @@ function scopeNow(session: Session): string {
  * yet). `read: false` skips the read a stale or ended view would ask for
  * (an open map expiring its wick says so at once, before any answer).
  *
- * Everything the load needs from the store (the epochs, the frontier, when
+ * Everything the load needs from the store (the epochs, the border, when
  * the wick ends) is taken once, before the first wait. After each wait it
  * checks the store still names the same world and epochs; if not (a
  * turning, another world), it stops, touches no cache, and says it was
@@ -117,7 +118,7 @@ export async function loadMap(session: Session, opts: { read?: boolean } = {}): 
   const live = () => scopeNow(session) === scope
   const still = { ...view.still }
   const wickEpoch = { ...view.wick }
-  const frontier = { ...view.frontier }
+  const border = { ...view.border }
   const cache: ScopeCache = current?.scope === scope ? current : (current = { scope, built: new Map(), chunks: new Map(), located: new Map() })
   // Fixed ground has no generated epoch (its chunks come from ./fixed.ts); a held chunk is its pinned epoch's.
   const held = new Map(view.held)
@@ -128,7 +129,7 @@ export async function loadMap(session: Session, opts: { read?: boolean } = {}): 
     const e = epochKindAt(cx, cy) === 'still' ? still : wickEpoch
     return e.id ? e : null
   }
-  const inside = (cx: number, cy: number) => cx >= frontier.minCx && cx <= frontier.maxCx && cy >= frontier.minCy && cy <= frontier.maxCy
+  const inside = (cx: number, cy: number) => cx >= border.minCx && cx <= border.maxCx && cy >= border.minCy && cy <= border.maxCy
   // A wick that ended with no current read since: its Beyond isn't current any more. Only the Tangle (still) stays.
   const endsAt = wickEpoch.endsAt
   const ended = endsAt !== null && gameNow() >= endsAt
@@ -142,7 +143,8 @@ export async function loadMap(session: Session, opts: { read?: boolean } = {}): 
     try {
       const batches: WildsMapStatus[] = []
       for (let i = 0; i < Math.max(1, keys.length); i += 256) {
-        const answer = await link.api.operations.mapStatus(keys.slice(i,i+256).map(parseChunkKey))
+        // The first batch also asks for the window round you at glimpse detail (0.14).
+        const answer = await link.api.operations.mapStatus(keys.slice(i,i+256).map(parseChunkKey), i === 0)
         if (!live() || answer.wick !== wick) return { ...none(null), scope, superseded: true }
         batches.push(answer)
       }
@@ -219,7 +221,7 @@ export async function loadMap(session: Session, opts: { read?: boolean } = {}): 
       }
       if (where) places.set(d.entityId, { ...where, seen: seen.has(d.entityId), foundBy: d.displayName })
     }
-    for (const [key, g] of v.glimpse) glimpse.push({ ...parseChunkKey(key), land: g.land, river: g.river })
+    for (const g of cache.status?.glimpse ?? []) if (g.chunk) glimpse.push({ cx: g.chunk.cx, cy: g.chunk.cy, land: g.land, river: g.river })
     for (const w of v.ways.values()) ways.push({ id: w.id, name: w.name, a: w.a, b: w.b, path: w.path.map((t) => ({ x: t.x, y: t.y })) })
   }
   // The fixed footprints (the Commons), always: their own chunks, whatever the world or wick.
@@ -229,8 +231,9 @@ export async function loadMap(session: Session, opts: { read?: boolean } = {}): 
   if (superseded || !live()) return { ...none(null), scope, superseded: true }
   const st = session.state
   const hero = mapHeroTile(st.area, st.position)
+  const window = cache.status?.window ? { ...cache.status.window } : mapWindowAround(hero)
   return {
-    input: { land: ended ? [] : cache.status?.chunks ?? [...view.land.values()], lamps: ended ? [] : cache.status?.lamps ?? [], frontier, chunks, fixed, glimpse, ways, places: [...places.values()], hero, words: { you: MAP_LABELS.you, gate: MAP_LABELS.gate } },
+    input: { land: ended ? [] : cache.status?.chunks ?? [...view.land.values()], lamps: ended ? [] : cache.status?.lamps ?? [], window, chunks, fixed, glimpse, ways, places: [...places.values()], hero, words: { you: MAP_LABELS.you, gate: MAP_LABELS.gate } },
     scope,
     missing: null,
     offline: !link.online,
@@ -356,4 +359,17 @@ export function mapHeroTile(area: string, position?: { x: number; y: number }): 
   }
  }
  return null
+}
+
+/**
+ * The map's window round a hero's tile (the gate's chunk when they're not
+ * out), as the server makes it (map.glimpseChunks, clipped to the world
+ * border): used until a map read names its own.
+ */
+export function mapWindowAround(hero: { tx: number; ty: number } | null): { minCx: number; minCy: number; maxCx: number; maxCy: number } {
+  const r = loadWilds().map.glimpseChunks
+  const b = borderRect()
+  const cx = hero ? Math.floor(hero.tx / CHUNK_TILES) : 0
+  const cy = hero ? Math.floor(hero.ty / CHUNK_TILES) : 0
+  return { minCx: Math.max(cx - r, b.minCx), minCy: Math.max(cy - r, b.minCy), maxCx: Math.min(cx + r, b.maxCx), maxCy: Math.min(cy + r, b.maxCy) }
 }

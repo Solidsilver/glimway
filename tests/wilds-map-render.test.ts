@@ -22,7 +22,7 @@ function chunk(cx: number, cy: number, ground: number = TERRAIN.grass_c, rev?: s
 }
 
 function input(o: Partial<MapInput> = {}): MapInput {
-  return { frontier: { minCx: -4, minCy: -8, maxCx: 4, maxCy: 0 }, chunks: [], glimpse: [], ways: [], places: [], hero: null, words: { you: 'You', gate: 'Commons gate' }, ...o };
+  return { window: { minCx: -4, minCy: -8, maxCx: 4, maxCy: 0 }, chunks: [], glimpse: [], ways: [], places: [], hero: null, words: { you: 'You', gate: 'Commons gate' }, ...o };
 }
 
 /** A canvas context that only counts and remembers what it was asked. */
@@ -107,11 +107,11 @@ test('close in, only the walked chunks in view are rastered, once each, and pann
   assert.equal(r.cached, 0);
 });
 
-test('chunks outside the frontier are never drawn; a summary shows only walked land', () => {
+test('chunks past the border are never drawn; a summary shows only walked land', () => {
   const r = new MapRenderer(make);
   images.length = 0;
   const walked = [chunk(-1, -2, TERRAIN.water_a), chunk(2, -6)];
-  r.setInput(input({ chunks: [...walked, chunk(9, -2)], glimpse: [{ cx: 5, cy: -3, land: 'meadow', river: false }] }), 'w:a');
+  r.setInput(input({ chunks: [...walked, chunk(4097, -2)], glimpse: [{ cx: 5, cy: -3, land: 'meadow', river: false }] }), 'w:a');
   const frame = r.frame()!;
   // Far out: the overview.
   const { ctx } = recorder();
@@ -127,10 +127,10 @@ test('chunks outside the frontier are never drawn; a summary shows only walked l
   for (let i = 0; i < 10; i++) r.draw(recorder().ctx, panBy(view, VP, frame, i * 7, i * 3), VP, 1);
   assert.equal(r.stats.overviews, before);
   // …only when the input changes.
-  r.setInput(input({ chunks: walked }), 'w:a');
+  r.setInput(input({ chunks: [...walked, chunk(3, -6)] }), 'w:a');
   r.draw(recorder().ctx, view, VP, 1);
   assert.equal(r.stats.overviews, before + 1);
-  assert.equal(r.stats.summaries, 2, 'chunk summaries are kept while their ground holds');
+  assert.equal(r.stats.summaries, 3, 'chunk summaries are kept while their ground holds: only the new one is made');
 });
 
 test('the marks: ways and places drawn over the land, you not baked in', () => {
@@ -168,7 +168,7 @@ test('labels come back as you zoom in, and one off screen never pushes out one o
     input({
       ways: [{ id: 'w', name: 'A long way off', a: 'x', b: 'y', path: [{ x: 10, y: -2000 }] }],
       places: [{ id: 'a', kind: 'camp-glade', tx: 10, ty: -40, seen: true, foundBy: null }],
-      frontier: { minCx: -4, minCy: -90, maxCx: 4, maxCy: 0 },
+      window: { minCx: -4, minCy: -90, maxCx: 4, maxCy: 0 },
     }),
     'w:a',
   );
@@ -201,7 +201,7 @@ test('performance fixture: thousands of sparse chunks, negative and far apart', 
   }
   const ways = Array.from({ length: 40 }, (_, i) => ({ id: `w${i}`, name: `Way ${i}`, a: 'a', b: 'b', path: Array.from({ length: 60 }, (_, j) => ({ x: -5000 + i * 300 + j, y: -8000 + i * 200 })) }));
   const places = Array.from({ length: 400 }, (_, i) => ({ id: `p${i}`, kind: 'camp-glade', tx: -16000 + i * 50, ty: -20000 + i * 40, seen: true, foundBy: i % 3 ? null : 'Tansy' }));
-  const big = input({ frontier, chunks, ways, places });
+  const big = input({ window: frontier, chunks, ways, places });
 
   const r = new MapRenderer(make);
   let t = performance.now();
@@ -320,7 +320,7 @@ test('the overview never paints unwalked chunks as land: a sparse map wider than
   const frontier = { minCx: -4, minCy: -8, maxCx: 2100, maxCy: 0 };
   const walked = [chunk(1, -1, TERRAIN.grass_c, 'a'), chunk(2049, -1, TERRAIN.grass_c, 'b')];
   const r = new MapRenderer(make);
-  r.setInput(input({ frontier, chunks: walked }), 'w:wide');
+  r.setInput(input({ window: frontier, chunks: walked }), 'w:wide');
   const frame = r.frame()!;
   assert.ok(frame.maxTx - frame.minTx + 1 > 1024 * S, 'the frame is wider than 1024 chunks');
   const levels = new Set<string>();
@@ -340,7 +340,7 @@ test('a dense checkerboard of walked chunks in a wide frame: each drawn at its o
   for (let cy = -40; cy < 0; cy++) for (let cx = 0; cx < 60; cx++) if ((cx + cy) % 2 === 0) walked.push(chunk(cx, cy, TERRAIN.grass_b, `${cx},${cy}`));
   walked.push(chunk(2049, -1, TERRAIN.grass_c, 'far'));
   const r = new MapRenderer(make);
-  r.setInput(input({ frontier, chunks: walked }), 'w:dense');
+  r.setInput(input({ window: frontier, chunks: walked }), 'w:dense');
   const frame = r.frame()!;
   const levels = new Set<string>();
   for (const scale of [0.05, 0.2, 0.5, 1]) {

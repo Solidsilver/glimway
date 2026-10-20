@@ -16,7 +16,7 @@
 import { PLACES, fixedChunks, type FixedPlace, type PlaceRules, type Places } from './places.ts';
 import { rootArea } from './rooms.ts';
 import { TILE } from './tile.ts';
-import { chunkOf, epochKindAt, footprintAt, insideFrontier, tileOfPixel } from './wilds/coords.ts';
+import { chunkOf, epochKindAt, footprintAt, insideBorder, tileOfPixel } from './wilds/coords.ts';
 import type { WildsEpochKind } from './wilds/types.ts';
 
 /** The coordinate frame a position is in, and the saved area. */
@@ -120,9 +120,9 @@ export function sourceOf(cx: number, cy: number, places: Places = PLACES): Sourc
   return f ? fixedSource(f) : { kind: 'generated', layout: '', revision: 0, epochKind: epochKindAt(cx, cy) };
 }
 
-/** An outdoor chunk exists: generated land may be made there (the frontier), or a fixed footprint covers it. */
+/** An outdoor chunk exists: inside the world border, where generated land may be made, or on a fixed footprint. */
 export function onGrid(cx: number, cy: number, places: Places = PLACES): boolean {
-  return insideFrontier(cx, cy, places.fixed) || fixedAt(cx, cy, places) !== undefined;
+  return insideBorder(cx, cy) || fixedAt(cx, cy, places) !== undefined;
 }
 
 /** "<place>:<anchor>" ("hearthwick:arch", "hearthwick:lot:3") as its space and its tile's centre in world pixels. */

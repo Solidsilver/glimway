@@ -2,11 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { TERRAIN } from '../src/lib/tile.ts';
 import { loadWilds, wildsGround } from '../src/lib/wilds/data.ts';
-import { frontierRect, insideFrontier } from '../src/lib/wilds/coords.ts';
+import { borderRect, insideBorder } from '../src/lib/wilds/coords.ts';
 import { walkFactor } from '../src/lib/wilds/walk.ts';
 import { CHUNK_PX, chunkKey, chunkOfPixel, gateTiles, parseChunkKey, worldTile } from '../src/game/wilds/coords.ts';
 import { anchor } from '../src/lib/location.ts';
-import { crossed, frontierDistance, keepAttached, nearestOpen, paintable, planWindow, SLACK_TILES, veilEdges, walledChunks } from '../src/game/wilds/window-plan.ts';
+import { crossed, rectDistance, keepAttached, nearestOpen, paintable, planWindow, SLACK_TILES, veilEdges, walledChunks } from '../src/game/wilds/window-plan.ts';
 import { chunkGather, chunkLandmarks, chunkScenery, effectiveTerrain, LANDMARK_KINDS } from '../src/game/wilds/terrain.ts';
 import { OPEN_MAP_DECOR_KINDS, openMapDecor } from '../src/game/wilds/open-map-art.ts';
 import { DECOR_ART } from '../src/game/wilds/decor.ts';
@@ -39,7 +39,8 @@ test('the Commons gate: three tiles on chunk (0, 0)’s south edge, over the Com
 
 // ---------------------------------------------------------------- the window
 
-const inside = (cx: number, cy: number) => insideFrontier(cx, cy);
+const inside = (cx: number, cy: number) => insideBorder(cx, cy);
+const B = borderRect().maxCx;
 
 test('the window: the 3×3 attached, the 5×5 fetched, the ring for landmarks', () => {
   const p = planWindow(0, -4, inside);
@@ -52,46 +53,44 @@ test('the window: the 3×3 attached, the 5×5 fetched, the ring for landmarks', 
   for (const k of p.attach) assert.ok(p.fetch.includes(k));
 });
 
-test('at the frontier the window’s far side is the drift: never fetched, never attached', () => {
-  // The north-west corner of the 0.8 frontier (cx -4..4, cy -8..0).
-  const corner = planWindow(-4, -8, inside);
+test('at the border the window’s far side is the drift: never fetched, never attached', () => {
+  // The north-west corner of the world.
+  const corner = planWindow(-B, -B, inside);
   assert.equal(corner.attach.length, 4);
   assert.equal(corner.drift.length, 5);
   assert.equal(corner.fetch.length, 9);
-  assert.ok(corner.drift.includes('-5,-9') && corner.drift.includes('-3,-9') && corner.drift.includes('-5,-7'));
-  // The Tangle gate now opens into fixed town ground inside the frontier.
+  assert.ok(corner.drift.includes(`${-B - 1},${-B - 1}`) && corner.drift.includes(`${-B + 1},${-B - 1}`) && corner.drift.includes(`${-B - 1},${-B + 1}`));
+  // Far south of home, where the frontier's south limit was, is ordinary land.
+  for (const at of [planWindow(0, 8, inside), planWindow(0, 400, inside), planWindow(-300, 0, inside)]) {
+    assert.deepEqual(at.drift, []);
+    assert.equal(at.attach.length, 9);
+  }
+  // The Tangle gate opens into fixed town ground.
   const gate = planWindow(0, 0, inside);
   assert.deepEqual(gate.drift, []);
   assert.equal(gate.attach.length, 9);
 });
 
-test('the drift inside the frontier’s rectangle is walled: the hero can’t walk into land past the reach (A19)', () => {
-  // The playtest: the reach's rectangle is cx -5..5, cy -8..7, but the
-  // north-east corner (cx 5, cy -8..-3) is past the reach. The world's
-  // bounds (the rectangle) let the hero walk into it, the drift had no
-  // collision, and the server refused the place a report later.
-  const r = frontierRect([]);
-  assert.deepEqual([r.maxCx, r.minCy], [5, -8]);
-  for (let cy = -8; cy <= -3; cy++) assert.equal(insideFrontier(5, cy, undefined, []), false, `5,${cy}`);
-  const plan = planWindow(4, -5, (cx, cy) => insideFrontier(cx, cy, undefined, []));
-  assert.deepEqual([...plan.drift].sort(), ['5,-4', '5,-5', '5,-6']);
+test('the drift past the border is walled: the hero can’t walk into it (A19)', () => {
+  const plan = planWindow(B, 0, inside);
+  assert.deepEqual([...plan.drift].sort(), [`${B + 1},-1`, `${B + 1},0`, `${B + 1},1`]);
   // Walkable is attached: the drift and chunks not attached yet are walled; the hero's own never is.
-  const attached = new Set(plan.attach.filter((k) => k !== '4,-4'));
-  const walls = walledChunks(4, -5, (cx, cy) => attached.has(chunkKey(cx, cy)));
-  assert.deepEqual(walls.sort(), ['4,-4', '5,-4', '5,-5', '5,-6']);
-  assert.deepEqual(walledChunks(4, -5, () => false).length, 8);
-  assert.ok(!walledChunks(4, -5, () => false).includes('4,-5'));
+  const attached = new Set(plan.attach.filter((k) => k !== `${B},1`));
+  const walls = walledChunks(B, 0, (cx, cy) => attached.has(chunkKey(cx, cy)));
+  assert.deepEqual(walls.sort(), [`${B + 1},-1`, `${B + 1},0`, `${B + 1},1`, `${B},1`].sort());
+  assert.deepEqual(walledChunks(B, 0, () => false).length, 8);
+  assert.ok(!walledChunks(B, 0, () => false).includes(`${B},0`));
 });
 
-test('a chunk is painted once every neighbour inside the frontier is known', () => {
+test('a chunk is painted once every neighbour on the grid is known', () => {
   const known = new Set(['0,-4', '1,-4', '-1,-4', '0,-5', '0,-3', '1,-5', '-1,-5', '1,-3'])
   const has = (cx: number, cy: number) => known.has(chunkKey(cx, cy));
   assert.equal(paintable(0, -4, inside, has), false, 'one neighbour missing');
   known.add('-1,-3');
   assert.equal(paintable(0, -4, inside, has), true);
-  // Past the frontier counts as known (it reads as the drift).
-  const edge = new Set(['-4,-8', '-3,-8', '-4,-7', '-3,-7']);
-  assert.equal(paintable(-4, -8, inside, (cx, cy) => edge.has(chunkKey(cx, cy))), true);
+  // Past the border counts as known (it reads as the drift).
+  const edge = new Set([chunkKey(-B, -B), chunkKey(-B + 1, -B), chunkKey(-B, -B + 1), chunkKey(-B + 1, -B + 1)]);
+  assert.equal(paintable(-B, -B, inside, (cx, cy) => edge.has(chunkKey(cx, cy))), true);
   assert.equal(paintable(5, 5, inside, () => false), false, 'not known itself');
 });
 
@@ -114,7 +113,7 @@ test('slack at the edge: a chunk that left the 3×3 stays until the hero is SLAC
   assert.equal(keepAttached(2, 0, 23, 12, 0), false);
   assert.equal(keepAttached(-1, -1, 24 + 2, -3, SLACK_TILES), true, 'just past a corner, both ways within the slack');
   assert.equal(keepAttached(-1, -1, 24 + 2, 24 + SLACK_TILES, SLACK_TILES), false);
-  // Signed tiles: two rows south of the frontier's north row (cy -8), the same.
+  // Signed tiles: north of the gate (cy -8), the same.
   assert.equal(keepAttached(0, -8, 5, -6 * 24 + 3, SLACK_TILES), true);
   assert.equal(keepAttached(0, -8, 5, -6 * 24 + SLACK_TILES, SLACK_TILES), false);
 });
@@ -130,14 +129,14 @@ test('the turning moves you to the nearest open tile, never home', () => {
   assert.deepEqual(nearestOpen(-30, -100, (x, y) => x === -31 && y === -100), { tx: -31, ty: -100 });
 });
 
-test('the drift: distance past the frontier, and which edges carry the veil', () => {
+test('the drift: distance past a rectangle, and which edges carry the veil', () => {
   const f = { minCx: -4, minCy: -8, maxCx: 4, maxCy: 0 };
-  assert.equal(frontierDistance(f, 0, 0), 0);
-  assert.equal(frontierDistance(f, -4 * 384 - 10, 0), 10);
-  assert.equal(frontierDistance(f, 0, -8 * 384 - 50), 50);
-  assert.deepEqual(veilEdges(0, -9, inside), ['south'], 'north of the frontier: the veil on its south edge');
-  assert.deepEqual(veilEdges(5, -4, inside), ['west']);
-  assert.deepEqual(veilEdges(5, -9, inside), [], 'a corner sees no inside chunk across an edge');
+  assert.equal(rectDistance(f, 0, 0), 0);
+  assert.equal(rectDistance(f, -4 * 384 - 10, 0), 10);
+  assert.equal(rectDistance(f, 0, -8 * 384 - 50), 50);
+  assert.deepEqual(veilEdges(0, -B - 1, inside), ['south'], 'north of the border: the veil on its south edge');
+  assert.deepEqual(veilEdges(B + 1, -4, inside), ['west']);
+  assert.deepEqual(veilEdges(B + 1, -B - 1, inside), [], 'a corner sees no inside chunk across an edge');
 });
 
 // ---------------------------------------------------------------- walking
@@ -231,10 +230,10 @@ test('walked chunks and seen landmarks are kept per wick on the device', () => {
   assert.deepEqual(walkedChunks('wick-b'), [], 'a new wick starts empty');
 });
 
-test('the frontier reach union spans cx -6..4, cy -8..7', () => {
+test('every chunk inside the border is on the grid: no reach, no south limit', () => {
   let n = 0;
   for (let cy = -10; cy <= 9; cy++) for (let cx = -8; cx <= 6; cx++) if (inside(cx, cy)) n++;
-  assert.equal(n, 164);
+  assert.equal(n, 20 * 15);
 });
 
 test('the open map is one area but three places on the HUD: the Tangle, the Whitequiet, beyond', async () => {

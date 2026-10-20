@@ -1,13 +1,13 @@
-import { insideFrontier, setHeldReach } from '../../lib/wilds/coords.ts';
+import type { ChunkRect } from '../../lib/wilds/coords.ts';
 /**
  * The Wilds store: the client's picture of the open map, keyed by chunk
  * (docs/design/open-map.md 2.4, 2.5), shared by the scene and the panels.
  *
  * The server owns everything (server-first.md 3). `refreshNear` reads
- * GET /api/wilds/near/<cx>/<cy>: the still and wick epochs, the frontier,
+ * GET /api/wilds/near/<cx>/<cy>: the still and wick epochs, the world border,
  * and for the 5×5 chunks around (cx, cy) every entity's cycle and state,
  * personal claims, discoveries, fallen lanterns, Echo assignments, ground
- * changes, the glimpse past the frontier, named ways and material balances.
+ * changes, named ways and material balances.
  * Each read replaces what the store held for the chunks in its window and
  * keeps the rest, then loads the window's chunk bodies (terrain, decor,
  * sites, entity bodies; game/wilds/chunks.ts) in their epochs. A read is
@@ -45,7 +45,7 @@ import { EV, bus } from '../events.ts';
 import { gameNow } from '../clock.ts';
 import type { Session } from '../session.ts';
 import { CHUNK_TILES, chunkKey, chunkOfPixel, isWildsArea } from './coords.ts';
-import { loadChunk, pruneChunks, cachedTerrain } from './chunks.ts';
+import { loadChunk, loadedTerrain, pruneChunks, cachedTerrain } from './chunks.ts';
 import type { ChunkTerrain, EntityBody } from './terrain.ts';
 import { adoptMaterials, heldMaterials, markNow, mirrorMaterials, nextMark } from '../materials-order.ts';
 
@@ -61,13 +61,8 @@ export interface WildsEpoch {
   endsAt: number | null;
 }
 
-/** The bounding rectangle of the frontier; content reach determines membership. */
-export interface FrontierRect {
-  minCx: number;
-  minCy: number;
-  maxCx: number;
-  maxCy: number;
-}
+/** A chunk rectangle, inclusive (the world border's, as the server names it). */
+export type { ChunkRect } from '../../lib/wilds/coords.ts';
 
 export interface LootDrop {
   materials: { id: string; qty: number }[];
@@ -85,7 +80,7 @@ export interface WildsDiscovery {
 /** An entity's body (from its chunk) with its state (from the near read); `cx, cy` its chunk. */
 export type WildsThing = WildsEntityView & { cx: number; cy: number };
 
-/** A chunk past the frontier, seen through the veil (decision 22). */
+/** A chunk seen at a distance: its main land and whether the Wend crosses it (the map's window). */
 export interface Glimpse {
   land: string;
   river: boolean;
@@ -98,7 +93,8 @@ export interface WildsView {
   land: Map<string, ChunkLandStatus>;
   still: WildsEpoch;
   wick: WildsEpoch;
-  frontier: FrontierRect;
+  /** The world border as the server named it (0.14). */
+  border: ChunkRect;
   /** Entity states by id (bodies are in the chunks). */
   states: Map<string, EntityStateView>;
   /** Entity ids this player personally claimed (chests, POIs). */
@@ -111,8 +107,6 @@ export interface WildsView {
   echoes: Map<string, { member: string; settled: boolean }>;
   /** Player-made ground changes per chunk (`cx,cy`), tiles chunk-local (section 3). */
   ground: Map<string, GroundChange[]>;
-  /** The glimpse past the frontier, per chunk (`cx,cy`). */
-  glimpse: Map<string, Glimpse>;
   /** Named ways by id (their geometry is the server's: `path`, `signA`, `signB`). */
   ways: Map<string, WildsWay>;
   /** Held chunks (`cx,cy`): the older wick epoch each keeps its land in (roadmap 0.12). */
@@ -213,15 +207,15 @@ export function chunkHeld(cx: number, cy: number): boolean {
   return view?.held.has(chunkKey(cx, cy)) ?? false;
 }
 
-/** The frontier as last read, or null. */
-export function wildsFrontier(): FrontierRect | null {
-  return view?.frontier ?? null;
+/** The world border as last read, or null. */
+export function wildsBorder(): ChunkRect | null {
+  return view?.border ?? null;
 }
 
-/** Inside the frontier the server named (the client treats everything else as solid). */
-export function insideNamedFrontier(cx: number, cy: number): boolean {
-  const f = view?.frontier;
-  return !!f && insideFrontier(cx, cy) && cx >= f.minCx && cx <= f.maxCx && cy >= f.minCy && cy <= f.maxCy;
+/** Inside the border the server named (the client treats everything past it as solid). */
+export function insideNamedBorder(cx: number, cy: number): boolean {
+  const f = view?.border;
+  return !!f && cx >= f.minCx && cx <= f.maxCx && cy >= f.minCy && cy <= f.maxCy;
 }
 
 /** When the wick ends (Unix seconds), or null before a read. */
@@ -244,7 +238,6 @@ export function wickEnded(): boolean {
  */
 export function resetWilds(opts: { quiet?: boolean } = {}): void {
   view = null;
-  setHeldReach([]);
   viewLink = null;
   generation += 1;
   fetchedAt.clear();
@@ -333,7 +326,7 @@ export function nearWindow(cx: number, cy: number, radius = NEAR_RADIUS): { cx: 
  * `since` is the read's order mark (readMark, taken as it was asked). What a
  * later read or an answer set after it was asked is newer and kept: a chunk a
  * later read covered, an entity, claim, lantern, Echo, chunk's ground, way,
- * the balances or the frontier. `link`: the link it was read through (whose
+ * the balances or the border. `link`: the link it was read through (whose
  * material balance it carries; refreshNear passes it).
  */
 export function applyNear(res: WildsNearResult, since: number = markNow(), link: object | null = viewLink): boolean | null {
@@ -347,7 +340,7 @@ export function applyNear(res: WildsNearResult, since: number = markNow(), link:
     view = {
       still,
       wick,
-      frontier: { minCx: 0, minCy: 0, maxCx: -1, maxCy: -1 },
+      border: { minCx: 0, minCy: 0, maxCx: -1, maxCy: -1 },
       states: new Map(),
       claims: new Set(),
       discoveries: new Map(),
@@ -355,7 +348,6 @@ export function applyNear(res: WildsNearResult, since: number = markNow(), link:
       materials: {},
       echoes: new Map(),
       ground: new Map(),
-      glimpse: new Map(),
       ways: new Map(),
       held: new Map(),
       land: new Map(),
@@ -378,12 +370,10 @@ export function applyNear(res: WildsNearResult, since: number = markNow(), link:
   v.wick = wick;
   // Newer than this read: set by a later read or an answer after it was asked.
   const newer = (at: number | undefined) => (at ?? 0) > since;
-  const r = res.frontier!.rect!;
-  if (!newer(frontierSeq)) {
-    v.frontier = { minCx: r.minCx, minCy: r.minCy, maxCx: r.maxCx, maxCy: r.maxCy };
-    // Held chunks push it out (lamps.md 2.2): the map, the window and the paths read them through insideFrontier.
-    setHeldReach(res.frontier!.held);
-    frontierSeq = since;
+  const r = res.border!.rect!;
+  if (!newer(borderSeq)) {
+    v.border = { minCx: r.minCx, minCy: r.minCy, maxCx: r.maxCx, maxCy: r.maxCy };
+    borderSeq = since;
   }
   const c = res.center!;
   const radius = res.radius;
@@ -452,7 +442,6 @@ export function applyNear(res: WildsNearResult, since: number = markNow(), link:
     if (speaks(key) && !newer(chunkSeq.get(key))) v.ground.set(key, [...(g.changes?.changes ?? [])]);
   }
   merged.clear();
-  for (const g of res.glimpse) if (g.chunk) v.glimpse.set(chunkKey(g.chunk.cx, g.chunk.cy), { land: g.land, river: g.river });
   // The read names every way whose path crosses its window: one it no longer names is gone (lifted by anyone).
   const returned = new Set(res.ways.map((w) => w.id));
   for (const [id, w] of [...v.ways]) {
@@ -496,7 +485,7 @@ const chunkSeq = new Map<string, number>();
 const waySeq = new Map<string, number>();
 /** The latest read that spoke for each chunk's land status (a near read, or refreshLand). */
 const landSeq = new Map<string, number>();
-let frontierSeq = 0;
+let borderSeq = 0;
 /** The mark of the read the view started over from: an older one can't start it over again. */
 let startedAt = 0;
 /** The latest read that succeeded: an older read's failure doesn't make it stale. */
@@ -510,7 +499,7 @@ function forgetOrder(): void {
   echoSeq.clear();
   chunkSeq.clear();
   waySeq.clear();
-  frontierSeq = 0;
+  borderSeq = 0;
   goodSeq = 0;
 }
 
@@ -619,12 +608,12 @@ export function chunkTerrain(cx: number, cy: number): ChunkTerrain | null {
   return epoch ? cachedTerrain(epoch.id, cx, cy) : null;
 }
 
-/** Load a chunk's body in its current epoch (null outside the frontier, on fixed ground, or before a read). */
+/** Load a chunk's body in its current epoch (null past the border, on fixed ground, or before a read). */
 export async function loadWildsChunk(session: Session, cx: number, cy: number): Promise<ChunkTerrain | null> {
   const link = session.link;
   const epoch = chunkEpoch(cx, cy);
   // Fixed ground has no generated chunk to fetch: its own come under its pseudo-epoch (./fixed.ts).
-  if (!link || !epoch || !insideNamedFrontier(cx, cy) || sourceOf(cx, cy).kind === 'fixed') return null;
+  if (!link || !epoch || !insideNamedBorder(cx, cy) || sourceOf(cx, cy).kind === 'fixed') return null;
   return loadChunk(link.api.operations, epoch.id, cx, cy);
 }
 
@@ -658,7 +647,7 @@ export async function refreshNear(session: Session, cx: number, cy: number, maxA
       const after = generation;
       fetchedAt.set(key, Date.now());
       goodSeq = Math.max(goodSeq, since);
-      await Promise.all(nearWindow(cx, cy).filter((c) => insideNamedFrontier(c.cx, c.cy)).map((c) => loadWildsChunk(session, c.cx, c.cy).catch(() => null)));
+      await Promise.all(nearWindow(cx, cy).filter((c) => insideNamedBorder(c.cx, c.cy)).map((c) => loadWildsChunk(session, c.cx, c.cy).catch(() => null)));
       // Forgotten while its chunks loaded: the land it read is gone.
       if (generation !== after || session.link !== link || !view) return false;
       if (priorWick !== view.wick.id) void pruneChunks([view.still.id, view.wick.id, ...new Set([...view.held.values()].map((e) => e.id))]);
@@ -936,17 +925,16 @@ export interface PlaceAt {
   ty: number;
 }
 
-/** Every cell place in the frontier's loaded chunks: this wick's, and held chunks' keyed by their epoch (placeKey). */
+/** Every cell place in the loaded chunks, each in its current epoch: this wick's, and held chunks' keyed by their epoch (placeKey). */
 export function knownPlaces(): PlaceAt[] {
-  const f = view?.frontier;
-  if (!f) return [];
+  if (!view) return [];
   const out: PlaceAt[] = [];
-  for (let cy = f.minCy; cy <= f.maxCy; cy++)
-    for (let cx = f.minCx; cx <= f.maxCx; cx++) {
-      const t = chunkTerrain(cx, cy);
-      if (!t) continue;
-      for (const p of t.places) out.push({ id: placeKey(p.id, t.epochId), kind: p.kind, tx: cx * t.size + p.tx, ty: cy * t.size + p.ty });
-    }
+  // Row by row, as the chunks lie (callers pick the first of equals).
+  const loaded = [...loadedTerrain()].sort((a, b) => a.cy - b.cy || a.cx - b.cx);
+  for (const t of loaded) {
+    if (chunkEpoch(t.cx, t.cy)?.id !== t.epochId) continue;
+    for (const p of t.places) out.push({ id: placeKey(p.id, t.epochId), kind: p.kind, tx: t.cx * t.size + p.tx, ty: t.cy * t.size + p.ty });
+  }
   return out;
 }
 

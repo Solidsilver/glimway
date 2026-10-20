@@ -44,7 +44,7 @@ function start(edit: (j: Record<string, any>) => void = () => {}): void {
 function chunkApi(o: { fail?: (cx: number, cy: number) => boolean } = {}) {
   const c = { calls: 0, running: 0, most: 0, near: 0 };
   const api = {
-    mapStatus: async (_keys: readonly { cx: number; cy: number }[]) => create(WildsMapStatusSchema, { wick: store.wildsView()!.wick.id }),
+    mapStatus: async (_keys: readonly { cx: number; cy: number }[], glimpse = false) => create(WildsMapStatusSchema, { wick: store.wildsView()!.wick.id, ...(glimpse ? { window: { minCx: -6, minCy: -8, maxCx: 4, maxCy: 7 }, glimpse: [{ chunk: { realm: 'hearthwick', layer: 0, cx: -5, cy: -4 }, land: 'meadow', river: true }] } : {}) }),
     near: async () => {
       c.near++;
       throw new Error('offline');

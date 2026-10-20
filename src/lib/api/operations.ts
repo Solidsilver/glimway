@@ -29,7 +29,8 @@ export interface OperationsApi {
   /** The open map's near read around a chunk (open-map.md 2.4). */
   near(cx: number, cy: number): Promise<WildsNearResult>;
   /** Read-only status for explored keys; never credits a visit. */
-  mapStatus(explored: readonly { cx: number; cy: number }[]): Promise<WildsMapStatus>;
+  /** `glimpse`: also the window round the reader at glimpse detail (0.14). */
+  mapStatus(explored: readonly { cx: number; cy: number }[], glimpse?: boolean): Promise<WildsMapStatus>;
   homeLand(gate: number): Promise<HomesteadLand>;
   report(request: ReportRequest, options?: { keepalive?: boolean }): Promise<Envelope>;
   questStep(request: QuestStepRequest): Promise<Envelope>;
@@ -111,8 +112,8 @@ export function createOperationsApi(send: Transport): OperationsApi {
     async worldChoose(choice) { return validatedSession(await send('POST', '/api/world/choose', toJson(WorldChooseRequestSchema, create(WorldChooseRequestSchema, { choice })))); },
     async logout() { await send('DELETE', '/api/session'); },
     async chunk(epoch, layer, cx, cy) { const raw = await send('GET', `/api/wilds/chunk/${encodeURIComponent(epoch)}/${layer}/${cx}/${cy}`, undefined, { binary: true }); return validated(() => { if (!(raw instanceof Uint8Array)) throw new Error('missing binary chunk'); const chunk = decodeChunk(raw); if (chunk.epochId !== epoch || chunk.layer !== layer || chunk.cx !== cx || chunk.cy !== cy) throw new Error("chunk identity mismatch"); return chunk; }); },
-    async mapStatus(explored) {
-      const req = create(WildsMapRequestSchema, { explored: explored.map((k) => ({ ...k, realm: loadWilds().realm, layer: 0 })) });
+    async mapStatus(explored, glimpse = false) {
+      const req = create(WildsMapRequestSchema, { explored: explored.map((k) => ({ ...k, realm: loadWilds().realm, layer: 0 })), glimpse });
       const raw = await send('POST', '/api/wilds/map', toJson(WildsMapRequestSchema, req));
       return validated(() => validateMapStatus(decodeWire(WildsMapStatusSchema, raw), explored));
     },

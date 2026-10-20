@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { TERRAIN } from '../src/lib/tile.ts';
-import { MAP_COLOURS, fitLabels, mapBounds, mapFrame, mapPicture, type MapInput } from '../src/lib/wilds/map-model.ts';
+import { MAP_COLOURS, fitLabels, mapBounds, mapEdges, mapFrame, mapPicture, type MapInput } from '../src/lib/wilds/map-model.ts';
 import { mapChunkKeys } from '../src/game/wilds/map-data.ts';
 import { forgetWalked, markSeen, markWalked, seenAt, seenLandmarks, walkedChunks } from '../src/game/wilds/walked.ts';
 import { displayArea, setWildsLand, areaInfo } from '../src/content/world.ts';
 
-const FRONTIER = { minCx: -6, minCy: -8, maxCx: 4, maxCy: 7 };
+const WINDOW = { minCx: -6, minCy: -8, maxCx: 4, maxCy: 7 };
 const S = 24;
 
 /** A chunk of one ground, a solid tree at local (1, 1), laid stone at (2, 2). */
@@ -19,7 +19,7 @@ function chunk(cx: number, cy: number, ground: number) {
 }
 
 function input(o: Partial<MapInput> = {}): MapInput {
-  return { frontier: FRONTIER, chunks: [], glimpse: [], ways: [], places: [], hero: null, words: { you: 'You', gate: 'Commons gate' }, ...o };
+  return { window: WINDOW, chunks: [], glimpse: [], ways: [], places: [], hero: null, words: { you: 'You', gate: 'Commons gate' }, ...o };
 }
 
 const pixel = (p: { width: number; rgba: Uint8ClampedArray; originTx: number; originTy: number }, tx: number, ty: number) => {
@@ -27,34 +27,34 @@ const pixel = (p: { width: number; rgba: Uint8ClampedArray; originTx: number; or
   return [p.rgba[i], p.rgba[i + 1], p.rgba[i + 2], p.rgba[i + 3]];
 };
 
-test('the map frames what you know with a chunk round it, growing to the frontier and the glimpse past it', () => {
-  // The reach union already contains all town and lot chunks.
-  assert.deepEqual(mapBounds({ frontier: FRONTIER, glimpse: [] }), FRONTIER);
+test('the map frames what you know with a chunk round it, growing to the window round you and its glimpse', () => {
+  // The window already contains all town and lot chunks.
+  assert.deepEqual(mapBounds({ window: WINDOW, glimpse: [] }), WINDOW);
   const glimpse = [{ cx: -5, cy: -4, land: 'meadow', river: true }, { cx: 0, cy: -9, land: 'woods', river: false }];
-  assert.deepEqual(mapBounds({ frontier: FRONTIER, glimpse }), { minCx: -6, minCy: -9, maxCx: 4, maxCy: 7 });
+  assert.deepEqual(mapBounds({ window: WINDOW, glimpse }), { minCx: -6, minCy: -9, maxCx: 4, maxCy: 7 });
   // Fresh: all four footprints plus a chunk around them.
   assert.deepEqual(mapFrame(input({ glimpse })), { minCx: -3, minCy: -6, maxCx: 3, maxCy: 5 });
-  // Walked out to the west edge: the frame reaches the glimpse past it.
+  // Walked out west: the frame reaches the glimpse beside it.
   const west = input({ glimpse, chunks: [chunk(-4, -4, TERRAIN.grass_c)], hero: { tx: -4 * S + 5, ty: -4 * S + 5 } });
   assert.deepEqual(mapFrame(west), { minCx: -5, minCy: -6, maxCx: 3, maxCy: 5 });
   const p = mapPicture(west);
   assert.equal(p.width, 9 * S);
   assert.equal(p.height, 12 * S);
   assert.deepEqual([p.originTx, p.originTy], [-5 * S, -6 * S]);
-  // Past the drift: a pale wash, see-through; and hatching where the Wend runs on.
+  // The glimpse: a pale wash, see-through; and hatching where the Wend runs.
   const wash = pixel(p, -5 * S + 3, -4 * S + 4);
   assert.ok(wash[3]! > 0 && wash[3]! < 255);
   let hatched = 0;
   for (let i = 0; i < S; i++) if (pixel(p, -5 * S + i, -4 * S + 5).slice(0, 3).join() === MAP_COLOURS.river.join()) hatched++;
   assert.ok(hatched > 0, 'the river’s hatching');
-  // Nothing at all where neither the frontier nor a glimpse reaches.
-  assert.equal(pixel(p, -5 * S + 1, -6 * S + 1)[3], 0);
-  // Everything walked: the whole frontier and its glimpse.
+  // The window's land with no glimpse is parchment.
+  assert.deepEqual(pixel(p, -5 * S + 1, -6 * S + 1).slice(0, 3), [...MAP_COLOURS.parchment]);
+  // Everything walked: the whole window and its glimpse.
   const everywhere = input({ glimpse, chunks: [chunk(-6, 2, TERRAIN.grass_b), chunk(4, -8, TERRAIN.grass_b), chunk(1, 7, TERRAIN.grass_b)] });
   assert.deepEqual(mapFrame(everywhere), mapBounds(everywhere));
 });
 
-test('walked chunks are drawn in their ground’s colours; the rest of the frontier is parchment, edged in the drift’s dashes', () => {
+test('walked chunks are drawn in their ground’s colours; the rest of the window is parchment, and the border is edged in the drift’s dashes', () => {
   const p = mapPicture(input({ chunks: [chunk(1, -6, TERRAIN.grass_c), chunk(-1, -6, TERRAIN.water_a), chunk(3, -8, TERRAIN.grass_b)] }));
   const meadow = pixel(p, S + 5, -6 * S + 5);
   const tree = pixel(p, S + 1, -6 * S + 1);
@@ -66,9 +66,13 @@ test('walked chunks are drawn in their ground’s colours; the rest of the front
   assert.ok(tree[0]! < meadow[0]! && tree[1]! < meadow[1]!, 'trees and stone are darker than the open ground');
   assert.ok(laid[0]! > 200 && laid[1]! > 200, 'laid stone shows pale');
   assert.ok(water[2]! > water[0]!, 'the Wend is blue');
-  // The frontier's edge, dashed.
-  const top = [0, 1, 2, 3, 4, 5, 6, 7].map((x) => pixel(p, S + x, -8 * S).slice(0, 3).join());
-  assert.ok(top.includes(MAP_COLOURS.drift.join()) && top.some((c) => c !== MAP_COLOURS.drift.join()));
+  // No border in the window: no dashes. Where the window reaches the border, its edge.
+  assert.deepEqual(mapEdges(WINDOW), []);
+  const B = 4096;
+  assert.deepEqual(mapEdges({ minCx: B - 2, minCy: -1, maxCx: B, maxCy: 0 }), [
+    { x0: (B + 1) * S, y0: -S, x1: (B + 1) * S, y1: 0 },
+    { x0: (B + 1) * S, y0: 0, x1: (B + 1) * S, y1: S },
+  ]);
 });
 
 test('labels that would overlap at the size shown are left off, the most useful kept', () => {

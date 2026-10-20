@@ -9,9 +9,10 @@ import type { Touches } from '../entities/touches.ts'
  * and verges, laid stone and plank, fords' stepping stones), its collision
  * (merged runs of solid tiles), its decor as scenery (fading where it
  * overhangs a path), its workable pieces (gathering) and its entities and
- * story sites (./entities.ts). A drift chunk is a chunk past the frontier:
- * a dim glimpse of the land beyond, trees in fog, and the frontier veil
- * along the edge you can't cross.
+ * story sites (./entities.ts). A drift chunk is a chunk past the world
+ * border: trees in fog under a pale wash (BorderVeil), and the veil's
+ * threads along the edge you can't cross. The last few chunks inside the
+ * border fade toward it under the same wash.
  *
  * Attaching is cheap on the frame that does it: the ground image and the
  * collision go in whole and at once (nobody walks through anything), then
@@ -35,6 +36,7 @@ import { TILE_DATA, type TileArt } from '../area/tile-art.ts'
 import type { Gathering } from '../entities/gathering.ts'
 import type { GatherSpot, ScenerySpot } from '../worlds.ts'
 import { CHUNK_PX, CHUNK_TILES, chunkKey } from './coords.ts'
+import { chunksInFromBorder } from '../../lib/wilds/coords.ts'
 import { fogDrift, paintDrift, type GroundSource } from './ground-paint.ts'
 import { chunkOrigin, chunkScenery, DECAL_DEPTH, type ChunkTerrain } from './terrain.ts'
 import { paintDriftTrees } from './tangle-art.ts'
@@ -602,5 +604,31 @@ export class DriftChunk {
   destroy(): void {
     destroyAll(this.scene, this.images)
     this.images = []
+  }
+}
+
+/** Above everything in the world (sprites sort by y, and the border lies within 2e6 px). */
+const BORDER_VEIL_DEPTH = 10_000_000
+
+/**
+ * The world border's veil (0.14, a placeholder look): over a chunk within
+ * content's border.veilChunks of the border, a pale wash, thicker the
+ * nearer the edge, so the land fades to white before it stops.
+ */
+export class BorderVeil {
+  private wash: Phaser.GameObjects.Rectangle | null = null
+
+  constructor(scene: Phaser.Scene, readonly cx: number, readonly cy: number) {
+    const veil = loadWilds().border.veilChunks
+    const inFrom = chunksInFromBorder(cx, cy)
+    if (inFrom >= veil) return
+    // Past the border (the drift there) all but white; inside, thinning inward.
+    const alpha = inFrom < 0 ? 0.85 : 0.2 + (0.55 * (veil - 1 - inFrom)) / Math.max(1, veil - 1)
+    this.wash = scene.add.rectangle(cx * CHUNK_PX, cy * CHUNK_PX, CHUNK_PX, CHUNK_PX, 0xf4f1ea, alpha).setOrigin(0, 0).setDepth(BORDER_VEIL_DEPTH)
+  }
+
+  destroy(): void {
+    this.wash?.destroy()
+    this.wash = null
   }
 }
