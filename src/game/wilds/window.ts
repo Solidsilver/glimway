@@ -45,7 +45,7 @@ import { gameNow } from '../clock.ts'
 import { bus, EV } from '../events.ts'
 import { generateRepairArt } from '../repairs-art.ts'
 import type { Session } from '../session.ts'
-import { CHUNK_TILES, chunkKey, chunkOfPixel, parseChunkKey } from './coords.ts'
+import { CHUNK_PX, CHUNK_TILES, chunkKey, chunkOfPixel, parseChunkKey } from './coords.ts'
 import { fixedPlaceOf, footprint, footprintAt, prepareFixed, applyLotHome, chunkOfTile, type FixedFootprint } from './fixed.ts'
 import { fixedChunkHash, paintSource } from './fixed-ground.ts'
 import { FixedChunk, type FixedChunkDeps } from './fixed-chunk.ts'
@@ -53,17 +53,20 @@ import type { ExitDef } from '../worlds.ts'
 import { PLACES, fixedChunks } from '../../lib/places.ts'
 import { chunkSig, effectiveChunk, forgetGround, groundAt, solidAt } from './ground-view.ts'
 import { chunkGather, chunkLandmarks } from './terrain.ts'
-import { crossed, frontierDistance, keepAttached, paintable, planWindow, SLACK_TILES, veilEdges, type WindowPlan } from './window-plan.ts'
+import { crossed, frontierDistance, keepAttached, paintable, planWindow, SLACK_TILES, veilEdges, walledChunks, type WindowPlan } from './window-plan.ts'
 import { AttachedChunk, BuildQueue, DriftChunk, groundTexture, paintDriftChunk, type ChunkDeps } from './window-chunk.ts'
 import { lanes, paintAway, paintHere, paintsAway, type PaintJob } from './paint-worker.ts'
 import { paintTable } from './ground-table.ts'
 import { chunkOrigin } from './terrain.ts'
 import { fnv1a32 } from '../../lib/hash.ts'
 import { TILE } from '../../lib/tile.ts'
-import { chunkTerrain, insideNamedFrontier, loadWildsChunk, NEAR_MAX_AGE_MS, refreshNear, wildsEpoch, wildsFrontier, wildsView } from './store.ts'
+import { chunkTerrain, insideNamedFrontier, landRevision, loadWildsChunk, NEAR_MAX_AGE_MS, placeKey, refreshLand, refreshNear, wildsEpoch, wildsFrontier, wildsView } from './store.ts'
 import { markSeen, markWalked } from './walked.ts'
+import { LandHere } from './land-here.ts'
 import { perfSpan, perfTime, perfWithout } from '../perf.ts'
-import { addAll, destroyAll, looseImage } from '../area/bulk.ts'
+import { addAll, destroyAll, destroyStatics, enableStatics, looseImage } from '../area/bulk.ts'
+import { staticBox } from '../area/collision.ts'
+import { heldReach } from '../../lib/wilds/coords.ts'
 
 export interface WindowDeps extends Omit<ChunkDeps, 'ground' | 'gather' | 'builds'>, Pick<FixedChunkDeps, 'interactables' | 'enter' | 'hooks'> {
   session: Session
@@ -109,8 +112,8 @@ interface PaintedChunk {
   sig: string
 }
 
-/** Where a paint was made: a worker, this thread, or the page's kept fixed paints. */
-type PaintThread = 'worker' | 'main' | 'cache'
+/** Where a paint was made: a worker, this thread (`'late'`: after the worker's deadline), or the page's kept fixed paints. */
+type PaintThread = 'worker' | 'main' | 'late' | 'cache'
 
 /**
  * Fixed chunks' last paints, by signature, for the page: a scene built again
@@ -154,6 +157,12 @@ export class WildsWindow {
   /** The attached chunks still being built, in attachment order (./window-chunk.ts BuildQueue). */
   readonly builds = new BuildQueue()
   private drifts = new Map<string, DriftChunk>()
+  /** Walls over the chunks beside the hero's that aren't attached (./window-plan.ts walledChunks). */
+  private walls = new Map<string, Phaser.Physics.Arcade.Image>()
+  /** The named reach the plan was made for: a camp set moves it, and the window is planned again. */
+  private seenFrontier: unknown = null
+  private seenHeld: unknown = null
+  private reachSig = ''
   private paints = new Map<string, PaintedChunk>()
   private far = new Map<string, Phaser.GameObjects.Image[]>()
   private loading = new Set<string>()
@@ -179,6 +188,10 @@ export class WildsWindow {
   private gone = false
   /** This window's identity (a playtest sees it never changes while walking: no scene restart). */
   private readonly id = Math.random().toString(36).slice(2, 10)
+  /** The HUD's land chip: the occupied chunk's status, told on change. */
+  private readonly landHere = new LandHere((cx, cy) => {
+    if (!fixedPlaceOf(cx, cy)) return refreshLand(this.deps.session, cx, cy)
+  })
 
   constructor(private deps: WindowDeps) {
     onSceneEnd(deps.scene, () => this.destroy())
@@ -210,9 +223,8 @@ export class WildsWindow {
       if (this.fixedDaySignature) this.seasonalPending = new Set(this.fixed.keys())
       this.fixedDaySignature = signature
     }
-    const stale = this.seasonalPending.values().next().value
+    const stale = this.nextRebuild()
     if (stale) {
-      this.seasonalPending.delete(stale)
       // Input is event-driven and can arrive before the next scene update.
       // A refresh under the hero (or their prompt, across a chunk edge) must
       // replace its fixtures in one turn, without an empty interaction list
@@ -238,23 +250,62 @@ export class WildsWindow {
     }
     const hero = this.deps.hero()
     const at = chunkOfPixel(hero.x, hero.y)
+    // Before the frontier: a forgotten view (a world move) takes the old land's chip down.
+    const view = wildsView()
+    this.landHere.update(at.cx, at.cy, view, landRevision())
     // Nothing to place a window on until the Wilds have been read once (the
     // entities say so on screen, and try again).
     if (!wildsFrontier()) return
-    if (crossed(this.plan?.center ?? null, at)) this.recentre(at.cx, at.cy)
+    if (this.reachMoved() || crossed(this.plan?.center ?? null, at)) this.recentre(at.cx, at.cy)
     else this.dropBehind()
-    const view = wildsView()
     if (view && view.version !== this.lastVersion) {
       this.lastVersion = view.version
       this.refreshChanged()
     }
     this.step()
+    this.wall(at.cx, at.cy)
     this.buildSome()
     this.seenTimer -= dt
     if (this.seenTimer <= 0) {
       this.seenTimer = 0.5
       this.noteSeen()
     }
+  }
+
+  /** Has the named reach (the near read's rectangle and held keys) changed since the window was last planned? */
+  private reachMoved(): boolean {
+    const f = wildsFrontier()
+    const held = heldReach()
+    if (f === this.seenFrontier && held === this.seenHeld) return false
+    this.seenFrontier = f
+    this.seenHeld = held
+    const sig = JSON.stringify([f, held])
+    if (sig === this.reachSig) return false
+    this.reachSig = sig
+    return true
+  }
+
+  /**
+   * Wall off the chunks beside the hero's that aren't attached: the drift,
+   * and land not fetched or painted yet. Only what is drawn can be walked.
+   */
+  private wall(cx: number, cy: number): void {
+    const want = new Set(walledChunks(cx, cy, (x, y) => this.attached.has(chunkKey(x, y)) || this.fixed.has(chunkKey(x, y))))
+    const { scene, solids } = this.deps
+    const going = [...this.walls].filter(([key]) => !want.has(key))
+    if (going.length) {
+      for (const [key] of going) this.walls.delete(key)
+      destroyStatics(scene.physics.world as never, solids as never, going.map(([, body]) => body) as never)
+    }
+    const coming: Phaser.Physics.Arcade.Image[] = []
+    for (const key of want) {
+      if (this.walls.has(key)) continue
+      const { cx: x, cy: y } = parseChunkKey(key)
+      const body = staticBox(scene, (x + 0.5) * CHUNK_PX, (y + 0.5) * CHUNK_PX, CHUNK_PX, CHUNK_PX)
+      this.walls.set(key, body)
+      coming.push(body)
+    }
+    if (coming.length) enableStatics(scene.physics.world as never, solids as never, coming as never)
   }
 
   /**
@@ -357,6 +408,11 @@ export class WildsWindow {
     const session = this.deps.session
     const wick = wildsEpoch('wick').id
     if (insideNamedFrontier(cx, cy) && wick) markWalked(wick, chunkKey(cx, cy))
+    // Drift the reach has grown over (a camp set) goes now: the land is attached in its place.
+    for (const [key, d] of this.drifts) if (plan.attach.includes(key)) {
+      d.destroy()
+      this.drifts.delete(key)
+    }
     // The new chunk's near read (reused within 10 s), then the ring's bodies.
     void refreshNear(session, cx, cy, NEAR_MAX_AGE_MS)
     for (const key of plan.fetch) this.load(key)
@@ -490,7 +546,7 @@ export class WildsWindow {
       if (!t) continue
       const { scene } = this.deps
       this.far.set(key, perfTime('landmarks', () => {
-        const imgs = chunkLandmarks(t, (k) => scene.textures.exists(k)).map((s) => looseImage(scene, s.x, s.y, s.key).setOrigin(0.5, 1).setFlipX(s.flipX ?? false).setDepth(s.y).setData('place', s.place).setData('at', { tx: s.tx, ty: s.ty }))
+        const imgs = chunkLandmarks(t, (k) => scene.textures.exists(k)).map((s) => looseImage(scene, s.x, s.y, s.key).setOrigin(0.5, 1).setFlipX(s.flipX ?? false).setDepth(s.y).setData('place', s.place && placeKey(s.place, t.epochId)).setData('at', { tx: s.tx, ty: s.ty }))
         addAll(scene, imgs)
         return imgs
       }))
@@ -694,6 +750,21 @@ export class WildsWindow {
   /** Mutable home overlays rebuild through the same window budget, without a scene restart. */
   refreshFixed(key: string): void { if (this.fixed.has(key)) this.seasonalPending.add(key) }
 
+  /**
+   * The next fixed chunk to rebuild, taken off the queue. A chunk a layer
+   * holds (a lot mid-placement: detaching it would end the placement) stays
+   * queued and is rebuilt once it is let go.
+   */
+  private nextRebuild(): string | undefined {
+    const hooks = this.deps.hooks()
+    for (const key of this.seasonalPending) {
+      if (hooks?.busy?.(key)) continue
+      this.seasonalPending.delete(key)
+      return key
+    }
+    return undefined
+  }
+
   /** Late layers join pending/built chunks through their existing budgeted job. */
   fixturesReady(): void {
     for (const c of this.fixed.values()) c.fixturesReady()
@@ -844,11 +915,14 @@ export class WildsWindow {
   private destroy(): void {
     if (this.gone) return
     this.gone = true
+    this.landHere.clear()
     bus.off(EV.fixedReady, this.onFixedReady)
     this.release()
     for (const c of this.attached.values()) c.destroy()
     for (const c of this.fixed.values()) c.destroy()
     for (const c of this.drifts.values()) c.destroy()
+    if (this.walls.size) destroyStatics(this.deps.scene.physics.world as never, this.deps.solids as never, [...this.walls.values()] as never)
+    this.walls.clear()
     this.fixed.clear()
     for (const p of this.paints.values()) if (this.deps.scene.textures.exists(p.key)) this.deps.scene.textures.remove(p.key)
     this.attached.clear()

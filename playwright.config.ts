@@ -62,7 +62,7 @@ export default defineConfig({
   workers: WORKERS,
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI
-    ? [['list'], ['json', { outputFile: 'test-results/e2e-results.json' }]]
+    ? [['list'], ['json', { outputFile: process.env.E2E_RESULTS || 'test-results/e2e-results.json' }]]
     : [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]],
   // The slowest spec files, named at the end of every run (review F12: keep the wall time in sight).
   reportSlowTests: { max: 10, threshold: 60_000 },
@@ -78,8 +78,10 @@ export default defineConfig({
     // minute leaves room for GitHub's software-rendered smoke runner.
     actionTimeout: 60_000,
     // The JSON report always captures every attempt. A retry trace can show
-    // the successful retry, not the failing first attempt that triggered it.
-    trace: process.env.CI ? 'on-first-retry' : 'retain-on-failure',
+    // the successful retry, not the failing first attempt that triggered it:
+    // E2E_TRACE=retain-on-first-failure keeps the failing attempt's instead
+    // (CI: the E2E_TRACE repository variable), at the cost of tracing every test.
+    trace: (process.env.E2E_TRACE as 'on-first-retry' | 'retain-on-first-failure' | undefined) || (process.env.CI ? 'on-first-retry' : 'retain-on-failure'),
     video: 'off',
     screenshot: 'only-on-failure'
   },
@@ -90,7 +92,11 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         viewport: { width: 1200, height: 760 },
         ...(GPU_LAUNCH.channel ? { channel: GPU_LAUNCH.channel } : {}),
-        launchOptions: { args: GPU_LAUNCH.args }
+        launchOptions: {
+          args: GPU_LAUNCH.args,
+          // A system Chromium where Playwright's own can't run (docs/testing.md).
+          ...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH } : {})
+        }
       }
     }
   ],

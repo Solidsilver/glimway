@@ -395,6 +395,22 @@ export declare type ItemsView = Message<"glimway.v1.ItemsView"> & {
    * @generated from field: repeated glimway.v1.Thanks thanks = 6;
    */
   thanks: Thanks[];
+
+  /**
+   * The home pieces in the pack (a way-lamp, a stool), deed or no deed:
+   * what can be set as a camp, a communal post or a piece at a camp.
+   *
+   * @generated from field: repeated glimway.v1.HomeInstance carried = 7;
+   */
+  carried: HomeInstance[];
+
+  /**
+   * Plants in the pack, lifted whole (from Pell's crate or with the trowel),
+   * their planting kept: each can be planted again wherever its seed could be.
+   *
+   * @generated from field: repeated glimway.v1.CarriedPlant plants = 8;
+   */
+  plants: CarriedPlant[];
 };
 
 export declare type ItemsViewValid = ItemsView;
@@ -404,6 +420,37 @@ export declare type ItemsViewValid = ItemsView;
  * Use `create(ItemsViewSchema)` to create a new message.
  */
 export declare const ItemsViewSchema: GenMessage<ItemsView, {validType: ItemsViewValid}>;
+
+/**
+ * A carried plant (lamps.md 2.7): its id (kept from its planting), its seed
+ * and when it was first planted (its growth).
+ *
+ * @generated from message glimway.v1.CarriedPlant
+ */
+export declare type CarriedPlant = Message<"glimway.v1.CarriedPlant"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string item_def = 2;
+   */
+  itemDef: string;
+
+  /**
+   * @generated from field: double planted_at = 3;
+   */
+  plantedAt: number;
+};
+
+export declare type CarriedPlantValid = CarriedPlant;
+
+/**
+ * Describes the message glimway.v1.CarriedPlant.
+ * Use `create(CarriedPlantSchema)` to create a new message.
+ */
+export declare const CarriedPlantSchema: GenMessage<CarriedPlant, {validType: CarriedPlantValid}>;
 
 /**
  * A homestead member (everyone on a deed is equal).
@@ -762,6 +809,11 @@ export declare type HomeView = Message<"glimway.v1.HomeView"> & {
    * @generated from field: repeated glimway.v1.YardPet yard_pets = 19;
    */
   yardPets: YardPet[];
+
+  /**
+   * @generated from field: glimway.v1.LotLanternView lantern = 20;
+   */
+  lantern?: LotLanternView | undefined;
 };
 
 export declare type HomeViewValid = HomeView;
@@ -771,4 +823,36 @@ export declare type HomeViewValid = HomeView;
  * Use `create(HomeViewSchema)` to create a new message.
  */
 export declare const HomeViewSchema: GenMessage<HomeView, {validType: HomeViewValid}>;
+
+/**
+ * A lot's lantern (roadmap 0.12): lit while it holds the backland chunk
+ * behind the lot; oil is the wicks left in its store; dimming, out of oil
+ * with one wick of warning before it goes dark at the next turning.
+ *
+ * @generated from message glimway.v1.LotLanternView
+ */
+export declare type LotLanternView = Message<"glimway.v1.LotLanternView"> & {
+  /**
+   * @generated from field: bool lit = 1;
+   */
+  lit: boolean;
+
+  /**
+   * @generated from field: int32 oil = 2;
+   */
+  oil: number;
+
+  /**
+   * @generated from field: bool dimming = 3;
+   */
+  dimming: boolean;
+};
+
+export declare type LotLanternViewValid = LotLanternView;
+
+/**
+ * Describes the message glimway.v1.LotLanternView.
+ * Use `create(LotLanternViewSchema)` to create a new message.
+ */
+export declare const LotLanternViewSchema: GenMessage<LotLanternView, {validType: LotLanternViewValid}>;
 

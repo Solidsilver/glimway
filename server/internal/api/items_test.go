@@ -52,6 +52,10 @@ type itemsResponse struct {
 		} `json:"bought"`
 		// give: the glims handed over (3.4).
 		GlimsGiven int `json:"glimsGiven"`
+		// tap and refine: the Wick Tree's sap (lamps.md 2.5).
+		Tapped   *stackView `json:"tapped"`
+		FirstTap bool       `json:"firstTap"`
+		Refined  *stackView `json:"refined"`
 	} `json:"result"`
 	Error struct {
 		Code string `json:"code"`

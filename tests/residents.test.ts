@@ -132,7 +132,7 @@ test('Elara’s line follows the calendar: the wick, the Mark, the day before a 
   assert.match(say(on(1, 3)), /^Mud-wick, Mudrise/);
   assert.match(say(on(4, 2)), /^Light-wick, the Green Hush/);
   assert.match(say(on(7, 2)), /^Sap-wick, Amberfall/);
-  assert.match(say(on(10, 2)), /^Smoke-wick\. The White Quiet/);
+  assert.match(say(on(10, 2)), /^Smoke-wick\. The Quiet/);
   // The last day of a wick: she has posted the Turning.
   assert.equal(on(8, 7)!.notice, 'Dark of Amber-wick — the outer Wilds will turn.');
   assert.match(say(on(8, 7)), /^Dark of Amber-wick tomorrow: the outer Wilds turn\. I’ve posted it\./);

@@ -960,6 +960,54 @@
   "offHand": false
  },
  {
+  "id": "wick-sap",
+  "instanced": false,
+  "stackable": true,
+  "assetKind": "material",
+  "atZero": "never",
+  "slots": 0,
+  "maxPoints": 0,
+  "giveable": true,
+  "usableNow": false,
+  "offHand": false
+ },
+ {
+  "id": "homing-turncap",
+  "instanced": false,
+  "stackable": true,
+  "assetKind": "item",
+  "atZero": "never",
+  "slots": 0,
+  "maxPoints": 0,
+  "giveable": true,
+  "usableNow": false,
+  "offHand": false
+ },
+ {
+  "id": "lamp-ash-pouch",
+  "instanced": false,
+  "stackable": true,
+  "assetKind": "item",
+  "atZero": "never",
+  "slots": 0,
+  "maxPoints": 0,
+  "giveable": true,
+  "usableNow": false,
+  "offHand": false
+ },
+ {
+  "id": "lamp-ash",
+  "instanced": false,
+  "stackable": true,
+  "assetKind": "material",
+  "atZero": "never",
+  "slots": 0,
+  "maxPoints": 0,
+  "giveable": true,
+  "usableNow": false,
+  "offHand": false
+ },
+ {
   "id": "storm-oil",
   "instanced": false,
   "stackable": true,
@@ -985,6 +1033,18 @@
  },
  {
   "id": "lantern-post",
+  "instanced": false,
+  "stackable": false,
+  "assetKind": "decoration",
+  "atZero": "never",
+  "slots": 0,
+  "maxPoints": 0,
+  "giveable": true,
+  "usableNow": false,
+  "offHand": false
+ },
+ {
+  "id": "way-lamp",
   "instanced": false,
   "stackable": false,
   "assetKind": "decoration",
@@ -1296,6 +1356,30 @@
   "offHand": false
  },
  {
+  "id": "recipe-homing-turncap",
+  "instanced": false,
+  "stackable": true,
+  "assetKind": "item",
+  "atZero": "never",
+  "slots": 0,
+  "maxPoints": 0,
+  "giveable": true,
+  "usableNow": false,
+  "offHand": false
+ },
+ {
+  "id": "recipe-lamp-ash-pouch",
+  "instanced": false,
+  "stackable": true,
+  "assetKind": "item",
+  "atZero": "never",
+  "slots": 0,
+  "maxPoints": 0,
+  "giveable": true,
+  "usableNow": false,
+  "offHand": false
+ },
+ {
   "id": "water",
   "instanced": false,
   "stackable": true,
@@ -1351,6 +1435,18 @@
   "atZero": "never",
   "slots": 0,
   "maxPoints": 0,
+  "giveable": true,
+  "usableNow": false,
+  "offHand": false
+ },
+ {
+  "id": "bench-trowel",
+  "instanced": true,
+  "stackable": false,
+  "assetKind": "instance",
+  "atZero": "breaks",
+  "slots": 1,
+  "maxPoints": 90,
   "giveable": true,
   "usableNow": false,
   "offHand": false

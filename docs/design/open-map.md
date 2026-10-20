@@ -65,9 +65,12 @@ never call a running instance "official".
     walled off (every route has its ford, later every cliff its pass). Because the 0.8 frontier
     is shorter than the cap, 0.8 also leans the Wend and its meadow into the first ring past the
     Whitequiet.
-18. **Everything in the Beyond turns at the wick,** the lie of the land included: which land is
+18. ~~**Everything in the Beyond turns at the wick,** the lie of the land included: which land is
     where, the Wend's course, the places and routes. Only the Lantern Road and the fixed story
-    sites stay put.
+    sites stay put.~~ **Overturned 2026-10-17 (owner): the shape of the land lasts.** Lakes,
+    rivers and ridges keep their course across turnings; the living detail (trees, forage,
+    creatures, places and unheld paths) still turns. In the generator the landform passes hash
+    the world seed without the season. Planned for 0.12 ([../roadmap.md](../roadmap.md)).
 
 Then, on the owner's ask for a more fun open map (2026-10-10), all five proposals taken:
 

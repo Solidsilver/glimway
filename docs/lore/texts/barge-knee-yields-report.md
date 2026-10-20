@@ -4,9 +4,9 @@
 **Date:** Written 60 years ago.
 **Location Found:** A bureaucratic filing cabinet in Tarrow-on-the-Reed. 
 
-**Report to the Magistrates regarding Quercus ferrum (Iron-Oak):**
+**Report to the Magistrates regarding Quercus ferrum (iron-oak):**
 
-We have completed our survey of the Brackenwood sector. The density of the Iron-Oak harvested this season remains exceptional, though the biological mechanism behind its growth continues to baffle our arborists. 
+We have completed our survey of the Brackenwood sector. The density of the iron-oak harvested this season remains exceptional, though the biological mechanism behind its growth continues to baffle our arborists. 
 
 Unlike standard oak, which requires nutrient-rich soil and ample sunlight to produce tight growth rings, *Quercus ferrum* exhibits its tightest, most impenetrable ring clusters in the most barren, heavily trafficked regions of the Wilds. 
 

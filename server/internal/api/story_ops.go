@@ -206,6 +206,18 @@ func (a *Server) fall(w http.ResponseWriter, r *http.Request) error {
 			if a.Config.Epochs != nil && a.Config.Lanterns != nil {
 				tx0, ty0 := wildsTileOf(req.Where.X, req.Where.Y)
 				epoch, e := a.Config.Epochs.Current(ctx, tx, s.WorldID, wilds.EpochKindAt(wilds.ChunkOf(tx0, ty0)), now)
+				if e == nil || errors.Is(e, sql.ErrNoRows) || errors.Is(e, chunks.ErrEpochEnded) {
+					// A held chunk's ground is its pinned epoch's: the lantern goes
+					// there, also in the gap at the turning before the next wick is made.
+					cx, cy := wilds.ChunkOf(tx0, ty0)
+					held, he := store.HeldEpoch(ctx, tx, s.WorldID, cx, cy)
+					if he != nil {
+						return nil, he
+					}
+					if held != nil {
+						epoch, e = held, nil
+					}
+				}
 				if e == nil {
 					g, e := a.Config.Lanterns.PlaceFallen(ctx, tx, s, epoch, req.Where, now)
 					if errors.Is(e, chunks.ErrUnavailable) || errors.Is(e, store.ErrGeneratorUnavailable) {

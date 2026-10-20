@@ -78,6 +78,8 @@ lot_jobs=[
  ("wildgate-arch",(3,2),(160,192),(2,1),"edge-prop")]
 for key,cell,canvas,foot,role in lot_jobs:
     job(key,"lot-pieces-source","generated-lot-animated.png",(4,3),cell,canvas,foot,role)
+job("lantern-stake-2","lantern-stake-dim-source","generated-lantern-stake-dim.png",
+    (1,1),(0,0),(64,96),(1,1),"lot-prop")
 
 # Shop signs, stacked goods, cart, trough, haystack, scarecrow.
 town_jobs=[
@@ -144,6 +146,7 @@ SOURCES = [
  {"key":"spring-stones-round3-source","file":"sheets/generated-spring-stones-round3.png"},
  {"key":"living-portal-source","file":"sheets/generated-living-portal.png"},
  {"key":"garden-set-source","file":"sheets/generated-garden-set.png"},
+ {"key":"lantern-stake-dim-source","file":"sheets/generated-lantern-stake-dim.png"},
 ]
 
 def clean_alpha(im: Image.Image) -> Image.Image:

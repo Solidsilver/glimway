@@ -175,7 +175,7 @@ message ItemDef {
   optional int32 uses = 9 [(buf.validate.field).int32 = {gte: 0, lte: 10000}];
   optional string at_zero = 10 [(buf.validate.field).string = {in: ["", "breaks", "blunt", "cracked"]}];
   optional int32 slots = 11 [(buf.validate.field).int32 = {gte: 0, lte: 6}];
-  repeated string actions = 12 [(buf.validate.field).repeated.items.string = {in: ["chop", "break", "dig", "draw", "water", "trim", "mark", "fish"]}];
+  repeated string actions = 12 [(buf.validate.field).repeated.items.string = {in: ["chop", "break", "dig", "draw", "water", "trim", "mark", "fish", "uproot"]}];
   ItemRepair repair = 13;
   string fitting = 14;
   repeated UseEffect use = 15;
@@ -211,7 +211,12 @@ message UseEffect {
     message: "restoring needs an amount"
     expression: "!(this.type in [\"restore-hp\", \"restore-mana\"]) || this.amount >= 1"
   };
-  string type = 1 [(buf.validate.field).string = {in: ["restore-hp", "restore-mana", "clear-unmoored", "ease-unmoored", "wisps-forget", "refill-lantern", "light-post"]}];
+  option (buf.validate.message).cel = {
+    id: "use_effect.travel"
+    message: "a way home names its pause, and the turncap the anchor it returns to"
+    expression: "!(this.type in [\"travel-home\", \"travel-lamp\"]) || (this.seconds >= 1 && this.seconds <= 10 && (this.type != \"travel-home\" || this.target != \"\"))"
+  };
+  string type = 1 [(buf.validate.field).string = {in: ["restore-hp", "restore-mana", "clear-unmoored", "ease-unmoored", "wisps-forget", "refill-lantern", "light-post", "travel-home", "travel-lamp"]}];
   optional int32 amount = 2 [(buf.validate.field).int32 = {gte: 0, lte: 1000}];
   optional int32 seconds = 3 [(buf.validate.field).int32 = {gte: 0, lte: 86400}];
   optional string target = 4 [(buf.validate.field).string.max_len = 100];

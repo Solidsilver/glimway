@@ -8,6 +8,7 @@
   import type { Asset, ChestId } from '../lib/api/types'
   import { HOMESTEAD_DATA } from '../lib/homestead'
   import { itemName } from '../lib/items'
+  import { LOCKED_RECIPE } from '../content/crafting'
   import { actionRunner, busVersion } from './panel-state.svelte'
   import { home } from './home.svelte'
   import Panel from './Panel.svelte'
@@ -87,6 +88,9 @@
     ]
     return { rows, tools, carried: { ...(inv?.items ?? {}), ...(inv?.materials ?? {}) }, ownUnits }
   })
+
+  /** A found recipe is locked until its page is carried (as at the hearth). */
+  const known = (page?: string): boolean => !page || (view.carried[page] ?? 0) > 0
 
   async function moveInstance(direction: 'deposit' | 'withdraw', id: string, instance: string): Promise<void> {
     await action.run(`${direction}:instance:${instance}`, () => village.move(direction, { kind: 'instance', id, qty: 1, instance }, chest), () =>
@@ -194,26 +198,35 @@
       {#each RECIPES as r (r.id)}
         {@const can = batchesAffordable(r, view.carried)}
         {@const n = effectiveBatches(batches[r.id], can)}
-        <li class="recipe" class:can={can > 0} data-recipe={r.id}>
+        {@const learned = known(r.page)}
+        <li class="recipe" class:can={can > 0 && learned} class:locked={!learned} data-recipe={r.id}>
           <span class="thumb" aria-hidden="true">
             {#if r.output.kind === 'decoration' && home.thumbs[r.output.id]}<img src={home.thumbs[r.output.id]} alt="" />{:else}<ArtIcon art={`icon-${r.output.id}`} name="sparkle" size={32} />{/if}
           </span>
           <span class="txt">
             <span class="name">{r.name}</span>
-            <span class="cost">{costPhrase(recipeCost(r, n))}{n > 1 ? ` for ${n}` : ''}</span>
-            <span class="can">{can > 0 ? `You can make ${can}` : 'Not enough materials'}</span>
+            {#if learned}
+              <span class="cost">{costPhrase(recipeCost(r, n))}{n > 1 ? ` for ${n}` : ''}</span>
+              <span class="can">{can > 0 ? `You can make ${can}` : 'Not enough materials'}</span>
+            {:else}
+              <span class="can">{LOCKED_RECIPE.line(r.found)}</span>
+            {/if}
           </span>
           <span class="go">
-            {#if can > 1}
+            {#if !learned}
+              <span class="locked-tag" data-testid="locked">{LOCKED_RECIPE.tag}</span>
+            {:else if can > 1}
               <span class="batch">
                 <button type="button" class="tiny" aria-label="Fewer" disabled={n <= 1} onclick={() => (batches = { ...batches, [r.id]: n - 1 })}>−</button>
                 <span class="bn">{n}</span>
                 <button type="button" class="tiny" aria-label="More" disabled={n >= can} onclick={() => (batches = { ...batches, [r.id]: n + 1 })}>+</button>
               </span>
             {/if}
-            <button type="button" class="small" class:primary={can > 0} data-craft={r.id} disabled={action.busy !== null || can <= 0} onclick={() => craft(r.id)}>
-              {action.busy === `craft:${r.id}` ? 'Making…' : 'Make'}
-            </button>
+            {#if learned}
+              <button type="button" class="small" class:primary={can > 0} data-craft={r.id} disabled={action.busy !== null || can <= 0} onclick={() => craft(r.id)}>
+                {action.busy === `craft:${r.id}` ? 'Making…' : 'Make'}
+              </button>
+            {/if}
           </span>
         </li>
       {/each}
@@ -309,6 +322,18 @@
   .recipe.can {
     opacity: 1;
     background: rgba(255, 255, 255, 0.32);
+  }
+  .recipe.locked {
+    opacity: 0.62;
+    border-style: dashed;
+  }
+  .locked-tag {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--text-soft);
+    border: 2px dashed var(--paper-line);
+    border-radius: 8px;
+    padding: 3px 8px;
   }
   .thumb {
     flex: none;

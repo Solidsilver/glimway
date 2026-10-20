@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fromJson, toBinary, type JsonValue } from '@bufbuild/protobuf';
 import { decodeChunk } from '../src/lib/api/chunks.ts';
+import { validateNear } from '../src/lib/api/near.ts';
 import { FakeOperations } from '../src/lib/api/operations.ts';
 import { WorldChunkSchema, WildsNearResultSchema } from '../src/lib/gen/glimway/v1/wilds_pb.js';
 import { TERRAIN } from '../src/lib/tile.ts';
@@ -10,7 +11,8 @@ import { epochKindAt } from '../src/lib/wilds/coords.ts';
 import { sourceOf } from '../src/lib/location.ts';
 import { DECOR_ART } from '../src/game/wilds/decor.ts';
 import { cachedTerrain, forgetChunks, loadChunk, pruneChunks } from '../src/game/wilds/chunks.ts';
-import { applyClaim, applyEchoSettled, applyLanterns, applyNear, chunkEpoch, chunkThings, groundChanges, isClaimed, readMark, refreshNear, resetWilds, takeReadRequest, wildsEpoch, wildsFrontier, wildsLive, wildsStale, wildsView } from '../src/game/wilds/store.ts';
+import { effectiveTerrain } from '../src/game/wilds/terrain.ts';
+import { applyClaim, applyDiscovery, applyEchoSettled, applyLanterns, applyNear, chunkEpoch, chunkHeld, knownPlaces, chunkThings, groundChanges, isClaimed, readMark, refreshNear, resetWilds, takeReadRequest, wildsEpoch, wildsFrontier, wildsLive, wildsStale, wildsView } from '../src/game/wilds/store.ts';
 import { bus, EV } from '../src/game/events.ts';
 import type { Session } from '../src/game/session.ts';
 import { chunkAt, fixtureChunk, fixtureTerrain } from './wilds-fixture.ts';
@@ -217,6 +219,64 @@ test('a read replaces only its own window: states, claims and changes elsewhere 
   assert.deepEqual(wildsView()!.glimpse.get('-5,-4'), { land: 'meadow', river: true }, 'what was glimpsed stays');
 });
 
+/** The near fixture with its centre chunk held in an older wick (roadmap 0.12): listed as held, its ground and state under that epoch. */
+function heldNear(j: Record<string, any>): void {
+  j.held = [{ ...j.wick, id: 'held-wick', season: 't:1791100000:1791300000', startsAt: 1791100000, endsAt: 1791300000 }];
+  for (const c of j.chunks) if (c.chunk.cx === CENTER.cx && c.chunk.cy === CENTER.cy) Object.assign(c, { source: 'held', epoch: 'held-wick' });
+  for (const g of j.ground) g.epoch = 'held-wick';
+  for (const e of j.entities) e.epoch = 'held-wick';
+  j.discoveries.push({ ...j.discoveries[0], entityId: 'place:0:-1', epoch: 'held-wick' });
+}
+
+test('a held chunk keeps its pinned wick: its body, ground and states come under that epoch', async () => {
+  forgetChunks();
+  resetWilds();
+  const ops = new FakeOperations();
+  const session = fakeSession(ops);
+  ops.responses.set(`/api/wilds/near/${CENTER.cx}/${CENTER.cy}`, [nearAt(CENTER.cx, CENTER.cy, heldNear)]);
+  serveWindow(ops, CENTER.cx, CENTER.cy);
+  const body = chunkAt('whitequiet-0-4', CENTER.cx, CENTER.cy);
+  body.epochId = 'held-wick';
+  body.places = [{ $typeName: 'glimway.v1.WildsPlaceMark', id: 'place:0:-1', kind: 'ruin', tx: 5, ty: 6 }];
+  Object.assign(body.entities[0]!, { id: `node:${CENTER.cx}:${CENTER.cy}:0`, kind: 'node', material: 'stone', enemies: [], tier: 0, poi: '' });
+  ops.responses.set(`/api/wilds/chunk/held-wick/0/${CENTER.cx}/${CENTER.cy}`, [toBinary(WorldChunkSchema, body)]);
+  assert.equal(await refreshNear(session, CENTER.cx, CENTER.cy), true);
+  assert.equal(chunkEpoch(CENTER.cx, CENTER.cy)!.id, 'held-wick');
+  assert.equal(chunkEpoch(CENTER.cx, CENTER.cy)!.kind, 'wick');
+  assert.equal(chunkEpoch(CENTER.cx + 1, CENTER.cy)!.id, NEAR.wick.id, 'its neighbours are this wick’s');
+  assert.ok(chunkHeld(CENTER.cx, CENTER.cy) && !chunkHeld(CENTER.cx + 1, CENTER.cy));
+  assert.equal(wildsEpoch('wick').id, NEAR.wick.id, 'a hold doesn’t turn the wick');
+  const fetched = ops.calls.filter((c) => c.path.startsWith('/api/wilds/chunk/')).map((c) => c.path);
+  assert.ok(fetched.includes(`/api/wilds/chunk/held-wick/0/${CENTER.cx}/${CENTER.cy}`));
+  assert.ok(!fetched.includes(`/api/wilds/chunk/${NEAR.wick.id}/0/${CENTER.cx}/${CENTER.cy}`), 'never fetched in this wick');
+  assert.equal(groundChanges(CENTER.cx, CENTER.cy).length, 2);
+  assert.equal(chunkThings(CENTER.cx, CENTER.cy).find((e) => e.id === `node:${CENTER.cx}:${CENTER.cy}:0`)!.state, 'harvested');
+  // Its place is the held wick's: keyed by that epoch, apart from this wick's place of the same cell.
+  assert.ok(knownPlaces().some((p) => p.id === 'place:0:-1@held-wick'));
+  assert.equal(wildsView()!.discoveries.get('place:0:-1@held-wick')?.displayName, 'Fixture');
+  assert.equal(wildsView()!.discoveries.has('place:0:-1'), false);
+  assert.equal(applyDiscovery({ entityId: 'place:0:-1', poiId: 'ruin', discovererId: 'me', displayName: 'Me' }, 'held-wick'), true);
+  assert.equal(wildsView()!.discoveries.get('place:0:-1@held-wick')?.displayName, 'Me');
+  assert.equal(applyDiscovery({ entityId: 'place:0:-1', poiId: 'ruin', discovererId: 'me', displayName: 'Me' }, 'some-other-wick'), false);
+  // Released and turned: a later read names it generated again.
+  ops.responses.set(`/api/wilds/near/${CENTER.cx}/${CENTER.cy}`, [nearAt(CENTER.cx, CENTER.cy, (j) => (j.ground = []))]);
+  assert.equal(await refreshNear(session, CENTER.cx, CENTER.cy, 0), true);
+  assert.equal(chunkEpoch(CENTER.cx, CENTER.cy)!.id, NEAR.wick.id);
+});
+
+test('the near read refuses a held chunk under an epoch it doesn’t name', () => {
+  assert.doesNotThrow(() => validateNear(fromJson(WildsNearResultSchema, nearAt(CENTER.cx, CENTER.cy, heldNear)), CENTER.cx, CENTER.cy));
+  for (const edit of [
+    (j: Record<string, any>) => (j.held = []),
+    (j: Record<string, any>) => (j.held[0].kind = 'still'),
+    (j: Record<string, any>) => (j.held[0].id = j.wick.id),
+    (j: Record<string, any>) => j.held.push({ ...j.held[0] }),
+    (j: Record<string, any>) => (j.ground[0].epoch = j.wick.id),
+  ]) {
+    assert.throws(() => validateNear(fromJson(WildsNearResultSchema, nearAt(CENTER.cx, CENTER.cy, (j) => (heldNear(j), edit(j)))), CENTER.cx, CENTER.cy));
+  }
+});
+
 test('a read in another wick is the turning: the view starts over and the scene is told', async () => {
   forgetChunks();
   resetWilds();
@@ -250,6 +310,41 @@ test('a read in another wick is the turning: the view starts over and the scene 
   } finally {
     bus.off(EV.turning, on);
   }
+});
+
+test('a Common path carried through the turning draws on the new wick’s land, its way with it', async () => {
+  forgetChunks();
+  resetWilds();
+  const ops = new FakeOperations();
+  const session = fakeSession(ops);
+  ops.responses.set(`/api/wilds/near/${CENTER.cx}/${CENTER.cy}`, [nearAt(CENTER.cx, CENTER.cy)]);
+  serveWindow(ops, CENTER.cx, CENTER.cy);
+  await refreshNear(session, CENTER.cx, CENTER.cy);
+  // The server carried the visited chunk's stone onto the next wick (bare
+  // clearing stays Wild) and found the way again over it.
+  ops.responses.set(`/api/wilds/near/${CENTER.cx}/${CENTER.cy}`, [nearAt(CENTER.cx, CENTER.cy, (j) => {
+    j.wick = { ...j.wick, id: 'wick-epoch-2', startsAt: j.wick.endsAt, endsAt: j.wick.endsAt + 604800, season: `t:${j.wick.endsAt}:${j.wick.endsAt + 604800}` };
+    for (const c of j.chunks) c.epoch = 'wick-epoch-2';
+    for (const g of j.ground) Object.assign(g, { epoch: 'wick-epoch-2', changes: { changes: g.changes.changes.filter((c: { change: string }) => c.change !== 'cleared') } });
+    for (const w of j.ways) w.epoch = 'wick-epoch-2';
+    Object.assign(j, { entities: [], personalClaims: [], discoveries: [] });
+  })]);
+  serveWindow(ops, CENTER.cx, CENTER.cy, 'wick-epoch-2');
+  assert.equal(await refreshNear(session, CENTER.cx, CENTER.cy), true);
+  assert.equal(chunkEpoch(-2, -4)!.id, 'wick-epoch-2');
+  assert.deepEqual(groundChanges(-2, -4).map((c) => [c.tx, c.ty, c.change]), [[4, 4, 'stone']]);
+  assert.equal(wildsView()!.ways.get('way:place:0:-2:place:1:-1')?.name, "Fixture's way");
+  // The new wick's detail grew a blocking piece on the path's tile: the path
+  // clears it and is walked on stone.
+  const base = cachedTerrain('wick-epoch-2', -2, -4)!;
+  const piece = base.decor.find((d) => DECOR_ART[d.kind].blocking)!;
+  const solid = base.solid.map((row) => [...row]);
+  solid[piece.ty]![piece.tx] = true;
+  const grown = { ...base, solid };
+  const drawn = effectiveTerrain(grown, [{ tx: piece.tx, ty: piece.ty, change: 'stone' }]);
+  assert.equal(drawn.solid[piece.ty]![piece.tx], false);
+  assert.notEqual(drawn.ground[piece.ty]![piece.tx], base.ground[piece.ty]![piece.tx], 'laid stone shows');
+  assert.ok(!drawn.decor.some((d) => d.tx === piece.tx && d.ty === piece.ty && DECOR_ART[d.kind].blocking), 'the regrown piece is cleared');
 });
 
 // ------------------------------------------------------------ late reads (step-back review F1, F3)
@@ -415,6 +510,7 @@ test('an old wick’s answer after the new wick can’t turn the land back', asy
     j.ground = [];
     j.ways = [];
     j.materials = { stone: 2 };
+    for (const d of j.discoveries) d.epoch = j.wick.id;
   };
   serveWindow(ops, CENTER.cx + 1, CENTER.cy, 'wick-epoch-2');
   serveWindow(ops, CENTER.cx, CENTER.cy, 'wick-epoch-2');

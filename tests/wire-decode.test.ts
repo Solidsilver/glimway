@@ -4,7 +4,7 @@ import { parseWorld, parseWorldChoice } from '../src/lib/api/world.ts';
 import { parseHome, parseShelf } from '../src/lib/api/homestead.ts';
 import { parseItems, parseItemsAction } from '../src/lib/api/items.ts';
 import { parseMail, parseCraft } from '../src/lib/api/village.ts';
-import type { JsonValue } from '@bufbuild/protobuf';
+import type { DescFile, DescMessage, JsonValue } from '@bufbuild/protobuf';
 
 /**
  * The migrated response parsers decode through the strict wire decoder
@@ -52,6 +52,8 @@ const itemsView = {
   offHand: { open: false, class: null, itemDef: null, instance: null },
   pickedUp: [],
   thanks: [],
+  carried: [{ id: 'lamp', itemDef: 'way-lamp', scene: null, x: null, y: null, rotation: null, name: null, stalls: null }],
+  plants: [],
 };
 const itemsResult = {
   items: itemsView,
@@ -70,6 +72,9 @@ const itemsResult = {
   adaOilCount: 0,
   glimsGiven: 0,
   bought: null,
+  tapped: null,
+  firstTap: false,
+  refined: null,
 };
 const workshopView = { home: null, inventory: { materials: {}, items: {}, decorations: {}, instances: [] }, storage: null, personal: { materials: {}, items: {}, decorations: {}, instances: [] }, shared: 'not-a-member' };
 const mailView = {
@@ -118,6 +123,7 @@ test('bad counts are refused', () => {
 test('malformed homestead, items, mail and craft answers are refused', () => {
   assert.throws(() => parseHome(deep(snapshot, { gate: 3, landSeed: 0, home: { id: '', gate: 3, worldId: 'w', tier: 1, members: [], member: false, desolate: false, landSeed: 0, cleared: [], postsBought: 0, nextPost: {}, indoor: null, items: [], stumps: [], plants: [] }, materials: {} })), 'empty home id');
   assert.throws(() => parseItems(deep(snapshot, { result: { ...itemsResult, items: { ...itemsView, instances: [{ ...itemsView.instances[0], item_def: 'bench-axe' }] } } })), 'nested alias in an instance');
+  assert.throws(() => parseItems(deep(snapshot, { result: { ...itemsResult, items: { ...itemsView, carried: [{ ...itemsView.carried[0], id: '' }] } } })), 'carried piece without an id');
   assert.throws(() => parseItemsAction(deep(snapshot, { result: { ...itemsResult, wear: { broke: false, woreOut: false, state: 'whole', wornOut: [], returned: [], itemDef: 'x', usesLeft: '3', condition: 0, instance: null, makerId: '' } } })), 'numeric string wear');
   assert.throws(() => parseCraft(deep(snapshot, { hearthCraft: null, craft: { ...workshopView, recipeId: 'plank', output: { kind: 'item', id: 'plank', qty: 1, instance: '', maker: 'Infinity' } } })), 'non-finite maker');
   assert.throws(() => parseMail(deep(snapshot, { mail: [{ ...mailView, sentAt: '100' }] })), 'numeric string sentAt');
@@ -146,6 +152,8 @@ test('unknown future fields are tolerated, wherever they sit', () => {
   assert.equal(s.shelf.gate, 3);
   const i = parseItems(deep(snapshot, { result: deep(itemsResult, next) as Record<string, unknown> }));
   assert.equal(i.items.stacks[0]!.qty, 5);
+  // The pack's home pieces, deed or no deed (review B6).
+  assert.deepEqual(i.items.carried, [{ id: 'lamp', itemDef: 'way-lamp' }]);
 });
 
 test('the world choice answers through the same decoder', () => {
@@ -153,4 +161,24 @@ test('the world choice answers through the same decoder', () => {
   assert.equal(parseWorldChoice({ worldChoice: choice })?.partyCanOpen, true);
   assert.throws(() => parseWorldChoice({ worldChoice: { ...choice, party_can_open: true } }), 'alias refused');
   assert.throws(() => parseWorldChoice({ worldChoice: { ...choice, habiticaId: undefined } }), 'missing field');
+});
+
+test('the v1 contract has no 64-bit integers: the server spells them as strings, which the decoder refuses', async () => {
+  const { readdirSync } = await import('node:fs');
+  const { ScalarType } = await import('@bufbuild/protobuf');
+  const wide = new Set([ScalarType.INT64, ScalarType.UINT64, ScalarType.SINT64, ScalarType.FIXED64, ScalarType.SFIXED64]);
+  const found: string[] = [];
+  const walk = (m: DescMessage) => {
+    for (const f of m.fields) {
+      const scalar = f.fieldKind === 'scalar' ? f.scalar : f.fieldKind === 'list' && f.listKind === 'scalar' ? f.scalar : f.fieldKind === 'map' && f.mapKind === 'scalar' ? f.scalar : undefined;
+      if (scalar !== undefined && wide.has(scalar)) found.push(`${m.typeName}.${f.name}`);
+    }
+    m.nestedMessages.forEach(walk);
+  };
+  const dir = new URL('../src/lib/gen/glimway/v1/', import.meta.url);
+  for (const name of readdirSync(dir).filter((n) => n.endsWith('_pb.js'))) {
+    const mod = await import(new URL(name, dir).href) as Record<string, unknown>;
+    for (const v of Object.values(mod)) if ((v as DescFile)?.kind === 'file') (v as DescFile).messages.forEach(walk);
+  }
+  assert.deepEqual(found, []);
 });

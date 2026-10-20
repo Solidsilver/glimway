@@ -173,7 +173,7 @@ export const GATHER_OF: Partial<Record<DecorKind, { target: string; label: strin
   'iron-oak': { target: 'iron-oak', label: 'Chop the iron-oak' },
   snag: { target: 'willow', label: 'Chop the willow snag' },
   boulder: { target: 'boulder', label: 'Break the boulder' },
-  cairn: { target: 'lamp-stone', label: 'Break the old lamp-stone' },
+  cairn: { target: 'lamp-stone', label: 'Break the old lamp stone' },
   stump: { target: 'stump', label: 'Dig the stump' },
   'ring-stump': { target: 'stump', label: 'Dig the stump' },
   turncaps: { target: 'stump', label: 'Dig the turncaps' },

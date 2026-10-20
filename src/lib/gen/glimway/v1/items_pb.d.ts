@@ -114,14 +114,17 @@ export declare type BoughtValid = Bought;
 export declare const BoughtSchema: GenMessage<Bought, {validType: BoughtValid}>;
 
 /**
- * One request message for all fourteen item mutations, mirroring the
+ * One request message for all seventeen item mutations, mirroring the
  * retired hand-written itemRequest: every op's fields are optional and empty
  * means unset (the op name comes from the URL path). Deliberate; don't copy
  * the grab-bag into new routes without saying why — the per-op result
  * messages in state.proto's Envelope oneof are the pattern to grow into.
  *
  * POST /api/items/{use,repair,fit,unfit,give,pocket,offhand,pickup,return,
- * heirloom,ada-oil,gather,plant,buy}. Tile is [x, y] (a home land tile), a
+ * heirloom,ada-oil,gather,plant,uproot,buy,tap,refine}; uproot digs up a home
+ * plant (target: its id) with a trowel. Tap and refine (the Wick Tree's
+ * sap, lamps.md 2.5) joined buy here as one more pack change at a
+ * spot, with no fields of their own. Tile is [x, y] (a home land tile), a
  * repeated-int32 pair on purpose: the gather stump proof matches stored
  * payloads with json_extract(payload_json,'$.tile[0]') (gathering.go), which
  * a {"x":…,"y":…} object would break, and the client's request building is
@@ -330,6 +333,26 @@ export declare type ItemsResult = Message<"glimway.v1.ItemsResult"> & {
    * @generated from field: int32 glims_given = 17;
    */
   glimsGiven: number;
+
+  /**
+   * tap: the Wick Tree's sap for this wick; first_tap on a player's first
+   * ever (lamps.md 2.5).
+   *
+   * @generated from field: glimway.v1.Stack tapped = 18;
+   */
+  tapped?: Stack | undefined;
+
+  /**
+   * @generated from field: bool first_tap = 19;
+   */
+  firstTap: boolean;
+
+  /**
+   * refine: the oil the chandler made from sap, free.
+   *
+   * @generated from field: glimway.v1.Stack refined = 20;
+   */
+  refined?: Stack | undefined;
 };
 
 export declare type ItemsResultValid = ItemsResult;

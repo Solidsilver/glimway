@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
 import { devices, type BrowserContext } from '@playwright/test'
-import { accountOf, calendarOnServer, pinWorld, sql, wickSlack, CONTRACT } from './connected'
+import { accountOf, calendarOnServer, moveServerClock, pinWorld, sql, wickSlack, CONTRACT } from './connected'
 import { freshPlayer, fund, giveInstance } from './home-helpers'
 import { loadWilds } from '../src/lib/wilds/data'
 import { diagnose, dialogueState, expectTarget, expectToast, parkCreatures, pressOn, readDialogue, steady, targetNow, waitForLive, waitForWilds, warp, wilds, windowWhole } from './helpers'
@@ -79,7 +79,7 @@ async function stepTo(page: Page, tx: number, ty: number): Promise<void> {
   await page.evaluate(([x, y]) => (window as unknown as Hooks).__fsDevWalk([{ x: x * 16 + 8, y: y * 16 + 10 }]), [tx, ty] as const)
   await expect.poll(() => page.evaluate(() => (window as unknown as Hooks).__fsDevWalking()), { timeout: 10_000 }).toBe(false)
   const p = await page.evaluate(() => (window as unknown as Hooks).__fsPlayer())
-  expect([Math.floor(p.x / 16), Math.floor(p.y / 16)]).toEqual([tx, ty])
+  if (Math.floor(p.x / 16) !== tx || Math.floor(p.y / 16) !== ty) throw new Error(`the step to ${tx},${ty} ended elsewhere: ${await diagnose(page)}`)
 }
 
 /** The outcome of the last path operation, once the queue has emptied. */
@@ -194,7 +194,7 @@ test('clear a thicket with a spade, lay stone after the turning-land confirm, se
   // Lay stone underfoot: the first lay on turning land this wick asks first.
   await page.keyboard.press('l')
   await expect.poll(async () => (await dialogueState(page)).open).toBe(true)
-  expect((await dialogueState(page)).said.join(' ')).toMatch(/This land turns in (a day|\d+ days)\. A path here goes with it\./)
+  expect((await dialogueState(page)).said.join(' ')).toMatch(/This land turns in (a day|\d+ days)\. A path here stays if someone walks here each wick\./)
   await shot(page, '91-paths-turning-confirm-desktop')
   await readDialogue(page, { pick: /Lay it/ })
   await landed(page, 'lay')
@@ -221,13 +221,21 @@ test('clear a thicket with a spade, lay stone after the turning-land confirm, se
   try {
     await freshPlayer(other, 'Wren', invite.code)
     await calendarOnServer(other)
+    // Parked from the arrival's first frame: a camp beside the stone hits
+    // and knocks an arriving hero off it before a later park.
+    await parkCreatures(other, { keep: true })
     await warp(other, 'outdoors', stand.tx, stand.ty)
     await waitForWilds(other)
-    await other.evaluate(() => (window as unknown as Hooks).__fsDevParkCreatures())
     await expect.poll(async () => (await tileAt(other, stand.tx, stand.ty))?.change ?? null, { timeout: 20_000 }).toEqual({ change: 'stone', by: accountOf(id) })
     expect((await tileAt(other, cleared.tx, cleared.ty))!.change).toEqual({ change: 'plank', by: accountOf(id) })
     await shot(other, '93-paths-second-player-desktop')
-    await waitForLive(other)
+    // On the stone itself, not beside it: L there is Tansy's path, not a lay of Wren's own.
+    await other.evaluate(([x, y]) => (window as unknown as { __fsDevPlace: (x: number, y: number) => void }).__fsDevPlace(x, y), [stand.tx * 16 + 8, stand.ty * 16 + 8] as const)
+    await steady(other, () => other.evaluate(() => {
+      const w = window as unknown as Hooks & { __fsFrame: () => { live: boolean } }
+      const hero = w.__fsPlayer()
+      return { live: w.__fsFrame().live, tx: Math.floor(hero.x / 16), ty: Math.floor(hero.y / 16) }
+    }), { frames: 3, seconds: 10, message: `Wren on Tansy's stone at ${stand.tx},${stand.ty}`, ready: (s) => s.live && s.tx === stand.tx && s.ty === stand.ty })
     await other.keyboard.press('l')
     await expectToast(other, 'There’s a path here already.')
   } finally {
@@ -284,6 +292,52 @@ test('clear a thicket with a spade, lay stone after the turning-land confirm, se
   expect((await tileAt(page, stand.tx, stand.ty))!.change).toBeNull()
   // The refusal showed the pack was wrong: a fresh read says what it holds now.
   await expect.poll(async () => (await paths(page))!.materials!.timber, { timeout: 15_000, message: 'timber read again' }).toBe(0)
+})
+
+test('a path laid on land that turns is Common: walked this wick, it is still there after the turning', async ({ page }) => {
+  test.setTimeout(150_000)
+  const id = await freshPlayer(page)
+  await wickSlack(page)
+  await pinWorld(page, SEED)
+  fund(id, { materials: { stone: 10 } })
+  await warp(page, 'outdoors', 2 * S + 12, -4 * S + 12)
+  await windowWhole(page)
+  await parkCreatures(page)
+  // Open land near the hero: laying it is the wick's visit to its chunk.
+  const stand = await page.evaluate(() => {
+    const w = window as unknown as Hooks
+    const p = w.__fsPlayer()
+    const open = (t: PathTile | null) => !!t && t.surface === 'land' && !t.baseSolid && !t.occupied && !t.change && t.decor.length === 0
+    const hx = Math.floor(p.x / 16)
+    const hy = Math.floor(p.y / 16)
+    for (let r = 0; r < 8; r++)
+      for (let ty = hy - r; ty <= hy + r; ty++)
+        for (let tx = hx - r; tx <= hx + r; tx++)
+          if (Math.floor(tx / 24) === 2 && Math.floor(ty / 24) === -4 && open(w.__fsPathTile(tx, ty))) return { tx, ty }
+    return null
+  })
+  expect(stand, `open land in chunk 2,-4 (seed ${SEED}; ${await diagnose(page)})`).not.toBeNull()
+  await page.evaluate(([x, y]) => (window as unknown as { __fsDevPlace: (x: number, y: number) => void }).__fsDevPlace(x, y), [stand!.tx * 16 + 8, stand!.ty * 16 + 8] as const)
+  await waitForLive(page)
+  await page.keyboard.press('l')
+  await expect.poll(async () => (await dialogueState(page)).open).toBe(true)
+  await readDialogue(page, { pick: /Lay it/ })
+  await landed(page, 'lay')
+  expect((await tileAt(page, stand!.tx, stand!.ty))!.change).toEqual({ change: 'stone', by: accountOf(id) })
+  const before = (await wilds(page)).season
+
+  // Away across the turning, then back: the new wick's land, the same stone.
+  const end = Number(before.split(':')[2])
+  await page.goto('/')
+  await expect(page.getByTestId('continue-world')).toBeVisible()
+  await moveServerClock(page, end + 60)
+  await page.reload()
+  await page.getByTestId('continue-world').click()
+  await waitForWilds(page)
+  await parkCreatures(page)
+  await expect.poll(async () => (await wilds(page)).season, { message: 'the wick turned' }).not.toBe(before)
+  await expect.poll(async () => (await tileAt(page, stand!.tx, stand!.ty))?.change ?? null, { timeout: 20_000, message: 'the stone carried' }).toEqual({ change: 'stone', by: accountOf(id) })
+  await shot(page, '92c-paths-carried-desktop')
 })
 
 test('the joining tile of a run between two places makes a named way, with signs at its ends and its name on the world map', async ({ page, browser, baseURL }) => {
@@ -465,11 +519,13 @@ test.describe('on a phone', () => {
   test('the path buttons press once on a tap, and also on Enter (a click with no pointer)', async ({ page }) => {
     test.setTimeout(180_000)
     const id = await freshPlayer(page)
+    await pinWorld(page, SEED)
     giveInstance(id, 'bench-spade', { max: 90 })
     fund(id, { materials: { stone: 10 } })
-    // The Tangle keeps its paths (no turning-land confirm): an open tile in its middle chunk.
+    // The Tangle keeps its paths (no turning-land confirm): an open tile in its
+    // middle chunk, read once the window is built whole (its things on their tiles).
     await warp(page, 'outdoors', 12, -12)
-    await waitForWilds(page)
+    await windowWhole(page)
     const open = await page.evaluate(() => {
       const w = window as unknown as Hooks
       for (let r = 0; r < 12; r++)
@@ -480,10 +536,11 @@ test.describe('on a phone', () => {
           }
       return null
     })
-    expect(open).not.toBeNull()
+    expect(open, `an open tile in the Tangle (seed ${SEED})`).not.toBeNull()
     await warp(page, 'outdoors', open!.tx, open!.ty)
-    await waitForWilds(page)
-    await page.evaluate(() => (window as unknown as Hooks).__fsDevParkCreatures())
+    // Parked once the window is whole: a creature of a chunk attached later can knock the hero off the tile.
+    await windowWhole(page)
+    await parkCreatures(page)
     await hold(page, 'dig')
     await expect.poll(async () => (await paths(page))?.materials?.stone ?? 0).toBeGreaterThanOrEqual(10)
     const stone = (await paths(page))!.materials!.stone!

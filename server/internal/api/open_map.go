@@ -68,8 +68,12 @@ func signedPair(raw, sep string) (int, int, bool) {
 	return out[0], out[1], true
 }
 
-// epochs are the world's two current epochs, made when absent.
-type openEpochs struct{ still, wick *contract.WildsEpoch }
+// epochs are the world's two current epochs, made when absent, and the
+// epochs its held chunks are pinned to (the composer's held source).
+type openEpochs struct {
+	still, wick *contract.WildsEpoch
+	held        map[[2]int]*contract.WildsEpoch
+}
 
 func (a *Server) openEpochs(ctx context.Context, tx *sql.Tx, world string, now int64) (openEpochs, error) {
 	if a.Config.Epochs == nil {
@@ -80,11 +84,19 @@ func (a *Server) openEpochs(ctx context.Context, tx *sql.Tx, world string, now i
 		return openEpochs{}, err
 	}
 	wick, err := chunks.Epoch(ctx, tx, a.Config.Epochs, world, store.EpochWick, now)
-	return openEpochs{still, wick}, err
+	if err != nil {
+		return openEpochs{}, err
+	}
+	// After the wick: reading it is the turning, which judges holds.
+	held, err := store.HeldEpochs(ctx, tx, world)
+	return openEpochs{still, wick, held}, err
 }
 
-// of is the epoch a chunk lies in.
+// of is the epoch a chunk lies in: its held epoch, else its kind's.
 func (e openEpochs) of(cx, cy int) *contract.WildsEpoch {
+	if h := e.held[[2]int{cx, cy}]; h != nil {
+		return h
+	}
 	if wilds.EpochKindAt(cx, cy) == store.EpochStill {
 		return e.still
 	}
@@ -106,10 +118,20 @@ func (a *Server) nearRead(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	defer tx.Rollback()
+	ctx, now := r.Context(), a.requestTime(r.Context()).Unix()
+	ep, err := a.openEpochs(ctx, tx, s.WorldID, now)
+	if err != nil {
+		return chunkError(err)
+	}
+	// Only past a turning that may have let holds go is the frontier this
+	// read's to check; a refusal keeps that turning (it is upkeep, done).
 	if !location.OnGrid(s.WorldID, cx, cy) {
+		if err = tx.Commit(); err != nil {
+			return err
+		}
 		return fail(409, "beyond-frontier")
 	}
-	view, err := a.near(r.Context(), tx, s, cx, cy, a.requestTime(r.Context()).Unix())
+	view, err := a.near(ctx, tx, s, ep, cx, cy, now)
 	if err != nil {
 		return chunkError(err)
 	}
@@ -120,24 +142,26 @@ func (a *Server) nearRead(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func (a *Server) near(ctx context.Context, tx *sql.Tx, s store.Snapshot, cx, cy int, now int64) (*contract.WildsNearResult, error) {
-	ep, err := a.openEpochs(ctx, tx, s.WorldID, now)
-	if err != nil {
-		return nil, err
-	}
+func (a *Server) near(ctx context.Context, tx *sql.Tx, s store.Snapshot, ep openEpochs, cx, cy int, now int64) (*contract.WildsNearResult, error) {
 	x0, y0, x1, y1 := frontier.Rect(s.WorldID)
+	held := frontier.Held(s.WorldID)
+	reach := &contract.WildsFrontier{Rect: &contract.WildsChunkRect{MinCx: int32(x0), MinCy: int32(y0), MaxCx: int32(x1), MaxCy: int32(y1)}, Held: make([]*contract.WildsChunkKey, 0, len(held))}
+	for _, k := range held {
+		reach.Held = append(reach.Held, chunkKeyProto(k[0], k[1]))
+	}
 	out := &contract.WildsNearResult{
 		Still: proto.Clone(ep.still).(*contract.WildsEpoch), Wick: proto.Clone(ep.wick).(*contract.WildsEpoch),
-		Frontier: &contract.WildsFrontier{Rect: &contract.WildsChunkRect{MinCx: int32(x0), MinCy: int32(y0), MaxCx: int32(x1), MaxCy: int32(y1)}},
+		Frontier: reach,
 		Center:   chunkKeyProto(cx, cy), Radius: NearRadius,
 		Entities: []*contract.WildsEntityState{}, PersonalClaims: []*contract.WildsPersonalClaim{},
 		Discoveries: []*contract.WildsDiscovery{}, Lanterns: []*contract.WildsLantern{}, Echoes: []*contract.EchoAssignment{},
 		Ground: []*contract.ChunkGroundChanges{}, Materials: map[string]float64{}, Glimpse: []*contract.WildsGlimpse{}, Ways: []*contract.WildsWay{},
-		Chunks: []*contract.NearChunk{},
+		Chunks: []*contract.NearChunk{}, Held: []*contract.WildsEpoch{},
 	}
 	// The window's chunks on the grid, row-major: a fixed chunk is listed
 	// (its body comes from content, under its pseudo-epoch, and it has no
-	// state); a generated one, inside the frontier, is read for its state.
+	// state); a generated one, inside the frontier, is read for its state,
+	// a held one under its pinned epoch (listed in Held when not this wick).
 	type entityAt struct {
 		epoch, kind string
 	}
@@ -157,8 +181,14 @@ func (a *Server) near(ctx context.Context, tx *sql.Tx, s store.Snapshot, cx, cy 
 				continue
 			}
 			window[[2]int{x, y}] = true
-			e := ep.of(x, y)
-			out.Chunks = append(out.Chunks, &contract.NearChunk{Chunk: chunkKeyProto(x, y), Source: location.SourceGenerated.String(), Epoch: e.Id})
+			e, source := ep.of(x, y), location.SourceGenerated
+			if h := ep.held[[2]int{x, y}]; h != nil {
+				source = location.SourceHeld
+				if h.Id != ep.wick.Id && !slices.ContainsFunc(out.Held, func(o *contract.WildsEpoch) bool { return o.Id == h.Id }) {
+					out.Held = append(out.Held, proto.Clone(h).(*contract.WildsEpoch))
+				}
+			}
+			out.Chunks = append(out.Chunks, &contract.NearChunk{Chunk: chunkKeyProto(x, y), Source: source.String(), Epoch: e.Id})
 			m, err := a.Config.Chunks.Chunk(ctx, tx, s.WorldID, e.Id, 0, int32(x), int32(y))
 			if err != nil {
 				return nil, err
@@ -169,7 +199,8 @@ func (a *Server) near(ctx context.Context, tx *sql.Tx, s store.Snapshot, cx, cy 
 				claimable[en.Id] = true
 			}
 			for _, site := range m.Sites {
-				if site.Kind == contract.SiteKind_SITE_KIND_RUMOUR {
+				// A held chunk's rumour site is its own wick's: no find.
+				if site.Kind == contract.SiteKind_SITE_KIND_RUMOUR && ep.held[[2]int{x, y}] == nil {
 					claimable[site.Id] = true
 				}
 			}
@@ -179,9 +210,15 @@ func (a *Server) near(ctx context.Context, tx *sql.Tx, s store.Snapshot, cx, cy 
 			}
 		}
 	}
-	epochs := []any{ep.still.Id, ep.wick.Id}
+	// Entity state, claims and lanterns under the two epochs and the held
+	// ones in the window.
+	withHeld := []any{ep.still.Id, ep.wick.Id}
+	for _, h := range out.Held {
+		withHeld = append(withHeld, h.Id)
+	}
+	marks := strings.TrimSuffix(strings.Repeat("?,", len(withHeld)), ",")
 	rows := map[string]entityRow{}
-	q, err := tx.QueryContext(ctx, "SELECT epoch,entity_id,cycle,state,available_at,by_id,at FROM entity_state WHERE epoch IN (?,?)", epochs...)
+	q, err := tx.QueryContext(ctx, "SELECT epoch,entity_id,cycle,state,available_at,by_id,at FROM entity_state WHERE epoch IN ("+marks+")", withHeld...)
 	if err != nil {
 		return nil, err
 	}
@@ -202,7 +239,7 @@ func (a *Server) near(ctx context.Context, tx *sql.Tx, s store.Snapshot, cx, cy 
 	// A camp's current cycle, as its reader stands to it (shared-fights.md
 	// 1.9): whether they witnessed that cycle's fall, and whether they have
 	// claimed it. A viewer who comes back after the room slept reads this.
-	camps, err := readCampStanding(ctx, tx, s.AccountID, ep.still.Id, ep.wick.Id)
+	camps, err := readCampStanding(ctx, tx, s.AccountID, withHeld...)
 	if err != nil {
 		return nil, err
 	}
@@ -223,7 +260,7 @@ func (a *Server) near(ctx context.Context, tx *sql.Tx, s store.Snapshot, cx, cy 
 		}
 		out.Entities = append(out.Entities, v)
 	}
-	if q, err = tx.QueryContext(ctx, "SELECT entity_id,at FROM personal_claims WHERE account_id=? AND epoch IN (?,?) ORDER BY entity_id", s.AccountID, ep.still.Id, ep.wick.Id); err != nil {
+	if q, err = tx.QueryContext(ctx, "SELECT entity_id,at FROM personal_claims WHERE account_id=? AND epoch IN ("+marks+") ORDER BY entity_id", append([]any{s.AccountID}, withHeld...)...); err != nil {
 		return nil, err
 	}
 	for q.Next() {
@@ -243,12 +280,13 @@ func (a *Server) near(ctx context.Context, tx *sql.Tx, s store.Snapshot, cx, cy 
 	}
 	out.PersonalClaims = append(out.PersonalClaims, campClaims...)
 	slices.SortStableFunc(out.PersonalClaims, func(a, b *contract.WildsPersonalClaim) int { return strings.Compare(a.EntityId, b.EntityId) })
-	// Every discovery of the two epochs: the Map tab names every place's
-	// finder, not only the window's (a world has a handful a wick).
-	if out.Discoveries, err = discoveries(ctx, tx, ep.still.Id, ep.wick.Id); err != nil {
+	// Every discovery of the two epochs and the window's held ones: the Map
+	// tab names every place's finder, not only the window's (a world has a
+	// handful a wick).
+	if out.Discoveries, err = discoveries(ctx, tx, withHeld...); err != nil {
 		return nil, err
 	}
-	if q, err = tx.QueryContext(ctx, "SELECT l.id,l.owner_id,p.display_name,l.x,l.y,l.lit_by,l.at,l.lit_at FROM lanterns l JOIN players p ON p.account_id=l.owner_id WHERE l.epoch IN (?,?) ORDER BY l.owner_id", epochs...); err != nil {
+	if q, err = tx.QueryContext(ctx, "SELECT l.id,l.owner_id,p.display_name,l.x,l.y,l.lit_by,l.at,l.lit_at FROM lanterns l JOIN players p ON p.account_id=l.owner_id WHERE l.epoch IN ("+marks+") ORDER BY l.owner_id", withHeld...); err != nil {
 		return nil, err
 	}
 	S := chunkSize()
@@ -307,7 +345,12 @@ func (a *Server) near(ctx context.Context, tx *sql.Tx, s store.Snapshot, cx, cy 
 		var at []chunks.ChunkXY
 		for y := cy - NearRadius - glimpseReach; y <= cy+NearRadius+glimpseReach; y++ {
 			for x := cx - NearRadius - glimpseReach; x <= cx+NearRadius+glimpseReach; x++ {
-				if frontier.Inside(s.WorldID, x, y) || y > int(content.WildsRules.GetFrontier().GetSouthLimit()) || wilds.NearestFootprint(x, y) > int(content.WildsRules.GetFrontier().GetReach())+glimpseReach {
+				// Past the reach, but within glimpseReach of it: the static
+				// frontier's, or a held chunk's slack.
+				nearHeld := slices.ContainsFunc(held, func(k [2]int) bool {
+					return max(abs(k[0]-x), abs(k[1]-y)) <= frontier.Slack()+glimpseReach
+				})
+				if frontier.Inside(s.WorldID, x, y) || y > int(content.WildsRules.GetFrontier().GetSouthLimit()) || !nearHeld && wilds.NearestFootprint(x, y) > int(content.WildsRules.GetFrontier().GetReach())+glimpseReach {
 					continue
 				}
 				at = append(at, chunks.ChunkXY{CX: int32(x), CY: int32(y)})
@@ -325,6 +368,16 @@ func (a *Server) near(ctx context.Context, tx *sql.Tx, s store.Snapshot, cx, cy 
 				out.Glimpse = append(out.Glimpse, &contract.WildsGlimpse{Chunk: chunkKeyProto(int(at[i].CX), int(at[i].CY)), Land: v.Land, River: v.River})
 			}
 		}
+	}
+	// Only the occupied chunk is explored by this read; the map submits its own known list.
+	var known []*contract.WildsChunkKey
+	if s.State.Area == outdoorsArea {
+		x, y := wilds.ChunkOf(wilds.TileOfPixel(s.State.Position.X, s.State.Position.Y))
+		known = append(known, chunkKeyProto(x, y))
+	}
+	out.Land, err = a.mapStatus(ctx, tx, s, ep, known, now)
+	if err != nil {
+		return nil, err
 	}
 	m, err := materialsProto(ctx, tx, s.AccountID)
 	out.Materials = m
@@ -349,20 +402,16 @@ func scanLantern(rows *sql.Rows) (*contract.WildsLantern, error) {
 	return &v, nil
 }
 
-func discoveries(ctx context.Context, tx *sql.Tx, epochs ...string) ([]*contract.WildsDiscovery, error) {
+func discoveries(ctx context.Context, tx *sql.Tx, epochs ...any) ([]*contract.WildsDiscovery, error) {
 	out := []*contract.WildsDiscovery{}
-	args := make([]any, len(epochs))
-	for i, e := range epochs {
-		args[i] = e
-	}
-	q, err := tx.QueryContext(ctx, "SELECT d.entity_id,d.poi_id,d.discoverer_id,p.display_name,d.at FROM discoveries d JOIN players p ON p.account_id=d.discoverer_id WHERE d.epoch IN (?"+strings.Repeat(",?", len(epochs)-1)+") ORDER BY d.entity_id", args...)
+	q, err := tx.QueryContext(ctx, "SELECT d.entity_id,d.poi_id,d.discoverer_id,p.display_name,d.at,d.epoch FROM discoveries d JOIN players p ON p.account_id=d.discoverer_id WHERE d.epoch IN (?"+strings.Repeat(",?", len(epochs)-1)+") ORDER BY d.entity_id", epochs...)
 	if err != nil {
 		return nil, err
 	}
 	for q.Next() {
 		var d contract.WildsDiscovery
 		var at int64
-		if err = q.Scan(&d.EntityId, &d.PoiId, &d.DiscovererId, &d.DisplayName, &at); err != nil {
+		if err = q.Scan(&d.EntityId, &d.PoiId, &d.DiscovererId, &d.DisplayName, &at, &d.Epoch); err != nil {
 			q.Close()
 			return nil, err
 		}
@@ -392,13 +441,19 @@ func placeKind(id string) *content.WildsPlaceKind {
 }
 
 // findPlace looks for a cell place's mark in the chunk (cx, cy) and its
-// eight neighbours, in the epoch.
-func (a *Server) findPlace(ctx context.Context, tx *sql.Tx, world string, e *contract.WildsEpoch, id string, cx, cy int) (*placeAt, error) {
+// eight neighbours, among those served in the epoch: a held chunk is its
+// pinned epoch's, the rest this wick's (place ids repeat across wicks, so
+// the epoch tells a held chunk's place from this wick's of the same cell).
+func (a *Server) findPlace(ctx context.Context, tx *sql.Tx, world string, e *contract.WildsEpoch, id string, cx, cy int, now int64) (*placeAt, error) {
 	S := chunkSize()
+	ep, err := a.openEpochs(ctx, tx, world, now)
+	if err != nil {
+		return nil, err
+	}
 	for dy := -1; dy <= 1; dy++ {
 		for dx := -1; dx <= 1; dx++ {
 			x, y := cx+dx, cy+dy
-			if !frontier.Inside(world, x, y) || location.SourceOf(x, y).Kind != location.SourceGenerated || wilds.EpochKindAt(x, y) != e.Kind {
+			if !frontier.Inside(world, x, y) || location.SourceOf(x, y).Kind != location.SourceGenerated || ep.of(x, y).Id != e.Id {
 				continue
 			}
 			m, err := a.Config.Chunks.Chunk(ctx, tx, world, e.Id, 0, int32(x), int32(y))
@@ -416,15 +471,17 @@ func (a *Server) findPlace(ctx context.Context, tx *sql.Tx, world string, e *con
 }
 
 // wildsDiscover is POST /api/wilds/discover (decision 20): the client sends
-// it when the hero enters a place's find radius. The first insert this wick
-// wins and rolls the "discovery" table; later finders get the name only.
+// it when the hero enters a place's find radius, naming the epoch the
+// place's chunk is served in (a held chunk's pinned one). The first insert
+// that epoch wins and rolls the "discovery" table; later finders get the
+// name only.
 func (a *Server) wildsDiscover(w http.ResponseWriter, r *http.Request) error {
 	req := &contract.WildsDiscoverRequest{}
 	if err := decodeOp(w, r, req); err != nil {
 		return err
 	}
 	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
-		e, err := a.epochFor(ctx, tx, *s, req.Epoch, now)
+		e, err := a.epochFor(ctx, tx, *s, req.Epoch, now, true)
 		if err != nil {
 			return nil, err
 		}
@@ -434,7 +491,7 @@ func (a *Server) wildsDiscover(w http.ResponseWriter, r *http.Request) error {
 		}
 		tx0, ty0 := wildsTileOf(s.State.Position.X, s.State.Position.Y)
 		S := chunkSize()
-		place, err := a.findPlace(ctx, tx, s.WorldID, e, req.Place, wilds.FloorDiv(tx0, S), wilds.FloorDiv(ty0, S))
+		place, err := a.findPlace(ctx, tx, s.WorldID, e, req.Place, wilds.FloorDiv(tx0, S), wilds.FloorDiv(ty0, S), now)
 		if err != nil {
 			return nil, chunkError(err)
 		}
@@ -467,7 +524,7 @@ func (a *Server) wildsDiscover(w http.ResponseWriter, r *http.Request) error {
 			}
 			out.Loot = lootProto(loot)
 		}
-		d := &contract.WildsDiscovery{EntityId: place.id, PoiId: place.kind}
+		d := &contract.WildsDiscovery{EntityId: place.id, PoiId: place.kind, Epoch: e.Id}
 		var at int64
 		if err = tx.QueryRowContext(ctx, "SELECT d.discoverer_id,p.display_name,d.at FROM discoveries d JOIN players p ON p.account_id=d.discoverer_id WHERE d.epoch=? AND d.entity_id=?", e.Id, place.id).Scan(&d.DiscovererId, &d.DisplayName, &at); err != nil {
 			return nil, err
@@ -499,6 +556,10 @@ func (a *Server) rumour(ctx context.Context, tx *sql.Tx, s store.Snapshot, now i
 	}
 	r, ok, err := g.Rumour(proto.Clone(wick).(*contract.WildsEpoch))
 	if err != nil || !ok {
+		return nil, err
+	}
+	// A held chunk keeps an older wick's land: this wick's find isn't there.
+	if held, err := store.HeldEpoch(ctx, tx, s.WorldID, int(r.CX), int(r.CY)); err != nil || held != nil {
 		return nil, err
 	}
 	out := &contract.WildsRumour{
@@ -536,6 +597,19 @@ func (a *Server) openRumour(ctx context.Context, tx *sql.Tx, s *store.Snapshot, 
 	}
 	if req.Cycle != 0 {
 		return nil, fail(409, "old-cycle")
+	}
+	// The find is this wick's, and not in a held chunk (as rumour reads it):
+	// a held chunk's blob still carries its own wick's rumour site.
+	wick, err := a.Config.Epochs.Current(ctx, tx, s.WorldID, store.EpochWick, now)
+	if err != nil {
+		return nil, chunkError(err)
+	}
+	held, err := store.HeldEpoch(ctx, tx, s.WorldID, cx, cy)
+	if err != nil {
+		return nil, err
+	}
+	if wick.Id != e.Id || held != nil {
+		return nil, fail(404, "entity-not-found")
 	}
 	m, err := a.Config.Chunks.Chunk(ctx, tx, s.WorldID, e.Id, 0, int32(cx), int32(cy))
 	if err != nil {

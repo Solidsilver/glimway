@@ -2,7 +2,7 @@
   "version": 1,
   "density": 4,
   "worldTileSize": 16,
-  "frameCount": 45,
+  "frameCount": 57,
   "sources": [
     {
       "key": "meadow-props",
@@ -83,6 +83,38 @@
       "height": 1536,
       "mode": "RGBA",
       "sha256": "4898551c1317f6122445f6d955d698939fa67bbf01c9bf7c571fee9eb99896c0"
+    },
+    {
+      "key": "way-lamp-generated",
+      "file": "source/way-lamp-generated.png",
+      "width": 2172,
+      "height": 724,
+      "mode": "RGBA",
+      "sha256": "c242243bf515943e506eab42f2b36ed98bb2a947c0d1e51d1d710a5ea55049a4"
+    },
+    {
+      "key": "lamp-stones-generated",
+      "file": "source/lamp-stones-generated.png",
+      "width": 2172,
+      "height": 724,
+      "mode": "RGBA",
+      "sha256": "07f135b74bde660436f414315b679182d16405f8c9e6f52ce28da1d8e5313ce6"
+    },
+    {
+      "key": "lamp-stone-flames-generated",
+      "file": "source/lamp-stone-flames-generated.png",
+      "width": 2172,
+      "height": 724,
+      "mode": "RGBA",
+      "sha256": "52b303e2f5505d2c72027b7699061b35ee1d7b0e1ba3c08d7d71d89a46d2b1ac"
+    },
+    {
+      "key": "map-lamp-icons-generated",
+      "file": "source/map-lamp-icons-generated.png",
+      "width": 1774,
+      "height": 887,
+      "mode": "RGBA",
+      "sha256": "7c7245c44af44de999689429f25bb0cf8905277e61132a302080b6df3154d78f"
     }
   ],
   "frames": {
@@ -543,6 +575,236 @@
       "footPoint": {
         "x": 32,
         "y": 128
+      },
+      "kind": "transparent-prop"
+    },
+    "lamp-stone-relit-0": {
+      "file": "frames/lamp-stone-relit-0.png",
+      "source": "lamp-stone-flames-generated",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 724,
+        "h": 724
+      },
+      "canvas": {
+        "w": 64,
+        "h": 128
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "kind": "transparent-prop"
+    },
+    "lamp-stone-relit-1": {
+      "file": "frames/lamp-stone-relit-1.png",
+      "source": "lamp-stone-flames-generated",
+      "sourceRect": {
+        "x": 724,
+        "y": 0,
+        "w": 724,
+        "h": 724
+      },
+      "canvas": {
+        "w": 64,
+        "h": 128
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "kind": "transparent-prop"
+    },
+    "lamp-stone-relit-2": {
+      "file": "frames/lamp-stone-relit-2.png",
+      "source": "lamp-stone-flames-generated",
+      "sourceRect": {
+        "x": 1448,
+        "y": 0,
+        "w": 724,
+        "h": 724
+      },
+      "canvas": {
+        "w": 64,
+        "h": 128
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "kind": "transparent-prop"
+    },
+    "route-stone-dark": {
+      "file": "frames/route-stone-dark.png",
+      "source": "lamp-stones-generated",
+      "sourceRect": {
+        "x": 1670,
+        "y": 105,
+        "w": 502,
+        "h": 555
+      },
+      "canvas": {
+        "w": 128,
+        "h": 128
+      },
+      "footprint": {
+        "w": 2,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      },
+      "kind": "transparent-prop"
+    },
+    "route-stone-relit-0": {
+      "file": "frames/route-stone-relit-0.png",
+      "source": "lamp-stone-flames-generated",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 724,
+        "h": 724
+      },
+      "canvas": {
+        "w": 128,
+        "h": 128
+      },
+      "footprint": {
+        "w": 2,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      },
+      "kind": "transparent-prop"
+    },
+    "route-stone-relit-1": {
+      "file": "frames/route-stone-relit-1.png",
+      "source": "lamp-stone-flames-generated",
+      "sourceRect": {
+        "x": 724,
+        "y": 0,
+        "w": 724,
+        "h": 724
+      },
+      "canvas": {
+        "w": 128,
+        "h": 128
+      },
+      "footprint": {
+        "w": 2,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      },
+      "kind": "transparent-prop"
+    },
+    "route-stone-relit-2": {
+      "file": "frames/route-stone-relit-2.png",
+      "source": "lamp-stone-flames-generated",
+      "sourceRect": {
+        "x": 1448,
+        "y": 0,
+        "w": 724,
+        "h": 724
+      },
+      "canvas": {
+        "w": 128,
+        "h": 128
+      },
+      "footprint": {
+        "w": 2,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      },
+      "kind": "transparent-prop"
+    },
+    "way-lamp-0": {
+      "file": "frames/way-lamp-0.png",
+      "source": "way-lamp-generated",
+      "sourceRect": {
+        "x": 6,
+        "y": 6,
+        "w": 712,
+        "h": 712
+      },
+      "canvas": {
+        "w": 64,
+        "h": 96
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 96
+      },
+      "kind": "transparent-prop"
+    },
+    "way-lamp-1": {
+      "file": "frames/way-lamp-1.png",
+      "source": "way-lamp-generated",
+      "sourceRect": {
+        "x": 730,
+        "y": 6,
+        "w": 712,
+        "h": 712
+      },
+      "canvas": {
+        "w": 64,
+        "h": 96
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 96
+      },
+      "kind": "transparent-prop"
+    },
+    "way-lamp-2": {
+      "file": "frames/way-lamp-2.png",
+      "source": "way-lamp-generated",
+      "sourceRect": {
+        "x": 1454,
+        "y": 6,
+        "w": 712,
+        "h": 712
+      },
+      "canvas": {
+        "w": 64,
+        "h": 96
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 96
       },
       "kind": "transparent-prop"
     },
@@ -1140,6 +1402,52 @@
         "y": 32
       },
       "kind": "ui-icon"
+    },
+    "map-lamp-lit": {
+      "file": "frames/map-lamp-lit.png",
+      "source": "map-lamp-icons-generated",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 887,
+        "h": 887
+      },
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "kind": "ui-icon"
+    },
+    "map-lamp-dimming": {
+      "file": "frames/map-lamp-dimming.png",
+      "source": "map-lamp-icons-generated",
+      "sourceRect": {
+        "x": 887,
+        "y": 0,
+        "w": 887,
+        "h": 887
+      },
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "kind": "ui-icon"
     }
   },
   "animations": [
@@ -1172,6 +1480,26 @@
         "frontier-veil-3"
       ],
       "frameRate": 2,
+      "repeat": -1
+    },
+    {
+      "key": "lamp-stone-relit",
+      "frames": [
+        "lamp-stone-relit-0",
+        "lamp-stone-relit-1",
+        "lamp-stone-relit-2"
+      ],
+      "frameRate": 1.2,
+      "repeat": -1
+    },
+    {
+      "key": "route-stone-relit",
+      "frames": [
+        "route-stone-relit-0",
+        "route-stone-relit-1",
+        "route-stone-relit-2"
+      ],
+      "frameRate": 1.2,
       "repeat": -1
     }
   ]

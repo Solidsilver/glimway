@@ -18,12 +18,14 @@
  */
 import { FINDS, PATH_DONE, PATH_REFUSALS, WAY_NEWS } from '../../content/open-map.ts'
 import { firstFindText, placeName, refusalText } from '../../lib/wilds/paths.ts'
+import { campRefusal } from '../../lib/camps.ts'
+import { campsKnown } from './camps-state.ts'
 import type { WildsClearResult, WildsDiscoverResult, WildsLayResult, WildsLiftResult } from '../../lib/gen/glimway/v1/operations_pb.js'
 import type { WildsWay } from '../../lib/gen/glimway/v1/wilds_pb.js'
 import { bus, EV } from '../events.ts'
 import type { WildsSettledPayload } from '../event-names.ts'
 import { sfx } from '../sfx.ts'
-import { applyBalances, applyDiscovery, applyPathAnswer, chunkEpoch, knownPlaces, lootName, requestRead, settlePrediction, wildsEpoch, wildsLive, wildsView, type LootDrop } from './store.ts'
+import { applyBalances, applyDiscovery, applyPathAnswer, chunkEpoch, invalidateLand, knownPlaces, lootName, requestRead, settlePrediction, wildsEpoch, wildsLive, wildsView, type LootDrop } from './store.ts'
 import { newKey } from '../../lib/api/client.ts'
 import type { Session } from '../session.ts'
 
@@ -149,7 +151,9 @@ function refused(op: WildsOp, code: string, world: string): void {
     if (op.place) retryLater(op.place, code === 'busy' ? 500 : code === 'too-far-away' || code === 'offline' ? 4000 : 60_000)
     return
   }
-  say(refusalText(code, { action: op.action, material: op.material, extra: PATH_REFUSALS }))
+  // At a camp you may not build at: whose camp it is, and that you can still walk and tend (camps.ts).
+  const camp = code === 'not-your-camp' ? campsKnown({ worldId: op.world, accountId: op.account ?? '' }).list.find((c) => c.cx === op.cx && c.cy === op.cy) ?? null : null
+  say(code === 'not-your-camp' ? campRefusal(camp) : refusalText(code, { action: op.action, material: op.material, extra: PATH_REFUSALS }))
   if (!NOT_DISPROVING.has(code) && current(op, world)) requestRead()
 }
 
@@ -158,6 +162,8 @@ function landed(op: WildsOp, r: WildsClearResult | WildsLayResult | WildsLiftRes
   const broken = r.$typeName === 'glimway.v1.WildsLiftResult' ? r.waysBroken : []
   const rerouted = r.$typeName === 'glimway.v1.WildsLiftResult' ? r.waysRerouted : []
   const before = new Map(wildsView()?.ways ?? [])
+  // A path laid or lifted can turn its chunk common or wild again: the land chip asks again.
+  if (op.kind === 'lay' || op.kind === 'lift') invalidateLand()
   if (!applyPathAnswer(r.ground, r.materials, { made, broken, rerouted })) {
     requestRead()
     return
@@ -217,8 +223,11 @@ export async function discoverPlace(session: Session, place: { id: string; cx: n
   const wick = wildsEpoch('wick').id
   if (!link || !wick || !wildsLive(session) || !mayAsk(place.id)) return
   const key = newKey()
-  trackOp({ key, kind: 'discover', world: link.worldId, wick, epoch: wick, cx: place.cx, cy: place.cy, token: null, place: place.id, account: link.accountId })
-  const res = await link.wildsDiscover({ epoch: wick, place: place.id, where: { area: 'outdoors', x: Math.round(where.x), y: Math.round(where.y) }, key })
+  // A held chunk's place (`<id>@<epoch>`, placeKey) is found in that chunk's pinned epoch.
+  const [id, pinned] = place.id.split('@') as [string, string | undefined]
+  const epoch = pinned ?? wick
+  trackOp({ key, kind: 'discover', world: link.worldId, wick, epoch, cx: place.cx, cy: place.cy, token: null, place: place.id, account: link.accountId })
+  const res = await link.wildsDiscover({ epoch, place: id, where: { area: 'outdoors', x: Math.round(where.x), y: Math.round(where.y) }, key })
   if (res.ok || !tracked(key)) return
   // In the outbox, unanswered: its replay settles it (this key, never a new one).
   if (res.code === 'pending') return

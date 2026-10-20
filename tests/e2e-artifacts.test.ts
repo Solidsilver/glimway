@@ -14,8 +14,10 @@ function fixture(t: test.TestContext, report?: unknown) {
   if (report !== undefined) writeFileSync(join(dir, 'test-results/e2e-results.json'), JSON.stringify(report))
   return {
     dir,
+    stepSummary: join(dir, 'step-summary.md'),
     collect() {
-      execFileSync(process.execPath, [script], { cwd: dir })
+      // Never the real job's step summary (verify runs these tests in CI).
+      execFileSync(process.execPath, [script], { cwd: dir, env: { ...process.env, GITHUB_STEP_SUMMARY: join(dir, 'step-summary.md'), E2E_SUMMARY_TITLE: 'e2e test' }, stdio: 'pipe' })
       return JSON.parse(readFileSync(join(dir, '.e2e-artifacts/summary.json'), 'utf8'))
     },
   }
@@ -56,6 +58,69 @@ test('retry-assisted green evidence keeps original errors, annotations and lifec
   assert.equal(entry.attempts[1].status, 'passed')
   assert.deepEqual(JSON.parse(readFileSync(join(f.dir, '.e2e-artifacts', summary.reportPolicy.copiedPath), 'utf8')), report)
   assert.match(summary.tracePolicy.note, /successful retry/)
+})
+
+test('a lane run’s smoke pass adds its own report to the first pass’s, not over it', (t) => {
+  const spec = (title: string, status: string) => ({ title, specs: [{ title, file: `e2e/${title}.spec.ts`, tests: [{ projectName: 'chromium', status, expectedStatus: 'passed', results: [{ status: status === 'expected' ? 'passed' : 'failed', retry: 0, duration: 5 }] }] }] })
+  const f = fixture(t, { stats: { expected: 1, unexpected: 1, duration: 100, startTime: 'first' }, suites: [spec('lane', 'expected'), spec('wilds', 'unexpected')] })
+  mkdirSync(join(f.dir, 'test-results/smoke'))
+  const smoke = { stats: { expected: 5, unexpected: 0, duration: 30, startTime: 'second' }, suites: [spec('smoke', 'expected')] }
+  writeFileSync(join(f.dir, 'test-results/smoke/e2e-results.json'), JSON.stringify(smoke))
+  const summary = f.collect()
+  assert.deepEqual(summary.report.tests.map((e: { title: string; status: string }) => `${e.title}:${e.status}`), ['lane › lane:expected', 'wilds › wilds:unexpected', 'smoke › smoke:expected'])
+  assert.deepEqual(summary.report.stats, { expected: 6, unexpected: 1, duration: 130, startTime: 'first' })
+  assert.equal(summary.report.passes, 2)
+  assert.deepEqual(summary.reportPolicy.copiedPaths, ['e2e-results.json', 'smoke-e2e-results.json'])
+  assert.deepEqual(JSON.parse(readFileSync(join(f.dir, '.e2e-artifacts/smoke-e2e-results.json'), 'utf8')), smoke)
+})
+
+test('the step summary counts flaky and failed tests and names the ten slowest', (t) => {
+  const attempt = (status: string, retry: number, duration: number) => ({ status, retry, duration })
+  const spec = (title: string, status: string, results: ReturnType<typeof attempt>[]) => ({ title, file: `${title}.spec.ts`, tests: [{ projectName: 'chromium', status, expectedStatus: 'passed', results }] })
+  const specs = [
+    spec('retried', 'flaky', [attempt('failed', 0, 30_000), attempt('passed', 1, 25_000)]),
+    spec('broken', 'unexpected', [attempt('failed', 0, 4_000), attempt('failed', 1, 4_000)]),
+    ...Array.from({ length: 11 }, (_, i) => spec(`fine-${i}`, 'expected', [attempt('passed', 0, (i + 1) * 1_000)])),
+  ]
+  // Playwright titles each file's suite with the file name, as here for the first.
+  const f = fixture(t, { stats: { duration: 90_000 }, suites: [{ title: 'retried.spec.ts', specs: specs.slice(0, 1) }, { title: 'all', specs: specs.slice(1) }] })
+  const summary = f.collect()
+  assert.deepEqual(summary.health.flaky, ['retried.spec.ts › retried'])
+  assert.deepEqual(summary.health.hard, ['broken.spec.ts › all › broken'])
+  assert.equal(summary.health.slowest.length, 10)
+  assert.deepEqual(summary.health.slowest[0], { test: 'retried.spec.ts › retried', durationMs: 55_000, attempts: 2 })
+  assert.equal(summary.health.slowest[1].test, 'fine-10.spec.ts › all › fine-10')
+  assert.ok(!summary.health.slowest.some((s: { test: string }) => s.test === 'fine-0.spec.ts › all › fine-0'))
+  const md = readFileSync(f.stepSummary, 'utf8')
+  assert.match(md, /^### e2e test/)
+  assert.match(md, /\*\*11 passed, 1 flaky, 1 failed, 0 helper retries\*\* in 1\.5 min/)
+  assert.match(md, /- broken\.spec\.ts › all › broken/)
+  assert.match(md, /\| retried\.spec\.ts › retried \| 55\.0 s \| 2 \|/)
+  assert.equal(readFileSync(join(f.dir, '.e2e-artifacts/summary.md'), 'utf8') + '\n', md)
+})
+
+test('helper retries inside passing tests are counted next to the flaky ones (review R2)', (t) => {
+  const retry = (description: string) => ({ type: 'helper retry', description })
+  const spec = (title: string, status: string, results: unknown[], annotations: unknown[] = []) => ({ title, file: `${title}.spec.ts`, tests: [{ projectName: 'chromium', status, expectedStatus: 'passed', annotations, results }] })
+  const f = fixture(t, { stats: { duration: 60_000 }, suites: [{ title: 'all', specs: [
+    // Per-attempt annotations; the test's own list repeats the last attempt's.
+    spec('homestead', 'flaky', [
+      { status: 'failed', retry: 0, duration: 10, annotations: [retry('pressToTalk: E at /Talk to Silas/ (silas) opened nothing; press 2')] },
+      { status: 'passed', retry: 1, duration: 10, annotations: [retry('pressToTalk: E at /Talk to Silas/ (silas) opened nothing; press 2'), { type: 'insets', description: '{}' }] },
+    ], [retry('pressToTalk: E at /Talk to Silas/ (silas) opened nothing; press 2')]),
+    // An older report: annotations on the test only.
+    spec('fights-server', 'expected', [{ status: 'passed', retry: 0, duration: 10 }], [retry('fights-server join: no enemy 5 s after join 1; sending join 2')]),
+    spec('clean', 'expected', [{ status: 'passed', retry: 0, duration: 10, annotations: [{ type: 'insets', description: '{}' }] }]),
+  ] }] })
+  const summary = f.collect()
+  assert.equal(summary.health.helperRetryCount, 3)
+  assert.deepEqual(summary.health.helperRetries.map((r: { test: string; count: number }) => [r.test, r.count]), [['homestead.spec.ts › all › homestead', 2], ['fights-server.spec.ts › all › fights-server', 1]])
+  assert.deepEqual(summary.report.tests.find((x: { title: string }) => x.title === 'all › clean').helperRetries, [])
+  const md = readFileSync(f.stepSummary, 'utf8')
+  assert.match(md, /\*\*2 passed, 1 flaky, 0 failed, 3 helper retries\*\*/)
+  assert.match(md, /\*\*Helper retries:\*\*\n\n- homestead\.spec\.ts › all › homestead \(2\)\n {2}- pressToTalk: E at \/Talk to Silas\/ \(silas\) opened nothing; press 2/)
+  assert.match(md, /- fights-server\.spec\.ts › all › fights-server \(1\)\n {2}- fights-server join: no enemy/)
+  assert.equal(readFileSync(join(f.dir, '.e2e-artifacts/summary.md'), 'utf8') + '\n', md)
 })
 
 test('setup failure with no tests retains report-level errors', (t) => {

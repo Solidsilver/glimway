@@ -71,9 +71,9 @@ test('Wilds claim parser preserves and validates rare warden sliver finds', () =
 });
 
 test('items parser keeps what a seller handed over (/api/items/buy)', () => {
-  const items = { stacks: [{ itemDef: 'tallow', qty: 1, maker: null }], instances: [], pockets: [], offHand: { open: false, class: null, itemDef: null, instance: null }, pickedUp: [], thanks: [] };
+  const items = { stacks: [{ itemDef: 'tallow', qty: 1, maker: null }], instances: [], pockets: [], offHand: { open: false, class: null, itemDef: null, instance: null }, pickedUp: [], thanks: [], carried: [], plants: [] };
   // The wire answer carries every ItemsResult field (EmitUnpopulated).
-  const fields = { wear: null, used: '', pickup: '', given: null, mended: '', created: [], gathered: [], plant: null, land: null, returned: '', paper: null, heirloom: '', adaOilCount: 0, glimsGiven: 0 };
+  const fields = { wear: null, used: '', pickup: '', given: null, mended: '', created: [], gathered: [], plant: null, land: null, returned: '', paper: null, heirloom: '', adaOilCount: 0, glimsGiven: 0, tapped: null, firstTap: false, refined: null };
   const raw = { ...snapshot(), result: { items, ...fields, bought: { seller: 'hazels-kitchen', itemDef: 'tallow', qty: 1, glims: 1 } } };
   assert.deepEqual(parseItemsAction(raw).result.bought, { seller: 'hazels-kitchen', itemDef: 'tallow', qty: 1, glims: 1 });
   assert.equal(parseItemsAction({ ...raw, result: { items, ...fields, bought: null } }).result.bought, undefined);
@@ -294,6 +294,18 @@ test('client id: a reload with no other live page keeps its stored id', async ()
   assert.equal(claim.id, 'stored-id');
 });
 
+test('client id: a new tab (nothing stored) takes a fresh id at once, without waiting for an answer', async () => {
+  const channelName = freshChannel();
+  const storage = memoryStorage();
+  const t0 = Date.now();
+  const claim = track(await claimClientId({ storage, channelName, waitMs: 2_000 }));
+  assert.ok(Date.now() - t0 < 1_000, 'no wait for a fresh id');
+  assert.equal(storage.store.get('fingersnap:client-id'), claim.id);
+  // It still answers for its id: a copy of this tab takes another.
+  const copy = track(await claimClientId({ storage: memoryStorage(claim.id), channelName, waitMs: 300 }));
+  assert.notEqual(copy.id, claim.id);
+});
+
 test('client id: a duplicated tab (same stored id, original still open) gets its own id', async () => {
   const channelName = freshChannel();
   const original = track(await claimClientId({ storage: memoryStorage('dup-id'), channelName, waitMs: 30 }));
@@ -405,4 +417,19 @@ test('hearth, desk and woodpile: endpoints, method, body and parsed shape', asyn
   assert.equal(calls[3].init.method, 'POST');
   assert.equal(act.result.action, 'stack');
   assert.deepEqual(act.result.woodpile.stacks, []);
+});
+
+test('a closed claim posts nothing: a later reclaim keeps its id instead of throwing', async () => {
+  // A closed BroadcastChannel throws on every post (step-back 2, the link's twin).
+  let closed = false;
+  const ch = {
+    onmessage: null as ((ev: { data: unknown }) => void) | null,
+    postMessage: () => {
+      if (closed) throw new Error('InvalidStateError: Channel is closed');
+    },
+    close: () => void (closed = true),
+  };
+  const claim = await claimClientId({ storage: memoryStorage(), waitMs: 1, makeChannel: () => ch });
+  claim.close();
+  assert.equal(await claim.reclaim(), claim.id);
 });

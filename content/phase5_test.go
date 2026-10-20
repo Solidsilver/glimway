@@ -83,14 +83,14 @@ func TestCalendarBoundariesAndFestivals(t *testing.T) {
 }
 func TestPhase5ContentValidation(t *testing.T) {
 	c, err := LoadCrafting()
-	if err != nil || len(c.Recipes) != 39 {
+	if err != nil || len(c.Recipes) != 43 {
 		t.Fatal("recipes", err)
 	}
 	p, err := LoadProjects()
 	if err != nil || len(p.Projects) != 6 {
 		t.Fatal("projects", err)
 	}
-	for name, mutate := range map[string]func(*Crafting){"unknown-output": func(c *Crafting) { c.Recipes[0].Output.Id = "absent" }, "free": func(c *Crafting) { c.Recipes[0].Materials = map[string]int32{} }, "material": func(c *Crafting) { c.Recipes[0].Materials = map[string]int32{"absent": 1} }, "duplicate": func(c *Crafting) { c.Recipes[1].Id = c.Recipes[0].GetId() }, "tier": func(c *Crafting) { c.Recipes[0].MinTier = 1 }, "quantity": func(c *Crafting) { c.Recipes[0].Output.Qty = 0 }, "utility": func(c *Crafting) { c.UtilityItems[0].Id = WildsRules.Trinkets[0] }} {
+	for name, mutate := range map[string]func(*Crafting){"unknown-output": func(c *Crafting) { c.Recipes[0].Output.Id = "absent" }, "free": func(c *Crafting) { c.Recipes[0].Materials = map[string]int32{} }, "material": func(c *Crafting) { c.Recipes[0].Materials = map[string]int32{"absent": 1} }, "duplicate": func(c *Crafting) { c.Recipes[1].Id = c.Recipes[0].GetId() }, "tier": func(c *Crafting) { c.Recipes[0].MinTier = 1 }, "quantity": func(c *Crafting) { c.Recipes[0].Output.Qty = 0 }, "utility": func(c *Crafting) { c.UtilityItems[0].Id = WildsRules.Trinkets[0] }, "page-without-found": func(c *Crafting) { c.Recipes[0].Page = "recipe-homing-turncap" }, "page-not-a-paper": func(c *Crafting) { c.Recipes[0].Page, c.Recipes[0].Found = "amber", "somewhere" }} {
 		t.Run(name, func(t *testing.T) {
 			copy := proto.Clone(c).(*Crafting)
 			mutate(copy)

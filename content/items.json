@@ -300,7 +300,7 @@
     },
     {
       "id": "lamp-wick",
-      "name": "Lamp Wick",
+      "name": "Lamp wick",
       "tab": "supplies",
       "kind": "part",
       "marked": true,
@@ -308,7 +308,7 @@
     },
     {
       "id": "oilcloth-wrap",
-      "name": "Oilcloth Wrap",
+      "name": "Oilcloth wrap",
       "tab": "supplies",
       "kind": "part",
       "marked": true,
@@ -316,7 +316,7 @@
     },
     {
       "id": "wooden-peg",
-      "name": "Wooden Peg",
+      "name": "Wooden peg",
       "tab": "supplies",
       "kind": "part",
       "marked": true,
@@ -336,7 +336,7 @@
       "tab": "supplies",
       "kind": "fitting",
       "fitting": "hold",
-      "blurb": "Common at old lamp-stones. Not one of the Eleven. Fitted to a tool, it wears slower."
+      "blurb": "Common at old lamp stones. Not one of the Eleven. Fitted to a tool, it wears slower."
     },
     {
       "id": "tarrow-edge-strip",
@@ -381,7 +381,7 @@
     },
     {
       "id": "keepers-twists",
-      "name": "Keeper's Twists",
+      "name": "Keeper's twists",
       "tab": "supplies",
       "kind": "consumable",
       "marked": true,
@@ -436,7 +436,7 @@
     },
     {
       "id": "whittled-fox",
-      "name": "Whittled Fox",
+      "name": "Whittled fox",
       "tab": "keepsakes",
       "kind": "keepsake",
       "bound": true,
@@ -450,7 +450,7 @@
     },
     {
       "id": "knotted-halter",
-      "name": "Knotted Ox-Halter",
+      "name": "Knotted ox-halter",
       "tab": "keepsakes",
       "kind": "keepsake",
       "bound": true,
@@ -465,7 +465,7 @@
     },
     {
       "id": "work-glove",
-      "name": "Work Glove",
+      "name": "Work glove",
       "tab": "keepsakes",
       "kind": "keepsake",
       "pocket": [
@@ -478,7 +478,7 @@
     },
     {
       "id": "river-glass-bead",
-      "name": "River Glass Bead",
+      "name": "River glass bead",
       "tab": "keepsakes",
       "kind": "keepsake",
       "pocket": [
@@ -490,7 +490,7 @@
     },
     {
       "id": "tin-whistle",
-      "name": "Tin Whistle",
+      "name": "Tin whistle",
       "tab": "keepsakes",
       "kind": "keepsake",
       "bound": true,
@@ -505,7 +505,7 @@
     },
     {
       "id": "beeswax-candle",
-      "name": "Beeswax Candle",
+      "name": "Beeswax candle",
       "tab": "keepsakes",
       "kind": "keepsake",
       "bound": true,
@@ -514,14 +514,14 @@
     },
     {
       "id": "spare-bootlace",
-      "name": "Spare Bootlace",
+      "name": "Spare bootlace",
       "tab": "keepsakes",
       "kind": "keepsake",
       "blurb": "Waxed leather, still knotted in the double hitch runners use, as if the boot came off a moment ago."
     },
     {
       "id": "road-nails",
-      "name": "Stamped Road-Nails",
+      "name": "Stamped road-nails",
       "tab": "keepsakes",
       "kind": "keepsake",
       "bound": true,
@@ -538,14 +538,14 @@
     },
     {
       "id": "tool-rack",
-      "name": "Tool Rack",
+      "name": "Tool rack",
       "tab": "home",
       "kind": "home-good",
       "blurb": "Pegs for every tool, each one's fittings on show."
     },
     {
       "id": "stone-hearth",
-      "name": "Stone Hearth",
+      "name": "Stone hearth",
       "tab": "home",
       "kind": "home-good",
       "blurb": "Where hearth recipes are made."
@@ -767,7 +767,7 @@
       "name": "Lamp head",
       "tab": "supplies",
       "kind": "part",
-      "blurb": "Iron frame, glass and a wick holder for a lantern post. Bought from Orrin or salvaged from old lamp-stones."
+      "blurb": "Iron frame, glass and a wick holder for a lantern post. Bought from Orrin or salvaged from old lamp stones."
     },
     {
       "id": "wax-seal",
@@ -821,7 +821,7 @@
     },
     {
       "id": "oil-twists",
-      "name": "Keeper's Twists (oil)",
+      "name": "Keeper's twists (oil)",
       "tab": "supplies",
       "kind": "consumable",
       "marked": true,
@@ -886,7 +886,50 @@
           "type": "light-post"
         }
       ],
-      "blurb": "Lights lantern posts and window lamps once each; a gift for Ada's window."
+      "blurb": "Wick Tree sap, refined by the chandler. Keeps a lot lantern or way-lamp burning a wick, lights lantern posts and window lamps, and Ada would be glad of some for her window."
+    },
+    {
+      "id": "wick-sap",
+      "name": "Wick Tree sap",
+      "tab": "supplies",
+      "kind": "material",
+      "blurb": "A stoppered jar of the Wick Tree's sap, one wick's tapping. The chandler refines it into hearth oil, free."
+    },
+    {
+      "id": "homing-turncap",
+      "name": "Homing turncap",
+      "tab": "supplies",
+      "kind": "consumable",
+      "marked": true,
+      "use": [
+        {
+          "type": "travel-home",
+          "seconds": 3,
+          "target": "hearthwick:arch"
+        }
+      ],
+      "blurb": "A turncap set in amber, still leaning toward town. Hold still a moment and it takes you back to the north arch."
+    },
+    {
+      "id": "lamp-ash-pouch",
+      "name": "Lamp-ash pouch",
+      "tab": "supplies",
+      "kind": "consumable",
+      "marked": true,
+      "use": [
+        {
+          "type": "travel-lamp",
+          "seconds": 3
+        }
+      ],
+      "blurb": "A fiber pouch with a pinch of lamp ash. Bind it at a lamp, and it brings you back beside that lamp."
+    },
+    {
+      "id": "lamp-ash",
+      "name": "Lamp ash",
+      "tab": "supplies",
+      "kind": "material",
+      "blurb": "A pinch of grey ash with one warm fleck still glowing."
     },
     {
       "id": "storm-oil",
@@ -906,10 +949,17 @@
     },
     {
       "id": "lantern-post",
-      "name": "Lantern Post",
+      "name": "Lantern post",
       "tab": "home",
       "kind": "home-good",
-      "blurb": "Expands your land. Holds back the dark where its light falls."
+      "blurb": "A lantern post for your own ground. Its light widens the yard you can build in, and it takes a name for its sign."
+    },
+    {
+      "id": "way-lamp",
+      "name": "Way-lamp",
+      "tab": "home",
+      "kind": "home-good",
+      "blurb": "A lamp on a stone footing, for the Wilds. Set it out and keep it in oil, and the woods it lights hold through the turning."
     },
     {
       "id": "gate-shelf",
@@ -1057,7 +1107,7 @@
     },
     {
       "id": "recipe-card-twists",
-      "name": "Recipe card: Keeper's Twists",
+      "name": "Recipe card: Keeper's twists",
       "tab": "papers",
       "kind": "paper",
       "marked": true,
@@ -1077,7 +1127,7 @@
       "tab": "papers",
       "kind": "paper",
       "marked": true,
-      "blurb": "A ruled ledger receipt leaf from Ada Cooley's window fund. Amber and tallow."
+      "blurb": "A ruled ledger receipt leaf from Ada Cooley's window fund. Amber is Wick Tree sap gone hard; with tallow it renders down to hearth oil at home."
     },
     {
       "id": "recipe-page-wax-seal",
@@ -1094,6 +1144,22 @@
       "kind": "paper",
       "marked": true,
       "blurb": "A torn margin from Wenna's ledger in dense dark script. Storm-grade drop and tallow."
+    },
+    {
+      "id": "recipe-homing-turncap",
+      "name": "Recipe page: Homing turncap",
+      "tab": "papers",
+      "kind": "paper",
+      "marked": true,
+      "blurb": "A keeper's slip in a small, careful hand. One turncap spawn and two amber: set it while it still leans."
+    },
+    {
+      "id": "recipe-lamp-ash-pouch",
+      "name": "Recipe page: Lamp-ash pouch",
+      "tab": "papers",
+      "kind": "paper",
+      "marked": true,
+      "blurb": "A keeper's slip with a drawstring sketched in the margin. One lamp ash and two fiber, sewn tight."
     },
     {
       "id": "water",
@@ -1148,6 +1214,19 @@
       "kind": "paper",
       "marked": true,
       "blurb": "A flour-dusted bakery card from Hazel, checked against a roach she kept. One mill roach and a scoop of flour."
+    },
+    {
+      "id": "bench-trowel",
+      "name": "Bench trowel",
+      "tab": "tools",
+      "kind": "tool",
+      "grade": "cheap",
+      "uses": 30,
+      "actions": [
+        "uproot"
+      ],
+      "marked": true,
+      "blurb": "Digs up a planted seed or sapling. It comes back to your pack as its seed."
     }
   ],
   "pickups": [
@@ -1280,6 +1359,24 @@
           "cap": 3,
           "label": "Buy fiber ×4 · 3 glims",
           "line": "Offcuts from the yard. I'll not sell you the good beams, you'll want to fell those yourself."
+        }
+      ]
+    },
+    {
+      "id": "chandler",
+      "npc": "The chandler",
+      "area": "hearthwick",
+      "tx": 27,
+      "ty": 35,
+      "radiusTiles": 4,
+      "goods": [
+        {
+          "item": "hearth-oil",
+          "qty": 1,
+          "glims": 4,
+          "cap": 3,
+          "label": "Buy a flask of hearth oil · 4 glims",
+          "line": "Wick Tree sap, refined here. One flask keeps a lot lantern burning a wick. Bring me your sap and I'll refine it for nothing."
         }
       ]
     }

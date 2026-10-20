@@ -20,6 +20,7 @@
  * stays there (the quest event is still 'defeat-guardian', for saves).
  */
 import Phaser from 'phaser'
+import { DEV_TOOLS } from '../../lib/dev-tools'
 import { CAMP_LEASH, CAMP_RETURN_MARGIN, fightLeashFraction } from '../../lib/fight-math'
 import { ServerEnemies } from './server-enemies'
 import type { FightTargetRef } from '../../lib/presence'
@@ -37,6 +38,9 @@ import { roadStep } from '../../lib/quests'
 import type { CombatField } from '../../lib/combat-moves'
 import { ENEMY_TUNING, KNOCK, contactThreat, hitOutcome, knockFrom, knockInterrupts, touchOutcome, type EnemyPhase, type EnemyState } from './fight-rules'
 import { ownCollider } from './collider-lifetime'
+
+/** Dev only (sessionStorage): this tab parks its creatures in every scene (parkAll with `keep`). */
+const DEV_PARKED_KEY = 'fs-dev-parked'
 
 /** An enemy on this screen: its state, the sprite that draws it (a local enemy's body too), and its owner's working. */
 export interface Enemy extends EnemyState {
@@ -168,6 +172,8 @@ export class EnemySystem {
     }
     this.hpBars = scene.add.graphics().setDepth(5000)
     if (world.areaId === 'outdoors') this.server = new ServerEnemies(this)
+    // Dev: a playtest that parked for good (across a reload) starts every scene parked.
+    if (DEV_TOOLS && sessionStorage.getItem(DEV_PARKED_KEY)) this.parkAll()
   }
 
   get enemies(): Enemy[] {
@@ -197,8 +203,12 @@ export class EnemySystem {
    * them back. Server camps' enemies, now and as their rows arrive, are
    * parked on this screen only (./server-enemies.ts): drawn and touched off
    * the map while their room goes on; their camps stay standing, unfallen.
+   * The room still chases the hero, so its enemies can stand on him when a
+   * scene is built again: `keep` parks every later scene of this tab, from
+   * its first frame (a reload included).
    */
-  parkAll(): number {
+  parkAll(keep = false): number {
+    if (keep) sessionStorage.setItem(DEV_PARKED_KEY, '1')
     this.parkedAll = true
     let n = 0
     for (const e of this._enemies) {
@@ -507,11 +517,11 @@ export class EnemySystem {
     const corpseBody = enemy.sprite.body as Phaser.Physics.Arcade.Body
     corpseBody.setVelocity(0, 0)
     corpseBody.enable = false
+    // With motion reduced it fades where it stands, without sinking.
     this.scene.tweens.add({
       targets: enemy.sprite,
       alpha: 0,
-      y: '+=4',
-      scaleY: 0.6,
+      ...(this.deps.reducedMotion ? {} : { y: '+=4', scaleY: 0.6 }),
       duration: 320,
       onComplete: () => enemy.sprite.destroy()
     })
@@ -586,7 +596,8 @@ export class EnemySystem {
       strokeThickness: 4,
       resolution: 3
     }).setOrigin(0.5, 1).setDepth(6100)
-    this.scene.tweens.add({ targets: bang, y: bang.y - 4, scale: { from: 0.4, to: 1 }, duration: 140, ease: 'Back.easeOut' })
+    if (this.deps.reducedMotion) bang.setY(bang.y - 4)
+    else this.scene.tweens.add({ targets: bang, y: bang.y - 4, scale: { from: 0.4, to: 1 }, duration: 140, ease: 'Back.easeOut' })
     this.scene.time.delayedCall(seconds * 1000, () => bang.destroy())
     if (enemy.type === 'beetle' && !this.deps.reducedMotion) {
       // Pawing the ground: a small shiver while it winds up.

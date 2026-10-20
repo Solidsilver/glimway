@@ -46,7 +46,7 @@ func (x *rig) pathOp(c *http.Cookie, s response, op string, key string, sx, sy, 
 	epoch := "outside"
 	if len(epochs) > 0 {
 		epoch = epochs[0]
-	} else if wildsWhereInside(tileWhere(tx, ty)) {
+	} else if wildsWhereInside("", tileWhere(tx, ty)) {
 		dbtx, err := x.db.DB.BeginTx(context.Background(), nil)
 		if err != nil {
 			x.t.Fatal(err)
@@ -240,8 +240,10 @@ func TestWildsLayAndLift(t *testing.T) {
 	}
 }
 
-// Changes are stored under their chunk's epoch: the Beyond's go at the
-// turning, the Tangle's last for good.
+// Changes are stored under their chunk's epoch: the Tangle's last for good;
+// the Beyond's are Common (common_ways.go), carried onto the next wick while
+// someone stood in their chunk (laying there counts), and turned, their
+// stone crated at Pell's for its layer, at the first turning nobody came.
 func TestWildsChangesTurnWithTheirLand(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
@@ -258,8 +260,18 @@ func TestWildsChangesTurnWithTheirLand(t *testing.T) {
 	x.now.Store(day.NextTurning + 60)
 	c, _ = x.again("alice")
 	after := x.near(c, 1, -1, 200)
-	if after.Wick.Id == before.Wick.Id || len(after.Ground) != 1 || after.Ground[0].Epoch != after.Still.Id || after.Ground[0].Chunk.Cx != 0 {
+	beyond := slices.IndexFunc(after.Ground, func(g *contract.ChunkGroundChanges) bool { return g.Chunk.Cx == 2 })
+	if after.Wick.Id == before.Wick.Id || len(after.Ground) != 2 || beyond < 0 || after.Ground[beyond].Epoch != after.Wick.Id || groundAt(after.Ground[beyond], 3, 14).GetChange() != "stone" {
 		t.Fatal("ground after the turning", after.Ground)
+	}
+	if x.packQty(s.AccountID, "stone") != 0 {
+		t.Fatal("a carried path refunded")
+	}
+	x.now.Store(content.CalendarAt(content.CalendarRules, x.now.Load()).NextTurning + 60)
+	c, _ = x.again("alice")
+	last := x.near(c, 1, -1, 200)
+	if len(last.Ground) != 1 || last.Ground[0].Epoch != last.Still.Id || last.Ground[0].Chunk.Cx != 0 || x.crated(s.AccountID, "stone") != 1 {
+		t.Fatal("ground after an unvisited turning", last.Ground, x.crated(s.AccountID, "stone"))
 	}
 }
 
@@ -363,11 +375,27 @@ func TestWildsNamedWays(t *testing.T) {
 	if got := lay2(t, x, c, s, 11, -49); len(got) != 0 {
 		t.Fatal("a way between the footprints", got)
 	}
-	// Gone at the turning, with its tiles.
-	x.now.Store(content.CalendarAt(content.CalendarRules, x.now.Load()).NextTurning + 60)
+	// Laying visited the column's chunks: the way carries through the
+	// turning with its tiles, name and namer, while its places (dealt
+	// with the wick) still join; then goes with them at a turning nobody
+	// came to.
+	stand := content.CalendarAt(content.CalendarRules, x.now.Load()).NextTurning + 60
+	x.now.Store(stand)
+	c, _ = x.again("alice")
+	n := x.near(c, 3, -2, 200)
+	if len(n.Ways) != 1 {
+		t.Fatal("carried ways", n.Ways)
+	}
+	if w := n.Ways[0]; w.Id != "way:place:1:-1:place:1:0" || w.Name != "Bob's way" || w.By != b.AccountID || w.Epoch != n.Wick.Id {
+		t.Fatal("carried way", w)
+	}
+	if len(n.Ground) == 0 {
+		t.Fatal("ground didn't carry")
+	}
+	x.now.Store(content.CalendarAt(content.CalendarRules, stand).NextTurning + 60)
 	c, _ = x.again("alice")
 	if n := x.near(c, 3, -2, 200); len(n.Ways) != 0 || len(n.Ground) != 0 {
-		t.Fatal("ways or ground outlived the turning", n.Ways)
+		t.Fatal("ways or ground outlived an unvisited turning", n.Ways)
 	}
 }
 
@@ -754,7 +782,10 @@ func TestPathOperationsCapturedEpoch(t *testing.T) {
 	if got := count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner=? AND item_def='stone'", s.AccountID); got != balance {
 		t.Fatal("replay spent twice")
 	}
+	// The lay visited its chunk: the stone carried into the new wick, where
+	// it lifts and lays again under the new epoch.
 	current := x.near(c, 2, -4, 200)
+	x.pathOp(c, s, "lift", "carried-lift", tx, ty+1, tx, ty, "", 200, current.Wick.Id)
 	x.pathOp(c, s, "lay", "new-epoch", tx, ty+1, tx, ty, "stone", 200, current.Wick.Id)
 	for _, epoch := range []string{current.Still.Id, ""} {
 		_, code := x.pathOp(c, s, "lay", "mismatch-"+epoch, tx+1, ty+1, tx+1, ty, "stone", 409, epoch)

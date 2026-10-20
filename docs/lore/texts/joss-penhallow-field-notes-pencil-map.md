@@ -12,15 +12,15 @@ If you must map the western route [back to Hearthwick], you must stop thinking o
 Only mark the places where a light has burned. Old iron-oak stumps, ruined shrines, the Ashwatch stones. These are the "bones." The bones do not move, because they are heavy with memory.
 
 *Rule 2: Map the Tendency.*
-Between the bones, the flesh of the woods wanders. The Tangle does not have a set path through it. Instead, record what it *wants* to do.
-- *The deep ravines tend to fold shut during the Green Hush.*
-- *The ridges flatten out during the White Quiet.*
+When I ran the road, the flesh of the woods wandered. Between the bones, the Tangle did not have a set path through it. So I recorded what it *wanted* to do.
+- *The deep ravines folded shut during the Green Hush.*
+- *The ridges flattened out in the Quiet.*
 
 *Rule 3: Use Pencil.*
 Never commit ink to the space between the bones. Ink implies permanence. The moment you ink a river crossing in the deep Wilds, you guarantee you will drown there next season when the water moves.
 
-*Rule 4: Trust the Turncaps.*
-A turncap spins with the wind all its life, but give it twenty winters and it settles tilted, a hair off true, toward the nearest light that ever held steady. Wood remembers what it turned to face. If the bones have lost you, find a roof — sheep-shed, smoke-house, shrine — and mark which way its cap leans. It is pointing at a light that held. Set your camp where it points.
+*Rule 4: Trust the Cowls.*
+A chimney cowl spins with the wind all its life, but give it twenty winters and it settles tilted, a hair off true, toward the nearest light that ever held steady. Wood remembers what it turned to face. If the bones have lost you, find a roof — sheep-shed, smoke-house, shrine — and mark which way its cowl leans. It is pointing at a light that held. Set your camp where it points.
 
 *(Elara Quill later found a copy of this specific page in a Tarrow market. She wrote "FINALLY, SOMEONE WITH EYES" in the margins).*
 

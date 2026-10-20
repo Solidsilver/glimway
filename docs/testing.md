@@ -2,8 +2,8 @@
 
 How Glimway is tested, which tier to run when, and how to chase a flaky
 playtest. This is the one reference for the test workflow; the README's
-"Tests" section is the short version, and older notes (`build-status.md`,
-playtest records) describe how things ran at the time.
+"Tests" section is the short version, and the older playtest records
+describe how things ran at the time.
 
 ## Prerequisites
 
@@ -19,6 +19,29 @@ plus a few programs that aren't npm packages:
 
 `npx knip` lists these as "unlisted binaries": that's expected.
 
+### On the NixOS dev host (owner only)
+
+**Agents never run Playwright or Vite on the host.** Paseo agents can't start
+Vite (the service lacks `AF_NETLINK`), and the suite bogs down the machine the
+live game runs on. Agents push their `exp/<lane>` branch and watch its CI run
+instead ([CI](#ci) below). This recipe is for the owner, by hand.
+
+Two things fail there, and each has a fix:
+
+- **Vite can't start:** the sandbox blocks netlink, so `os.networkInterfaces()` throws
+  (errno 97). Preload the shim with `NODE_OPTIONS=--require=./scripts/netif-shim.cjs`.
+- **Playwright's downloaded Chromium won't launch on NixOS.** Point it at the nixpkgs build:
+  `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=$(ls -d /nix/store/*-chromium-1*[0-9] | tail -1)/bin/chromium`.
+  `playwright.config.ts` and `npm run atlases` both read it.
+
+Run one spec at a time inside `nix develop`:
+
+```sh
+NODE_OPTIONS=--require=./scripts/netif-shim.cjs \
+PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=… \
+npx playwright test e2e/camps.spec.ts --workers=1
+```
+
 ## The tiers
 
 | Command | What runs | When |
@@ -27,9 +50,9 @@ plus a few programs that aren't npm packages:
 | `npm test` | unit tests | while working |
 | `go test ./...` | server, shared content, parity vectors | server or shared-data changes |
 | `cd server && go test -race -timeout 30m ./...` | the server with the race detector | server changes, before handing back |
-| `npm run test:smoke` | the `@smoke` playtests (5 tests, a few minutes at most) | while working, often |
-| `npm run test:changed` | the playtests mapped to what this branch changed | at the end of a work session |
-| `npm run test:e2e` | the full Playwright suite | CI on the self-hosted GPU runner, on pushes to `main`, `dev` and `exp/**`, or manual dispatch ([ci-runner.md](ci-runner.md)) |
+| `npm run test:smoke` | the `@smoke` playtests (5 tests, a few minutes at most) | CI on every push; locally, the owner only |
+| `npm run test:changed` | the playtests mapped to what this branch changed | CI on pushes to `exp/**`; locally, the owner only |
+| `npm run test:e2e` | the full Playwright suite | CI on the self-hosted GPU runner, on pushes to `main` and `dev`, or a manual run with `full` ([ci-runner.md](ci-runner.md)) |
 | `npm run test:screens` | everything, saving screenshots to `.agent/screens/` (the `*-screens` specs only run with it) | visual reviews |
 
 Under `-race`, `internal/api` alone takes about 7–8 minutes, so on a busy
@@ -47,17 +70,7 @@ the unit tests fail when the committed output has drifted from its inputs:
 | `npm run atlases` | the packed art in `public/assets/fingersnap/packed/` (needs `cwebp`/`dwebp`) |
 
 While working, run `npm test` (or `npm run verify` when the change warrants
-it). At the end, run `npm run test:changed`. In CI, every push and pull
-request runs `verify`, the Go tests, the Docker smoke test and the smoke tier
-on GitHub's runners. The full suite runs on a self-hosted runner with an
-NVIDIA GPU, for pushes to `main`, `dev` and `exp/**` and for manual
-dispatch, never for pull requests ([ci-runner.md](ci-runner.md)). Each E2E
-job uploads a JSON attempt summary; up to three retry traces are retained
-within a 50 MiB cap. The first retry is traced, so it can show a successful
-attempt while the JSON summary preserves the original failure. A separate
-manual browser-performance job measures first paint and sparse-map rendering.
-Push an
-`exp/` branch to run it before main moves.
+it), and `go test ./...` for server changes. Playtests run in CI.
 
 Unit tests can load rune modules (`*.svelte.ts`, such as
 `src/ui/account-flow.svelte.ts`): import `tests/helpers/svelte-runes.ts`
@@ -65,9 +78,56 @@ first, then the module with `await import(…)`. Keep such modules free of
 Phaser and of imports without a `.ts` extension, and hand them their
 collaborators (an API, a session) so a test can pass fakes.
 
-**Agents:** run `test:smoke` and `test:changed` while you work. The full suite
-runs once per merge batch, not once per agent. `test:changed` itself runs the
-full suite when shared test code changed (see below).
+**Agents:** run `npm test`, `npm run verify` and the Go tests locally, never
+the playtests. Commit, push your `exp/<lane>` branch, and watch its run in the
+foreground (`gh run watch <id> --exit-status`): it runs the specs your changes
+touch, and the full suite when shared test code changed (see
+[Changed](#changed)). The full suite runs on `dev` once per merge batch, not
+once per agent.
+
+### CI
+
+Every push and pull request runs `verify`, the Go tests, the Docker smoke test
+and the smoke tier on GitHub's runners. The `e2e full` job runs on a
+self-hosted runner with an NVIDIA GPU, never for pull requests
+([ci-runner.md](ci-runner.md)):
+
+| Trigger | `e2e full` runs |
+|---|---|
+| push to `dev` or `main` | the full suite |
+| push to `exp/**` | `test:changed` against `origin/dev` ([Changed](#changed)) |
+| manual run with `full` | the full suite, on any branch: `gh workflow run ci.yml --ref <branch> -f full=true` |
+| manual run without `full` | as a push to that branch would |
+
+`e2e full` has a 60-minute timeout. A full dev run takes about 25 minutes, with
+outliers near 41. A newer push to the same branch cancels the older run's `e2e full`, except
+on `main`, where `tag-release.yml` needs every run to finish.
+
+A push that changes only docs (`docs/**` and Markdown files, except
+`CHANGELOG.md`, which the build reads) skips both E2E jobs; `verify` still
+runs. Each E2E job writes its health to the run's step summary: passed, flaky
+(failed, then passed on the retry) and failed tests by name, the helper
+retries, and the ten slowest tests. A helper retry is an action a helper
+repeated inside one attempt (`noteHelperRetry` in `e2e/helpers.ts` records
+it as a `helper retry` annotation): `pressToTalk` pressing E again at a
+walking resident, or `fights-server.spec.ts` sending its fight join again.
+The test still passes, so Playwright doesn't call it flaky; the summary lists
+each one by test, and the release bar reads both numbers
+([releasing.md](releasing.md)). It also uploads a JSON attempt summary (a lane run's two
+passes, its specs and then the smoke tier, each keep their own report and
+traces); up to three retry traces are retained within a 50 MiB cap. The first
+retry is traced, so it can show a successful attempt while the JSON summary
+preserves the original failure. To keep the failing attempts' traces instead,
+set the repository variable `E2E_TRACE=retain-on-first-failure` (every test is
+traced then, which slows the run), with `E2E_TRACE_FILES` and `E2E_TRACE_MB` to
+keep more.
+
+Any manual run (`workflow_dispatch`) also starts two opt-in measured jobs:
+"measured generator budgets" and "measured browser budget" (first paint and
+the sparse-map renderer; [Performance](#performance)). **Known issue:** the
+browser budget job fails today, because the sparse-map drag p95 is about
+240 ms against its 16 ms target, so every manual run ends red. That red is the measurement, not the
+correctness gate: read the `e2e full` job's result on its own.
 
 ### Smoke
 
@@ -86,14 +146,37 @@ plus uncommitted and untracked files, and maps them through
 
 - a changed spec runs itself;
 - a file under a rule's `paths` runs that rule's `specs` (rules marked
-  `smoke` also run the smoke tier, e.g. `src/game/scenes/**`);
-- a file in the `full` list (fixtures, helpers, the e2e servers, the
-  Playwright and Vite configs, `package.json`) runs the full suite;
+  `smoke` also run the smoke tier, e.g. `src/game/scenes/**`). A path
+  starting with `!` takes files back out of its rule
+  (`"!src/game/wilds/camps.ts"` under `src/game/wilds/**`);
+- a rule marked `fallback` is a catch-all: it applies only to files no other
+  rule covers. `server/internal/api/**`, `server/internal/store/**`,
+  `src/lib/api/**` and the generated code are fallbacks to the sign-in specs,
+  so a server or client file with its own rule runs only that rule's specs
+  (every playtest signs in against the Go server anyway);
+- a file in the `full` list (fixtures, helpers and what they re-export, the
+  e2e servers, the Playwright, Vite and Svelte configs, `package.json`,
+  `go.mod`) runs the full suite;
 - a source file no rule covers adds the smoke tier, and the script names it.
   Add a rule when that happens;
-- docs, unit tests and other `ignore` paths run nothing.
+- docs, unit tests (Go `_test.go` files, `testdata` and `storetest` too) and
+  other `ignore` paths run nothing.
 
-The fight selector maps server fight/fall code, presence protobuf output,
+The wire contract maps by message family: `camps.proto`, its Go output and
+its TS output together run the camps specs, `items.proto` the item-route
+specs, and so on. Each family's API client (`src/lib/api/items.ts`) sits in
+the same rule. Content schemas (`proto/glimway/content/v1`) run the specs of
+the loader that decodes them. `state_pb` loads most families at start-up, so
+family rules also run the smoke tier. A dialogue hub such as
+`homestead-talk.ts` has its own rule naming one spec per branch it routes to;
+its `about` says which spec covers which branch.
+
+CI does the same on lane branches: a push to `exp/*` runs `test:changed`
+against `origin/dev` on the self-hosted GPU runner, so lanes don't queue behind
+each other's full runs. Pushes to `dev` and `main` run the full suite, and
+so does a manual run with `full`: `gh workflow run ci.yml --ref exp/<lane> -f full=true`.
+
+The fight selector maps server fight/fall code, v2 presence protobuf output,
 interpolation, the server enemy renderer, camp outcome polling and fight
 content to `fights-server.spec.ts` and `fights-shared.spec.ts`. The two-client
 gate runs in CI; set `E2E_SHARED_FIGHTS=1` to opt in locally.
@@ -186,7 +269,8 @@ it at most 50 ms). A fixed pause is either too short (flaky) or too long
 | Instead of | Use |
 |---|---|
 | `waitForTimeout` after a warp | `warp` / `go` / `waitForArea` (they wait until the area is built, its fade-in done, and a few frames drawn) |
-| a pause before pressing E | `waitForLive(page)` (no dialogue or panel, past the grace after a conversation) or `openTalk(page, prompt)` |
+| a pause before pressing E | `waitForLive(page)` (no dialogue or panel, past the grace after a conversation) or `openTalk(page, prompt)` (the prompt shows, input is live and the target has held still: then one press) |
+| pressing or sending again until it works | wait for the thing to be ready, then act once. Where only a retry will do (someone walking), record each repeat with `noteHelperRetry(helper, detail)` so the step summary counts it |
 | `waitForWilds` before using something on the open map | `chunkWhole(page, tile)` (that tile's chunk attached *and built whole*: its pieces and things registered) or `windowWhole(page)` (the whole 3×3); `waitForWilds` only promises the scene settled and the hero's chunk attached |
 | working out which prompt wins (reach, rank, the tool in hand) in the spec | the game's own election: `targetAt(page, feet)` (the target those feet would get), `standFor(page, id, spots)` (stand where it is `id`), `expectTarget(page, id)`, and `pressOn(page, id, tile)` (chunk whole, input live, exactly `id` elected, then E) |
 | a stall that just times out | a progress check that fails fast with `diagnose(page)` (hero, body, target and what is in reach, the dev walk's next waypoints, the window's build state, the epoch) |
@@ -204,6 +288,7 @@ it at most 50 ms). A fixed pause is either too short (flaky) or too long
 | a pause for a banner to clear | poll `__fsBanners().current` until it is `null` (see `coop.spec.ts`) |
 | a pause before a screenshot | `animationsDone(page)` (running transitions and fades finished, then two frames) |
 | a reload that must carry the tab's writes (the old `savedToDisk` wait) | `reenter(page)` (e2e/connected.ts): the server's revision matches the tab's, then reload and Continue |
+| a poll of the server's saved place after a move within one area (`__fsDevSaveSoon` sends no report) | `{ timeout: PLACE_REPORTED_MS }` (e2e/connected.ts): the link reports the place on a 10 s deadline; only an arrival in another area goes at once |
 
 **Proving something does *not* happen.** Wait for an observable state that
 rules it out, and record what the page does in the meantime:
@@ -229,6 +314,9 @@ nothing in smoke covers. Screenshot-only specs skip themselves without
 
 ## Debugging a flake
 
+Agents work from the CI run: its step summary, the uploaded attempt summary
+and traces, and a re-run of the branch. The local steps below are the owner's.
+
 1. Re-run just the test, several times, in parallel with itself:
    `E2E_PORT=5231 npx playwright test e2e/x.spec.ts -g "title" --repeat-each=5 --workers=5`.
    Add `--workers=1` to see whether it only fails under load.
@@ -247,12 +335,25 @@ nothing in smoke covers. Screenshot-only specs skip themselves without
    IN (SELECT world_id FROM region_epochs)")` before the first Wilds read, as
    the handoff test does.
 6. `npx playwright test --last-failed` re-runs what failed.
+7. "Test timeout" with no step named means a wait with no bound of its own: a
+   promise the spec built (a held `page.route`, an event) or `page.evaluate`.
+   `actionTimeout` covers only Playwright's own waits. Give such a wait a named
+   step with a timeout (`step()` in ways-home.spec.ts), and have its failure
+   say what the game did instead (its toasts, `__fsSafety`). The game can
+   decline quietly: a pause that lets go asks nothing.
+8. Check game code for real-time gaps between frames. On a loaded runner one
+   frame can take over two seconds (CI 2026-10-19). Code that treats a gap
+   over some threshold as "the player stopped" or "something took the
+   screen" fails then. The ways-home pause did, until it asked the scene's
+   `playHold` instead. Game time (`delta`, capped at 50 ms a frame) and the
+   scene's own hold are safe. `scene.time.now` is wall time.
 
 ## Performance
 
 Walking the open map is the game's heaviest work on the main thread: every
 chunk edge attaches a row of chunks and drops one. Three tools keep it
-measurable. None of them runs in CI.
+measurable. None of them runs in CI, and like every Playwright run they are
+the owner's to run on the dev host, not an agent's.
 
 **`?perf=1`** (src/game/perf.ts) turns on the instruments in any build: a
 small overlay (top right: frame times, long frames, display list, tweens,
@@ -340,6 +441,8 @@ The sparse-map renderer unit fixture always checks output correctness, cache
 bounds and overview dimensions. Its drag and zoom p95 budget is opt-in with
 `MAP_PERF=1`; the manual browser-performance job records it with the browser
 measurement. Set `MAP_RENDER_P95_BUDGET_MS` to override the 16 ms target.
+The drag p95 measures about 240 ms on the CI runner today, so that job
+fails ([CI](#ci), known issue).
 
 **Fight load tools:** `sh scripts/fight-load.sh` measures multi-client server
 fight load; `docs/shared-fights-testing.md` records its settings and output.
@@ -347,8 +450,10 @@ The load run is a measurement, not part of the correctness gate.
 
 ## Quarantined
 
-There are no quarantined Playwright tests at present. Keep real product
-regressions in the gate when possible; if one must be marked `test.fixme`,
-record the current reason and remove the quarantine with the fix.
+No Playwright test is quarantined.
+
+Keep real product regressions in the gate when possible; if one must be
+marked `test.fixme`, record the current reason here and remove the
+quarantine with the fix.
 
 Generator wall-clock thresholds are opt-in: `GLIMWAY_PERF=1 go test -count=1 -v ./server/internal/wilds -run '^TestChunkTime(Budget|Headroom)V3$'`. CI runs them in the manual-dispatch measured job. Ordinary tests retain size, connectivity and golden invariants.

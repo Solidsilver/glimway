@@ -18,7 +18,7 @@ import { CRAFTING } from './workshop.ts';
 import { QUEST_ITEMS } from './api/progress.ts';
 import { CHARM_ITEM } from './glims.ts';
 import { glimsCount } from '../content/purse.ts';
-import type { Asset, InstanceView, ItemsView, MakerView } from './api/types.ts';
+import type { Asset, CarriedPlantView, InstanceView, ItemsView, MakerView } from './api/types.ts';
 import { assetKind, itemName, effectLine, slotCount, giveable, heldEffects, iconId, iconState, itemDef, offHandable, usableNow, wearRuleLine, type ItemDef } from './items.ts';
 
 export type InventoryTab = 'tools' | 'supplies' | 'keepsakes' | 'home' | 'papers';
@@ -71,6 +71,8 @@ export interface InventoryEntry {
   carryable?: boolean;
   giveable?: boolean;
   mendable?: boolean;
+  /** A plant carried as itself, from Pell’s crate or the trowel (lamps.md 2.7): it plants again, its growth kept. */
+  carriedPlant?: CarriedPlantView;
   /** Which pocket holds it (1, 2), or whether the off hand does. */
   pocket?: number | null;
   inHand?: boolean;
@@ -88,6 +90,25 @@ export interface InventorySource {
   items?: Record<string, number> | null;
   /** Your home's decorations: one per instance, `scene` null when not set out. */
   decorations?: ReadonlyArray<{ itemDef: string; scene: string | null }>;
+}
+
+/** A home piece: set out (`scene`) or in the pack (`scene` null). */
+export interface HomePiece { id: string; itemDef: string; scene: string | null }
+
+/**
+ * Your home pieces: those set out at your homestead, then those in your
+ * pack. The items read lists the pack's whether or not you hold a deed
+ * (`carried`); until it lands, the homestead's own copy stands in.
+ */
+export function homePieces(home: readonly HomePiece[] | null | undefined, carried: readonly { id: string; itemDef: string }[] | null | undefined): HomePiece[] {
+  const placed = (home ?? []).filter((p) => p.scene !== null);
+  const pack = carried ? carried.map((p) => ({ id: p.id, itemDef: p.itemDef, scene: null })) : (home ?? []).filter((p) => p.scene === null);
+  return [...placed, ...pack];
+}
+
+/** A piece of this kind in the pack, to set out: its id, or null. */
+export function carriedPiece(pieces: readonly HomePiece[], def: string): string | null {
+  return pieces.find((p) => p.itemDef === def && p.scene === null)?.id ?? null;
 }
 
 /**
@@ -297,6 +318,11 @@ export function modelEntries(view: ItemsView, src: Pick<InventorySource, 'pack' 
       ),
     );
   }
+  // Plants carried whole (from Pell's crate or the trowel), each its own row (lamps.md 2.7).
+  for (const p of view.plants ?? []) {
+    const d = itemDef(p.itemDef);
+    if (d) out.push(modelEntry(d, carriedPlantEntry(d, p), view));
+  }
   // Quest things ride in the save, as before.
   const seen = new Set<string>();
   for (const id of src.pack) {
@@ -306,6 +332,21 @@ export function modelEntries(view: ItemsView, src: Pick<InventorySource, 'pack' 
   }
   for (const e of inventoryEntries({ pack: [], materials: {}, decorations: src.decorations })) out.push(e);
   return out;
+}
+
+/** A carried plant's icon (items pass `item-carried-plant`): a plant lifted with its root ball, for every kind of plant. */
+export const CARRIED_PLANT_ART = 'item-carried-plant';
+
+/** A carried plant's words (lamps.md 2.7): it is the plant itself, lifted whole, not its seed. */
+export const CARRIED_PLANT_WORDS = {
+  name: (seed: string) => `${seed}, lifted whole`,
+  blurb: 'Lifted whole, roots and all. Plant it on your land or at a camp you build at and it grows on from where it was.',
+  planted: (seed: string) => `Your ${seed.toLowerCase()} is back in the ground, growing on from where it was.`,
+} as const;
+
+/** A carried plant's row: its own key and icon, one of it, nothing to give, use or pocket. */
+export function carriedPlantEntry(d: ItemDef, p: CarriedPlantView): Partial<InventoryEntry> & { key: string; qty: number } {
+  return { key: `plant:${p.id}`, qty: 1, carriedPlant: p, name: CARRIED_PLANT_WORDS.name(d.name), blurb: CARRIED_PLANT_WORDS.blurb, art: CARRIED_PLANT_ART, stateArt: null, usable: false, pocketable: false, carryable: false, giveable: false };
 }
 
 /** Which instances could take this fitting (tools in the pack with a free slot and no fitting of its kind). */

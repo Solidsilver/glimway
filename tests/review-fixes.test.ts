@@ -7,7 +7,7 @@ import { dirname, join } from 'node:path'
 import { installDirs, installStaged } from '../scripts/atlas-install.ts'
 import { hook, type FsHooks } from '../src/game/dev-hooks.ts'
 import { onSceneEnd } from '../src/game/scene-end.ts'
-import { enemiesNearForSync, setSyncSafety, syncSafety, type SyncSafety } from '../src/game/sync-safety.ts'
+import { clearSyncSafety, enemiesNearForSync, setSyncSafety, syncSafety, type SyncSafety } from '../src/game/sync-safety.ts'
 import { DialogueHold } from '../src/game/dialogue-hold.ts'
 
 /**
@@ -151,6 +151,18 @@ test('sync safety: no live world answers null; a world answers until its scene e
   assert.equal(syncSafety()?.areaId, 'village')
   s.events.emit('destroy') // game.destroy: a session swap
   assert.equal(syncSafety(), null, 'a dead world never answers for the next one')
+})
+
+test('sync safety: a stopping game answers null at once, before its scene ends on the next frame (a world move)', () => {
+  const old = scene()
+  onSceneEnd(old, setSyncSafety(answer('village')))
+  clearSyncSafety() // stopGame: the next world boots under the loading screen
+  assert.equal(syncSafety(), null, 'the old world never stands in for the one booting')
+  const next = scene()
+  onSceneEnd(next, setSyncSafety(answer('commons')))
+  old.events.emit('destroy')
+  assert.equal(syncSafety()?.areaId, 'commons', 'its late end leaves the new world alone')
+  next.events.emit('shutdown')
 })
 
 test('sync safety: an older world ending never clears a newer one', () => {

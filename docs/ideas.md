@@ -4,7 +4,7 @@ A canvas for ideas that come up along the way. Nothing here is planned or promis
 becomes real work, it moves into a plan or brief and gets a link here. Add freely and keep each
 entry short.
 
-Designed ideas now live in [design/](design/plan.md): the combined [plan](design/plan.md), the
+The release order is [roadmap.md](roadmap.md). Designed ideas live in [design/](design/plan.md): the combined [plan](design/plan.md), the
 open [world](design/world.md), [layers](design/layers.md), [pets](design/pets.md),
 [magic](design/magic.md), [quests](design/quests.md), [fishing](design/fishing.md) and
 [guests on the server](design/guests.md).
@@ -36,11 +36,13 @@ worth thinking about; **(later)** means parked on purpose.
   it stays in Habitica. Design: [design/purse-and-wardrobe.md](design/purse-and-wardrobe.md).
 - **Pets and mounts as companions** (shipped in 0.5): choose which pet walks with you and three for
   the yard, and ride from the stable. See [design/crafts.md](design/crafts.md).
-- **Streaks and achievements** (maybe): earn recognition in the world, such as a plaque, a title,
-  or a resident who remarks on it.
-- **Party goals tied to Habitica tasks** (maybe): party members' finished tasks add up to something
+- **Streaks and achievements** (maybe; "the Habitica mirror", after 0.16 in [roadmap.md](roadmap.md)): earn recognition in the world, such as a plaque, a title,
+  or a resident who remarks on it. Celebrate, never grade.
+- **Party goals tied to Habitica tasks** (later, parked 2026-10-17): party members' finished tasks add up to something
   shared in the world, such as lighting a stretch of road together, so doing your dailies helps
-  your friends.
+  your friends. Shared projects in the game (the span, a road) do this without a second goal system.
+- **A weekly wick report** (later, parked 2026-10-17): your Habitica week reflected in the world at
+  the turning. Owner: "ok, not super exciting."
 
 - **Backups for everything Habitica supplies** (agreed, standing goal): our own versions of the
   avatar (the player body), gear, pets and sprites, so a spin-off not tied to Habitica stays
@@ -68,10 +70,27 @@ worth thinking about; **(later)** means parked on purpose.
     fishes slowly.
   - **A water can be fished out** for a while, with a small "a fish got in here somehow" chance.
   - It's all deterministic and server-checkable, like gathering.
-- **More variety beyond the Tangle** (maybe, needs a brainstorm): mountains, lakes and rivers, and
-  later caves, plus ways to go past the Whitequiet. Unlock those only once players have a way back
-  (a map, breadcrumbs, or a door or teleport item). This needs a better generation system; hold a
-  brainstorming session when we explore it.
+- **More variety beyond the Tangle, in endless Wilds** (agreed 2026-10-19, no release yet; needs a
+  brainstorm): mountains, lakes and rivers, and later caves, other biomes and other creatures, so the
+  world feels big and full. Pair it with **endless Wilds**: the generator already makes any chunk
+  from the seed, the epoch and (cx, cy) alone, so the limits are rules and costs. What it takes:
+  - the rule: widen or drop the frontier's `reach` and `southLimit` (`content/wilds.json`), and
+    decide what the Whitequiet's closing edge means then (it's how lit camps push it back, canon
+    §2.4);
+  - the open map: `api/open_map.go` and the client walk the whole frontier rect, so both need a
+    window round the player;
+  - storage: chunks are stored the first time they're read, so prune unheld ones or cap them;
+  - content: tiers stop at 3 about six chunks out, and the Wend, the rumours and the Lantern Road
+    (40 chunks past its bend) are laid only near the start, so variety has to keep growing with
+    distance;
+  - ways home matter more on a long walk out.
+  Players still need a way back before it opens (a map, breadcrumbs, or a door or teleport item).
+  The owner's picture of the height (2026-10-19): the world is mostly flat and solid. You can't dig
+  down just anywhere, and caves aren't everywhere. In a few places a tunnel from the surface opens
+  into a large space below ground (maybe somewhere players build a base). Mountains have trails up
+  them, and sometimes a way across a whole range, but they aren't everywhere either. Some caves may
+  run under mountains. This fits the cut of "a sprawling underground", which meant digging anywhere
+  and caves everywhere, not a few large places below ground. Work it through in the brainstorm.
 
 - **Exploration for every class and playstyle** (maybe): the Wilds and future expansions give each
   Habitica class (warrior, mage, healer, rogue) and each playstyle (fighting, gathering, crafting,
@@ -87,6 +106,11 @@ worth thinking about; **(later)** means parked on purpose.
 
 ## Standalone version (later)
 Glimway without Habitica, with Habitica as one mode. The owner plays with Habitica, so this waits.
+Decided 2026-10-17 ([roadmap.md](roadmap.md) rule 6): **one world, two editions.** The standalone
+is a game to sell on Steam and/or mobile with no real-life tie-in; it swaps three edges, where glims
+come from (daily town requests, boss bounties, trade, on a rested-glim curve), the hero, and the art.
+It waits until the 0.14–0.16 loops are proven. The web client gets wrapped (Tauri, Capacitor)
+rather than rewritten.
 - **Guest accounts** (agreed, designed): key phrase sign-in, devices, linking. Steps 3–6 of
   [design/guests.md](design/guests.md).
 - **Glims without Habitica** (needs a design session): today guests earn glims only from story
@@ -105,7 +129,15 @@ Glimway without Habitica, with Habitica as one mode. The owner plays with Habiti
   today. Ideas: pet storage, mounts done properly, and pets that matter in the world. Check against
   [habitica-boundary.md](habitica-boundary.md).
 - **A bigger magic system** (maybe, needs a design session): today there's a single Fingersnap
-  ability. Expand it into a real system, perhaps tied to class.
+  ability. Expand it into a real system, perhaps tied to class. **The Old ways** (the level-30 mage
+  capstone, [design/lamps.md](design/lamps.md)) and class-locked magic trees are parked (later,
+  2026-10-17): no player is near level 30.
+- **Baking** (later, parked 2026-10-17): food with buffs, baked and sold at the stalls. Comes back as
+  a tactile craft you can get good at, not a click-to-craft button.
+- **An animal overhaul** (maybe, needs a design session, canon §5.4, 2026-10-19): ordinary
+  animals and corrupted ones. Beasts the Dark has fevered are unmoored, keep their animal nature,
+  and flee into the woods when the fever breaks in a fight. The Wilds' wisps and beetles get
+  explained then; until then no text says what they are.
 - **A quest overhaul** (maybe, needs a design session):
   - quests as a tree, so new ones can be added over time;
   - the first quest is a "tutorial by doing" without feeling like a tutorial: it teaches the
@@ -128,10 +160,23 @@ Glimway without Habitica, with Habitica as one mode. The owner plays with Habiti
 - **Versioning** (agreed): semver 0.x, tags, `CHANGELOG.md`, the version in the Menu, and a
   "new version, reload" prompt.
 - **Client error reporting and basic server metrics** (agreed).
-- **Automated database backups** on the home server (agreed).
+- **Automated database backups** on the home server (shipped in 0.1.0: the NixOS timer; 0.12
+  adds a restore check, `verify-backup`).
 - **Scaling** (later): notes in [scaling.md](scaling.md). Measure before acting.
 - **A binary wire format (protobuf) for presence** (later): see [scaling.md](scaling.md).
 - **Lossy WebP for the people atlas** (later): it would roughly halve its 0.7 MB, but the owner wants
   exact pixels for now.
 - **A faster scene build on phones** (maybe): after the ground fix, about 0.4–0.5 s remains on a
   throttled phone, from props, portraits and the HUD's icons.
+
+## Land (2026-10-17)
+- **Tethers** (maybe, owner idea): each player gets a small fixed number of tethers that hold a
+  chunk of land for good, with no oil, as a permanent alternative to lamps. Optional; the
+  chartered Wilds hearth's core plot is permanent either way (roadmap 0.14).
+- **Kept shortcuts** (maybe, owner 10-17): bare clearing turns every week even when visited;
+  only laid paths stay. The cost is that an unpaved shortcut must be cut again each week. If that
+  grates in play, let a visited path keep a one-tile shoulder, or let a communal lamp keep a small
+  rest clearing around it.
+- **Worn ways** (maybe, canon §2.6, 2026-10-19): a way walked several wicks running becomes
+  **worn** and forgives one missed wick before it turns. The lore says only that care wears in
+  slowly; it isn't canon until built.

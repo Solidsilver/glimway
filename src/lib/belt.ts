@@ -1,10 +1,10 @@
 /**
  * The hand slot and the belt (playtest 1, held items): what the hero holds
  * decides what the action does. Slot 1 is always the weapon; then one slot
- * per kind of tool carried (axe, pick, spade, bucket, can, …), the best of
- * each, in a fixed order, and last the empty hands (lane exp/empty-hands,
- * key 0: the only way the action button offers a pet). Nothing to set up: a
- * new tool joins the belt.
+ * per kind of tool carried (axe, pick, spade, trowel, bucket, can, …), the
+ * best of each, in a fixed order, and last the empty hands (lane
+ * exp/empty-hands, key 0: the only way the action button offers a pet).
+ * Nothing to set up: a new tool joins the belt.
  *
  * What's in hand is a choice on this device (src/game/held.ts keeps it), not
  * part of the save: the save's flags only ever grow on the server. No Phaser,
@@ -14,10 +14,10 @@ import { itemDef } from './items.ts';
 import type { InstanceView } from './api/types.ts';
 
 /** A belt slot's kind: the weapon, a tool action (content/items.json `actions`), or the empty hands. */
-export type BeltKind = 'weapon' | 'chop' | 'break' | 'dig' | 'fish' | 'draw' | 'water' | 'trim' | 'mark' | 'hands';
+export type BeltKind = 'weapon' | 'chop' | 'break' | 'dig' | 'uproot' | 'fish' | 'draw' | 'water' | 'trim' | 'mark' | 'hands';
 
 /** Belt order (keys 1, 2, … follow it over the kinds you carry; the hands are last, on 0). */
-export const BELT_ORDER: readonly BeltKind[] = ['weapon', 'chop', 'break', 'dig', 'fish', 'draw', 'water', 'trim', 'mark', 'hands'];
+export const BELT_ORDER: readonly BeltKind[] = ['weapon', 'chop', 'break', 'dig', 'uproot', 'fish', 'draw', 'water', 'trim', 'mark', 'hands'];
 
 /** The kinds a carried tool can fill (everything but the weapon and the hands). */
 const TOOL_KINDS: readonly BeltKind[] = BELT_ORDER.filter((k) => k !== 'weapon' && k !== 'hands');
@@ -27,13 +27,14 @@ const TOOL_KINDS: readonly BeltKind[] = BELT_ORDER.filter((k) => k !== 'weapon' 
  * for it to work on (the owner's playtest: "you probably couldn't attack with
  * a fishing rod"). The weapon strikes; the sturdy tools (axe, pick, spade)
  * swing, a duller arc at half the damage, enough to fend off a wisp; the rest
- * (rod, bucket, can, pole, punch) don't swing at all.
+ * (trowel, rod, bucket, can, pole, punch) don't swing at all.
  */
 export const SWING: Readonly<Record<BeltKind, 'weapon' | 'tool' | null>> = {
   weapon: 'weapon',
   chop: 'tool',
   break: 'tool',
   dig: 'tool',
+  uproot: null,
   fish: null,
   draw: null,
   water: null,
@@ -118,6 +119,7 @@ export const KIND_WORDS: Record<BeltKind, string> = {
   chop: 'Axe',
   break: 'Pick',
   dig: 'Spade',
+  uproot: 'Trowel',
   fish: 'Fish',
   draw: 'Bucket',
   water: 'Watering can',

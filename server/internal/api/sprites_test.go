@@ -31,6 +31,12 @@ type fakeSpriteHost struct {
 func newFakeSpriteHost(t *testing.T) *fakeSpriteHost {
 	f := &fakeSpriteHost{files: map[string][]byte{}}
 	f.srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Only the proxy's asks count: a loopback port sweep's GET / is not
+		// a fetch (see fromHabiticaClient).
+		if !strings.HasPrefix(r.URL.Path, "/images/") {
+			http.NotFound(w, r)
+			return
+		}
 		f.hits.Add(1)
 		f.mu.Lock()
 		f.seen = append(f.seen, r.Header.Clone())

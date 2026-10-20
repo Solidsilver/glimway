@@ -81,6 +81,16 @@ export interface ItemsView {
   pickedUp: string[];
   /** Recent thank-yous for things you made. */
   thanks: ThanksView[];
+  /** Home pieces in the pack (a way-lamp, a stool), deed or no deed. */
+  carried: { id: string; itemDef: string }[];
+  /** Plants in the pack, lifted whole (from Pell’s crate or with the trowel), their planting kept: each plants again where its seed could. */
+  plants: CarriedPlantView[];
+}
+/** A carried plant (lamps.md 2.7): its own id, its seed and when it was first planted. */
+export interface CarriedPlantView {
+  id: string;
+  itemDef: string;
+  plantedAt: number;
 }
 export interface ItemsResponse extends Snapshot {
   items: ItemsView;
@@ -96,7 +106,7 @@ interface WearResult {
   condition: number;
   instance: InstanceView | null;
 }
-export type ItemsOp = 'use' | 'repair' | 'fit' | 'unfit' | 'give' | 'pocket' | 'offhand' | 'pickup' | 'return' | 'gather' | 'plant' | 'heirloom' | 'ada-oil' | 'buy';
+export type ItemsOp = 'use' | 'repair' | 'fit' | 'unfit' | 'give' | 'pocket' | 'offhand' | 'pickup' | 'return' | 'gather' | 'plant' | 'uproot' | 'heirloom' | 'ada-oil' | 'buy' | 'tap' | 'refine';
 export interface ItemsActionResponse extends Snapshot {
   result: {
     items: ItemsView;
@@ -118,6 +128,11 @@ export interface ItemsActionResponse extends Snapshot {
     glimsGiven?: number;
     /** What a seller just handed over (/api/items/buy), and what it cost in glims. */
     bought?: { seller: string; itemDef: string; qty: number; glims: number };
+    /** tap: the Wick Tree's sap for this wick (lamps.md 2.5); firstTap on a player's first ever. */
+    tapped?: { itemDef: string; qty: number };
+    firstTap?: boolean;
+    /** refine: the oil the chandler made from sap, free. */
+    refined?: { itemDef: string; qty: number };
   };
 }
 
@@ -178,6 +193,7 @@ export function projectCounts(v: GeneratedAssetCounts | undefined): AssetCounts 
 
 export function projectItemsView(v: GeneratedItemsView): ItemsView {
   if (!v.offHand) throw new Error('missing off hand');
+  if (v.carried.some((p) => !p.id || !p.itemDef)) throw new Error('invalid carried piece');
   return {
     stacks: v.stacks.map((s): StackView => ({ itemDef: s.itemDef, qty: int(s.qty, 1), maker: maker(s.maker ?? undefined) })),
     instances: v.instances.map(projectInstance),
@@ -185,6 +201,8 @@ export function projectItemsView(v: GeneratedItemsView): ItemsView {
     offHand: { open: v.offHand.open, class: v.offHand.class ?? null, itemDef: v.offHand.itemDef ?? null, instance: v.offHand.instance ?? null },
     pickedUp: v.pickedUp.filter((p): p is string => typeof p === 'string'),
     thanks: v.thanks.map((t): ThanksView => ({ fromName: t.fromName.slice(0, 64), itemDef: t.itemDef, at: num(t.at) })),
+    carried: v.carried.map((p) => ({ id: p.id, itemDef: p.itemDef })),
+    plants: v.plants.map((p): CarriedPlantView => ({ id: p.id, itemDef: p.itemDef, plantedAt: num(p.plantedAt) })),
   };
 }
 
@@ -229,12 +247,15 @@ function result(r: ItemsResult): ItemsActionResponse['result'] {
   if (r.adaOilCount) out.adaOilCount = int(r.adaOilCount);
   if (r.glimsGiven) out.glimsGiven = int(r.glimsGiven);
   if (r.bought) out.bought = { seller: r.bought.seller, itemDef: r.bought.itemDef, qty: int(r.bought.qty), glims: int(r.bought.glims) };
+  if (r.tapped) out.tapped = { itemDef: r.tapped.itemDef, qty: int(r.tapped.qty) };
+  if (r.firstTap) out.firstTap = true;
+  if (r.refined) out.refined = { itemDef: r.refined.itemDef, qty: int(r.refined.qty) };
   if (r.gathered?.length) out.gathered = r.gathered.map((g) => ({ itemDef: g.itemDef, qty: int(g.qty) }));
   if (r.plant) {
     out.plant = {
       id: r.plant.id,
       itemDef: r.plant.itemDef,
-      x: int(r.plant.x),
+      x: int(r.plant.x, -24), // a west lot's backland: lot-local x -24..-1
       y: int(r.plant.y),
       plantedAt: r.plant.plantedAt ?? undefined,
       plantedDay: r.plant.plantedDay ?? undefined,

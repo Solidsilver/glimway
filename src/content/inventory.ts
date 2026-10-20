@@ -50,6 +50,8 @@ export const inventoryCopy = {
   },
   road: 'For the road',
   roadNote: 'Quest things. They stay with you.',
+  /** Under a carried way-lamp before Mara's ledger (lamps.md 2.8): a communal lamp still sets. */
+  keeperNote: 'Setting a way-lamp for a camp wants a Keeper’s hand. Mara keeps the ledger. You can still set it as a communal lamp.',
   placed: (n: number) => `${n} set out`,
   stored: (n: number) => `${n} put away`,
   papersNote: 'Also in your Journal (J).',
@@ -79,7 +81,7 @@ export const inventoryCopy = {
   neverWears: 'Never wears',
   state: { blunt: 'Blunt. Mend it to use it again.', cracked: 'Cracked. Mend it to use it again.', dull: 'Dull. Sharp again by morning.' } as Record<string, string>,
   fittings: 'Fittings',
-  actions: { use: 'Use', pocket: 'Pocket', unpocket: 'Take out', carry: 'Carry', putAway: 'Put away', give: 'Give', mend: 'Mend', fit: 'Fit to', takeOff: 'Take off', plant: 'Plant' },
+  actions: { use: 'Use', pocket: 'Pocket', unpocket: 'Take out', carry: 'Carry', putAway: 'Put away', give: 'Give', mend: 'Mend', fit: 'Fit to', takeOff: 'Take off', plant: 'Plant', setLamp: 'Set it here', setCommunal: 'Set it as a communal lamp', setOut: 'Set it out here', goHome: 'Back to the north arch', goToLamp: 'Back to its lamp' },
   giveTo: 'Hand it to',
   giveNobody: 'Stand next to someone to hand it over.',
   mendAt: (who: string, cost: string) => `${who} (${cost})`,

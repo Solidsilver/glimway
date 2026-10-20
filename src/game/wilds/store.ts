@@ -1,4 +1,4 @@
-import { insideFrontier } from '../../lib/wilds/coords.ts';
+import { insideFrontier, setHeldReach } from '../../lib/wilds/coords.ts';
 /**
  * The Wilds store: the client's picture of the open map, keyed by chunk
  * (docs/design/open-map.md 2.4, 2.5), shared by the scene and the panels.
@@ -34,7 +34,7 @@ import { insideFrontier } from '../../lib/wilds/coords.ts';
 import { prepareFixed } from './fixed.ts';
 import { MATERIALS, TRINKETS } from '../../content/expansion-writing.ts';
 import type { WildsEntityView, WildsLanternView } from '../../lib/api/types.ts';
-import type { ChunkGroundChanges, GroundChange, WildsEntityState, WildsEpoch as WildsEpochPb, WildsLantern, WildsNearResult, WildsWay } from '../../lib/gen/glimway/v1/wilds_pb.js';
+import type { ChunkGroundChanges, GroundChange, ChunkLandStatus, WildsEntityState, WildsEpoch as WildsEpochPb, WildsLantern, WildsNearResult, WildsWay } from '../../lib/gen/glimway/v1/wilds_pb.js';
 import { tileKey } from '../../lib/tile.ts';
 import type { WildsClaimResult } from '../../lib/gen/glimway/v1/operations_pb.js';
 import { epochKindAt } from '../../lib/wilds/coords.ts';
@@ -94,6 +94,8 @@ export interface Glimpse {
 type EntityStateView = Pick<WildsEntityView, 'cycle' | 'state' | 'available_at' | 'by' | 'at' | 'camp_claimable'>;
 
 export interface WildsView {
+  /** Explicit status of occupied/explored chunks from near reads. */
+  land: Map<string, ChunkLandStatus>;
   still: WildsEpoch;
   wick: WildsEpoch;
   frontier: FrontierRect;
@@ -113,6 +115,8 @@ export interface WildsView {
   glimpse: Map<string, Glimpse>;
   /** Named ways by id (their geometry is the server's: `path`, `signA`, `signB`). */
   ways: Map<string, WildsWay>;
+  /** Held chunks (`cx,cy`): the older wick epoch each keeps its land in (roadmap 0.12). */
+  held: Map<string, WildsEpoch>;
   /** The last refresh failed: this is the Wilds as last seen, shown but not interactive. */
   stale: boolean;
   /** Bumps on every change; the scene re-renders when it moves. */
@@ -196,10 +200,17 @@ export function wildsEpoch(kind: WildsEpochKind): WildsEpoch {
   return view ? view[kind] : unread(kind);
 }
 
-/** The epoch a chunk is made in (the Tangle's still one, else the wick's), or null before a read. */
+/** The epoch a chunk is made in (a held chunk's pinned one, the Tangle's still one, else the wick's), or null before a read. */
 export function chunkEpoch(cx: number, cy: number): WildsEpoch | null {
+  const held = view?.held.get(chunkKey(cx, cy));
+  if (held) return held;
   const e = wildsEpoch(epochKindAt(cx, cy));
   return e.id ? e : null;
+}
+
+/** Is the chunk held (pinned to a wick epoch across turnings) as last read? */
+export function chunkHeld(cx: number, cy: number): boolean {
+  return view?.held.has(chunkKey(cx, cy)) ?? false;
 }
 
 /** The frontier as last read, or null. */
@@ -233,6 +244,7 @@ export function wickEnded(): boolean {
  */
 export function resetWilds(opts: { quiet?: boolean } = {}): void {
   view = null;
+  setHeldReach([]);
   viewLink = null;
   generation += 1;
   fetchedAt.clear();
@@ -345,6 +357,8 @@ export function applyNear(res: WildsNearResult, since: number = markNow(), link:
       ground: new Map(),
       glimpse: new Map(),
       ways: new Map(),
+      held: new Map(),
+      land: new Map(),
       stale: false,
       version: (view?.version ?? 0) + 1,
     };
@@ -367,6 +381,8 @@ export function applyNear(res: WildsNearResult, since: number = markNow(), link:
   const r = res.frontier!.rect!;
   if (!newer(frontierSeq)) {
     v.frontier = { minCx: r.minCx, minCy: r.minCy, maxCx: r.maxCx, maxCy: r.maxCy };
+    // Held chunks push it out (lamps.md 2.2): the map, the window and the paths read them through insideFrontier.
+    setHeldReach(res.frontier!.held);
     frontierSeq = since;
   }
   const c = res.center!;
@@ -378,6 +394,23 @@ export function applyNear(res: WildsNearResult, since: number = markNow(), link:
     if (newer(readSeq.get(key))) continue;
     ours.add(key);
     readSeq.set(key, since);
+  }
+  // Held chunks: the epoch each of the window's is pinned to, for the chunks this read speaks for.
+  for (const key of ours) v.held.delete(key);
+  for (const n of res.chunks) {
+    const k = n.chunk;
+    if (n.source !== 'held' || !k || !ours.has(chunkKey(k.cx, k.cy))) continue;
+    const older = res.held.find((e) => e.id === n.epoch);
+    const pinned = n.epoch === wick.id ? wick : older ? epochView(older, 'wick') : null;
+    if (pinned) v.held.set(chunkKey(k.cx, k.cy), pinned);
+  }
+  for (const land of res.land?.chunks ?? []) {
+    const k = land.chunk;
+    const key = k ? chunkKey(k.cx,k.cy) : '';
+    if (k && !newer(readSeq.get(key)) && !newer(landSeq.get(key))) {
+      v.land.set(key, land);
+      landSeq.set(key, since);
+    }
   }
   // Adding what the read names: anywhere no later read spoke for (an id naming no chunk: wherever).
   const speaks = (key: string) => ours.has(key) || !newer(readSeq.get(key));
@@ -401,7 +434,10 @@ export function applyNear(res: WildsNearResult, since: number = markNow(), link:
   for (const s of res.entities) if (named(s.id)) v.states.set(s.id, stateView(s));
   for (const id of [...v.claims]) if (ownChunk(id) && !newer(entitySeq.get(id))) v.claims.delete(id);
   for (const p of res.personalClaims) if (named(p.entityId)) v.claims.add(p.entityId);
-  for (const d of res.discoveries) v.discoveries.set(d.entityId, { entityId: d.entityId, poiId: d.poiId, discovererId: d.discovererId, displayName: d.displayName });
+  for (const d of res.discoveries) {
+    const id = placeKey(d.entityId, d.epoch, wick.id);
+    v.discoveries.set(id, { entityId: id, poiId: d.poiId, discovererId: d.discovererId, displayName: d.displayName });
+  }
   for (const [id, l] of [...v.lanterns]) if (ours.has(tileChunk(l)) && !newer(lanternSeq.get(id))) v.lanterns.delete(id);
   for (const l of res.lanterns) if (speaks(tileChunk(l)) && !newer(lanternSeq.get(l.id))) v.lanterns.set(l.id, lanternView(l));
   for (const a of res.echoes) {
@@ -458,6 +494,8 @@ const lanternSeq = new Map<string, number>();
 const echoSeq = new Map<string, number>();
 const chunkSeq = new Map<string, number>();
 const waySeq = new Map<string, number>();
+/** The latest read that spoke for each chunk's land status (a near read, or refreshLand). */
+const landSeq = new Map<string, number>();
 let frontierSeq = 0;
 /** The mark of the read the view started over from: an older one can't start it over again. */
 let startedAt = 0;
@@ -466,6 +504,7 @@ let goodSeq = 0;
 
 function forgetOrder(): void {
   readSeq.clear();
+  landSeq.clear();
   entitySeq.clear();
   lanternSeq.clear();
   echoSeq.clear();
@@ -482,6 +521,54 @@ export function readMark(): number {
 
 /** A read is wanted: something the store held turned out wrong (a refusal, an answer for land that has turned). */
 let readWanted = false;
+
+/**
+ * The land status of the chunk the hero just stepped into (the HUD's land
+ * chip). A near read speaks only for the chunk the server last saw you in,
+ * which can lag a step behind, so this asks the map's status read for this
+ * one chunk: standing in it is exploring it. Kept unless a later read spoke
+ * for the chunk meanwhile; a failure keeps what was known. False when no
+ * answer came (offline, or the read failed): the chip asks again later.
+ */
+export async function refreshLand(session: Session, cx: number, cy: number): Promise<boolean> {
+  const link = session.link;
+  if (!link?.online || !view) return false;
+  const gen = generation;
+  const since = readMark();
+  const key = chunkKey(cx, cy);
+  try {
+    const res = await link.api.operations.mapStatus([{ cx, cy }]);
+    const land = res.chunks[0];
+    // Answered: dropped only because the land it spoke for is gone, or a later read spoke first.
+    if (generation !== gen || session.link !== link || !view || res.wick !== view.wick.id || !land) return true;
+    if ((landSeq.get(key) ?? 0) > since) return true;
+    landSeq.set(key, since);
+    view.land.set(key, land);
+    bump();
+    return true;
+  } catch {
+    // The chip keeps what it knew.
+    return false;
+  }
+}
+
+/**
+ * Bumps when one of your operations changed the land's holds or visits (a
+ * lamp set, filled, lit, tended, lifted or taken down; a path laid or
+ * lifted). Every status the chip holds may be out of date then: it asks for
+ * the chunk underfoot again (./land-here.ts), and for others as you step in.
+ */
+let landRev = 0;
+
+/** The land-change count (./land-here.ts compares it). */
+export function landRevision(): number {
+  return landRev;
+}
+
+/** One of your operations changed the land: the chip's statuses are out of date. */
+export function invalidateLand(): void {
+  landRev += 1;
+}
 
 /** Ask for a fresh near read: the scene takes the request (takeReadRequest), and no earlier read counts as recent. */
 export function requestRead(): void {
@@ -574,7 +661,7 @@ export async function refreshNear(session: Session, cx: number, cy: number, maxA
       await Promise.all(nearWindow(cx, cy).filter((c) => insideNamedFrontier(c.cx, c.cy)).map((c) => loadWildsChunk(session, c.cx, c.cy).catch(() => null)));
       // Forgotten while its chunks loaded: the land it read is gone.
       if (generation !== after || session.link !== link || !view) return false;
-      if (priorWick !== view.wick.id) void pruneChunks([view.still.id, view.wick.id]);
+      if (priorWick !== view.wick.id) void pruneChunks([view.still.id, view.wick.id, ...new Set([...view.held.values()].map((e) => e.id))]);
       bump();
       if (turned) bus.emit(EV.turning, { reason: 'epoch-ended' });
       return true;
@@ -798,12 +885,24 @@ export function applyPathAnswer(ground: ChunkGroundChanges | undefined, material
 }
 
 /**
+ * A place's key in the view: its id for this wick's places, `<id>@<epoch>`
+ * for a held chunk's (place ids name a cell, so they repeat across wicks:
+ * a held chunk's landmark and this wick's of the same cell are two places).
+ * Other ids (a POI's) name their chunk and never repeat.
+ */
+export function placeKey(id: string, epoch: string, wick: string = view?.wick.id ?? ''): string {
+  return !epoch || epoch === wick || !id.startsWith('place:') ? id : `${id}@${epoch}`;
+}
+
+/**
  * A discovery answered by the server (yours or the first finder's): the map
- * and the banner name them. Only for the wick held now; false otherwise.
+ * and the banner name them. Only for the wick held now, or a held chunk's
+ * epoch the view holds; false otherwise.
  */
 export function applyDiscovery(d: { entityId: string; poiId: string; discovererId: string; displayName: string }, epoch: string): boolean {
-  if (!view || epoch !== view.wick.id) return false;
-  view.discoveries.set(d.entityId, { entityId: d.entityId, poiId: d.poiId, discovererId: d.discovererId, displayName: d.displayName });
+  if (!view || (epoch !== view.wick.id && ![...view.held.values()].some((e) => e.id === epoch))) return false;
+  const id = placeKey(d.entityId, epoch);
+  view.discoveries.set(id, { entityId: id, poiId: d.poiId, discovererId: d.discovererId, displayName: d.displayName });
   bump();
   return true;
 }
@@ -837,7 +936,7 @@ export interface PlaceAt {
   ty: number;
 }
 
-/** Every cell place in the frontier's loaded chunks (this wick's land). */
+/** Every cell place in the frontier's loaded chunks: this wick's, and held chunks' keyed by their epoch (placeKey). */
 export function knownPlaces(): PlaceAt[] {
   const f = view?.frontier;
   if (!f) return [];
@@ -846,7 +945,7 @@ export function knownPlaces(): PlaceAt[] {
     for (let cx = f.minCx; cx <= f.maxCx; cx++) {
       const t = chunkTerrain(cx, cy);
       if (!t) continue;
-      for (const p of t.places) out.push({ id: p.id, kind: p.kind, tx: cx * t.size + p.tx, ty: cy * t.size + p.ty });
+      for (const p of t.places) out.push({ id: placeKey(p.id, t.epochId), kind: p.kind, tx: cx * t.size + p.tx, ty: cy * t.size + p.ty });
     }
   return out;
 }

@@ -1,0 +1,114 @@
+{
+  "unvisited": {
+    "chunks": [
+      {
+        "chunk": {
+          "cx": 2,
+          "cy": -4,
+          "layer": 0,
+          "realm": "hearthwick"
+        },
+        "claimId": "",
+        "cost": 0,
+        "dimming": false,
+        "epoch": null,
+        "ground": null,
+        "keeper": "",
+        "nextTurning": "lamps-turn",
+        "reserve": 0,
+        "tier": "common",
+        "visited": false,
+        "yours": false
+      }
+    ],
+    "lamps": [
+      {
+        "at": 1769731200,
+        "id": "post",
+        "kind": "common-lamp",
+        "land": {
+          "chunk": {
+            "cx": 2,
+            "cy": -4,
+            "layer": 0,
+            "realm": "hearthwick"
+          },
+          "claimId": "",
+          "cost": 0,
+          "dimming": false,
+          "epoch": null,
+          "ground": null,
+          "keeper": "",
+          "nextTurning": "lamps-turn",
+          "reserve": 0,
+          "tier": "common",
+          "visited": false,
+          "yours": false
+        },
+        "mageLit": false,
+        "name": "",
+        "namer": "",
+        "naming": "",
+        "x": 51,
+        "y": -93
+      }
+    ],
+    "wick": "wick"
+  },
+  "visited": {
+    "chunks": [
+      {
+        "chunk": {
+          "cx": 2,
+          "cy": -4,
+          "layer": 0,
+          "realm": "hearthwick"
+        },
+        "claimId": "",
+        "cost": 0,
+        "dimming": false,
+        "epoch": null,
+        "ground": null,
+        "keeper": "",
+        "nextTurning": "lamps-carry",
+        "reserve": 0,
+        "tier": "common",
+        "visited": true,
+        "yours": false
+      }
+    ],
+    "lamps": [
+      {
+        "at": 1769731200,
+        "id": "post",
+        "kind": "common-lamp",
+        "land": {
+          "chunk": {
+            "cx": 2,
+            "cy": -4,
+            "layer": 0,
+            "realm": "hearthwick"
+          },
+          "claimId": "",
+          "cost": 0,
+          "dimming": false,
+          "epoch": null,
+          "ground": null,
+          "keeper": "",
+          "nextTurning": "lamps-carry",
+          "reserve": 0,
+          "tier": "common",
+          "visited": true,
+          "yours": false
+        },
+        "mageLit": false,
+        "name": "",
+        "namer": "",
+        "naming": "",
+        "x": 51,
+        "y": -93
+      }
+    ],
+    "wick": "wick"
+  }
+}

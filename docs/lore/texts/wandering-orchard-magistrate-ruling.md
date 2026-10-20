@@ -1,4 +1,4 @@
-# Excerpt from the Tarrow Magistrate Rulings (Year 134)
+# Excerpt from the Tarrow Magistrate Rulings (Year 118)
 
 **Subject:** Dispute of Property (The "Wandering Orchard" Precedent)
 **Magistrate:** Senior Justice Hallet, Oak Hall

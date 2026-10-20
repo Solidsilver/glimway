@@ -205,7 +205,7 @@ func TestGlobalLoginConcurrencyAndTransactionalRecheck(t *testing.T) {
 	}
 	entered := make(chan struct{})
 	release := make(chan struct{})
-	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	up := httptest.NewServer(fromHabiticaClient(func(w http.ResponseWriter, r *http.Request) {
 		close(entered)
 		<-release
 		_, _ = fmt.Fprintf(w, `{"success":true,"data":{"_id":%q,"profile":{"name":"Hero"},"flags":{"classSelected":false},"stats":{"lvl":1,"exp":0,"hp":20,"mp":10,"str":0,"int":0,"con":0,"per":0}}}`, r.Header.Get("X-Api-User"))

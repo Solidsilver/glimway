@@ -186,7 +186,7 @@ export function buildLand(gate: number): LandWorld {
           so.push(true)
           gathering.push(
             r < 0.2
-              ? { target: 'lamp-stone', label: 'Break the old lamp-stone', tx: x, ty: y }
+              ? { target: 'lamp-stone', label: 'Break the old lamp stone', tx: x, ty: y }
               : { target: 'boulder', label: 'Break the boulder', tx: x, ty: y }
           )
           decor(r < 0.2 ? 'cairn' : 'boulder', x, y, Math.floor(r * 16))

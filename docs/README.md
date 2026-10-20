@@ -25,6 +25,7 @@ its architecture. This folder holds two kinds of document:
 | [server-behavior.md](server-behavior.md) | Server behavior and migration notes, preserved by implementation phase |
 | [home-server.md](home-server.md) | Self-hosting with the NixOS flake, Docker Compose or manual builds |
 | [releasing.md](releasing.md) | Cutting a release: the changelog, the version bump, the tag that publishes the image |
+| [agent-workflow.md](agent-workflow.md) | How agents are run through Paseo: lanes, briefs, providers, the development server |
 | [runtime-contract.md](runtime-contract.md) | The lantern road: game state, the quest machine and its ids, the warden, defeat |
 | [import-contract.md](import-contract.md) | The read-only Habitica import, saves (format 2), imported health and mana |
 | [habitica-assets.md](habitica-assets.md) | The gear catalog and the avatar and companion art |
@@ -36,6 +37,8 @@ its architecture. This folder holds two kinds of document:
 
 | Doc | What it covers |
 |---|---|
+| [roadmap.md](roadmap.md) | The release order from 0.12 on, the rules every release keeps, the three land tiers, what's parked |
+| [planning/](planning/direction-overview.md) | The 2026-10-16 planning round: the brief, four agents' answers and the merged plan |
 | [expansion-design.md](expansion-design.md) | Onboarding, homesteads, shared worlds, the Wilds (approved design, with an implementation status) |
 | [hands-on-design.md](hands-on-design.md) | Homesteads, items and things to touch (extends the expansion design) |
 | [items/](items/overview.md) | Items: [overview](items/overview.md), [catalogue](items/catalogue.md), [crafting and repair](items/crafting-and-repair.md) |
@@ -63,7 +66,6 @@ register, and `assets/generated/README.md` the art direction.
 
 | Doc | Date | What it was |
 |---|---|---|
-| [build-status.md](build-status.md) | 2026-10-04 | Build status snapshot, with milestones 2–3 |
 | [m3-implementation.md](m3-implementation.md) | 2026-10-03 | Record of the M3 import foundation work |
 | [runtime-import-notes.md](runtime-import-notes.md) | 2026-10-03 | How the runtime consumed the M3 import |
 | `../BUILD_KICKOFF.md`, `../Fingersnap Plan.md` | 2026-10-02 | The original kickoff and plan |

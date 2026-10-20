@@ -381,6 +381,17 @@
       }
     },
     {
+      "id": "way-lamp",
+      "category": "utility",
+      "where": [
+        "camp"
+      ],
+      "minTier": 0,
+      "glims": 5,
+      "materials": {},
+      "craftOnly": true
+    },
+    {
       "id": "stable",
       "category": "utility",
       "building": true,
@@ -589,5 +600,96 @@
       "timber": 4,
       "stone": 2
     }
+  },
+  "lotLantern": {
+    "oil": "hearth-oil",
+    "maxWicks": 3,
+    "wicksPerOil": 1,
+    "stakeY": 12
+  },
+  "wayLamp": {
+    "item": "way-lamp",
+    "oil": "hearth-oil",
+    "maxWicks": 3,
+    "wicksPerOil": 1,
+    "reach": 3
+  },
+  "communalLamp": {
+    "relight": "lamp-wick",
+    "relightQty": 1,
+    "reach": 3
+  },
+  "lampNaming": {
+    "ordinals": [
+      { "id": "first", "words": "first" },
+      { "id": "second", "words": "second" },
+      { "id": "third", "words": "third" },
+      { "id": "fourth", "words": "fourth" },
+      { "id": "fifth", "words": "fifth" },
+      { "id": "sixth", "words": "sixth" },
+      { "id": "seventh", "words": "seventh" },
+      { "id": "eighth", "words": "eighth" },
+      { "id": "ninth", "words": "ninth" },
+      { "id": "tenth", "words": "tenth" },
+      { "id": "eleventh", "words": "eleventh" },
+      { "id": "twelfth", "words": "twelfth" },
+      { "id": "thirteenth", "words": "thirteenth" },
+      { "id": "fourteenth", "words": "fourteenth" },
+      { "id": "fifteenth", "words": "fifteenth" },
+      { "id": "sixteenth", "words": "sixteenth" },
+      { "id": "seventeenth", "words": "seventeenth" },
+      { "id": "eighteenth", "words": "eighteenth" },
+      { "id": "nineteenth", "words": "nineteenth" },
+      { "id": "twentieth", "words": "twentieth" },
+      { "id": "last", "words": "last" }
+    ],
+    "relations": [
+      { "id": "past", "words": "past" },
+      { "id": "beside", "words": "beside" },
+      { "id": "above", "words": "above" },
+      { "id": "below", "words": "below" }
+    ],
+    "fallbacks": [
+      { "id": "road", "words": "the road" },
+      { "id": "whitequiet", "words": "the Whitequiet" }
+    ],
+    "places": {
+      "camp-glade": "the split oak",
+      "ruin": "the standing stone",
+      "outcrop": "the outcrop",
+      "lone-tree": "the lone oak"
+    },
+    "sites": {
+      "cairn": "the cairn",
+      "reeds": "the reeds",
+      "lamp-stone": "the old lamp stone"
+    },
+    "sides": [
+      { "id": "hearthwick", "words": "Hearthwick" },
+      { "id": "home", "words": "home" },
+      { "id": "woods", "words": "the woods" },
+      { "id": "river", "words": "the river" },
+      { "id": "wilds", "words": "the Wilds" },
+      { "id": "dark", "words": "the dark" },
+      { "id": "long-way", "words": "the long way" }
+    ],
+    "closings": [
+      { "id": "weave", "words": "Keep the weave tight." },
+      { "id": "hold-fast", "words": "Hold fast." },
+      { "id": "stay", "words": "Stay." }
+    ],
+    "ash": "lamp-ash",
+    "ashQty": 1
+  },
+  "wickSap": {
+    "item": "wick-sap",
+    "qty": 1,
+    "area": "hearthwick",
+    "tx": 34,
+    "ty": 37,
+    "reach": 3,
+    "refiner": "chandler",
+    "oil": "hearth-oil",
+    "oilQty": 1
   }
 }

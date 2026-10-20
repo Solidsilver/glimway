@@ -55,6 +55,8 @@ export interface StoredReports {
   seq: number;
   next: NextReport;
   captured: CapturedReport | null;
+  /** The last server move (`Place.movedVersion`) the noted place followed (absent: none). */
+  moved?: number;
 }
 
 /** `ReportResult`, as the envelope carries it. */
@@ -98,6 +100,12 @@ export class ReportBook {
   acked = 0;
   /** The place area the last captured report named ('' before any): an arrival elsewhere is reported. */
   reportedArea = '';
+  /**
+   * The last server move (`Place.movedVersion`: a place the world chose)
+   * the noted place has followed. A newer one is followed before anything
+   * is noted on its basis (link.ts `followMove`).
+   */
+  moved = 0;
 
   constructor(stored?: StoredReports | null) {
     if (!stored) return;
@@ -106,10 +114,11 @@ export class ReportBook {
     this.seq = stored.seq;
     this.next = withMoves(stored.next);
     this.captured = stored.captured ? withMoves(stored.captured) : null;
+    this.moved = stored.moved ?? 0;
   }
 
   stored(): StoredReports {
-    return { client: this.client, generation: this.generation, seq: this.seq, next: withMoves(this.next), captured: this.captured ? withMoves(this.captured) : null };
+    return { client: this.client, generation: this.generation, seq: this.seq, next: withMoves(this.next), captured: this.captured ? withMoves(this.captured) : null, moved: this.moved };
   }
 
   /**
@@ -147,6 +156,15 @@ export class ReportBook {
   /** A combat move (Stand, Kindle, Ward-light, Echo) was cast on screen. */
   castMove(id: string, n = 1): void {
     this.next = { ...this.next, abilityCasts: addCasts(this.next.abilityCasts, { [id]: n }), changed: true };
+  }
+
+  /**
+   * The world ignored the last report's place but kept the hero where the
+   * screen has them: the place goes again, on the newest basis, even if the
+   * hero hasn't moved since.
+   */
+  again(): void {
+    if (this.next.place) this.next = { ...this.next, changed: true };
   }
 
   get due(): boolean {

@@ -146,3 +146,28 @@ func TestServeRefusesAHomePastTheCommons(t *testing.T) {
 		t.Fatal("serving past the capacity", err)
 	}
 }
+
+func TestVerifyBackupCommand(t *testing.T) {
+	dir := t.TempDir()
+	path, backup := filepath.Join(dir, "game.sqlite"), filepath.Join(dir, "backup.sqlite")
+	if err := run([]string{"-db", path, "backup", backup}); err != nil {
+		t.Fatal(err)
+	}
+	// verify-backup never opens -db: a missing database stays missing.
+	unopened := filepath.Join(dir, "never", "game.sqlite")
+	if err := run([]string{"-db", unopened, "verify-backup", backup}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Dir(unopened)); !os.IsNotExist(err) {
+		t.Fatal("verify-backup opened -db", err)
+	}
+	broken := filepath.Join(dir, "broken.sqlite")
+	if err := os.WriteFile(broken, []byte("not a database"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	for _, cmd := range [][]string{{"verify-backup"}, {"verify-backup", backup, "extra"}, {"verify-backup", broken}} {
+		if err := run(append([]string{"-db", path}, cmd...)); err == nil {
+			t.Fatalf("accepted %v", cmd)
+		}
+	}
+}

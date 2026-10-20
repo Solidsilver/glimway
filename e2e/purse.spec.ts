@@ -1,7 +1,7 @@
 import type { Browser, BrowserContext } from '@playwright/test'
 import { expect, test, type Page } from './fixtures'
 import { accountOf, allow, CONTRACT, habiticaURL, newUser, openTitleGuide, pasteAndConnect, routeHabitica, setHabitica, sql, TOKEN, waitForWorld } from './connected'
-import { expectToast, openTalk, readDialogue, untilChoices, waitForLive, warp } from './helpers'
+import { expectToast, openTalk, readDialogue, SERVER_ANSWER_MS, untilChoices, waitForLive, warp } from './helpers'
 import { residentsOut } from './room-helpers'
 import { atMyMailbox, claimDeed, earnGlims, freshPlayer, fund, go, homes, myHome, place, shot, type HomesView, yardBuild } from './home-helpers'
 
@@ -422,7 +422,8 @@ test('a glim letter: sent, collected, both logs right; another recalled and the 
   const letter = theirs.locator('[data-mail]', { hasText: '20 glims' })
   await expect(letter).toContainText('from Tansy')
   await letter.getByRole('button', { name: 'Collect' }).click()
-  await expect(theirs.locator('.msg.ok')).toContainText('You collect 20 glims from Tansy')
+  // Bram's first answer of the session (its opening mark and report go first).
+  await expect(theirs.locator('.msg.ok')).toContainText('You collect 20 glims from Tansy', { timeout: SERVER_ANSWER_MS })
   await expect.poll(() => glimsOf(bram)).toBe(bramStart + 20)
   await other.keyboard.press('Escape')
   expect((await logLines(other))[0]).toMatch(/In a letter from Tansy\s*\+ 20/)

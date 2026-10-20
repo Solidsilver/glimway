@@ -1,0 +1,99 @@
+syntax = "proto3";
+package glimway.v1;
+option go_package = "glimway/server/internal/gen/glimway/v1;contract";
+import "glimway/v1/op.proto";
+import "glimway/v1/lamps.proto";
+import "glimway/v1/items.proto";
+
+// Camps (roadmap 0.13; docs/design/lamps.md 2.5, 2.7): a way-lamp set in a
+// Wilds chunk holds that one chunk while it has oil. Its setter (and their
+// household) set pieces out and plant there; anyone may top the lamp up.
+// When the oil has run out and a wick of dimming passes, the camp lapses:
+// everything there goes into a crate at Pell's, its owners' to collect.
+// Tiles on the wire are world tiles.
+
+// A piece standing at a camp (a home piece; the lamp is one): whose it is.
+// owner_name: the owner's display name, for every viewer.
+message CampPiece { string id = 1; string item_def = 2; sint32 x = 3; sint32 y = 4; int32 rotation = 5; string owner_id = 6; string owner_name = 7; }
+// A seed or sapling planted at a camp, by whom (owner_name: the planter's
+// display name, for every viewer), and when.
+message CampPlant { string id = 1; string item_def = 2; sint32 x = 3; sint32 y = 4; double planted_at = 5; double planted_day = 6; string owner_id = 7; string owner_name = 8; }
+// A world member, by account and name: someone a camp's keeper may name.
+message CampMember { string account_id = 1; string name = 2; }
+// A camp: its chunk, its lamp (id, tile), who set it (its keeper), its oil
+// in wicks and whether it dims (out of oil at the last turning: it lapses
+// at the next unless filled). builder: the caller may build here. Only the
+// keeper reads who may build: rule (household, listed, except or everyone)
+// and the members it names.
+message CampView {
+  string id = 1; sint32 cx = 2; sint32 cy = 3; sint32 x = 4; sint32 y = 5;
+  string setter_id = 6; string setter_name = 7;
+  int32 oil = 8; bool dimming = 9; bool builder = 10;
+  repeated CampPiece pieces = 11; repeated CampPlant plants = 12;
+  // The lamp's naming (lamps.md 2.8), unset until its Keeper names it.
+  LampNaming naming = 13;
+  string rule = 14; repeated CampMember members = 15;
+}
+// GET /api/camps: the world's camps and, for a camp's keeper, the world's
+// members to name in its rule.
+message CampsRead { repeated CampView camps = 1; repeated CampMember people = 2; }
+
+// POST /api/camps: one camp operation, by action.
+//   set:    set the carried way-lamp item_id at tile (x, y), with a first flask of oil.
+//   fill:   pour a flask of oil into camp's lamp (anyone).
+//   place:  set the carried piece item_id out at (x, y) with rotation (a builder).
+//   remove: pick up a piece of yours, item_id (the lamp, once nothing else stands there);
+//           the keeper may move anyone's piece to its owner's crate at Pell's.
+//   plant:  plant a seed or sapling item_def at (x, y) (a builder).
+//   name:   give camp's lamp its naming from `parts` (a Keeper who builds there).
+// Setting a way-lamp, or naming one, takes the Keeper's hand.
+//   rule:   the keeper sets who may build at camp: rule and the members it names.
+message CampRequest {
+  OpHeader op = 1; Where where = 2;
+  string action = 3; string camp = 4; string item_id = 5; string item_def = 6;
+  sint32 x = 7; sint32 y = 8; int32 rotation = 9;
+  repeated string parts = 10;
+  string rule = 11; repeated string members = 12;
+}
+// The camp after the operation (none: the lamp was taken down), the
+// pack's material balances, what a naming gave (lamp ash, once), and the
+// trowel's wear when a plant was dug up (uproot).
+message CampResult { CampView camp = 1; map<string,double> materials = 2; repeated string given = 3; WearResult wear = 4; }
+
+// One thing waiting in a crate at Pell's: a piece, a tool, a stack (oil,
+// path stone) or a plant (its planting kept: it comes as a carried plant or
+// as its seed), from the place at chunk (cx, cy) it left at lapsed_at.
+// The id is int32: the HTTP JSON carries numbers, and protojson writes a
+// 64-bit integer as a string, which the client refuses.
+// moved_by: the camp keeper's name when they moved the piece off their camp
+// (empty for what a lapse packed).
+// reason: why it waits. "" a lapsed claim packed it (the woods turned);
+// "land-changed" 0.12's lasting geography ended the wick it was paid on (old
+// paths refunded); "deed-lost" its home's deed was lost; "packed-up" its
+// camp's keeper packed the camp up (moved_by names them on what wasn't theirs).
+message RecoveryEntry {
+  int32 id = 1; string kind = 2; string item_def = 3; int32 qty = 4;
+  sint32 cx = 5; sint32 cy = 6; double lapsed_at = 7;
+  string moved_by = 8;
+  string reason = 9;
+}
+// GET /api/recovery: what waits for the caller at Pell's, in this world.
+message RecoveryRead { repeated RecoveryEntry entries = 1; }
+// POST /api/recovery/collect: take what waits into the pack (pieces to the
+// carried home pieces), in Pell's office. entries: the entry ids to take;
+// none means everything. A plant comes as a carried plant, its planting
+// kept, unless its id is in as_seed: then it comes as its seed.
+message RecoveryCollectRequest {
+  OpHeader op = 1; Where where = 2;
+  repeated int32 entries = 3; repeated int32 as_seed = 4;
+}
+message RecoveryCollectResult { repeated RecoveryEntry collected = 1; map<string,double> materials = 2; }
+
+// GET /api/lamp-notices: the lights the caller keeps (their camp's way-lamp,
+// their household's lot lantern) that dimmed at this wick's turning and that
+// they haven't been told of yet (lamps.md 2.5). Each dimming is told once:
+// the read records it, and one the caller is standing by is recorded
+// unsaid (they can see it there). kind: way-lamp or lot-lantern; id: the
+// camp's id or the lot's gate; name: the lamp's naming's short name, if any.
+message LampNotice { string kind = 1; string id = 2; string name = 3; sint32 cx = 4; sint32 cy = 5; }
+message LampNoticesRead { repeated LampNotice notices = 1; }

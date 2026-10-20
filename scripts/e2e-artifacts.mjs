@@ -1,16 +1,21 @@
-import { copyFileSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
+import { appendFileSync, copyFileSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { basename, join, relative } from 'node:path'
 
-const reportPath = 'test-results/e2e-results.json'
+// The run's report, and a second pass's (scripts/e2e-changed.ts: the smoke
+// tier after a lane's specs) in its own folder.
+const reportPaths = [['test-results/e2e-results.json', 'e2e-results.json'], ['test-results/smoke/e2e-results.json', 'smoke-e2e-results.json']]
 const outDir = '.e2e-artifacts'
 const traceDir = join(outDir, 'traces')
-const traceMaxCount = 3
-const traceMaxBytes = 50 * 1024 * 1024
+const traceMaxCount = Number(process.env.E2E_TRACE_FILES) || 3
+const traceMaxBytes = (Number(process.env.E2E_TRACE_MB) || 50) * 1024 * 1024
 const reportMaxBytes = 10 * 1024 * 1024
 const diagnosticsMaxBytes = 2 * 1024 * 1024
 const diagnosticStringMaxBytes = 16 * 1024
 const diagnosticMaxItems = 50
-const reportPolicy = { maximumBytes: reportMaxBytes, copiedPath: null, note: '' }
+const reportPolicy = { maximumBytes: reportMaxBytes, copiedPath: null, copiedPaths: [], note: '' }
+// e2e/helpers.ts HELPER_RETRY: an action a helper pressed or sent again
+// inside one attempt. The test passes, so Playwright never calls it flaky.
+const helperRetryType = 'helper retry'
 
 // Keep structured errors and output even when the original report is too large.
 // Bound individual values and the combined diagnostic payload; say when cut.
@@ -66,19 +71,57 @@ function walk(dir) {
   }
 }
 
+/** Each pass's report that exists, copied when within the cap; the first is required. */
+function readReports() {
+  const reports = []
+  const notes = []
+  for (const [i, [path, copy]] of reportPaths.entries()) {
+    let raw
+    try {
+      raw = readFileSync(path)
+    } catch (error) {
+      if (i === 0) throw error
+      continue
+    }
+    reports.push(JSON.parse(raw.toString('utf8')))
+    if (raw.length <= reportMaxBytes) {
+      reportPolicy.copiedPaths.push(copy)
+      writeFileSync(join(outDir, copy), raw)
+      notes.push(`${copy}: the original Playwright JSON report, including every attempt and diagnostic.`)
+    } else {
+      notes.push(`${path} (${raw.length} bytes) exceeds the byte cap; bounded diagnostics remain in the summary.`)
+    }
+  }
+  reportPolicy.copiedPath = reportPolicy.copiedPaths[0] ?? null
+  reportPolicy.note = notes.join(' ')
+  return reports
+}
+
+/**
+ * A test's helper retries, from the unbounded report (every attempt's; an
+ * older report without per-attempt annotations has them on the test).
+ */
+function helperRetriesOf(test) {
+  const pick = (notes) => (notes ?? []).filter((n) => n?.type === helperRetryType).map((n) => String(n.description ?? ''))
+  const perAttempt = (test.results ?? []).flatMap((result) => pick(result.annotations))
+  return perAttempt.length ? perAttempt : pick(test.annotations)
+}
+
+/** Stats of several passes: counts and duration added, the first start. */
+function mergeStats(all) {
+  const stats = all.filter(Boolean)
+  if (stats.length <= 1) return stats[0] ?? null
+  const out = { ...stats[0] }
+  for (const s of stats.slice(1))
+    for (const [k, v] of Object.entries(s)) if (typeof v === 'number' && typeof out[k] === 'number') out[k] += v
+  return out
+}
+
 function summarizeReport() {
   try {
-    const raw = readFileSync(reportPath)
-    const report = JSON.parse(raw.toString('utf8'))
-    if (raw.length <= reportMaxBytes) {
-      reportPolicy.copiedPath = 'e2e-results.json'
-      writeFileSync(join(outDir, reportPolicy.copiedPath), raw)
-      reportPolicy.note = 'Original Playwright JSON report, including every attempt and diagnostic.'
-    } else {
-      reportPolicy.note = `Original report (${raw.length} bytes) exceeds the byte cap; bounded diagnostics remain in the summary.`
-    }
+    const reports = readReports()
     const diagnostics = diagnosticCollector()
-    const errors = diagnostics.bounded(report.errors ?? [])
+    const errors = diagnostics.bounded(reports.flatMap((r) => r.errors ?? []))
     const tests = []
     const visit = (suite, parent = []) => {
       const titles = [...parent, suite.title].filter(Boolean)
@@ -91,6 +134,7 @@ function summarizeReport() {
             status: test.status,
             expectedStatus: test.expectedStatus,
             annotations: diagnostics.bounded(test.annotations ?? []),
+            helperRetries: helperRetriesOf(test),
             attempts: (test.results ?? []).map((result) => ({
               status: result.status, retry: result.retry, durationMs: result.duration,
               error: diagnostics.bounded(result.error),
@@ -105,9 +149,9 @@ function summarizeReport() {
       }
       for (const child of suite.suites ?? []) visit(child, titles)
     }
-    for (const suite of report.suites ?? []) visit(suite)
+    for (const report of reports) for (const suite of report.suites ?? []) visit(suite)
     return {
-      available: true, stats: report.stats ?? null, errors, tests,
+      available: true, stats: mergeStats(reports.map((r) => r.stats)), passes: reports.length, errors, tests,
       diagnosticsTruncated: diagnostics.wasTruncated(),
       diagnosticPolicy: { maximumBytes: diagnosticsMaxBytes, maximumStringBytes: diagnosticStringMaxBytes, maximumItems: diagnosticMaxItems },
     }
@@ -132,14 +176,69 @@ for (const candidate of candidates) {
   bytes += candidate.size
 }
 
+/**
+ * What a reader of the run needs without opening a log (review T4/T5): how
+ * many tests passed only on their retry, which failed both attempts, and the
+ * ten slowest tests (every attempt's time added: what the run paid for them),
+ * and the helper retries (review R2): presses and sends a helper repeated
+ * inside a passing test, which the flaky count can't see.
+ */
+function health(report) {
+  // A spec file's own suite is titled with its file name: say it once.
+  const name = (t) => [t.file ?? '?', ...t.title.split(' › ').filter((part, i) => !(i === 0 && part === t.file))].join(' › ')
+  const flaky = report.tests.filter((t) => t.status === 'flaky').map(name)
+  const hard = report.tests.filter((t) => t.status === 'unexpected').map(name)
+  const slowest = report.tests
+    .map((t) => ({ test: name(t), durationMs: t.attempts.reduce((sum, a) => sum + (a.durationMs ?? 0), 0), attempts: t.attempts.length }))
+    .sort((a, b) => b.durationMs - a.durationMs)
+    .slice(0, 10)
+  const helperRetries = report.tests
+    .filter((t) => t.helperRetries?.length)
+    .map((t) => ({ test: name(t), count: t.helperRetries.length, notes: t.helperRetries }))
+  const helperRetryCount = helperRetries.reduce((sum, t) => sum + t.count, 0)
+  return { flaky, hard, slowest, helperRetryCount, helperRetries }
+}
+
+const seconds = (ms) => `${(ms / 1000).toFixed(1)} s`
+const cell = (text) => text.replace(/\|/g, '\\|')
+
+/** The health as Markdown, for the job's step summary. */
+function healthMarkdown(report, h) {
+  const title = process.env.E2E_SUMMARY_TITLE || 'E2E'
+  if (!report.available) return `### ${title}\n\nNo Playwright report: ${report.error}\n`
+  const passed = report.tests.filter((t) => t.status === 'expected').length
+  const lines = [`### ${title}`, '', `**${passed} passed, ${h.flaky.length} flaky, ${h.hard.length} failed, ${h.helperRetryCount} helper ${h.helperRetryCount === 1 ? 'retry' : 'retries'}**${report.stats?.duration ? ` in ${(report.stats.duration / 60000).toFixed(1)} min` : ''}. Flaky: failed, then passed on the retry. Helper retry: a helper pressed or sent again inside a test that passed.`, '']
+  for (const [label, list] of [['Failed', h.hard], ['Flaky', h.flaky]]) {
+    if (!list.length) continue
+    lines.push(`**${label}:**`, '', ...list.map((t) => `- ${t}`), '')
+  }
+  if (h.helperRetries.length) {
+    lines.push('**Helper retries:**', '', ...h.helperRetries.flatMap((t) => [`- ${t.test} (${t.count})`, ...t.notes.map((n) => `  - ${n}`)]), '')
+  }
+  if (h.slowest.length) {
+    lines.push('**Slowest tests** (all attempts):', '', '| Test | Time | Attempts |', '|---|---:|---:|')
+    for (const t of h.slowest) lines.push(`| ${cell(t.test)} | ${seconds(t.durationMs)} | ${t.attempts} |`)
+    lines.push('')
+  }
+  return lines.join('\n')
+}
+
+const report = summarizeReport()
+const runHealth = health(report)
+const markdown = healthMarkdown(report, runHealth)
+writeFileSync(join(outDir, 'summary.md'), markdown)
+if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, markdown + '\n')
+console.log(markdown)
+
 writeFileSync(join(outDir, 'summary.json'), JSON.stringify({
   generatedAt: new Date().toISOString(),
-  report: summarizeReport(),
+  report,
+  health: runHealth,
   reportPolicy,
   tracePolicy: {
     maximumFiles: traceMaxCount,
     maximumBytes: traceMaxBytes,
     copiedFiles: traces,
-    note: 'CI traces are recorded on the first retry. A retained trace can show the successful retry; the summary retains bounded original failure diagnostics and the original JSON report is included when within its byte cap.'
+    note: 'CI traces are recorded on the first retry (unless E2E_TRACE says otherwise). A retained trace can show the successful retry; the summary retains bounded original failure diagnostics and the original JSON report is included when within its byte cap.'
   }
 }, null, 2))

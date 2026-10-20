@@ -1,7 +1,8 @@
 /**
  * Small native portraits for the dialogue box and the character sheet, cut
- * from the loaded art once a scene is up (EV.portraits), and the delivered
- * UI icons (EV.artIcons).
+ * from the loaded art (EV.portraits), and the delivered UI icons
+ * (EV.artIcons). Boot draws them a few at a time, once per game (the art
+ * never changes after boot); each world scene sends them again.
  */
 import { craftsIconUrls } from './crafts-art'
 import { purseIconUrls } from './purse-art'
@@ -10,17 +11,30 @@ import { openMapIconUrls } from './wilds/open-map-art'
 import { indoorsIconUrls } from './indoors-art'
 import type Phaser from 'phaser'
 import { bus, EV } from './events'
+import { drain, type Steps } from './art-pass'
 import { densityOf } from './density'
 import { COMMONS_RESIDENT_PORTRAITS, commonsDataUrl, commonsIconUrls } from './commons-pass'
 import { itemIconUrls } from './items-pass'
 import { NPC_NAMES } from './entities/npcs'
 
-/**
- * Small native portraits for the dialogue box and character sheet. Each is
- * trimmed to its visible pixels (textures carry transparent padding) and,
- * for people, cropped to head and shoulders, then centered on a square.
- */
+/** The portraits and icons drawn for each game. */
+const drawn = new WeakMap<Phaser.Game, { portraits: Record<string, string>; icons: Record<string, string> }>()
+
+/** Send the portraits and icons (drawn now if boot didn't). */
 export function emitPortraits(scene: Phaser.Scene): void {
+  if (!drawn.has(scene.sys.game)) drain(drawPortraits(scene))
+  const d = drawn.get(scene.sys.game)!
+  bus.emit(EV.portraits, { ...d.portraits })
+  bus.emit(EV.artIcons, { ...d.icons })
+}
+
+/**
+ * Small native portraits for the dialogue box and character sheet, a
+ * portrait or a pass's icons a step. Each portrait is trimmed to its
+ * visible pixels (textures carry transparent padding) and, for people,
+ * cropped to head and shoulders, then centered on a square.
+ */
+export function* drawPortraits(scene: Phaser.Scene): Steps<void> {
   const out: Record<string, string> = {}
   const add = (name: string, key: string, frame: string | undefined, bust: boolean) => {
     try {
@@ -72,19 +86,28 @@ export function emitPortraits(scene: Phaser.Scene): void {
   }
   for (const id of ['mara', 'pip', 'orrin']) {
     add(NPC_NAMES[id], scene.textures.exists(`${id}-idle-0`) ? `${id}-idle-0` : id, undefined, true)
+    yield
   }
   if (scene.textures.get('fingersnap-props').has('stone-milestone')) add('Route Marker', 'fingersnap-props', 'stone-milestone', false)
   else add('Route Marker', 'mural', undefined, false)
+  yield
   add('Hilltop Lantern', 'fingersnap-props', 'lantern-shrine', false)
   add('Hearth Lantern', 'fingersnap-props', 'lantern-post', false)
   add('Road Lantern', 'fingersnap-props', 'lantern-post', false)
   add('Ashwatch Chest', 'fingersnap-props', 'treasure-chest', false)
+  yield
   add('You', 'fingersnap-demo-walk', 'walk-down-0', true)
+  yield
   // Commons pass: the residents' delivered busts (64 px), and the UI icons.
   for (const [name, frame] of Object.entries(COMMONS_RESIDENT_PORTRAITS)) {
     const url = commonsDataUrl(scene, frame)
     if (url) out[name] = url
+    yield
   }
-  bus.emit(EV.portraits, out)
-  bus.emit(EV.artIcons, { ...commonsIconUrls(scene), ...itemIconUrls(scene), ...indoorsIconUrls(scene), ...craftsIconUrls(scene), ...purseIconUrls(scene), ...glimsIconUrls(scene), ...openMapIconUrls(scene) })
+  const icons: Record<string, string> = {}
+  for (const urls of [commonsIconUrls, itemIconUrls, indoorsIconUrls, craftsIconUrls, purseIconUrls, glimsIconUrls, openMapIconUrls]) {
+    Object.assign(icons, urls(scene))
+    yield
+  }
+  drawn.set(scene.sys.game, { portraits: out, icons })
 }

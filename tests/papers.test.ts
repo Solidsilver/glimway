@@ -43,14 +43,15 @@ test('the shared catalog the server embeds matches the client papers (run `npm r
   const rows = paperCatalog();
   assert.equal(rows.length, PAPERS.length);
   for (const [i, p] of PAPERS.entries()) {
-    assert.deepEqual(rows[i], { id: p.id, collection: p.collection, source: p.source.kind, section: p.section, rule: designedRule(p.id) });
+    // A later quest's step (`quest-step`) is a quest find on the server.
+    assert.deepEqual(rows[i], { id: p.id, collection: p.collection, source: designedRule(p.id)!.kind, section: p.section, rule: designedRule(p.id) });
   }
 });
 
-test('all 52 texts, in the README’s 8 collections, each with a find source', () => {
-  assert.equal(PAPERS.length, 52);
+test('all 53 texts, in the README’s 8 collections, each with a find source', () => {
+  assert.equal(PAPERS.length, 53);
   assert.equal(PAPER_COLLECTIONS.length, 8);
-  assert.equal(new Set(PAPERS.map((p) => p.id)).size, 52);
+  assert.equal(new Set(PAPERS.map((p) => p.id)).size, 53);
   for (const p of PAPERS) {
     assert.ok(p.title && p.description && p.body.length > 100, `${p.id} has text`);
     assert.ok(PAPER_COLLECTIONS.includes(p.collection));

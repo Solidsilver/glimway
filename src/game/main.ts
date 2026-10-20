@@ -4,6 +4,7 @@ import { WorldScene } from './scenes/WorldScene'
 import type { Session } from './session'
 import { DEMO_CHARACTER } from '../content/world'
 import { canvasRatio, screenCanvasRatio, setCanvasRatio } from './viewport'
+import { clearSyncSafety } from './sync-safety'
 
 /**
  * The game draws at the screen's device pixel ratio (./viewport.ts
@@ -34,6 +35,7 @@ export function startGame(parent: HTMLElement, session: Session): Phaser.Game {
 }
 
 export function stopGame(game: Phaser.Game | null): void {
+  if (game) clearSyncSafety()
   game?.destroy(true)
 }
 

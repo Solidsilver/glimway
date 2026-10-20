@@ -1,4 +1,5 @@
-import { lotAtPixel } from '../../lib/lots'
+import { backlandAtPixel, inBackland, lotAtPixel, lotOrigin } from '../../lib/lots'
+import { groundAt, solidAt } from '../wilds/ground-view'
 /**
  * Homesteads, arranged: placement mode for a member on their own land or in
  * their cottage. The tray (src/ui/HomeBar.svelte) and the keys move, turn,
@@ -6,12 +7,12 @@ import { lotAtPixel } from '../../lib/lots'
  * a clearable tile can be cleared with Silas's saw.
  */
 import Phaser from 'phaser'
-import { HOMESTEAD_DATA, outdoorReserved, canRotate, checkPlacement, checkRemoval, grownItem, homeItem as catalogItem, rotatedFootprint, type HomeInstance, type HomeScene, type PlacementGround, type Rotation } from '../../lib/homestead'
+import { HOMESTEAD_DATA, outdoorReserved, canRotate, checkPlacement, checkRemoval, grownItem, homeItem as catalogItem, rotatedFootprint, type HomeInstance, type HomeScene, type BacklandGround, type PlacementGround, type Rotation } from '../../lib/homestead'
 import { LAND, buildableKind, clearable, clearedSet, effectiveKind, isLit } from '../../lib/homestead-land'
 import { bus, EV } from '../events'
 import { touchVec, uiBlocked, uiState } from '../input'
 import { sfx } from '../sfx'
-import { TILE, tileBottom, tileMid } from '../../lib/tile'
+import { TERRAIN, TILE, tileBottom, tileMid } from '../../lib/tile'
 import { decoKey } from '../commons-art'
 import { drawStable } from './homestead-stable'
 import { itemsFrame, itemWorldArt } from '../items-pass'
@@ -23,9 +24,10 @@ import { POST } from './homestead-art'
 
 interface Placement {
   scene: HomeScene
-  /** Grid origin in world px, and size in tiles. */
+  /** Grid origin in world px, and size in tiles; x0 is the first column (west lots' lit backland is x -24..-1). */
   ox: number
   oy: number
+  x0: number
   cols: number
   rows: number
   selected: string | null
@@ -69,7 +71,7 @@ export class HomesteadArranging {
 
   /** A few times a second: is the hero somewhere they may arrange their own place? */
   update(dt: number): void {
-    if (this.placement && this.home.land && lotAtPixel(this.deps.hero().x,this.deps.hero().y) !== this.home.gate) {
+    if (this.placement && this.home.land && !this.onMyGround()) {
       this.endPlacement(false)
     }
     this.arrangeTimer -= dt
@@ -79,7 +81,7 @@ export class HomesteadArranging {
     let next: ArrangeView = { available: false, scene: null, tier: home?.tier ?? 0 }
     if (home?.member && !this.placement) {
       if (this.deps.room) next = { available: true, scene: 'indoor', tier: home.tier }
-      else if (this.home.land && lotAtPixel(this.deps.hero().x,this.deps.hero().y) === this.home.gate) next = { available: true, scene: 'outdoor', tier: home.tier }
+      else if (this.home.land && this.onMyGround()) next = { available: true, scene: 'outdoor', tier: home.tier }
     }
     if (next.available !== this.arrange.available || next.scene !== this.arrange.scene || next.tier !== this.arrange.tier) this.emitArrange(next)
   }
@@ -89,6 +91,23 @@ export class HomesteadArranging {
     bus.emit(EV.homeArrange, v)
   }
 
+  /** On the lot, or in its backland while the lantern burns (lotLit). */
+  private onMyGround(): boolean {
+    const h = this.deps.hero()
+    return lotAtPixel(h.x, h.y) === this.home.gate || !!this.home.here()?.lantern.lit && backlandAtPixel(h.x, h.y) === this.home.gate
+  }
+
+  /** The lit backland's open ground (the server's backland.buildable, less what only it knows), or null while it's dark. */
+  private backland(): BacklandGround | null {
+    const h = this.home.here()
+    if (!this.home.land || !h?.lantern.lit) return null
+    const o = lotOrigin(h.gate)
+    return (x, y) => {
+      const g = groundAt(o.tx + x, o.ty + y)
+      return !solidAt(o.tx + x, o.ty + y) && g !== null && g !== TERRAIN.water_a && g !== TERRAIN.water_b && g !== TERRAIN.bridge
+    }
+  }
+
   private ground(): PlacementGround | undefined {
     const h = this.home.here()
     return this.home.land && h ? { land: this.home.land.land, cleared: clearedSet(h.cleared) } : undefined
@@ -96,10 +115,11 @@ export class HomesteadArranging {
 
   startPlacement(): void {
     if (this.placement || !this.arrange.available || !this.arrange.scene) return
-    if (this.home.land && lotAtPixel(this.deps.hero().x,this.deps.hero().y) !== this.home.gate) return
+    if (this.home.land && !this.onMyGround()) return
     const scene = this.arrange.scene
     let ox = 0
     let oy = 0
+    let x0 = 0
     let cols: number
     let rows: number
     if (scene === 'indoor') {
@@ -113,11 +133,17 @@ export class HomesteadArranging {
       oy = this.home.land.gridOrigin?.y ?? 0
       cols = this.home.land.width
       rows = this.home.land.height
+      // The lit backland widens the grid past the back line.
+      if (this.home.here()?.lantern.lit) {
+        if (this.home.gate! % 2 === 0) x0 = -cols
+        cols *= 2
+      }
     }
     this.placement = {
       scene,
       ox,
       oy,
+      x0,
       cols,
       rows,
       selected: null,
@@ -232,7 +258,7 @@ export class HomesteadArranging {
     if (!p || p.busy || uiBlocked()) return
     const gx = Math.floor((pointer.worldX - p.ox) / TILE)
     const gy = Math.floor((pointer.worldY - p.oy) / TILE)
-    if (gx < 0 || gy < 0 || gx >= p.cols || gy >= p.rows) return
+    if (gx < p.x0 || gy < 0 || gx >= p.x0 + p.cols || gy >= p.rows) return
     const hit = this.instanceAt(p.scene, gx, gy)
     if (!p.selected && hit) {
       this.select(hit.id)
@@ -257,7 +283,7 @@ export class HomesteadArranging {
     const def = it && homeItem(it)
     if (!def) return
     const [w, h] = rotatedFootprint(def, p.rotation)
-    p.x = Phaser.Math.Clamp(gx - Math.floor((w - 1) / 2), 0, p.cols - w)
+    p.x = Phaser.Math.Clamp(gx - Math.floor((w - 1) / 2), p.x0, p.x0 + p.cols - w)
     p.y = Phaser.Math.Clamp(gy - Math.floor((h - 1) / 2), 0, p.rows - h)
     p.message = null
     this.refreshPlacement()
@@ -308,12 +334,12 @@ export class HomesteadArranging {
     const hero = this.deps.hero()
     const cx = p.scene === 'outdoor' ? (hero.x - p.ox) / TILE - w / 2 : (p.cols - w) / 2
     const cy = p.scene === 'outdoor' ? (hero.y - p.oy) / TILE - h / 2 - 1 : p.rows - h - 2
-    let best = { x: Phaser.Math.Clamp(Math.round(cx), 0, p.cols - w), y: Phaser.Math.Clamp(Math.round(cy), 0, p.rows - h) }
+    let best = { x: Phaser.Math.Clamp(Math.round(cx), p.x0, p.x0 + p.cols - w), y: Phaser.Math.Clamp(Math.round(cy), 0, p.rows - h) }
     let bestD = Infinity
-    const g = this.ground()
+    const g = this.ground(), back = this.backland()
     for (let y = 0; y <= p.rows - h; y++)
-      for (let x = 0; x <= p.cols - w; x++) {
-        if (checkPlacement({ gate: home.gate, tier: Math.max(1, home.tier), items: home.items, plants: home.plants }, it, p.scene, x, y, 0, HOMESTEAD_DATA, g)) continue
+      for (let x = p.x0; x <= p.x0 + p.cols - w; x++) {
+        if (checkPlacement({ gate: home.gate, tier: Math.max(1, home.tier), items: home.items, plants: home.plants }, it, p.scene, x, y, 0, HOMESTEAD_DATA, g, back)) continue
         const d = Math.hypot(x - cx, (y - cy) * 1.3)
         if (d < bestD) {
           bestD = d
@@ -342,7 +368,7 @@ export class HomesteadArranging {
         const def = it && homeItem(it)
         if (!def) return
         const [w, h] = rotatedFootprint(def, p.rotation)
-        p.x = Phaser.Math.Clamp(p.x + c.dx, 0, p.cols - w)
+        p.x = Phaser.Math.Clamp(p.x + c.dx, p.x0, p.x0 + p.cols - w)
         p.y = Phaser.Math.Clamp(p.y + c.dy, 0, p.rows - h)
         p.message = null
         sfx('blip')
@@ -354,7 +380,7 @@ export class HomesteadArranging {
         if (!def || !canRotate(def)) return
         p.rotation = (((p.rotation + 90) % 360) as Rotation)
         const [w, h] = rotatedFootprint(def, p.rotation)
-        p.x = Phaser.Math.Clamp(p.x, 0, p.cols - w)
+        p.x = Phaser.Math.Clamp(p.x, p.x0, p.x0 + p.cols - w)
         p.y = Phaser.Math.Clamp(p.y, 0, p.rows - h)
         sfx('click')
         return this.refreshPlacement()
@@ -380,8 +406,8 @@ export class HomesteadArranging {
       // must not land in the name field.
       setTimeout(() =>
         bus.emit(EV.homeNamePrompt, {
-          title: 'Name the lamp',
-          body: 'Land only stays put where a named lamp holds it. What will you call this one?',
+          title: 'Name the post',
+          body: 'A lantern post on your own ground. What will its sign say?',
           placeholder: 'The Wren, Ada’s Light, Last Post…',
           max: HOMESTEAD_DATA.lanternPosts.nameMax
         })
@@ -401,7 +427,7 @@ export class HomesteadArranging {
     }
     let name: string | undefined
     if (op === 'place' && it.itemDef === POST) {
-      const problem = checkPlacement(this.home.here()!, it, p.scene, p.x, p.y, p.rotation, HOMESTEAD_DATA, this.ground())
+      const problem = checkPlacement(this.home.here()!, it, p.scene, p.x, p.y, p.rotation, HOMESTEAD_DATA, this.ground(), this.backland())
       if (problem) {
         p.message = { text: homeErrorText(problem), kind: 'error' }
         return this.refreshPlacement()
@@ -499,19 +525,21 @@ export class HomesteadArranging {
     if (!home?.member) return this.endPlacement()
     const g = p.overlay
     g.clear()
-    const ground = this.ground()
+    const ground = this.ground(), back = p.scene === 'outdoor' ? this.backland() : null
     const lights = p.scene === 'outdoor' ? this.home.art.lights(home) : []
     // The grid: faint cells where you may build (lit, open ground outdoors),
     // reserved tiles and obstacles hatched, placed pieces outlined.
     const cell = (x: number, y: number) => {
       if (p.scene === 'indoor') return 'open'
+      // The backland: all of it in the lot lantern's light.
+      if (inBackland(x, y, home.gate)) return !back ? 'dark' : back(x, y) ? 'open' : 'blocked'
       if (!isLit(lights, x, y)) return 'dark'
       const k = ground ? effectiveKind(ground.land, ground.cleared, x, y) : LAND.GRASS
       if (clearable(k)) return 'obstacle'
       return buildableKind(k) ? 'open' : 'blocked'
     }
     for (let y = 0; y < p.rows; y++)
-      for (let x = 0; x < p.cols; x++) {
+      for (let x = p.x0; x < p.x0 + p.cols; x++) {
         const c = cell(x, y)
         if (c === 'dark') continue
         const px = p.ox + x * TILE
@@ -556,7 +584,7 @@ export class HomesteadArranging {
     p.ghost = null
     if (it && def) {
       const [w, h] = rotatedFootprint(def, p.rotation)
-      const code = checkPlacement(home, it, p.scene, p.x, p.y, p.rotation, HOMESTEAD_DATA, ground)
+      const code = checkPlacement(home, it, p.scene, p.x, p.y, p.rotation, HOMESTEAD_DATA, ground, back)
       problem = code ? homeErrorText(code) : null
       const key = decoKey(it.itemDef, p.rotation)
       const bx = p.ox + p.x * TILE

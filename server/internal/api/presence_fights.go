@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"hash/fnv"
 	"math"
+	"slices"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -246,6 +248,11 @@ func (a *Server) fightOutputs(batch []fights.Emitted) {
 		h.mu.Lock()
 		for _, it := range chunk {
 			room, out := it.room, it.out
+			// An enemy winding up or locking its aim on someone (or on their
+			// Echo, decoy:<account>): they're in a fight.
+			if e, ok := out.Message.(*wire.FightEvent); ok && e.Target != nil && (e.Kind == wire.FightEventKind_FIGHT_EVENT_KIND_WINDUP_START || e.Kind == wire.FightEventKind_FIGHT_EVENT_KIND_AIM_LOCK) {
+				h.markFought(strings.TrimPrefix(e.GetTarget(), "decoy:"), h.now())
+			}
 			for p := range room.viewers {
 				if p.fightRooms[room.handle] != room || p.detached || out.Observer != "" && out.Observer != p.fightToken {
 					continue
@@ -387,7 +394,7 @@ func (a *Server) scanFightRooms(p *presencePeer, wake bool) (covered, done bool)
 	for dy := -1; dy <= 1; dy++ {
 		for dx := -1; dx <= 1; dx++ {
 			cx, cy := pcx+dx, pcy+dy
-			if !frontier.Inside(world, cx, cy) || location.SourceOf(cx, cy).Kind != location.SourceGenerated {
+			if !frontier.InsidePublished(world, cx, cy) || location.SourceOf(cx, cy).Kind != location.SourceGenerated {
 				continue
 			}
 			location := fightLocation{world: world, realm: content.WildsRules.GetRealm(), layer: 0, cx: int32(cx), cy: int32(cy)}
@@ -569,7 +576,7 @@ func (a *Server) wakeFightRooms(p *presencePeer, world string, missing []fightLo
 // nothing to claim again), until the row's timer.
 func (a *Server) loadFightChunk(ctx context.Context, tx *sql.Tx, world string, loc fightLocation, now time.Time) (fightWake, error) {
 	cx, cy := int(loc.cx), int(loc.cy)
-	ep, err := a.epochAt(ctx, tx, world, cx, cy, now.Unix())
+	ep, current, err := a.epochsAt(ctx, tx, world, cx, cy, now.Unix())
 	if err != nil {
 		return fightWake{}, err
 	}
@@ -581,8 +588,11 @@ func (a *Server) loadFightChunk(ctx context.Context, tx *sql.Tx, world string, l
 		return fightWake{}, fmt.Errorf("fight wake: chunk %d,%d answered for %d,%d", chunk.Cx, chunk.Cy, cx, cy)
 	}
 	w := fightWake{location: loc, key: fights.Key{World: world, Realm: chunk.Realm, Epoch: ep.Id, Layer: chunk.Layer, CX: chunk.Cx, CY: chunk.Cy}}
-	if ep.EndsAt != nil {
-		w.endsAt = int64(ep.EndsAt.Value * 1000)
+	// A held chunk keeps its pinned epoch's camps, falls and timers (the key),
+	// but its room lasts only to the current turning, where the hold is
+	// judged: the pinned epoch's own end has passed.
+	if current.EndsAt != nil {
+		w.endsAt = int64(current.EndsAt.Value * 1000)
 	}
 	for _, entity := range chunk.Entities {
 		if entity.Kind != "camp" || len(entity.Enemies) == 0 {
@@ -874,10 +884,13 @@ func (h *presenceHub) fightGround(p *presencePeer, x, y float64) fights.Ground {
 }
 
 // answerFight gathers the rooms that took a swing or cast off h.mu and sends
-// its one FightSwingResult, with a row for every prediction.
+// its one FightSwingResult, with a row for every prediction. A blow that
+// landed on something puts its player in a fight (markFought); one into
+// empty air doesn't, even inside a camp's room.
 func (h *presenceHub) answerFight(p *presencePeer, counter uint32, crit bool, predicted []*wire.FightTarget, replies chan []*wire.FightHitRow, pending int) {
 	ctx := p.ctx
 	token := p.fightToken
+	id := p.identity.ID
 	predicted = append([]*wire.FightTarget(nil), predicted...)
 	h.fightGathers.Add(1)
 	go func() {
@@ -908,7 +921,10 @@ func (h *presenceHub) answerFight(p *presencePeer, counter uint32, crit bool, pr
 		})
 		h.mu.Lock()
 		defer h.mu.Unlock()
-		if h.peers[p.identity.ID] == p && p.fightToken == token {
+		if slices.ContainsFunc(hits, landed) {
+			h.markFought(id, h.now())
+		}
+		if h.peers[id] == p && p.fightToken == token {
 			h.send(p, &wire.FightSwingResult{SwingCounter: counter, Crit: crit, Hits: hits})
 		}
 	}()
@@ -939,4 +955,9 @@ func gatherFightHits(ctx context.Context, replies <-chan []*wire.FightHitRow, pe
 		}
 	}
 	return hits, true
+}
+
+// landed: a row that hit (refused rows deal nothing).
+func landed(row *wire.FightHitRow) bool {
+	return row.RefusedReason == wire.FightRefusedReason_FIGHT_REFUSED_REASON_UNSPECIFIED
 }

@@ -145,7 +145,7 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
     areaId: s['world'].areaId,
     frames: s.game.loop.frame - builtAt,
     loop: s.game.loop.frame,
-    fading: s.cameras.main.fadeEffect.isRunning || s['holdingFade'],
+    fading: s.cameras.main.fadeEffect.isRunning || s['fadeHold'].active,
     transitioning: s['transitioning'],
     cinematic: s['cinematic'],
     live: s['worldLive']()
@@ -269,8 +269,8 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
   on('__fsDevDodge', (dx, dy) => s['hero'].tryDodge(new Phaser.Math.Vector2(dx, dy)))
   // One swing of the hero's weapon, wherever they stand (the off hand tucks away).
   on('__fsDevAttack', () => s['hero'].tryAttack())
-  // Set the area's creatures aside (frozen, off the map) for a quiet chunk.
-  on('__fsDevParkCreatures', () => s['enemies'].parkAll())
+  // Set the area's creatures aside (frozen, off the map) for a quiet chunk; `keep`: in every later scene too, a reload included.
+  on('__fsDevParkCreatures', (keep?: boolean) => s['enemies'].parkAll(keep))
   on('__fsDevStrike', (n: number, type?: EnemyType) => {
     for (const e of [...s['enemies'].enemies]) if (!e.dead && (!type || e.type === type)) s['enemies'].damageEnemy(e, n, s['hero'].sprite.x)
   })
@@ -344,7 +344,13 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
     // Textures the scene's chunks made (ground paints, drift), and everything listening on the game's bus.
     const textures = s.textures.getTextureKeys().filter((k) => /^wilds-(ground|drift):/.test(k)).length
     const listeners = Object.values(EV).reduce((n, e) => n + bus.listenerCount(e), 0)
-    return { list: s.children.length, tweens: tweens.length, transientTweens: tweens.filter(t => !t.isInfinite).length, statics: s.physics.world.staticBodies.size, textures, listeners, kinds }
+    // What each tween moves and how (type:texture or a text's words, then its properties), so a stray one can be named.
+    // A tween torn down mid-frame (a detaching chunk's) has no targets or data left.
+    const tweening = tweens.flatMap((t) => (t.targets ?? []).map((o) => {
+      const g = o as { type?: string; texture?: { key: string }; text?: string }
+      return `${g.type ?? '?'}:${g.text ?? g.texture?.key ?? ''} ${(t.data ?? []).map((d) => ('key' in d ? d.key : '')).join(',')}`
+    }))
+    return { list: s.children.length, tweens: tweens.length, transientTweens: tweens.filter(t => !t.isInfinite).length, tweening, statics: s.physics.world.staticBodies.size, textures, listeners, kinds }
   })
   on('__fsPaths', () => {
     const paths = s['paths']
@@ -360,6 +366,8 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
     const view = wildsView()
     return { ...marks.debug(), discoveries: [...(view?.discoveries.values() ?? [])].map((d) => ({ id: d.entityId, by: d.discovererId, name: d.displayName })), places: knownPlaces() }
   })
+  on('__fsCamps', () => s['camps']?.debug() ?? null)
+  on('__fsCommunalLamps', () => s['communalLamps']?.debug() ?? null)
   on('__fsRumour', () => {
     const link = s['session'].link
     // `current`: read since the last turning (Link.rumourStale), so it's this wick's.
@@ -398,6 +406,11 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
       .filter((c): c is Phaser.GameObjects.Image => c instanceof Phaser.GameObjects.Image && c.active && c.getData(TILE_DATA) === tileKey(tx, ty))
       .map((c) => ({ frame: String(c.frame.name), fades: fading.has(c) }))
   })
+  on('__fsImagesNamed', (prefix) =>
+    s.children.list
+      .filter((c): c is Phaser.GameObjects.Image => c instanceof Phaser.GameObjects.Image && c.active && c.texture.key.startsWith(prefix))
+      .map((c) => ({ key: c.texture.key, x: c.x, y: c.y }))
+  )
   on('__fsSafety', syncSafety)
   // Seated: the seat's pose and the depths drawn at (the hero's and the
   // layered avatar's), so a playtest can check the hero sits on the seat.

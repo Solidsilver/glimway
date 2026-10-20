@@ -134,6 +134,16 @@ type itemsView struct {
 	OffHand   offHandView    `json:"offHand"`
 	PickedUp  []string       `json:"pickedUp"`
 	Thanks    []thanksView   `json:"thanks"`
+	// Carried are the home pieces in the pack, deed or no deed.
+	Carried []homeInstance `json:"carried"`
+	// Plants are the plants in the pack, lifted whole (recovery.go carryPlant).
+	Plants []carriedPlantView `json:"plants"`
+}
+
+type carriedPlantView struct {
+	ID        string `json:"id"`
+	ItemDef   string `json:"itemDef"`
+	PlantedAt int64  `json:"plantedAt"`
 }
 
 // maintainAndReadItems keeps flower drying at its historical read boundary.
@@ -147,7 +157,7 @@ func maintainAndReadItems(ctx context.Context, tx *sql.Tx, s *store.Snapshot, no
 }
 
 func emptyItemsView() itemsView {
-	return itemsView{Stacks: []stackView{}, Pockets: []slotView{}, PickedUp: []string{}, Thanks: []thanksView{}}
+	return itemsView{Stacks: []stackView{}, Pockets: []slotView{}, PickedUp: []string{}, Thanks: []thanksView{}, Carried: []homeInstance{}, Plants: []carriedPlantView{}}
 }
 
 // projectItems only assembles the pack view from rows; it never dries flowers.
@@ -236,6 +246,17 @@ func projectItems(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (itemsView
 	if err != nil {
 		return v, err
 	}
+	// Home pieces in the pack: a way-lamp is set from here, deed or not.
+	rows, err = tx.QueryContext(ctx, "SELECT id,item_def,scene,x,y,rotation,name,stalls FROM homestead_items WHERE account_id=? AND location='inventory' ORDER BY id", s.AccountID)
+	if err != nil {
+		return v, err
+	}
+	if v.Carried, err = scanInstances(rows, v.Carried); err != nil {
+		return v, err
+	}
+	if v.Plants, err = carriedPlants(ctx, tx, s.AccountID); err != nil {
+		return v, err
+	}
 	rows, err = tx.QueryContext(ctx, "SELECT p.display_name,t.item_def,t.at FROM item_thanks t JOIN players p ON p.account_id=t.user_id WHERE t.maker_id=? ORDER BY t.at DESC,t.id DESC LIMIT 10", s.AccountID)
 	if err != nil {
 		return v, err
@@ -273,4 +294,22 @@ func (a *Server) itemsRead(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	return a.finishRead(w, r, tx, s, raw)
+}
+
+// carriedPlants are the plants in a pack, first carried first.
+func carriedPlants(ctx context.Context, tx *sql.Tx, account string) ([]carriedPlantView, error) {
+	rows, err := tx.QueryContext(ctx, "SELECT id,item_def,planted_at FROM carried_plants WHERE account_id=? ORDER BY carried_at,id", account)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []carriedPlantView{}
+	for rows.Next() {
+		var p carriedPlantView
+		if err = rows.Scan(&p.ID, &p.ItemDef, &p.PlantedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, p)
+	}
+	return out, rows.Err()
 }

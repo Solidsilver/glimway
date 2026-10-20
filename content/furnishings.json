@@ -2,7 +2,7 @@
   "pieces": [
     {
       "id": "wooden-stool",
-      "name": "Wooden Stool",
+      "name": "Wooden stool",
       "facings": {
         "front": "stool-front-default",
         "left": "",
@@ -26,7 +26,7 @@
     },
     {
       "id": "reading-chair",
-      "name": "Reading Chair",
+      "name": "Reading chair",
       "facings": {
         "front": ""
       },
@@ -48,7 +48,7 @@
     },
     {
       "id": "braided-rug",
-      "name": "Braided Rug",
+      "name": "Braided rug",
       "facings": {
         "front": ""
       },
@@ -68,7 +68,7 @@
     },
     {
       "id": "iron-lantern",
-      "name": "Iron Lantern",
+      "name": "Iron lantern",
       "facings": {
         "front": "lamp-oil-front-default"
       },
@@ -90,7 +90,7 @@
     },
     {
       "id": "oak-table",
-      "name": "Oak Table",
+      "name": "Oak table",
       "facings": {
         "front": "",
         "left": "",
@@ -115,7 +115,7 @@
     },
     {
       "id": "potted-fern",
-      "name": "Potted Fern",
+      "name": "Potted fern",
       "facings": {
         "front": "plant-leafy-front-default"
       },
@@ -135,7 +135,7 @@
     },
     {
       "id": "bookshelf",
-      "name": "Short Bookshelf",
+      "name": "Short bookshelf",
       "facings": {
         "front": ""
       },
@@ -160,7 +160,7 @@
     },
     {
       "id": "wash-basin",
-      "name": "Wash Basin",
+      "name": "Wash basin",
       "facings": {
         "front": ""
       },
@@ -183,7 +183,7 @@
     },
     {
       "id": "stone-hearth",
-      "name": "Stone Hearth",
+      "name": "Stone hearth",
       "facings": {
         "front": ""
       },
@@ -205,7 +205,7 @@
     },
     {
       "id": "carved-bed",
-      "name": "Carved Bed",
+      "name": "Carved bed",
       "facings": {
         "front": ""
       },
@@ -225,7 +225,7 @@
     },
     {
       "id": "woven-basket",
-      "name": "Woven Basket",
+      "name": "Woven basket",
       "facings": {
         "front": "basket-front-default"
       },
@@ -245,7 +245,7 @@
     },
     {
       "id": "display-stand",
-      "name": "Display Stand",
+      "name": "Display stand",
       "facings": {
         "front": ""
       },
@@ -268,7 +268,7 @@
     },
     {
       "id": "tool-rack",
-      "name": "Tool Rack",
+      "name": "Tool rack",
       "facings": {
         "front": ""
       },
@@ -288,7 +288,7 @@
     },
     {
       "id": "amber-sconce",
-      "name": "Amber Sconce",
+      "name": "Amber sconce",
       "facings": {
         "front": ""
       },
@@ -310,7 +310,29 @@
     },
     {
       "id": "lantern-post",
-      "name": "Lantern Post",
+      "name": "Lantern post",
+      "facings": {
+        "front": ""
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "base": {
+        "x": 0,
+        "y": 0,
+        "w": 1,
+        "h": 1
+      },
+      "mount": "floor",
+      "size": "large",
+      "tags": [
+        "light"
+      ]
+    },
+    {
+      "id": "way-lamp",
+      "name": "Way-lamp",
       "facings": {
         "front": ""
       },
@@ -692,7 +714,7 @@
     },
     {
       "id": "rag-rug",
-      "name": "Rag Rug",
+      "name": "Rag rug",
       "facings": {
         "front": "rug-woven-front-default"
       },
@@ -712,7 +734,7 @@
     },
     {
       "id": "wall-shelves",
-      "name": "Wall Shelves",
+      "name": "Wall shelves",
       "facings": {
         "front": "shelf-generic-front-default"
       },
@@ -735,7 +757,7 @@
     },
     {
       "id": "wall-peg",
-      "name": "Wall Peg",
+      "name": "Wall peg",
       "facings": {
         "front": ""
       },
@@ -755,7 +777,7 @@
     },
     {
       "id": "wall-tools",
-      "name": "Wall Tools",
+      "name": "Wall tools",
       "facings": {
         "front": ""
       },
@@ -825,7 +847,7 @@
     },
     {
       "id": "sack",
-      "name": "Flour Sack",
+      "name": "Flour sack",
       "facings": {
         "front": "sack-large-front-upright"
       },
@@ -950,7 +972,7 @@
     },
     {
       "id": "small-table",
-      "name": "Small Table",
+      "name": "Small table",
       "facings": {
         "front": "side-table-front-default",
         "left": "",
@@ -998,7 +1020,7 @@
     },
     {
       "id": "kitchen-hearth",
-      "name": "Bread Oven and Hearth",
+      "name": "Bread oven and hearth",
       "facings": {
         "front": "kitchen-oven-front-fire"
       },
@@ -1034,7 +1056,7 @@
     },
     {
       "id": "kitchen-crocks",
-      "name": "Shelves of Crocks",
+      "name": "Shelves of crocks",
       "facings": {
         "front": "kitchen-jar-shelf-front-default"
       },
@@ -1057,7 +1079,7 @@
     },
     {
       "id": "kitchen-tallow-pot",
-      "name": "Tallow Pot on its Stand",
+      "name": "Tallow pot on its stand",
       "facings": {
         "front": "kitchen-cauldron-front-steaming-0"
       },
@@ -1117,7 +1139,7 @@
     },
     {
       "id": "kitchen-sponge-bowl",
-      "name": "Sponge Bowl on a Stool",
+      "name": "Sponge bowl on a stool",
       "facings": {
         "front": "kitchen-washtub-front-default"
       },
@@ -1150,7 +1172,7 @@
     },
     {
       "id": "kitchen-bread-rack",
-      "name": "Bread Rack",
+      "name": "Bread rack",
       "facings": {
         "front": "kitchen-bread-rack-front-default"
       },
@@ -1173,7 +1195,7 @@
     },
     {
       "id": "mill-gears",
-      "name": "Gear Train",
+      "name": "Gear train",
       "facings": {
         "left": "mill-gear-wheel-left-turn-0"
       },
@@ -1210,7 +1232,7 @@
     },
     {
       "id": "millstones",
-      "name": "Millstones under the Hopper",
+      "name": "Millstones under the hopper",
       "facings": {
         "front": "millstone-hopper-front-turn-0"
       },
@@ -1247,7 +1269,7 @@
     },
     {
       "id": "counting-stool",
-      "name": "Counting Stool",
+      "name": "Counting stool",
       "facings": {
         "front": "stool-front-default"
       },
@@ -1269,7 +1291,7 @@
     },
     {
       "id": "mill-hoist",
-      "name": "Sack Hoist and Hatch",
+      "name": "Sack hoist and hatch",
       "facings": {
         "front": "loft-hoist-front-default"
       },
@@ -1306,7 +1328,7 @@
     },
     {
       "id": "library-shelves",
-      "name": "Tall Bookshelf",
+      "name": "Tall bookshelf",
       "facings": {
         "front": "library-shelf-front-half"
       },
@@ -1349,7 +1371,7 @@
     },
     {
       "id": "library-side-shelves",
-      "name": "Tall Side Bookshelf",
+      "name": "Tall side bookshelf",
       "facings": {
         "left": "library-shelf-tall-left-half",
         "right": "library-shelf-tall-right-half"
@@ -1375,7 +1397,7 @@
     },
     {
       "id": "reading-table",
-      "name": "Reading Table",
+      "name": "Reading table",
       "facings": {
         "front": "reading-table-unlit"
       },
@@ -1414,7 +1436,7 @@
     },
     {
       "id": "reading-nook",
-      "name": "Reading Nook",
+      "name": "Reading nook",
       "facings": {
         "front": "library-reading-nook-front-default"
       },
@@ -1440,7 +1462,7 @@
     },
     {
       "id": "elara-desk",
-      "name": "Elara's Desk",
+      "name": "Elara's desk",
       "facings": {
         "front": "library-elara-desk-front-empty"
       },
@@ -1480,7 +1502,7 @@
     },
     {
       "id": "rug-braided",
-      "name": "Braided Oval Rug",
+      "name": "Braided oval rug",
       "facings": {
         "front": "rug-braided-front-default"
       },
@@ -1500,7 +1522,7 @@
     },
     {
       "id": "rug-patchwork",
-      "name": "Patchwork Runner",
+      "name": "Patchwork runner",
       "facings": {
         "front": "rug-patchwork-front-default"
       },
@@ -1520,7 +1542,7 @@
     },
     {
       "id": "wall-pegs-tools",
-      "name": "Wall Pegs with Tools",
+      "name": "Wall pegs with tools",
       "facings": {
         "front": "wall-pegs-front-tools"
       },
@@ -1540,7 +1562,7 @@
     },
     {
       "id": "plant-flowering",
-      "name": "Flowering Plant",
+      "name": "Flowering plant",
       "facings": {
         "front": "plant-flowering-front-default"
       },
@@ -1560,7 +1582,7 @@
     },
     {
       "id": "candle-holder",
-      "name": "Candle in a Holder",
+      "name": "Candle in a holder",
       "facings": {
         "front": "candle-holder-front-default"
       },
@@ -1582,7 +1604,7 @@
     },
     {
       "id": "chair-side",
-      "name": "Side Chair",
+      "name": "Side chair",
       "facings": {
         "left": "chair-right-default",
         "right": "chair-left-default"
@@ -1605,7 +1627,7 @@
     },
     {
       "id": "kitchen-flour-handprint",
-      "name": "Flour Handprint Board",
+      "name": "Flour handprint board",
       "facings": {
         "front": "kitchen-flour-handprint-wall-default"
       },
@@ -1625,7 +1647,7 @@
     },
     {
       "id": "kitchen-oven-peel",
-      "name": "Oven Peel",
+      "name": "Oven peel",
       "facings": {
         "front": "kitchen-oven-peel-wall-default"
       },
@@ -1645,7 +1667,7 @@
     },
     {
       "id": "mill-sifter",
-      "name": "Flour Sifter",
+      "name": "Flour sifter",
       "facings": {
         "front": "mill-sifter-front-default"
       },
@@ -1668,7 +1690,7 @@
     },
     {
       "id": "mill-tally-board",
-      "name": "Tally Board",
+      "name": "Tally board",
       "facings": {
         "front": "mill-tally-board-wall-default"
       },
@@ -1688,7 +1710,7 @@
     },
     {
       "id": "mill-sack",
-      "name": "Flour Sack",
+      "name": "Flour sack",
       "facings": {
         "front": "mill-sack-front-upright"
       },
@@ -1721,7 +1743,7 @@
     },
     {
       "id": "library-side-shelf-short",
-      "name": "Short Side Bookshelf",
+      "name": "Short side bookshelf",
       "facings": {
         "left": "library-shelf-short-left-half",
         "right": "library-shelf-short-right-half"
@@ -1747,7 +1769,7 @@
     },
     {
       "id": "library-section-sign-stories",
-      "name": "Section Sign: Stories",
+      "name": "Section sign: stories",
       "facings": {
         "front": "library-section-sign-front-stories"
       },
@@ -1769,7 +1791,7 @@
     },
     {
       "id": "library-section-sign-histories",
-      "name": "Section Sign: Histories",
+      "name": "Section sign: histories",
       "facings": {
         "front": "library-section-sign-front-histories"
       },
@@ -1791,7 +1813,7 @@
     },
     {
       "id": "library-section-sign-recipes",
-      "name": "Section Sign: Recipes",
+      "name": "Section sign: recipes",
       "facings": {
         "front": "library-section-sign-front-recipes"
       },
@@ -1813,7 +1835,7 @@
     },
     {
       "id": "library-section-sign-field-notes",
-      "name": "Section Sign: Field Notes",
+      "name": "Section sign: field notes",
       "facings": {
         "front": "library-section-sign-front-field-notes"
       },
@@ -1835,7 +1857,7 @@
     },
     {
       "id": "yard-counter",
-      "name": "Silas's Counter",
+      "name": "Silas's counter",
       "facings": {
         "front": "yard-counter"
       },
@@ -1855,7 +1877,7 @@
     },
     {
       "id": "yard-timber-rack",
-      "name": "Timber Rack",
+      "name": "Timber rack",
       "facings": {
         "front": "yard-timber-rack"
       },
@@ -1875,7 +1897,7 @@
     },
     {
       "id": "yard-mending-bench",
-      "name": "Mending Bench",
+      "name": "Mending bench",
       "facings": {
         "front": "yard-mending-bench"
       },
@@ -1895,7 +1917,7 @@
     },
     {
       "id": "kit-side-doorway",
-      "name": "Side Doorway",
+      "name": "Side doorway",
       "facings": {
         "left": "kit-side-doorway",
         "right": "kit-side-doorway-right"
@@ -1916,7 +1938,7 @@
     },
     {
       "id": "deeds-pigeonholes",
-      "name": "Deed Pigeonholes",
+      "name": "Deed pigeonholes",
       "facings": {
         "front": "deeds-pigeonholes"
       },
@@ -1936,7 +1958,7 @@
     },
     {
       "id": "deeds-clerk-desk",
-      "name": "Clerk's Desk",
+      "name": "Clerk's desk",
       "facings": {
         "front": "deeds-clerk-desk"
       },
@@ -1956,7 +1978,7 @@
     },
     {
       "id": "deeds-table",
-      "name": "Deed Table",
+      "name": "Deed table",
       "facings": {
         "front": "deeds-table"
       },

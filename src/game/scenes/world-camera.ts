@@ -4,6 +4,7 @@
  * follow offset that keep the hero clear of the interface, with a soft
  * fade where the map ends.
  */
+import { onSceneEnd } from '../scene-end'
 import Phaser from 'phaser'
 import { canvasRatio, canvasZoomFor, playInsets, roomZoomFor, snapScroll } from '../viewport'
 import type { WorldData } from '../worlds'
@@ -22,7 +23,7 @@ export class WorldCamera {
     this.snapToPixels()
     const onResize = (size: Phaser.Structs.Size) => this.apply(size.width, size.height)
     scene.scale.on('resize', onResize)
-    scene.events.once('shutdown', () => scene.scale.off('resize', onResize))
+    onSceneEnd(scene, () => scene.scale.off('resize', onResize))
   }
 
   /**
@@ -106,6 +107,11 @@ export class WorldCamera {
     cam.setFollowOffset(this.followOffset.x, this.followOffset.y)
     // Indoors the room's own vignette and dark surround end it (./area/room-art.ts).
     this.layEdgeFade(!this.indoors && !this.world.open && (left || right || top || bottom) ? 1 : 0)
+  }
+
+  /** Re-frame now: the map's bounds moved (the frontier, WorldScene.followFrontier). */
+  reframe(): void {
+    this.frameCamera()
   }
 
   /** Re-frame when the insets, the ratio, the zoom or the size changed (cheap: one string compare a frame). */

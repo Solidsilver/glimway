@@ -1,9 +1,9 @@
 import { homeEntrance, lotName, lotOrigin } from '../src/lib/lots.ts'
 import { expect, type Page } from './fixtures'
 import type { Locator } from '@playwright/test'
-import { accountOf, allow, CONTRACT, newUser, openTitleGuide, pasteAndConnect, pastOpening, routeHabitica, setHabitica, sql, syncFromMenu, waitForWorld, served } from './connected'
+import { accountOf, allow, CONTRACT, newUser, openTitleGuide, pasteAndConnect, pastOpening, routeHabitica, serverState, setHabitica, sql, syncFromMenu, waitForWorld, served } from './connected'
 import { landFromCells, type Land } from '../src/lib/homestead-land.ts'
-import { dialogueState, frames, inCommons, readDialogue, settled, waitForArea, waitForLive, expectToast, SERVER_ANSWER_MS } from './helpers'
+import { dialogueState, frames, inCommons, noteHelperRetry, pressToTalk, readDialogue, settled, waitForArea, waitForLive, expectToast, SERVER_ANSWER_MS } from './helpers'
 import { setHour } from './room-helpers'
 import { residentAt } from '../src/lib/residents.ts'
 
@@ -29,9 +29,13 @@ export interface Home {
   postsBought: number
   nextPost: Record<string, number>
   items: Item[]
+  /** The lot lantern (roadmap 0.12). */
+  lantern?: { lit: boolean; oil: number; dimming: boolean }
 }
 export interface HomesView {
   status: string
+  /** Lane and home reads still to land. */
+  reading: number
   claimed: boolean
   myGate: number | null
   gateCount: number
@@ -85,11 +89,9 @@ export async function talk(page: Page, prompt: RegExp, pick?: RegExp): Promise<v
   // With a reply to pick: someone not ready yet ("Hold on, I'm finding your
   // page") is asked again, as a player would.
   for (let attempt = 1; ; attempt++) {
-    await expect(page.locator('.prompt')).toContainText(prompt)
-    await waitForLive(page)
     const mark = (await dialogueState(page)).opened
     talkedFrom.set(page, mark)
-    await page.keyboard.press('e')
+    await pressToTalk(page, prompt)
     await expect(dialogue).toBeVisible()
     let picked = false
     await readDialogue(page, { pick, picked: () => (picked = true) })
@@ -104,6 +106,7 @@ export async function talk(page: Page, prompt: RegExp, pick?: RegExp): Promise<v
     await expect.poll(async () => (await dialogueState(page)).opened).toBeGreaterThan(mark)
     if (!pick || picked) return
     if (attempt >= 3) throw new Error(`no reply matching ${pick} was offered at ${prompt}`)
+    noteHelperRetry('talk', `no reply matching ${pick} at ${prompt}; asking again (talk ${attempt + 1})`)
     await frames(page, 30)
   }
 }
@@ -371,6 +374,22 @@ export async function claimDeed(page: Page): Promise<number> {
   // Back out on the lane, as a deed bought from Silas used to leave you.
   await go(page, 'outdoors', 23, 60)
   return free.gate
+}
+
+/**
+ * Test lever: a deed on `gate` of the player's world, written straight to the
+ * database, for specs that need a homestead but don't test buying one
+ * (claimDeed walks to Pell for it). The page sees it after its next state
+ * read: a `reenter`, or `__fsHomes.fresh()`.
+ */
+export async function seedDeed(page: Page, id: string, gate = 2): Promise<void> {
+  const world = (await serverState(page)).body.worldId as string
+  const account = accountOf(id)
+  const home = `home-${account}`
+  const now = Math.floor(Date.now() / 1000)
+  sql(`INSERT INTO homesteads(id,world_id,gate,tier,posts_bought,claimed_at) VALUES('${home}','${world}',${gate},0,0,${now});
+INSERT INTO homestead_members VALUES('${account}','${home}',${now});
+INSERT INTO player_deeds VALUES('${account}',1);`)
 }
 
 /** Pell's word on a deed bought (src/content/pell.ts PELL_DEED.bought). */

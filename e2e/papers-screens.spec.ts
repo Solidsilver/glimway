@@ -1,4 +1,5 @@
 import { expect, test, type Page } from './fixtures'
+import { ALL_PAPERS } from './paper-totals'
 import { openLibraryShelves } from './room-helpers'
 import { warp } from './helpers'
 import { freshPlayer } from './home-helpers'
@@ -80,10 +81,10 @@ test('desktop screens', async ({ page }) => {
   // The reading room: the panel opens at its shelves.
   await openLibraryShelves(page)
   const library = page.getByRole('dialog', { name: 'Hearthwick Library' })
-  await expect(library.getByText(/of 52/)).toBeVisible()
+  await expect(library.getByText(`of ${ALL_PAPERS}`)).toBeVisible()
   await page.waitForTimeout(500)
   await page.screenshot({ path: `${OUT}/desktop-library.png` })
-  await library.getByRole('button', { name: /Dangers of the White Quiet/ }).click()
+  await library.getByRole('button', { name: /Dangers of the Quiet/ }).click()
   await page.screenshot({ path: `${OUT}/desktop-library-read-broadside.png` })
   await library.getByRole('button', { name: /The shelves/ }).click()
   await library.getByRole('button', { name: /Mudrise Fleet/ }).click()
@@ -114,7 +115,7 @@ test.describe('phone', () => {
 
     await openLibraryShelves(page, { touch: true })
     const library = page.getByRole('dialog', { name: 'Hearthwick Library' })
-    await expect(library.getByText(/of 52/)).toBeVisible()
+    await expect(library.getByText(`of ${ALL_PAPERS}`)).toBeVisible()
     await page.waitForTimeout(500)
     await page.screenshot({ path: `${OUT}/phone-library.png` })
   })

@@ -1,3 +1,4 @@
+import { onSceneEnd } from '../scene-end.ts'
 import { lotAt, lotOrigin, lotAtPixel } from '../../lib/lots.ts'
 /**
  * Gathering (docs/items/crafting-and-repair.md, "Gathering"): the workable
@@ -105,7 +106,7 @@ export class Gathering {
     if (deps.session.link && !items.view) void items.load()
     Gathering.live = this
     bus.on(EV.planted, this.onPlanted, this)
-    scene.events.once('shutdown', () => {
+    onSceneEnd(scene, () => {
       this.ghost?.destroy()
       this.ghost = null
       if (Gathering.live === this) Gathering.live = null

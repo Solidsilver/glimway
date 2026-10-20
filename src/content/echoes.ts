@@ -255,7 +255,7 @@ export const SITE_TEXT = {
     verb: 'Lift the third white stone',
   },
   nest: {
-    name: 'Dead Iron-Oak',
+    name: 'Dead iron-oak',
     look: 'A dead iron-oak, bare as bone. High in its crotch, a jackdaw’s nest of dry grass and drift-twigs.',
     verb: 'Look into the nest',
   },

@@ -4,7 +4,7 @@ import { contentPosition } from '../lib/location.ts';
  *
  * The words live in docs/lore/texts (generated into papers-text.ts). This
  * file is the design layer on top: how each paper looks when you read it,
- * and where it is found. The reveal order follows docs/lore/chronicle.md —
+ * and where it is found. The reveal order follows docs/lore/canon.md —
  * early finds build the world and the Closure; nothing before the road is
  * lit says the Six survived; Aldo's linseed-box note, Joss's letter, the
  * Count House scrap and Nan's journal wait for systems that come later.
@@ -48,6 +48,11 @@ export type FindSource =
    * at or after `stage`; without, found the moment the quest reaches it.
    */
   | { kind: 'quest'; stage: QuestStage; from?: QuestNpc; spot: string }
+  /**
+   * A step of a quest other than the Lantern Road, which grants it in its
+   * `papers` (content/quests.json). Nothing else here hands it over.
+   */
+  | { kind: 'quest-step'; quest: string; step: string; spot: string }
   /** Given by an NPC once the main quest is done. */
   | { kind: 'gift'; from: QuestNpc; stage: QuestStage }
   /** Declared for later systems; `hook` says what should trigger it. */
@@ -119,7 +124,7 @@ const DESIGN: Record<string, Design> = {
   },
   // ---- The Liar's Art
   'failed-grid-of-sector-4': { style: 'notebook', source: { kind: 'wilds-poi', hook: 'A surveyor’s abandoned camp beside a tight-ringed stump' } },
-  'joss-penhallow-field-notes-pencil-map': { style: 'notebook', source: { kind: 'wilds-poi', hook: 'A roofed shrine deep east whose turncap leans toward Sallow Ford (late)' } },
+  'joss-penhallow-field-notes-pencil-map': { style: 'notebook', source: { kind: 'wilds-poi', hook: 'A roofed shrine deep east whose cowl leans toward Sallow Ford (late)' } },
   'log-of-the-bark-wind-hewn': { style: 'ledger', source: { kind: 'library-start' } },
   'guild-of-cartographers-invoice': { style: 'record', source: { kind: 'library-start' } },
   // ---- Blood, Ink, and Timber
@@ -181,6 +186,12 @@ const DESIGN: Record<string, Design> = {
     source: { kind: 'quest', stage: 'guardian-defeated', spot: 'Charcoal on the inside of the Stone Warden’s chest, read when it settles and the latch opens' },
     hint: 'Something is written where nobody was meant to look.',
   },
+  // ---- The Keeper's hand (0.13; docs/design/lamps.md 2.8)
+  'the-form-of-a-naming': {
+    style: 'ledger',
+    source: { kind: 'quest-step', quest: 'keepers-hand', step: 'check-ledger', spot: 'Mara copies it out of the middle pages of Wenna’s ledger once your cut matches' },
+    hint: 'Mara keeps the ledger. Bring her something to check against it.',
+  },
 };
 
 const AREA_HINT: Record<string, string> = {
@@ -206,6 +217,8 @@ function hintFor(source: FindSource): string {
       return AREA_HINT[source.area];
     case 'quest':
       return 'Part of the Lantern Road story.';
+    case 'quest-step':
+      return 'Mara gives it to a Keeper’s hand.';
     case 'gift':
       return 'Someone in Hearthwick may share it, in time.';
     default:
@@ -231,6 +244,7 @@ const SECTIONS: Readonly<Record<string, LibrarySection>> = {
   'orrins-drift-slap-foundation-standard': 'recipes',
   'twoford-almanac-silas-copy': 'histories',
   'eleven-days': 'histories',
+  'the-form-of-a-naming': 'histories',
   'the-ashwatch-skipping-game': 'stories',
 };
 
@@ -325,7 +339,7 @@ const HANDOVER: Record<string, { lines: string[]; laterLines?: string[] }> = {
   },
   'keepers-twists-recipe-card': {
     lines: [
-      'Here. Take the card off my wall: Keeper’s Twists. I know it by heart, and it’s about time someone else used it.',
+      'Here. Take the card off my wall: Keeper’s twists. I know it by heart, and it’s about time someone else used it.',
       'There’s a note on the back about my brother. Pip has read it eleven times when they think I’m not looking. You may as well read it once.',
     ],
   },

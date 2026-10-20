@@ -61,9 +61,9 @@ test('items.json loads with a representative set and the shared rules', () => {
   assert.equal(assetKind(itemDef('timber')!), 'material');
   assert.equal(assetKind(itemDef('lamp-wick')!), 'item');
   // Existing ids keep their names (and the new ones carry the catalogue's).
-  assert.equal(itemName('lamp-wick'), 'Lamp Wick');
-  assert.equal(itemName('whittled-fox'), 'Whittled Fox');
-  assert.equal(itemName('wooden-stool'), 'Wooden Stool', 'home goods from homestead.json');
+  assert.equal(itemName('lamp-wick'), 'Lamp wick');
+  assert.equal(itemName('whittled-fox'), 'Whittled fox');
+  assert.equal(itemName('wooden-stool'), 'Wooden stool', 'home goods from homestead.json');
 });
 
 test('gift phrases preserve makers, articles, and named pieces', () => {
@@ -181,7 +181,7 @@ test('menders stand where Silas and Orrin do', () => {
 test('a gift reads like a line someone would say', () => {
   assert.equal(giftPhrase('comfrey-salve', 1), 'a comfrey salve');
   assert.equal(giftPhrase('amber-bead', 1), 'an amber bead');
-  assert.equal(giftPhrase('lamp-wick', 2), '2 Lamp Wicks');
+  assert.equal(giftPhrase('lamp-wick', 2), '2 Lamp wicks');
   assert.equal(giftPhrase('nans-lamplighter-pole', 1), "Nan's lamplighter pole");
 });
 
@@ -269,6 +269,8 @@ function view(extra: Partial<ItemsView> = {}): ItemsView {
     offHand: { open: true, class: 'warrior', itemDef: 'carters-lantern', instance: 'l1' },
     pickedUp: [],
     thanks: [],
+    carried: [],
+    plants: [],
     ...extra,
   };
 }
@@ -337,7 +339,7 @@ test('item responses parse, and malformed instances are refused', () => {
   assert.equal(items.items.instances.length, 4);
   assert.equal(items.items.offHand.class, 'warrior');
   // The wire answer carries every ItemsResult field (EmitUnpopulated).
-  const fields = { wear: null, used: '', pickup: '', given: null, mended: '', created: [], gathered: [], plant: null, land: null, returned: '', paper: null, heirloom: '', adaOilCount: 0, glimsGiven: 0, bought: null };
+  const fields = { wear: null, used: '', pickup: '', given: null, mended: '', created: [], gathered: [], plant: null, land: null, returned: '', paper: null, heirloom: '', adaOilCount: 0, glimsGiven: 0, bought: null, tapped: null, firstTap: false, refined: null };
   const action = parseItemsAction({ ...snapshot, result: { items: v, ...fields, wear: { broke: true, woreOut: false, state: 'broken', wornOut: [], returned: ['amber-bead'], itemDef: 'bench-axe', usesLeft: 0, condition: 0, instance: null, makerId: '' } } });
   assert.equal(action.result.wear?.broke, true);
   assert.deepEqual(action.result.wear?.returned, ['amber-bead']);
@@ -389,6 +391,8 @@ test('modelEntries formats warden-set descriptions across all dullness stages', 
     offHand: { open: false, class: null, itemDef: null, instance: null },
     pickedUp: [],
     thanks: [],
+    carried: [],
+    plants: [],
   };
 
   const entries = modelEntries(baseView, { pack: [], decorations: [] });

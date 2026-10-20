@@ -6,7 +6,7 @@
 
 **THE COOLEY WINDOW FUND**
 
-*Wenna's Script, Thirty-one years ago, Leaf-wick 17th (One week after the storm):*
+*Wenna's Script, Thirty-one years ago, Mud-wick 7th (one wick after the second storm):*
 Allocated: One pint, hearth-grade. Ada will not shut her door. She put a lamp in the window for the twins. The Guild says we cannot spare the oil for a private grief. I told the Guild to bill my own stipend. If a mother wants to hold her front step still for her children, the Keepers of this road will not be the ones to make it drift.
 
 *Wenna's Script, Twenty years ago:*

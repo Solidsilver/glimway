@@ -633,7 +633,7 @@ export class Session {
       const link = this.link
       const last = skipSave ? Promise.resolve() : link.persist({ urgent: true, leaving: true })
       this.destroyed = true
-      void last.finally(() => link.stop())
+      void link.close(last)
       return
     }
     this.destroyed = true

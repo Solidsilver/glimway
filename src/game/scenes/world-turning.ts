@@ -43,9 +43,13 @@ export interface TurningDeps {
   /** The open map's window and entities (null in curated areas). */
   window: () => WildsWindow | null
   wilds: () => WildsEntities | null
-  /** The scene is already leaving (a Turning waits for nothing else). */
+  /** The scene is leaving (a move, not a held Turning): a Turning waits for nothing else. */
   moving: () => boolean
-  /** Hold the scene still while the land turns (and let it go after). */
+  /**
+   * Hold the scene still while the land turns, and let it go after. Letting
+   * go applies a relocation the server sent meanwhile (the hero may stand
+   * elsewhere, or the scene leave).
+   */
   hold: (on: boolean) => void
 }
 
@@ -55,6 +59,11 @@ export class Turning {
   /** Seconds until the next "has the wick ended?" check. */
   private check = 0
   private playing = false
+  /**
+   * This scene build has ended (a fall, say, while the land loaded). A
+   * restarted scene is active again, so its loads must not land into the next build.
+   */
+  private ended = false
   /** The wick a Turning last played for: the clock alone never plays it twice. */
   private playedFor = ''
   /**
@@ -77,6 +86,7 @@ export class Turning {
     const off = () => {
       bus.off(EV.turning, onTurning)
       bus.off(EV.clock, onClock)
+      this.ended = true
     }
     onSceneEnd(scene, off)
   }
@@ -167,7 +177,7 @@ export class Turning {
       this.deps.window()?.reload()
       this.deps.wilds()?.detachAll()
       void prepareWilds(this.deps.session, 0).finally(() => {
-        if (!this.scene.sys.isActive()) return
+        if (this.ended || !this.scene.sys.isActive()) return
         const w = this.deps.window()
         w?.update(0)
         w?.settle()
@@ -175,27 +185,33 @@ export class Turning {
         // comes in can't keep the veil down and the hero held.
         const waited = new Promise<void>((resolve) => this.scene.time.delayedCall(LAND_WAIT_MS, resolve))
         void Promise.race([w?.ready() ?? Promise.resolve(), waited]).then(() => {
-          if (this.scene.sys.isActive()) this.landed(loud, parts)
+          if (!this.ended && this.scene.sys.isActive()) this.landed(loud, parts)
         })
       })
     })
   }
 
-  /** The new land is in: step off anything solid, lift the veil, say what happened. */
+  /** The new land is in: lift the hold and the veil, step off anything solid, say what happened. */
   private landed(loud: boolean, parts: Phaser.GameObjects.GameObject[]): void {
-    const hero = this.deps.hero().sprite
-    const at = this.deps.world.open?.standAt(hero.x, hero.y)
-    const moved = !!at && (at.x !== hero.x || at.y !== hero.y)
-    if (at && moved) {
-      hero.setPosition(at.x, at.y)
-      hero.setVelocity(0, 0)
-    }
-    this.deps.session.saveSoon()
-    // The next wick's rumour: the state names it (read again, it changed without a version bump).
-    void this.deps.session.link?.refreshState()
-    this.scene.tweens.add({ targets: parts, alpha: 0, duration: 400, onComplete: () => parts.forEach((p) => p.destroy()) })
+    // Let go first: a relocation the server sent while the land turned (a
+    // ways-home answer, a settled reach) puts the hero there now, or starts
+    // a move away. The spot to clear is then the hero's new one.
     this.deps.hold(false)
     this.playing = false
+    this.scene.tweens.add({ targets: parts, alpha: 0, duration: 400, onComplete: () => parts.forEach((p) => p.destroy()) })
+    let moved = false
+    if (!this.deps.moving()) {
+      const hero = this.deps.hero().sprite
+      const at = this.deps.world.open?.standAt(hero.x, hero.y)
+      moved = !!at && (at.x !== hero.x || at.y !== hero.y)
+      if (at && moved) {
+        hero.setPosition(at.x, at.y)
+        hero.setVelocity(0, 0)
+      }
+      this.deps.session.saveSoon()
+    }
+    // The next wick's rumour: the state names it (read again, it changed without a version bump).
+    void this.deps.session.link?.refreshState()
     if (loud) this.note(true)
     else bus.emit(EV.toast, { text: SEASON_SHIFT_NOTICE, icon: 'map' })
     if (moved) bus.emit(EV.toast, { text: loadWilds().words.turned, icon: 'map', kind: 'thought' })

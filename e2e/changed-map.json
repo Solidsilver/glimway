@@ -1,22 +1,152 @@
 {
-  "about": "npm run test:changed: which Playwright specs to run for which changed files (scripts/e2e-changed.ts). Paths are globs from the repo root (* within a folder, ** across folders). A changed spec always runs itself; a rule marked smoke also runs the smoke tier. Keep this up to date when you add a spec or a game system: an unmapped source file falls back to the smoke tier.",
+  "about": "npm run test:changed: which Playwright specs to run for which changed files (scripts/e2e-changed.ts). Paths are globs from the repo root (* within a folder, ** across folders). A changed spec always runs itself; a rule marked smoke also runs the smoke tier. A path starting with ! takes files back out of its rule. A rule marked fallback is a catch-all: it applies only to files no other rule covers, so give a file its own rule to narrow it. Keep this up to date when you add a spec or a game system: an unmapped source file falls back to the smoke tier.",
   "full": [
     "e2e/fixtures.ts",
     "e2e/helpers.ts",
     "e2e/read-retry.ts",
     "e2e/home-helpers.ts",
+    "e2e/room-helpers.ts",
+    "e2e/positions.ts",
     "e2e/connected.ts",
     "e2e/global-setup.ts",
     "e2e/server/**",
     "playwright.config.ts",
     "vite.config.ts",
+    "svelte.config.js",
     "package.json",
-    "package-lock.json"
+    "package-lock.json",
+    "go.mod",
+    "go.sum"
   ],
-  "ignore": ["**/*.md", "docs/**", ".agent/**", "tests/**", "e2e/changed-map.json", "deploy/**", "scripts/*-vectors.ts", "scripts/papers.ts", "scripts/webgl-renderer.ts", "scripts/e2e-artifacts.mjs", "perf/**", "playwright.perf.config.ts", "playwright.first-paint.perf.config.ts", "scripts/trace-hotspots.mjs", "scripts/png-diff.ts", "content/vectors/**", "content/**/*_test.go"],
+  "ignore": ["**/*.md", "docs/**", ".agent/**", "tests/**", "e2e/changed-map.json", "deploy/**", "scripts/*-vectors.ts", "scripts/papers.ts", "scripts/webgl-renderer.ts", "scripts/e2e-artifacts.mjs", "perf/**", "playwright.perf.config.ts", "playwright.first-paint.perf.config.ts", "scripts/trace-hotspots.mjs", "scripts/png-diff.ts", "content/vectors/**", "content/**/*_test.go", "server/**/*_test.go", "server/**/testdata/**", "server/internal/store/storetest/**", "e2e/hooks.d.ts"],
   "rules": [
     {
-      "paths": ["src/game/entities/interactables.ts", "src/game/wilds/fixed-life.ts", "src/game/wilds/fixed-scope.ts", "src/game/entities/homesteads.ts", "src/game/entities/homestead-talk.ts", "src/game/entities/npcs.ts", "src/game/entities/world-talk.ts", "src/game/entities/repairs.ts", "src/game/entities/item-pickups.ts", "src/game/entities/papers.ts", "src/game/entities/village-life.ts", "src/game/entities/touches.ts"],
+      "paths": ["server/internal/api/map_tiers*.go", "src/content/map-lamps.ts", "src/lib/wilds/map-lamps.ts"],
+      "specs": ["map-tiers.spec.ts", "land-chip.spec.ts"]
+    },
+    {
+      "paths": ["server/internal/api/lamp_notices*.go", "src/content/land-chip.ts", "src/lib/wilds/land-chip.ts", "src/game/wilds/land-here.ts", "src/ui/Hud.svelte"],
+      "specs": ["land-chip.spec.ts"]
+    },
+    {
+      "paths": ["server/internal/api/ways_home*.go", "src/game/ways-home.ts", "src/lib/ways-home.ts"],
+      "specs": ["camps.spec.ts", "ways-home.spec.ts"]
+    },
+    {
+      "paths": ["server/internal/api/wick_sap*.go", "src/lib/wick-sap.ts"],
+      "specs": ["lot-lantern.spec.ts"]
+    },
+    {
+      "paths": [
+        "src/lib/belt.ts",
+        "src/lib/trowel.ts",
+        "src/lib/lots.ts",
+        "src/lib/lot-lantern.ts",
+        "src/lib/homestead*.ts",
+        "src/game/homestead.ts",
+        "src/game/lot-*.ts",
+        "src/game/wilds/lot-chunk.ts",
+        "src/game/entities/homestead*.ts",
+        "!src/game/entities/homestead-talk.ts",
+        "server/internal/api/homestead*.go",
+        "server/internal/api/home_*.go",
+        "server/internal/api/lot_*.go",
+        "server/internal/api/plants.go",
+        "server/internal/api/camp_teardown.go",
+        "server/internal/land/**"
+      ],
+      "specs": ["lot-lantern.spec.ts"]
+    },
+    {
+      "paths": ["src/lib/camps.ts", "src/lib/trowel.ts", "src/game/wilds/camps*.ts", "server/internal/api/camps.go", "server/internal/api/camp_teardown.go", "server/internal/api/recovery.go", "src/ui/CratePanel.svelte"],
+      "specs": ["camps.spec.ts"]
+    },
+    {
+      "about": "WildsCamps is built on every outdoors load (the village too) and updates every frame with no camps; only camps.spec.ts sets camps, the smoke tier catches the always-on path.",
+      "paths": ["src/game/wilds/camps.ts", "src/game/wilds/camps-state.ts"],
+      "specs": ["camps.spec.ts"],
+      "smoke": true
+    },
+    {
+      "about": "homestead-talk.ts is one dialogue hub: one spec per branch it routes to. Silas, Pell, claim, take back, joint deed, Manage deed, Commons sign, door, rest: homestead + yard. Pell's crate: camps. Lot lantern read/fill: lot-lantern. Gift shelf: gifts. Mailbox, chest: village. Hearth, desk, bench: crafting. Seats: playtest1. Stable: companions. Silas's axe beat: heirlooms. Its interaction list is built on every outdoors load: the smoke tier.",
+      "paths": ["src/game/entities/homestead-talk.ts"],
+      "specs": ["homestead.spec.ts", "yard.spec.ts", "camps.spec.ts", "lot-lantern.spec.ts", "gifts.spec.ts", "village.spec.ts", "crafting.spec.ts", "playtest1.spec.ts", "companions.spec.ts", "heirlooms.spec.ts"],
+      "smoke": true
+    },
+    {
+      "paths": ["server/internal/api/communal_lamps.go", "server/internal/api/lamp_naming.go", "src/lib/communal-lamps.ts", "src/game/wilds/communal-lamps.ts"],
+      "specs": ["camps.spec.ts", "map-tiers.spec.ts"]
+    },
+    {
+      "paths": ["e2e/harness/**"],
+      "specs": ["window-order.spec.ts"]
+    },
+    {
+      "paths": ["e2e/paper-totals.ts"],
+      "specs": ["connected.spec.ts", "papers.spec.ts", "papers-screens.spec.ts", "inventory.spec.ts"]
+    },
+    {
+      "about": "The shared content the 0.13 review (T1) found running smoke only. Papers: the paper totals that connected, inventory and papers count (#46). Each loads at start-up, so the smoke tier too.",
+      "paths": ["content/papers.json"],
+      "specs": ["papers.spec.ts", "papers-screens.spec.ts", "connected.spec.ts", "inventory.spec.ts"],
+      "smoke": true
+    },
+    {
+      "about": "Items, recipes and home goods (the way-lamp recipe, the trowel, the lamp items): the specs that make, carry and set them.",
+      "paths": ["content/items.json", "content/crafting.json", "content/homestead.json"],
+      "specs": ["items.spec.ts", "crafting.spec.ts", "camps.spec.ts", "lot-lantern.spec.ts", "homestead.spec.ts", "inventory.spec.ts"],
+      "smoke": true
+    },
+    {
+      "about": "Quests and story, data and the quest modules (the Keeper's hand gates setting a camp, #36).",
+      "paths": ["content/quests.json", "content/story.json", "src/content/quests/**"],
+      "specs": ["quest.spec.ts", "camps.spec.ts", "rumour.spec.ts"],
+      "smoke": true
+    },
+    {
+      "about": "The common ways (the common path test is in paths.spec.ts).",
+      "paths": ["server/internal/api/common_ways*.go"],
+      "specs": ["paths.spec.ts"]
+    },
+    {
+      "about": "Holds, frontier reach and claim rules: who may set or keep a lamp, and where.",
+      "paths": ["server/internal/api/frontier_reach*.go", "server/internal/api/claim_rules*.go", "server/internal/store/holds.go", "server/internal/store/reach.go", "server/internal/store/commons.go"],
+      "specs": ["camps.spec.ts", "lot-lantern.spec.ts", "land-chip.spec.ts", "paths.spec.ts"]
+    },
+    {
+      "about": "Naming a lamp: camps.spec.ts sets the lamps it names.",
+      "paths": ["src/lib/lamp-naming.ts", "src/content/lamp-naming.ts", "src/ui/LampNamingPanel.svelte"],
+      "specs": ["camps.spec.ts"]
+    },
+    {
+      "about": "The words of lamps, camps and Pell's crate (way-lamp, lot lantern, crate lines): the specs that read them.",
+      "paths": ["src/content/camps.ts"],
+      "specs": ["camps.spec.ts", "lot-lantern.spec.ts", "map-tiers.spec.ts", "land-chip.spec.ts"]
+    },
+    {
+      "about": "The lamps migration: lamps, camps, holds and the path refunds to Pell's crate, beyond the sign-in and party specs every migration runs.",
+      "paths": ["server/internal/store/migrations/038_lamps.sql"],
+      "specs": ["camps.spec.ts", "lot-lantern.spec.ts", "map-tiers.spec.ts", "land-chip.spec.ts"]
+    },
+    {
+      "about": "The link sends every operation and place report, and adopts a way home's destination (ways-home.spec.ts holds it mid-travel).",
+      "paths": ["src/game/link.ts"],
+      "specs": ["ways-home.spec.ts"]
+    },
+    {
+      "about": "Furnishings: the Yard's shop (Furnish and Build), the way-lamp, lantern posts, the stable, the hearth and desk. Read at start-up, so the smoke tier too.",
+      "paths": ["content/furnishings.json"],
+      "specs": ["yard.spec.ts", "homestead.spec.ts", "review-fixes.spec.ts", "review5-fixes.spec.ts", "companions.spec.ts", "camps.spec.ts", "lot-lantern.spec.ts", "crafting.spec.ts"],
+      "smoke": true
+    },
+    {
+      "about": "Server and web settings: the dev tools a player gets (dev-mode.spec.ts) and the login limits (sign-in). Every page reads them at start-up, so the smoke tier too.",
+      "paths": ["server/internal/settings/**", "src/lib/web-settings.ts", "src/lib/dev-tools.ts"],
+      "specs": ["dev-mode.spec.ts", "connected.spec.ts", "onboarding.spec.ts"],
+      "smoke": true
+    },
+    {
+      "paths": ["src/game/entities/interactables.ts", "src/game/wilds/fixed-life.ts", "src/game/wilds/fixed-scope.ts", "src/game/entities/homesteads.ts", "src/game/entities/npcs.ts", "src/game/entities/world-talk.ts", "src/game/entities/repairs.ts", "src/game/entities/item-pickups.ts", "src/game/entities/papers.ts", "src/game/entities/village-life.ts", "src/game/entities/touches.ts"],
       "specs": ["seam.spec.ts", "residents.spec.ts", "homestead.spec.ts", "yard.spec.ts", "village.spec.ts", "open-map.spec.ts"]
     },
     {
@@ -28,7 +158,7 @@
       "specs": ["presence.spec.ts", "coop.spec.ts"]
     },
     {
-      "paths": ["server/internal/api/location_rules*.go", "server/internal/store/outdoors_upgrade_test.go", "server/internal/store/migrations/036_outdoors.sql"],
+      "paths": ["server/internal/api/location_rules*.go", "server/internal/store/migrations/036_outdoors.sql"],
       "specs": ["wilds.spec.ts", "open-map.spec.ts", "wilds-outer.spec.ts", "world-map.spec.ts", "seam.spec.ts", "homestead.spec.ts"]
     },
     {
@@ -40,7 +170,7 @@
       "specs": ["seam.spec.ts", "yard.spec.ts", "residents.spec.ts", "goal.spec.ts", "party-worlds.spec.ts"]
     },
     {
-      "paths": ["src/lib/api/queued-operation.ts", "src/game/link.ts", "server/internal/api/maintenance_phases_test.go", "server/internal/api/op.go", "server/internal/api/http.go", "server/internal/api/projection.go", "server/internal/api/mutation.go"],
+      "paths": ["src/lib/api/queued-operation.ts", "src/game/link.ts", "server/internal/api/op.go", "server/internal/api/http.go", "server/internal/api/projection.go", "server/internal/api/mutation.go"],
       "specs": ["fishing.spec.ts", "companions.spec.ts", "paths.spec.ts", "echo-keepsakes.spec.ts", "repairs.spec.ts", "items.spec.ts", "glims.spec.ts", "connected.spec.ts"]
     },
     {
@@ -61,7 +191,7 @@
       "specs": ["unreachable.spec.ts", "version.spec.ts", "onboarding.spec.ts"]
     },
     {
-      "paths": ["src/game/wilds/**", "src/game/perf.ts", "e2e/harness/**", "src/lib/wilds/**", "server/internal/wilds/**", "src/content/echoes.ts", "src/content/expansion-writing.ts", "src/game/expansion.ts"],
+      "paths": ["src/game/wilds/**", "!src/game/wilds/camps.ts", "!src/game/wilds/camps-state.ts", "src/game/perf.ts", "src/lib/wilds/**", "server/internal/wilds/**", "src/content/echoes.ts", "src/content/expansion-writing.ts", "src/game/expansion.ts"],
       "specs": ["open-map.spec.ts", "window-order.spec.ts", "open-map-screens.spec.ts", "wilds.spec.ts", "wilds-outer.spec.ts", "wilds-screens.spec.ts", "echo-keepsakes.spec.ts", "paths.spec.ts", "rumour.spec.ts", "seam.spec.ts"]
     },
     {
@@ -83,6 +213,7 @@
     {
       "paths": [
         "src/game/entities/homestead*.ts",
+        "!src/game/entities/homestead-talk.ts",
         "src/game/homestead.ts",
         "src/game/homeland.ts",
         "src/game/cottage.ts",
@@ -117,7 +248,6 @@
     {
       "paths": [
         "src/ui/GateShelfPanel.svelte",
-        "server/internal/api/gifts_test.go",
         "e2e/gifts.spec.ts"
       ],
       "specs": ["gifts.spec.ts"]
@@ -177,13 +307,12 @@
     },
     {
       "paths": ["src/content/world.ts", "src/game/entities/interactables.ts", "src/game/entities/world-talk.ts", "src/game/dialogue.ts", "src/game/entities/npcs.ts", "src/game/npc-routines.ts", "src/ui/DialoguePanel.svelte", "src/game/area/**", "src/game/worlds.ts"],
-      "specs": ["quest.spec.ts", "glims.spec.ts", "combat.spec.ts", "touches.spec.ts"]
+      "specs": ["quest.spec.ts", "glims.spec.ts", "combat.spec.ts", "touches.spec.ts", "dialogue-fit.spec.ts"]
     },
     {
       "paths": [
         "src/game/link.ts",
         "src/game/session.ts",
-        "src/lib/api/**",
         "src/lib/save.ts",
         "src/lib/state.ts",
         "src/content/connected.ts",
@@ -196,16 +325,42 @@
         "src/ui/MenuPanel.svelte",
         "src/ui/ConfirmDialog.svelte",
         "src/ui/account.ts",
-        "server/internal/api/**",
-        "server/internal/store/**",
+        "server/internal/api/api.go",
+        "server/internal/api/routes.go",
+        "server/internal/api/login*.go",
+        "server/internal/api/sessions.go",
+        "server/internal/api/invites.go",
+        "server/internal/api/state*.go",
+        "server/internal/store/store.go",
+        "server/internal/store/identity.go",
+        "server/internal/store/invite_codes.go",
+        "server/internal/store/state.go",
+        "server/internal/store/migrations/**",
+        "server/internal/store/migrations.go",
         "server/internal/habitica/**",
         "server/cmd/**",
-        "server/internal/gen/**",
-        "src/lib/gen/**",
-        "proto/**",
-        "server/internal/itemmove/**"
+        "proto/glimway/v1/state.proto",
+        "proto/glimway/v1/profile.proto",
+        "proto/glimway/v1/invites.proto",
+        "server/internal/gen/glimway/v1/state.pb.go",
+        "server/internal/gen/glimway/v1/profile.pb.go",
+        "server/internal/gen/glimway/v1/invites.pb.go",
+        "src/lib/gen/glimway/v1/state_pb.*",
+        "src/lib/gen/glimway/v1/profile_pb.*",
+        "src/lib/gen/glimway/v1/invites_pb.*"
       ],
       "specs": ["connected.spec.ts", "connected-screens.spec.ts", "onboarding.spec.ts", "polish.spec.ts"]
+    },
+    {
+      "about": "Catch-all for the server, the API client and the wire contract: a file here with no rule of its own runs the sign-in specs (and the party specs, for src/lib/api). Files with their own rule run only that rule's specs; every playtest signs in against the Go server.",
+      "fallback": true,
+      "paths": ["server/internal/api/**", "server/internal/store/**", "server/internal/itemmove/**", "server/internal/gen/**", "src/lib/gen/**", "gen/**", "proto/**"],
+      "specs": ["connected.spec.ts", "connected-screens.spec.ts", "onboarding.spec.ts", "polish.spec.ts"]
+    },
+    {
+      "fallback": true,
+      "paths": ["src/lib/api/**"],
+      "specs": ["connected.spec.ts", "connected-screens.spec.ts", "onboarding.spec.ts", "polish.spec.ts", "party-worlds.spec.ts", "party-worlds-screens.spec.ts", "presence.spec.ts", "coop.spec.ts"]
     },
     {
       "paths": [
@@ -221,7 +376,8 @@
         "src/ui/MenuPanel.svelte",
         "src/App.svelte",
         "src/game/link.ts",
-        "src/lib/api/**",
+        "src/lib/api/world.ts",
+        "src/lib/api/invites.ts",
         "server/internal/api/worlds.go",
         "server/internal/api/world_choice.go",
         "server/internal/api/invites.go",
@@ -343,7 +499,7 @@
       "specs": ["held.spec.ts", "gathering.spec.ts", "seasons.spec.ts"]
     },
     {
-      "paths": ["src/content/talk.ts", "src/game/heard.ts", "src/ui/DialoguePanel.svelte", "src/game/entities/interactables.ts", "src/game/entities/world-talk.ts", "src/game/dialogue.ts", "src/content/residents.ts", "src/game/entities/homestead*.ts"],
+      "paths": ["src/content/talk.ts", "src/game/heard.ts", "src/ui/DialoguePanel.svelte", "src/game/entities/interactables.ts", "src/game/entities/world-talk.ts", "src/game/dialogue.ts", "src/content/residents.ts", "src/game/entities/homestead*.ts", "!src/game/entities/homestead-talk.ts"],
       "specs": ["talk.spec.ts"]
     },
     {
@@ -385,8 +541,23 @@
       "specs": ["polish.spec.ts", "onboarding-layout.spec.ts", "homestead.spec.ts", "talk.spec.ts", "party-worlds.spec.ts"]
     },
     {
+      "about": "The step-back's A4 guards live in camps.spec.ts: the lamp naming holds I, J and C (layers), Pell's crate reads once per take (panel-state), and the bag's camp buttons follow you into a camp (InventoryPanel).",
+      "paths": ["src/ui/layers.ts", "src/ui/panel-state.svelte.ts", "src/ui/InventoryPanel.svelte"],
+      "specs": ["camps.spec.ts"]
+    },
+    {
+      "about": "A Turning's hold and the relocations it keeps (step-back A2): ways-home.spec.ts answers a way home during the veil; wilds-outer.spec.ts turns the land in place.",
+      "paths": ["src/game/scenes/travel-hold.ts", "src/game/scenes/world-turning.ts"],
+      "specs": ["ways-home.spec.ts", "wilds-outer.spec.ts"]
+    },
+    {
       "paths": ["src/ui/account-flow.svelte.ts"],
       "specs": ["connected.spec.ts", "party-worlds.spec.ts", "coop.spec.ts"]
+    },
+    {
+      "about": "Entering the world (lane A13): the loading screen, its stages and timings, Retry and Back, and the boot and dark start that end it.",
+      "paths": ["src/lib/loading.ts", "src/lib/load-timings.ts", "src/content/loading.ts", "src/ui/loading.svelte.ts", "src/ui/LoadingScreen.svelte", "src/ui/layers.ts", "src/ui/account-flow.svelte.ts", "src/game/scenes/BootScene.ts", "src/game/scenes/fade-hold.ts", "src/game/sync-safety.ts", "src/game/main.ts", "src/game/session.ts", "src/App.svelte"],
+      "specs": ["loading.spec.ts"]
     },
     {
       "paths": ["src/ui/play-insets.ts"],
@@ -416,7 +587,6 @@
       "paths": [
         "server/internal/fights/**",
         "server/internal/api/presence_fights*.go",
-        "server/internal/api/presence_seam_test.go",
         "server/internal/api/presence_socket.go",
         "server/internal/api/item_presence.go",
         "server/internal/api/witness*.go",
@@ -437,13 +607,181 @@
         "src/content/fights*.ts",
         "content/enemies.json",
         "content/combat.json",
-        "content/abilities.json",
-        "proto/**",
-        "gen/**",
-        "src/lib/gen/**",
-        "server/internal/gen/**"
+        "content/abilities.json"
       ],
       "specs": ["fights-server.spec.ts", "fights-shared.spec.ts"]
+    },
+    {
+      "about": "The wire contract by message family (proto, Go and TS output together). state_pb loads most families at boot, so a family rule also runs the smoke tier. state, profile and invites are in the sign-in rule.",
+      "paths": ["proto/glimway/v1/op.proto", "server/internal/gen/glimway/v1/op.pb.go", "src/lib/gen/glimway/v1/op_pb.*", "proto/glimway/v1/operations.proto", "server/internal/gen/glimway/v1/operations.pb.go", "src/lib/gen/glimway/v1/operations_pb.*"],
+      "specs": ["connected.spec.ts", "connected-screens.spec.ts", "quest.spec.ts", "glims.spec.ts", "papers.spec.ts", "paths.spec.ts", "open-map.spec.ts", "wilds.spec.ts", "rumour.spec.ts", "combat.spec.ts"],
+      "smoke": true
+    },
+    {
+      "paths": ["proto/glimway/v1/calendar.proto", "server/internal/gen/glimway/v1/calendar.pb.go", "src/lib/gen/glimway/v1/calendar_pb.*", "src/lib/api/calendar.ts"],
+      "specs": ["village.spec.ts", "residents.spec.ts", "mill.spec.ts", "seasons.spec.ts"],
+      "smoke": true
+    },
+    {
+      "paths": ["proto/glimway/v1/camps.proto", "server/internal/gen/glimway/v1/camps.pb.go", "src/lib/gen/glimway/v1/camps_pb.*"],
+      "specs": ["camps.spec.ts", "lot-lantern.spec.ts"],
+      "smoke": true
+    },
+    {
+      "paths": ["proto/glimway/v1/lamps.proto", "server/internal/gen/glimway/v1/lamps.pb.go", "src/lib/gen/glimway/v1/lamps_pb.*"],
+      "specs": ["camps.spec.ts", "paths.spec.ts", "rumour.spec.ts", "open-map-screens.spec.ts"],
+      "smoke": true
+    },
+    {
+      "paths": ["proto/glimway/v1/companions.proto", "server/internal/gen/glimway/v1/companions.pb.go", "src/lib/gen/glimway/v1/companions_pb.*"],
+      "specs": ["companions.spec.ts", "yard.spec.ts"],
+      "smoke": true
+    },
+    {
+      "about": "Error codes: the sign-in, party, version and unreachable refusals. Refusal copy is src/content/errors.ts, mapped on its own.",
+      "paths": ["proto/glimway/v1/errors.proto", "server/internal/gen/glimway/v1/errors.pb.go", "src/lib/gen/glimway/v1/errors_pb.*"],
+      "specs": ["connected.spec.ts", "onboarding.spec.ts", "party-worlds.spec.ts", "version.spec.ts", "unreachable.spec.ts"],
+      "smoke": true
+    },
+    {
+      "paths": ["proto/glimway/v1/fishing.proto", "server/internal/gen/glimway/v1/fishing.pb.go", "src/lib/gen/glimway/v1/fishing_pb.*"],
+      "specs": ["fishing.spec.ts"],
+      "smoke": true
+    },
+    {
+      "paths": ["proto/glimway/v1/goods.proto", "server/internal/gen/glimway/v1/goods.pb.go", "src/lib/gen/glimway/v1/goods_pb.*"],
+      "specs": ["items.spec.ts", "inventory.spec.ts", "gathering.spec.ts", "homestead.spec.ts", "village.spec.ts", "lot-lantern.spec.ts", "companions.spec.ts"],
+      "smoke": true
+    },
+    {
+      "paths": ["proto/glimway/v1/homestead.proto", "server/internal/gen/glimway/v1/homestead.pb.go", "src/lib/gen/glimway/v1/homestead_pb.*", "src/lib/api/homestead.ts"],
+      "specs": ["homestead.spec.ts", "yard.spec.ts", "lot-lantern.spec.ts", "crafting.spec.ts", "gifts.spec.ts", "review-fixes.spec.ts", "review5-fixes.spec.ts"],
+      "smoke": true
+    },
+    {
+      "about": "Every /api/items route: pack, wear, pickup, return, heirloom, gather, plant and uproot (the trowel), buy, tap and refine (Wick sap).",
+      "paths": ["proto/glimway/v1/items.proto", "server/internal/gen/glimway/v1/items.pb.go", "src/lib/gen/glimway/v1/items_pb.*", "src/lib/api/items.ts"],
+      "specs": ["items.spec.ts", "inventory.spec.ts", "warden.spec.ts", "gathering.spec.ts", "repairs.spec.ts", "playtest1.spec.ts", "gifts.spec.ts", "heirlooms.spec.ts", "crafting.spec.ts", "camps.spec.ts", "lot-lantern.spec.ts"],
+      "smoke": true
+    },
+    {
+      "paths": ["proto/glimway/v1/purse.proto", "server/internal/gen/glimway/v1/purse.pb.go", "src/lib/gen/glimway/v1/purse_pb.*"],
+      "specs": ["purse.spec.ts", "glims.spec.ts"],
+      "smoke": true
+    },
+    {
+      "paths": ["proto/glimway/v1/village.proto", "server/internal/gen/glimway/v1/village.pb.go", "src/lib/gen/glimway/v1/village_pb.*", "src/lib/api/village.ts"],
+      "specs": ["village.spec.ts", "crafting.spec.ts", "homestead.spec.ts", "library.spec.ts", "repairs.spec.ts", "review5-fixes.spec.ts", "mill.spec.ts"],
+      "smoke": true
+    },
+    {
+      "paths": ["proto/glimway/v1/wardrobe.proto", "server/internal/gen/glimway/v1/wardrobe.pb.go", "src/lib/gen/glimway/v1/wardrobe_pb.*"],
+      "specs": ["wardrobe.spec.ts", "companions.spec.ts"],
+      "smoke": true
+    },
+    {
+      "paths": ["proto/glimway/v1/wilds.proto", "server/internal/gen/glimway/v1/wilds.pb.go", "src/lib/gen/glimway/v1/wilds_pb.*", "src/lib/api/chunks.ts"],
+      "specs": ["open-map.spec.ts", "open-map-screens.spec.ts", "wilds.spec.ts", "wilds-outer.spec.ts", "wilds-screens.spec.ts", "paths.spec.ts", "rumour.spec.ts", "seam.spec.ts", "world-map.spec.ts", "map-tiers.spec.ts", "camps.spec.ts", "lot-lantern.spec.ts", "gathering.spec.ts"],
+      "smoke": true
+    },
+    {
+      "paths": ["proto/glimway/v1/world.proto", "server/internal/gen/glimway/v1/world.pb.go", "src/lib/gen/glimway/v1/world_pb.*"],
+      "specs": ["party-worlds.spec.ts", "party-worlds-screens.spec.ts", "connected.spec.ts", "coop.spec.ts"],
+      "smoke": true
+    },
+    {
+      "about": "v1 presence.proto has no users (the server and client speak v2).",
+      "paths": ["proto/glimway/v1/presence.proto", "server/internal/gen/glimway/v1/presence.pb.go", "src/lib/gen/glimway/v1/presence_pb.*"],
+      "specs": [],
+      "smoke": true
+    },
+    {
+      "about": "Live presence (every signed-in session) and server-run fights.",
+      "paths": ["proto/glimway/v2/**", "server/internal/gen/glimway/v2/**", "src/lib/gen/glimway/v2/**"],
+      "specs": ["presence.spec.ts", "coop.spec.ts", "fights-server.spec.ts", "fights-shared.spec.ts", "abilities.spec.ts"],
+      "smoke": true
+    },
+    {
+      "about": "Content schemas by family: the specs of the loader that decodes them (src/lib/<family>.ts). Both sides decode content at start-up, so the smoke tier too.",
+      "paths": ["proto/glimway/content/v1/items.proto", "gen/glimway/content/v1/items.pb.go", "src/lib/gen/glimway/content/v1/items_pb.*"],
+      "specs": ["items.spec.ts", "inventory.spec.ts", "warden.spec.ts"],
+      "smoke": true
+    },
+    {
+      "paths": ["proto/glimway/content/v1/homestead.proto", "gen/glimway/content/v1/homestead.pb.go", "src/lib/gen/glimway/content/v1/homestead_pb.*", "proto/glimway/content/v1/mail.proto", "gen/glimway/content/v1/mail.pb.go", "src/lib/gen/glimway/content/v1/mail_pb.*", "proto/glimway/content/v1/story.proto", "gen/glimway/content/v1/story.pb.go", "src/lib/gen/glimway/content/v1/story_pb.*"],
+      "specs": ["homestead.spec.ts", "yard.spec.ts", "village.spec.ts", "lot-lantern.spec.ts", "review-fixes.spec.ts", "review5-fixes.spec.ts", "companions.spec.ts", "heirlooms.spec.ts", "goal.spec.ts"],
+      "smoke": true
+    },
+    {
+      "paths": ["proto/glimway/content/v1/crafting.proto", "gen/glimway/content/v1/crafting.pb.go", "src/lib/gen/glimway/content/v1/crafting_pb.*", "proto/glimway/content/v1/projects.proto", "gen/glimway/content/v1/projects.pb.go", "src/lib/gen/glimway/content/v1/projects_pb.*"],
+      "specs": ["crafting.spec.ts", "village.spec.ts", "homestead.spec.ts"],
+      "smoke": true
+    },
+    {
+      "paths": ["proto/glimway/content/v1/gathering.proto", "gen/glimway/content/v1/gathering.pb.go", "src/lib/gen/glimway/content/v1/gathering_pb.*"],
+      "specs": ["gathering.spec.ts"],
+      "smoke": true
+    },
+    {
+      "paths": ["proto/glimway/content/v1/economy.proto", "gen/glimway/content/v1/economy.pb.go", "src/lib/gen/glimway/content/v1/economy_pb.*"],
+      "specs": ["glims.spec.ts", "connected.spec.ts"],
+      "smoke": true
+    },
+    {
+      "paths": ["proto/glimway/content/v1/habitica_gear.proto", "gen/glimway/content/v1/habitica_gear.pb.go", "src/lib/gen/glimway/content/v1/habitica_gear_pb.*"],
+      "specs": ["connected.spec.ts", "onboarding.spec.ts"],
+      "smoke": true
+    },
+    {
+      "paths": ["proto/glimway/content/v1/papers.proto", "gen/glimway/content/v1/papers.pb.go", "src/lib/gen/glimway/content/v1/papers_pb.*"],
+      "specs": ["papers.spec.ts", "papers-screens.spec.ts", "connected.spec.ts"],
+      "smoke": true
+    },
+    {
+      "paths": ["proto/glimway/content/v1/places.proto", "gen/glimway/content/v1/places.pb.go", "src/lib/gen/glimway/content/v1/places_pb.*", "proto/glimway/content/v1/layout.proto", "gen/glimway/content/v1/layout.pb.go", "src/lib/gen/glimway/content/v1/layout_pb.*"],
+      "specs": ["presence.spec.ts", "homestead.spec.ts", "yard.spec.ts", "residents.spec.ts", "repairs.spec.ts", "seam.spec.ts", "wilds.spec.ts", "open-map.spec.ts", "world-map.spec.ts", "goal.spec.ts", "camera.spec.ts"],
+      "smoke": true
+    },
+    {
+      "paths": ["proto/glimway/content/v1/repairs.proto", "gen/glimway/content/v1/repairs.pb.go", "src/lib/gen/glimway/content/v1/repairs_pb.*"],
+      "specs": ["repairs.spec.ts"],
+      "smoke": true
+    },
+    {
+      "paths": ["proto/glimway/content/v1/fishing.proto", "gen/glimway/content/v1/fishing.pb.go", "src/lib/gen/glimway/content/v1/fishing_pb.*"],
+      "specs": ["fishing.spec.ts"],
+      "smoke": true
+    },
+    {
+      "paths": ["proto/glimway/content/v1/residents.proto", "gen/glimway/content/v1/residents.pb.go", "src/lib/gen/glimway/content/v1/residents_pb.*", "proto/glimway/content/v1/clock.proto", "gen/glimway/content/v1/clock.pb.go", "src/lib/gen/glimway/content/v1/clock_pb.*"],
+      "specs": ["residents.spec.ts", "village.spec.ts", "mill.spec.ts"],
+      "smoke": true
+    },
+    {
+      "paths": ["proto/glimway/content/v1/rooms.proto", "gen/glimway/content/v1/rooms.pb.go", "src/lib/gen/glimway/content/v1/rooms_pb.*"],
+      "specs": ["rooms.spec.ts", "room-quests.spec.ts"],
+      "smoke": true
+    },
+    {
+      "paths": ["proto/glimway/content/v1/quests.proto", "gen/glimway/content/v1/quests.pb.go", "src/lib/gen/glimway/content/v1/quests_pb.*", "proto/glimway/content/v1/vitals.proto", "gen/glimway/content/v1/vitals.pb.go", "src/lib/gen/glimway/content/v1/vitals_pb.*"],
+      "specs": ["quest.spec.ts", "goal.spec.ts", "connected.spec.ts"],
+      "smoke": true
+    },
+    {
+      "paths": ["proto/glimway/content/v1/enemies.proto", "gen/glimway/content/v1/enemies.pb.go", "src/lib/gen/glimway/content/v1/enemies_pb.*", "proto/glimway/content/v1/combat.proto", "gen/glimway/content/v1/combat.pb.go", "src/lib/gen/glimway/content/v1/combat_pb.*", "proto/glimway/content/v1/abilities.proto", "gen/glimway/content/v1/abilities.pb.go", "src/lib/gen/glimway/content/v1/abilities_pb.*", "proto/glimway/content/v1/presence.proto", "gen/glimway/content/v1/presence.pb.go", "src/lib/gen/glimway/content/v1/presence_pb.*"],
+      "specs": ["fights-server.spec.ts", "fights-shared.spec.ts", "combat.spec.ts", "abilities.spec.ts", "presence.spec.ts"],
+      "smoke": true
+    },
+    {
+      "paths": ["proto/glimway/content/v1/wilds.proto", "gen/glimway/content/v1/wilds.pb.go", "src/lib/gen/glimway/content/v1/wilds_pb.*"],
+      "specs": ["open-map.spec.ts", "paths.spec.ts", "rumour.spec.ts", "wilds.spec.ts", "wilds-outer.spec.ts", "seam.spec.ts"],
+      "smoke": true
+    },
+    {
+      "about": "Any other content schema (contract, furnishings…): the smoke tier.",
+      "paths": ["proto/glimway/content/**", "gen/glimway/content/**", "src/lib/gen/glimway/content/**"],
+      "specs": [],
+      "smoke": true
     }
   ]
 }

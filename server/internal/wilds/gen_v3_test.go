@@ -70,12 +70,6 @@ func buildFrontier(t testing.TB, seed, season string) *frontierMap {
 // beside it as its kept neighbours: every seam then differs from what v3
 // would make itself.
 func buildFrontierKept(t testing.TB, seed, season, keptSeed string) *frontierMap {
-	t.Helper()
-	S := chunkSize()
-	minCx, minCy, maxCx, maxCy := frontierChunks()
-	m := &frontierMap{seed: seed, season: season, x0: minCx * S, y0: minCy * S, W: (maxCx - minCx + 1) * S, H: (maxCy - minCy + 1) * S, chunks: map[[2]int]Chunk{}}
-	m.walk = make([]bool, m.W*m.H)
-	m.ground = make([]Ground, m.W*m.H)
 	stored := map[[2]int]Chunk{}
 	if keptSeed != "" {
 		for _, c := range frontierList() {
@@ -84,6 +78,19 @@ func buildFrontierKept(t testing.TB, seed, season, keptSeed string) *frontierMap
 			}
 		}
 	}
+	return buildFrontierStored(t, seed, season, stored, false)
+}
+
+// buildFrontierStored lays out a frontier whose stored chunks stand as
+// given, each passed to the chunks made beside it as a kept neighbour
+// (held: as a held one).
+func buildFrontierStored(t testing.TB, seed, season string, stored map[[2]int]Chunk, held bool) *frontierMap {
+	t.Helper()
+	S := chunkSize()
+	minCx, minCy, maxCx, maxCy := frontierChunks()
+	m := &frontierMap{seed: seed, season: season, x0: minCx * S, y0: minCy * S, W: (maxCx - minCx + 1) * S, H: (maxCy - minCy + 1) * S, chunks: map[[2]int]Chunk{}}
+	m.walk = make([]bool, m.W*m.H)
+	m.ground = make([]Ground, m.W*m.H)
 	for _, c := range frontierList() {
 		var ch Chunk
 		if k, ok := stored[c]; ok {
@@ -92,7 +99,7 @@ func buildFrontierKept(t testing.TB, seed, season, keptSeed string) *frontierMap
 			var kept []Kept
 			for _, d := range seamOrder {
 				if k, ok := stored[[2]int{c[0] + d[0], c[1] + d[1]}]; ok {
-					kept = append(kept, Kept{c[0] + d[0], c[1] + d[1], ToProto(k, epochID)})
+					kept = append(kept, Kept{c[0] + d[0], c[1] + d[1], ToProto(k, epochID), held})
 				}
 			}
 			var err error
@@ -770,7 +777,7 @@ func TestV3PlacesAndRumour(t *testing.T) {
 		// Pinned per seed, independent of the enumeration/filter implementation.
 		// Hearthwick 2's 5×4 block makes cells (1, 1) and (1, 2) footprint
 		// cells and moves the frontier a chunk east.
-		counts := [...]int{12, 13, 16, 15, 14, 12, 12, 17, 14, 12, 13, 14, 13, 14, 13, 15, 12, 13, 13, 13, 11, 13, 14, 11, 13, 12, 11, 15, 14, 13, 12, 10, 14, 10, 11, 13, 13, 14, 11, 12}
+		counts := [...]int{12, 13, 16, 15, 14, 12, 12, 16, 14, 12, 14, 15, 13, 14, 13, 15, 13, 13, 13, 13, 11, 12, 15, 11, 12, 12, 11, 16, 15, 13, 12, 10, 14, 10, 11, 13, 13, 15, 11, 12}
 		expected := counts[seedIndex]
 		if len(places) != expected {
 			t.Fatalf("%s: %d rumour places; want %d", seed, len(places), expected)

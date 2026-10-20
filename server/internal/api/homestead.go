@@ -89,6 +89,9 @@ type homeView struct {
 	Items       []homeInstance    `json:"items"`
 	Stalls      []stallView       `json:"stalls"`
 	YardPets    []yardPetView     `json:"yardPets"`
+	Lantern     lotLantern        `json:"lantern"`
+	// Back is the lit backland, read for the ops that build on it.
+	Back *backland `json:"-"`
 }
 
 // tileList decodes the homestead wire's tile pairs into the domain's [2]int
@@ -138,11 +141,11 @@ func (a *Server) homeMutation(w http.ResponseWriter, r *http.Request) error {
 	// home) and empties their stalls: their room and the stable's land hear it.
 	var account string
 	var changedWorld string
-	changedGate := -1
+	changedGate, lantern := -1, -1
 	var avatar *presenceAvatarMsg
 	var room presenceRoom
 	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
-		if err := settleHomes(ctx, tx, s.WorldID, now); err != nil {
+		if err := a.settleHomes(ctx, tx, s.WorldID, now); err != nil {
 			return nil, err
 		}
 		op := strings.TrimPrefix(r.URL.Path, "/api/homestead/")
@@ -157,6 +160,11 @@ func (a *Server) homeMutation(w http.ResponseWriter, r *http.Request) error {
 			err = a.claim(ctx, tx, s, &req, member, now)
 		case "joint":
 			status, err = a.joint(ctx, tx, s, &req, now)
+		case "lantern":
+			var g int
+			if g, err = a.fillLantern(ctx, tx, s, &req, homeID, member, now); err == nil {
+				lantern = g
+			}
 		default:
 			if !member {
 				return nil, fail(409, "not-a-member")
@@ -172,6 +180,11 @@ func (a *Server) homeMutation(w http.ResponseWriter, r *http.Request) error {
 			case "buy":
 				instanceID, err = buyItem(ctx, tx, s, h, &req, now)
 			case "place", "move", "remove":
+				if h.Lantern.Lit {
+					if h.Back, err = a.backlandOf(ctx, tx, s.WorldID, h.Gate, now); err != nil {
+						return nil, err
+					}
+				}
 				instanceID, err = arrange(ctx, tx, s, h, op, &req, now)
 			case "clear":
 				err = clearTile(ctx, tx, s, h, &req, now)
@@ -208,5 +221,8 @@ func (a *Server) homeMutation(w http.ResponseWriter, r *http.Request) error {
 			a.avatarChanged(account, avatar, room)
 		}
 		a.homeChanged(changedWorld, changedGate)
+		if lantern >= 0 && lantern != changedGate {
+			a.homeChanged(changedWorld, lantern)
+		}
 	})
 }

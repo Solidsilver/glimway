@@ -232,9 +232,10 @@ test('walk from the gate through the Tangle into the Whitequiet and on, with no 
   expect(saved.area).toBe('outdoors')
   expect(Math.abs(saved.x - before.x), 'local save x matches the settled hero').toBeLessThanOrEqual(17)
   expect(Math.abs(saved.y - before.y), 'local save y matches the settled hero').toBeLessThanOrEqual(17)
+  // Reload rebuilds the enemy system: parked from its first frame, so a camp's
+  // room that chased the parked hero can't knock him off the spot first.
+  await parkCreatures(page, { keep: true })
   await reenter(page, 'outdoors')
-  // Reload rebuilds the enemy system: keep this walking/save test quiet too.
-  await parkCreatures(page)
   await waitForWilds(page)
   const after = await steady(page, () => player(page), { frames: 4, seconds: 20, message: 'hero position after re-entering the open map' })
   expect(Math.abs(after.x - before.x)).toBeLessThanOrEqual(17)
@@ -302,7 +303,7 @@ test('the drift at the frontier stops you, and says so the first time', async ({
   await waitForLive(page)
   await page.keyboard.down('ArrowUp')
   try {
-    await expectToast(page, /The drift is thick here\. Not without a lamp\./, { timeout: 8_000 })
+    await expectToast(page, /The Whitequiet closes in here\. Only a lit camp pushes it back\./, { timeout: 8_000 })
   } finally {
     await page.keyboard.up('ArrowUp')
   }
@@ -334,16 +335,29 @@ test('two players in neighbouring chunks see each other; two chunks apart they d
   await waitForWorld(other)
 
   // Ash by the east edge of the Tangle's middle chunk (0, -1); Rowan just over it in (1, -1).
+  // The Tangle is the wick's land: a warp onto a tree or rock stands the hero
+  // on the nearest open tile, which can be over the edge (CI, 2026-10-18), so
+  // both spots are open tiles on their own side of it.
   await warp(page, 'outdoors', 22, -12)
   await waitForWilds(page)
-  await warp(other, 'outdoors', 25, -12)
+  await windowWhole(page)
+  const ashAt = await openNear(page, 22, -12, { minTx: 0, maxTx: S - 1, minTy: -S, maxTy: -1 })
+  const rowanAt = await openNear(page, 25, -12, { minTx: S, maxTx: 2 * S - 1, minTy: -S, maxTy: -1 })
+  if (!ashAt || !rowanAt) throw new Error(`no open ground by the edge: ${JSON.stringify({ ashAt, rowanAt })}`)
+  await warp(page, 'outdoors', ashAt.tx, ashAt.ty)
+  await waitForWilds(page)
+  await warp(other, 'outdoors', rowanAt.tx, rowanAt.ty)
   await waitForWilds(other)
-  expect((await wilds(page)).chunk).toEqual({ cx: 0, cy: -1 })
-  expect((await wilds(other)).chunk).toEqual({ cx: 1, cy: -1 })
-  await expect.poll(async () => (await remotes(page)).map((r) => r.name), { timeout: 20_000 }).toEqual(['Rowan'])
-  await expect.poll(async () => (await remotes(other)).map((r) => r.name), { timeout: 20_000 }).toEqual(['Ash'])
-  const seen = (await remotes(page))[0]!
-  const there = await player(other)
+  // Two samples that agree, not one read after a warp or a join (T4).
+  const chunkOf = async (p: Page) => (await wilds(p)).chunk
+  expect(await steady(page, () => chunkOf(page), { frames: 2, seconds: 10, message: 'Ash in chunk 0,-1' })).toEqual({ cx: 0, cy: -1 })
+  expect(await steady(other, () => chunkOf(other), { frames: 2, seconds: 10, message: 'Rowan in chunk 1,-1' })).toEqual({ cx: 1, cy: -1 })
+  const names = async (p: Page) => (await remotes(p)).map((r) => r.name)
+  const same = (want: string[]) => (v: string[]) => JSON.stringify(v) === JSON.stringify(want)
+  await steady(page, () => names(page), { frames: 2, seconds: 20, message: 'Ash sees Rowan', ready: same(['Rowan']) })
+  await steady(other, () => names(other), { frames: 2, seconds: 20, message: 'Rowan sees Ash', ready: same(['Ash']) })
+  const there = await steady(other, () => player(other), { frames: 2, seconds: 10, message: 'Rowan stands still' })
+  const seen = (await steady(page, () => remotes(page), { frames: 2, seconds: 10, message: 'Rowan drawn at rest', ready: (r) => r.length === 1 }))[0]!
   expect(Math.hypot(seen.x - there.x, seen.y - there.y), 'drawn where Rowan stands (world pixels)').toBeLessThan(24)
   await expect.poll(async () => (await remotes(page))[0]?.alpha ?? 0).toBe(1)
   await shot(page, '64-open-map-two-players-desktop')
@@ -351,11 +365,11 @@ test('two players in neighbouring chunks see each other; two chunks apart they d
   // Rowan goes two chunks further east: out of Ash's 3×3, so they part.
   await warp(other, 'outdoors', 3 * S + 12, -12)
   await waitForWilds(other)
-  await expect.poll(async () => (await remotes(page)).length, { timeout: 15_000 }).toBe(0)
+  await steady(page, () => names(page), { frames: 2, seconds: 15, message: 'Ash no longer sees Rowan', ready: same([]) })
   await ctx.close()
 })
 
-type SceneSize = { list: number; tweens: number; transientTweens: number; statics: number; textures: number; listeners: number; kinds: Record<string, number> }
+type SceneSize = { list: number; tweens: number; transientTweens: number; tweening: string[]; statics: number; textures: number; listeners: number; kinds: Record<string, number> }
 const sceneSize = (p: Page) => p.evaluate(() => (window as unknown as { __fsSceneSize: () => SceneSize }).__fsSceneSize())
 
 /** The churn invariant: animation frames are one sprite; thought bubbles come and go. */
@@ -371,10 +385,14 @@ async function sceneResources(p: Page) {
   return { tweens: z.tweens, transientTweens: z.transientTweens, statics: z.statics, textures: z.textures, listeners: z.listeners, drawn: Object.fromEntries(Object.entries(drawn).sort(([a], [b]) => a.localeCompare(b))) }
 }
 
-/** Only the motes and their tween lifetime matter to a site redraw. */
+/**
+ * Only the motes and their tweens matter to a site redraw: the looping ones
+ * (a mote drifts for as long as it lives). A short tween that starts beside
+ * the redraw (a toast, a hint) isn't a mote's (CI, 2026-10-18: 9 more).
+ */
 async function moteResources(p: Page) {
   const z = await sceneSize(p)
-  return { motes: z.kinds['Image:site-mote'] ?? 0, tweens: z.tweens }
+  return { motes: z.kinds['Image:site-mote'] ?? 0, tweens: z.tweens - z.transientTweens }
 }
 
 /** A stable empty scene can precede the presence join: wait for every camp's sprites. */
@@ -540,14 +558,17 @@ test('the Whitequiet’s motes drift with each outer chunk, stay through its sit
   // A paper found redraws every site layer (its key counts paper flags): the motes stay, nothing doubles.
   await page.evaluate(() => (window as unknown as { __fsDevAddFlag: (f: string) => void }).__fsDevAddFlag('paper:motes-test'))
   await frames(page, 5)
-  await expect.poll(async () => moteResources(page), {
-    timeout: 20_000,
-    message: 'Whitequiet scene counts settle after redraw'
-  }).toEqual({
-    motes: MOTES * outer.length,
-    tweens: before.tweens
+  // Two samples that agree on the counts before redraw, not a poll that passes once and a
+  // fresh read after it (T4). A count that never comes back fails here, naming what was seen.
+  const want = { motes: MOTES * outer.length, tweens: before.tweens }
+  const after = await steady(page, () => moteResources(page), {
+    frames: 2,
+    seconds: 20,
+    message: `Whitequiet scene counts settle after redraw at ${JSON.stringify(want)}`,
+    ready: (z) => z.motes === want.motes && z.tweens === want.tweens
+  }).catch(async (e) => {
+    throw new Error(`${String(e).slice(0, 300)}; last seen ${JSON.stringify(await moteResources(page))}`)
   })
-  const after = await moteResources(page)
   expect(after.motes, 'the motes survive the redraw').toBe(MOTES * outer.length)
   expect(after.tweens, 'and so do their tweens (no more, no fewer)').toBe(before.tweens)
 
@@ -556,7 +577,7 @@ test('the Whitequiet’s motes drift with each outer chunk, stay through its sit
   await standAt(page, (await openNear(page, 12, 12))!)
   const left = (await steady(page, () => wildsWindow(page), { frames: 4, seconds: 20, message: 'outer chunks after returning to the Tangle' }))!.outer
   expect(await motes(page), `only the outer chunks still attached (${left.join(' ') || 'none'}) keep theirs`).toBe(MOTES * left.length)
-  expect((await sceneSize(page)).tweens).toBeLessThan(before.tweens - MOTES * (outer.length - left.length) + 1)
+  expect((await moteResources(page)).tweens).toBeLessThan(before.tweens - MOTES * (outer.length - left.length) + 1)
 })
 
 test.describe('with reduced motion', () => {
@@ -569,7 +590,13 @@ test.describe('with reduced motion', () => {
     await standAt(page, (await openNear(page, 12, -3 * S + 12))!)
     const outer = (await steady(page, () => wildsWindow(page), { frames: 4, seconds: 20, message: 'reduced-motion Whitequiet window' }))!.outer
     expect(await motes(page)).toBe(MOTES * outer.length)
-    const tweens = await steady(page, async () => (await sceneSize(page)).tweens, { frames: 5, seconds: 20, message: 'reduced-motion scene tween count' })
-    expect(tweens, 'nothing in the Wilds tweens with motion reduced').toBe(0)
+    // A passing fade may stay (a thought bubble going, an enemy dissolving, if a camp
+    // nearby fights); nothing moves, grows or turns, and nothing loops.
+    const motion = async () => {
+      const z = await sceneSize(page)
+      return { moving: z.tweening.filter((t) => t.split(' ').pop()!.split(',').some((k) => !/alpha/i.test(k))), looping: z.tweens - z.transientTweens }
+    }
+    const tweens = await steady(page, motion, { frames: 5, seconds: 20, message: 'reduced-motion scene tweens' })
+    expect(tweens, 'nothing in the Wilds moves by tween with motion reduced').toEqual({ moving: [], looping: 0 })
   })
 })

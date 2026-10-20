@@ -41,7 +41,7 @@ func TestClientFixtures(t *testing.T) {
 						if err != nil {
 							t.Fatal(err)
 						}
-						kept = append(kept, Kept{cx + dx, cy + dy, ToProto(k, fixtureStillID)})
+						kept = append(kept, Kept{CX: cx + dx, CY: cy + dy, Chunk: ToProto(k, fixtureStillID)})
 					}
 				}
 			}
@@ -110,16 +110,16 @@ func TestClientFixtures(t *testing.T) {
 // Real bent crossings, including one split across a chunk edge. Their
 // walkable ford geometry must survive generation and wire packing unchanged.
 func TestRiverCrossingFixtures(t *testing.T) {
-	e := WickEpoch("v3-0", "t:1789948800:1790553600")
+	e := WickEpoch("v3-0", "t:1791158400:1791763200")
 	for _, f := range []struct {
 		name    string
 		cx, cy  int
 		hasFord bool
 	}{
-		{"ford-bend", -4, -3, true},
-		{"ford-bend-east", -3, -3, false}, // the dry east bank
-		{"ford-diagonal-west", -5, 1, true},
-		{"ford-diagonal-east", -4, 1, true},
+		{"ford-bend", -4, -4, true},
+		{"ford-bend-east", -3, -4, false}, // the dry east bank
+		{"ford-diagonal-west", -5, 2, true},
+		{"ford-diagonal-east", -4, 2, true},
 	} {
 		t.Run(f.name, func(t *testing.T) {
 			ch, err := GenerateV3(e, f.cx, f.cy, nil)

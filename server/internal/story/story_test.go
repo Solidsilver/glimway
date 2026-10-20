@@ -258,3 +258,50 @@ func contains(v []string, s string) bool {
 	}
 	return false
 }
+
+// A claim in a held chunk names the wick epoch the chunk is pinned to, not
+// this wick's: its paper facts still count (holds).
+func TestPaperFactsInHeldChunk(t *testing.T) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	_, err = db.Exec(`CREATE TABLE personal_claims(epoch TEXT,entity_id TEXT,account_id TEXT);
+ CREATE TABLE wild_epochs(id TEXT,world_id TEXT,world_seed TEXT,kind TEXT,generator_version INTEGER,season TEXT,starts_at INTEGER,ends_at INTEGER);
+ CREATE TABLE holds(world_id TEXT,realm TEXT,layer INTEGER,cx INTEGER,cy INTEGER,epoch_id TEXT);
+ INSERT INTO wild_epochs VALUES('held','w','seed','wick',3,'t:1:2',1,2),('other','w','seed','wick',3,'t:2:3',2,3);
+ INSERT INTO personal_claims VALUES('held','chest:-3:1:0','a'),('other','chest:-3:1:0','a');`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+	now := int64(1791400000)
+	es := &chunkstest.FakeEpochs{Values: map[chunkstest.EpochKey]*contract.WildsEpoch{{World: "w", Kind: "wick"}: {Id: "e1", GeneratorVersion: 3, WorldSeed: "seed", Kind: "wick", StartsAt: float64(now)}}}
+	chest := &contract.WildsEntity{Id: "chest:-3:1:0", Kind: "chest", Tier: 3}
+	source := &chunkstest.Fake{Chunks: map[chunkstest.Key]*contract.WorldChunk{}}
+	for _, epoch := range []string{"held", "other"} {
+		source.Chunks[chunkstest.Key{World: "w", Epoch: epoch, CX: -3, CY: 1}] = &contract.WorldChunk{Size: 24, Cx: -3, Cy: 1, Entities: []*contract.WildsEntity{chest}}
+	}
+	r := Rules{Chunks: source, Epochs: es, Now: func() time.Time { return time.Unix(now, 0) }}
+	s := store.Snapshot{AccountID: "a", WorldID: "w", State: rules.NewTownState()}
+	w := &contract.Where{Area: "outdoors", X: float64((-3*24+5)*16 + 8), Y: float64((24+6)*16 + 8)}
+	eligible := func(epoch string, want bool) {
+		t.Helper()
+		got, e := r.Eligible(context.Background(), tx, s, ports.PaperInput{Paper: "the-blind-routes-smugglers-ledger", Where: w, Epoch: epoch, Entity: chest.Id})
+		if e != nil || got != want {
+			t.Fatalf("%s: %v, %v (want %v)", epoch, got, e, want)
+		}
+	}
+	eligible("held", false)
+	if _, err = tx.Exec(`INSERT INTO holds VALUES('w',?,0,-3,1,'held')`, content.WildsRules.GetRealm()); err != nil {
+		t.Fatal(err)
+	}
+	eligible("held", true)
+	// Only the epoch the chunk is pinned to: an older wick's claim stays dry.
+	eligible("other", false)
+}

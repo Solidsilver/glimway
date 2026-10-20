@@ -145,7 +145,7 @@ func newRig(t *testing.T) *rig {
 	if err != nil {
 		t.Fatal(err)
 	}
-	x.upstream = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	x.upstream = httptest.NewServer(fromHabiticaClient(func(w http.ResponseWriter, r *http.Request) {
 		x.calls.Add(1)
 		if r.Header.Get("X-Client") != "test-creator-glimway" {
 			t.Error("invalid upstream request")
@@ -164,6 +164,23 @@ func newRig(t *testing.T) *rig {
 		x.db.Close()
 	})
 	return x
+}
+
+// fromHabiticaClient lets through only what the server's Habitica client
+// sent: every one of its calls names the user it is for (X-Api-User). The
+// fakes listen on loopback ports any program on the machine can reach, and
+// something does: a port sweep's bare GET / (Go-http-client, no headers)
+// reached a rig's fake, failed the X-Client check in whichever test held
+// that port and would have moved the call counts. A stray gets a 404 and is
+// neither counted nor checked.
+func fromHabiticaClient(h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("X-Api-User") == "" {
+			http.NotFound(w, r)
+			return
+		}
+		h(w, r)
+	}
 }
 
 func (x *rig) set(p rules.Profile) { x.mu.Lock(); defer x.mu.Unlock(); x.profiles[p.ID] = p }

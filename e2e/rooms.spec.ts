@@ -117,7 +117,8 @@ test('a resident at the change of the hour: Hazel walks out of her kitchen, and 
   await expect.poll(async () => (await npc(page, 'hazel'))?.walking, { timeout: 20_000 }).toBe(true)
   await shot(page, 'room-kitchen-hazel-leaving')
   await expect.poll(async () => (await npc(page, 'hazel'))?.present, { timeout: 30_000 }).toBe(false)
-  await expect.poll(async () => (await npc(page, 'hazel'))?.walking).toBe(false)
+  // Not here from the moment she sets off: the walk to the door still has to finish.
+  await expect.poll(async () => (await npc(page, 'hazel'))?.walking, { timeout: 30_000 }).toBe(false)
   // Outside she's in the square, and her door says Knock: you hear where she is, and go in anyway.
   await walkOut(page)
   await expect.poll(async () => (await npc(page, 'hazel'))?.present).toBe(true)

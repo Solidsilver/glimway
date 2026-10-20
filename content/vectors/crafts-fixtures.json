@@ -410,7 +410,8 @@
             "pet": "Cat-Siamese",
             "slot": 1
           }
-        ]
+        ],
+        "lantern": null
       }
     },
     {
@@ -498,7 +499,8 @@
               "pet": "Cat-Siamese",
               "slot": 1
             }
-          ]
+          ],
+          "lantern": null
         }
       }
     },
@@ -603,7 +605,8 @@
               "pet": "Cat-Siamese",
               "slot": 1
             }
-          ]
+          ],
+          "lantern": null
         },
         "materials": {
           "fiber": 2,
@@ -691,7 +694,8 @@
             "x": 400,
             "y": 300,
             "placeSetVersion": 0,
-            "wickEpoch": ""
+            "wickEpoch": "",
+            "movedVersion": 0
           },
           "story": {
             "quests": {},
@@ -835,7 +839,8 @@
                 "pet": "Cat-Siamese",
                 "slot": 1
               }
-            ]
+            ],
+            "lantern": null
           }
         }
       }
@@ -918,7 +923,8 @@
           "x": 400,
           "y": 300,
           "placeSetVersion": 0,
-          "wickEpoch": ""
+          "wickEpoch": "",
+          "movedVersion": 0
         },
         "story": {
           "quests": {},

@@ -2,11 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { TERRAIN } from '../src/lib/tile.ts';
 import { loadWilds, wildsGround } from '../src/lib/wilds/data.ts';
-import { insideFrontier } from '../src/lib/wilds/coords.ts';
+import { frontierRect, insideFrontier } from '../src/lib/wilds/coords.ts';
 import { walkFactor } from '../src/lib/wilds/walk.ts';
 import { CHUNK_PX, chunkKey, chunkOfPixel, gateTiles, parseChunkKey, worldTile } from '../src/game/wilds/coords.ts';
 import { anchor } from '../src/lib/location.ts';
-import { crossed, frontierDistance, keepAttached, nearestOpen, paintable, planWindow, SLACK_TILES, veilEdges } from '../src/game/wilds/window-plan.ts';
+import { crossed, frontierDistance, keepAttached, nearestOpen, paintable, planWindow, SLACK_TILES, veilEdges, walledChunks } from '../src/game/wilds/window-plan.ts';
 import { chunkGather, chunkLandmarks, chunkScenery, effectiveTerrain, LANDMARK_KINDS } from '../src/game/wilds/terrain.ts';
 import { OPEN_MAP_DECOR_KINDS, openMapDecor } from '../src/game/wilds/open-map-art.ts';
 import { DECOR_ART } from '../src/game/wilds/decor.ts';
@@ -63,6 +63,24 @@ test('at the frontier the window’s far side is the drift: never fetched, never
   const gate = planWindow(0, 0, inside);
   assert.deepEqual(gate.drift, []);
   assert.equal(gate.attach.length, 9);
+});
+
+test('the drift inside the frontier’s rectangle is walled: the hero can’t walk into land past the reach (A19)', () => {
+  // The playtest: the reach's rectangle is cx -5..5, cy -8..7, but the
+  // north-east corner (cx 5, cy -8..-3) is past the reach. The world's
+  // bounds (the rectangle) let the hero walk into it, the drift had no
+  // collision, and the server refused the place a report later.
+  const r = frontierRect([]);
+  assert.deepEqual([r.maxCx, r.minCy], [5, -8]);
+  for (let cy = -8; cy <= -3; cy++) assert.equal(insideFrontier(5, cy, undefined, []), false, `5,${cy}`);
+  const plan = planWindow(4, -5, (cx, cy) => insideFrontier(cx, cy, undefined, []));
+  assert.deepEqual([...plan.drift].sort(), ['5,-4', '5,-5', '5,-6']);
+  // Walkable is attached: the drift and chunks not attached yet are walled; the hero's own never is.
+  const attached = new Set(plan.attach.filter((k) => k !== '4,-4'));
+  const walls = walledChunks(4, -5, (cx, cy) => attached.has(chunkKey(cx, cy)));
+  assert.deepEqual(walls.sort(), ['4,-4', '5,-4', '5,-5', '5,-6']);
+  assert.deepEqual(walledChunks(4, -5, () => false).length, 8);
+  assert.ok(!walledChunks(4, -5, () => false).includes('4,-5'));
 });
 
 test('a chunk is painted once every neighbour inside the frontier is known', () => {

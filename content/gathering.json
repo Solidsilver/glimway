@@ -199,7 +199,7 @@
     "lamp-stone": {
       "action": "break",
       "toolAction": "break",
-      "name": "Old lamp-stone",
+      "name": "Old lamp stone",
       "yields": [
         {
           "item": "loose-road-nail",

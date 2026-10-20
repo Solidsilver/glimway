@@ -1,7 +1,7 @@
 import type Phaser from 'phaser'
 import { PACKED_MANIFEST_KEY, type PackedManifest } from './atlas-plan.ts'
 import { addArtCanvas, artCanvas, artDataUrl, artSource, drawArt } from './density.ts'
-import { explodeFrames, type PassAnimation, type PassRect, type PassSource } from './art-pass.ts'
+import { explodingFrames, type Steps, type PassAnimation, type PassRect, type PassSource } from './art-pass.ts'
 import { CRAFTS_WORLD_ART, crArt } from './crafts-art.ts'
 
 /**
@@ -129,13 +129,14 @@ export function preloadItemsPass(scene: Phaser.Scene, base: string = ITEMS_PASS_
 /**
  * Build the native canvas textures once at boot (existing keys are
  * skipped; the packed atlas texture is released after). Each is copied 1:1
- * from the packed atlas, dense (./density.ts). State groups are discrete
- * states, never animations.
+ * from the packed atlas, dense (./density.ts), a texture a step
+ * (./art-pass.ts `Steps`). State groups are discrete states, never
+ * animations.
  */
-export function createItemsPass(scene: Phaser.Scene): ItemsPassManifest | null {
+export function* createItemsPass(scene: Phaser.Scene): Steps<ItemsPassManifest | null> {
   const manifest = scene.cache.json.get(ITEMS_PASS_MANIFEST_KEY) as ItemsPassManifest | undefined
   const packed = (scene.cache.json.get(PACKED_MANIFEST_KEY) as PackedManifest | undefined)?.items
-  if (!manifest || !Array.isArray(manifest.frames) || !explodeFrames(scene, ITEMS_PACKED_KEY, packed, manifest.frames, itemsArtKey)) return null
+  if (!manifest || !Array.isArray(manifest.frames) || !(yield* explodingFrames(scene, ITEMS_PACKED_KEY, packed, manifest.frames, itemsArtKey))) return null
   initItemsManifest(manifest)
 
   // Fallback 16×16 texture for items without art

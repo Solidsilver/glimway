@@ -62,7 +62,7 @@ func (a *Server) storageRead(w http.ResponseWriter, r *http.Request) error {
 	}
 	defer tx.Rollback()
 	now := a.requestTime(r.Context()).Unix()
-	if err = settleHomes(r.Context(), tx, s.WorldID, now); err != nil {
+	if err = a.settleHomes(r.Context(), tx, s.WorldID, now); err != nil {
 		return err
 	}
 	v, err := readWorkshop(r.Context(), tx, &s, now)
@@ -89,7 +89,7 @@ func (a *Server) storageMutation(w http.ResponseWriter, r *http.Request) error {
 	}
 	asset := assetOf(req.Asset)
 	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
-		if err := settleHomes(ctx, tx, s.WorldID, now); err != nil {
+		if err := a.settleHomes(ctx, tx, s.WorldID, now); err != nil {
 			return nil, err
 		}
 		var chest holder
@@ -190,7 +190,7 @@ func (a *Server) craft(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
-		if err := settleHomes(ctx, tx, s.WorldID, now); err != nil {
+		if err := a.settleHomes(ctx, tx, s.WorldID, now); err != nil {
 			return nil, err
 		}
 		if _, err := workshop(ctx, tx, s); err != nil {
@@ -199,6 +199,16 @@ func (a *Server) craft(w http.ResponseWriter, r *http.Request) error {
 		recipe, ok := content.RecipeFor(req.RecipeId)
 		if !ok {
 			return nil, fail(400, "invalid-recipe")
+		}
+		// A found recipe is only known once its page is held, as at the hearth.
+		if recipe.GetPage() != "" {
+			held, err := stackTotal(ctx, tx, packOf(s.AccountID), recipe.GetPage())
+			if err != nil {
+				return nil, err
+			}
+			if held <= 0 {
+				return nil, fail(409, "recipe-unknown")
+			}
 		}
 		if req.Qty < 1 || req.Qty > 100 {
 			return nil, fail(400, "invalid-quantity")

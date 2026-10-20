@@ -1,0 +1,103 @@
+syntax = "proto3";
+package glimway.v1;
+option go_package = "glimway/server/internal/gen/glimway/v1;contract";
+import "glimway/v1/op.proto";
+
+// Communal lamps (roadmap 0.13; docs/design/lamps.md 1.3, 2.4): Common light,
+// public rest and wayfinding, claiming no land around it. Kept by presence,
+// never by oil: a lamp whose chunk somebody stood in during the wick stays
+// lit through the turning; one nobody came to goes dark (a relit stone) or
+// waits for its setter in a crate at Pell's (a post). Tiles on the wire are
+// world tiles.
+
+// A lamp's naming (lamps.md 2.8), from parts only, never free text: the part
+// ids, the real landmark it names, and the sentence and short name rendered
+// from them when it was named (kept as written if the landmark later moves).
+// Unset until a Keeper names the lamp (the Keeper's-hand lane builds the
+// naming); before that the lamp goes by a neutral communal-lamp label.
+message LampNaming {
+  repeated string parts = 1; string landmark = 2;
+  string text = 3; string short_name = 4;
+  string namer_id = 5; string namer_name = 6; double named_at = 7;
+}
+
+// A lit communal lamp. id is stable for the lamp's life and through
+// recovery: a stone's is its road site's (lamp-stone:<cx>:<cy>), a post's
+// its way-lamp piece's. kind: "stone" (a Lantern Road stone relit) or
+// "post" (a way-lamp set as communal). setter: who relit or set it.
+// visited: its chunk has had a visit this wick, so it stays lit through
+// the next turning. A dark stone is never listed.
+message CommunalLampView {
+  string id = 1; string kind = 2;
+  sint32 cx = 3; sint32 cy = 4; sint32 x = 5; sint32 y = 6;
+  string setter_id = 7; string setter_name = 8;
+  double lit_at = 9; bool visited = 10;
+  LampNaming naming = 11;
+}
+// GET /api/communal-lamps: the world's lit communal lamps, and cut_stone:
+// the Lantern Road stone whose cut the Keeper's-hand quest copies (lamps.md
+// 2.8), the first along the road past the Whitequiet. It is a function of
+// the world's seed, the same every wick.
+message CommunalLampsRead { repeated CommunalLampView lamps = 1; string cut_stone = 2; }
+
+// POST /api/communal-lamps: one communal-lamp operation, by action. Each
+// one that succeeds visits the lamp's chunk for this wick, even across a
+// seam from where the player stands (copy and read only look).
+//   relight: light the dark stone `lamp` (a lamp-stone site id), anyone.
+//   tend:    look after the lit lamp `lamp`, anyone (it only visits).
+//   post:    set the carried way-lamp item_id at tile (x, y) as a communal post.
+//   lift:    take your own post `lamp` back into your pack.
+//   copy:    copy the cut from the quest's stone `lamp` (the Keeper's hand).
+//   read:    read the lit lamp `lamp`'s naming.
+//   name:    give the lit lamp `lamp` its naming from `parts` (a Keeper).
+message CommunalLampRequest {
+  OpHeader op = 1; Where where = 2;
+  string action = 3; string lamp = 4; string item_id = 5;
+  sint32 x = 6; sint32 y = 7;
+  repeated string parts = 8;
+}
+
+// Ways home (roadmap 0.13; lamps.md 1.4). A lamp-ash pouch is bound to one
+// lamp by its stable id: a camp's way-lamp, or a communal lamp (a relit
+// stone or a post). Lot lanterns don't take a binding. The binding is the
+// player's, one at a time, for every pouch they carry. state says how the
+// lamp stands now: "lit", "unlit" (a stone gone dark), "packed" (in a crate
+// at Pell's), "elsewhere" (another world) or "gone" (taken down, or no
+// longer anywhere). While it's lit: kind ("stone", "post" or "camp"), its
+// world tile (x, y), and its naming's short name ("" while unnamed).
+message WaysHomeBinding {
+  string lamp_id = 1; string lamp_name = 2; string state = 3;
+  sint32 x = 4; sint32 y = 5; double bound_at = 6; string kind = 7;
+}
+// GET /api/ways-home: your pouch's binding, if any.
+message WaysHomeRead { WaysHomeBinding binding = 1; }
+
+// POST /api/ways-home: one way-home operation, by action. Travel takes
+// exactly one item, and only when it succeeds; any refusal keeps it. Both
+// refuse while you're in a fight. The client holds the three-second pause.
+//   bind:    bind your pouches to the lamp `lamp` beside you (a pouch in
+//            the pack, the lamp within reach).
+//   turncap: use a homing turncap: back to Hearthwick's Wilds entrance (the
+//            anchor its content names, resolved now).
+//   pouch:   use a lamp-ash pouch: to open ground beside its bound lamp.
+message WaysHomeRequest {
+  OpHeader op = 1; Where where = 2;
+  string action = 3; string lamp = 4;
+}
+// The binding after the operation, and where travel put you (the state's
+// place says the same).
+message WaysHomeResult {
+  string action = 1; WaysHomeBinding binding = 2;
+  string area = 3; double x = 4; double y = 5;
+}
+// The lamp after the operation (none: lifted, or a stone's cut copied),
+// the pack's material balances, and what a naming gave (lamp ash, once).
+message CommunalLampResult { CommunalLampView lamp = 1; map<string,double> materials = 2; repeated string given = 3; }
+
+// A landmark a lamp may be named by (lamps.md 2.8): one the server found
+// near the lamp, or a fallback (the road, the Whitequiet). id is the part
+// id after "landmark:"; phrase how the naming says it ("the old shrine").
+message LampLandmark { string id = 1; string phrase = 2; }
+// GET /api/lamp-landmarks/<lamp>: the landmarks a naming of that lamp may
+// use, nearest first. The naming refuses any other.
+message LampLandmarksRead { repeated LampLandmark landmarks = 1; }

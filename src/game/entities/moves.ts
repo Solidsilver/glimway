@@ -11,6 +11,7 @@
  * friend's pulse mends at the same moments the friend's screen pulses (the
  * hub credits the server the same heal, 4.5).
  */
+import { onSceneEnd } from '../scene-end'
 import Phaser from 'phaser'
 import { bus, EV, type AbilityCastPayload } from '../events'
 import { abilityFor } from '../../lib/abilities'
@@ -47,7 +48,7 @@ export class MoveFx {
     private readonly deps: MoveFxDeps
   ) {
     bus.on(EV.abilityCast, this.onCast)
-    scene.events.once('shutdown', () => bus.off(EV.abilityCast, this.onCast))
+    onSceneEnd(scene, () => bus.off(EV.abilityCast, this.onCast))
   }
 
   /** Stand: a ring of pressed earth at the feet, planting then held, for `seconds`. */

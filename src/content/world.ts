@@ -136,10 +136,10 @@ export const locations: Record<AreaId, LocationInfo> = {
   outdoors: WILDS_INNER.location,
   woodland: {
     name: 'Brackenwood Path',
-    eyebrow: 'The old lantern road',
+    eyebrow: 'The old Lantern Road',
     tagline: 'Iron-oak shade, leaning route stones — and things that hop. Watch for the wind-up.',
     description:
-      'A soft trail under iron-oak and bracken, where the lantern road once ran east toward Sallow Ford. Route stones lean in the moss, and the lamps on their posts have been cold for thirty years.',
+      'A soft trail under iron-oak and bracken, where the Lantern Road once ran east, and then north to Sallow Ford. Route stones lean in the moss, and the lamps on their posts have been cold for thirty years.',
   },
   ruin: {
     name: 'Ashwatch Ruin',
@@ -323,7 +323,7 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
       speaker: 'Mara',
       lines: [
         "There's a lamp burning past the east gate, and I can see it from my crate. That one's yours. The village noticed. I noticed.",
-        "My grandmother Wenna kept the lantern road east of here. The lamp on Ashwatch hill has been dark thirty years. Longer than I've been alive.",
+        "My grandmother Wenna kept the Lantern Road east of here. The lamp on Ashwatch hill has been dark thirty years. Longer than I've been alive.",
         "I'd walk it myself, but the oil ledger doesn't keep itself. Would you go on? Past your lamp, the ruin, up to the shrine. Tell me what's left of it.",
       ],
       event: 'accept',
@@ -421,7 +421,7 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
       speaker: 'Orrin',
       lines: [
         'Mind the shavings. Post’s holding: three fingers off plumb, east, the way it should be. Frost’ll have another go at it come spring. It always does.',
-        "I'm Orrin. Built every bridge within a day of here, and complained about all of them. Here about the lantern road? Hm. Thought someone would come.",
+        "I'm Orrin. Built every bridge within a day of here, and complained about all of them. Here about the Lantern Road? Hm. Thought someone would come.",
       ],
     },
     {
@@ -500,7 +500,7 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
       speaker: 'Hilltop Lantern',
       lines: [
         'The warden rests now, its chest-lamp guttered to a coal. On the ledge: flint, steel, a dry wick, and words scratched in a small, neat hand.',
-        "'You are the shrine above Ashwatch. Behind you the ruin, before you the road east. Hold.' You read it aloud to the wick, feeling a little foolish.",
+        "'You are the shrine above Ashwatch. Behind you the ruin, before you the road north. Hold.' You read it aloud to the wick, feeling a little foolish.",
         'You strike a spark. The wick catches, then the oil, and the lamp fills with steady gold. Far below, a village square turns its face toward the hill.',
       ],
       event: 'light-lantern',
@@ -510,7 +510,7 @@ const DIALOGUE: Record<string, DialogueRule[]> = {
       speaker: 'Hilltop Lantern',
       lines: [
         'The lantern burns steady, laying a warm path down the hillside and over the dark weave of Brackenwood.',
-        'East of here the old road runs on toward Sallow Ford, lamp after cold lamp. This one, at least, the land will remember.',
+        'North of here the old road runs on toward Sallow Ford, lamp after cold lamp. This one, at least, the land will remember.',
       ],
     },
   ],
@@ -526,7 +526,7 @@ const JOURNAL_BY_STAGE: Record<QuestStage, JournalEntry[]> = {
   accepted: [
     {
       title: "Mara's Request",
-      body: 'Mara asked me to walk the old lantern road: out the east gate, along the Brackenwood path, through Ashwatch Ruin, up to the hilltop shrine. Her grandmother Wenna kept that road. Find what is left of it.',
+      body: 'Mara asked me to walk the old Lantern Road: out the east gate, along the Brackenwood path, through Ashwatch Ruin, up to the hilltop shrine. Her grandmother Wenna kept that road. Find what is left of it.',
     },
     {
       title: 'Orrin’s Advice',
@@ -632,13 +632,13 @@ export function journalEntries(record: QuestRecord, flags: readonly string[] = [
   if (flags.includes('unmoored:felt')) {
     entries.push({
       title: 'The Drift’s Sway',
-      body: 'The woods began to sway and the ground went soft and uncertain underfoot. Not a storm, just the land forgetting its own shape for a while.',
+      body: 'Deep in the Tangle the woods began to sway and the ground went soft underfoot. Not a storm: the land letting go of me for a while.',
     });
   }
   if (flags.includes('unmoored:cleared')) {
     entries.push({
       title: 'Finding the Anchor',
-      body: 'The edges settled and the ground stood still again. Lamplight, comfrey salve, or patience — the world remembers when you remind it.',
+      body: 'The edges settled and the ground stood still again. Rest on safe ground, or a remedy: the world remembers when you remind it.',
     });
   }
   if (flags.includes('warden-sliver:found')) {

@@ -1,4 +1,4 @@
-import { lotService } from './lots.ts';
+import { inBackland, lotService } from './lots.ts';
 import { lotOrigin } from './lots.ts';
 import raw from '../../content/homestead.json' with { type: 'json' };
 import { ITEMS_SHAPE } from './items-shape.ts';
@@ -59,6 +59,20 @@ export interface CommonsLane {
 export interface LanternPosts { item: string; radius: number; nameMax: number; costs: { materials: Record<string, number> }[]; growth: Record<string, number> }
 /** The stable's growth rules (design 3.2): one piece, a bay at a time. */
 export interface HomesteadStable { item: string; maxStalls: number; stallCost: Record<string, number>; growth: Record<string, number> }
+/** The lot lantern's oil (roadmap 0.12): wicks per flask, the store's size, and the stake that carries it. */
+export interface LotLanternRules { oil: string; maxWicks: number; wicksPerOil: number; stakeY: number }
+/** The way-lamp's camp (roadmap 0.13): its piece, its oil, and the reach to set, fill and build from. */
+export interface WayLampRules { item: string; oil: string; maxWicks: number; wicksPerOil: number; reach: number }
+/** Communal lamps (roadmap 0.13): what relighting a dark stone burns (relightQty 0: free), and the reach to relight, tend, set or lift from. */
+export interface CommunalLampRules { relight: string; relightQty: number; reach: number }
+/** Naming a lamp from parts (src/lib/lamp-naming.ts): each list's ids and words, the found landmarks' phrases, the ash a first naming gives. */
+export interface LampNamingRules {
+  ordinals: NamingWord[]; relations: NamingWord[]; fallbacks: NamingWord[]; sides: NamingWord[]; closings: NamingWord[];
+  places: Record<string, string>; sites: Record<string, string>; ash: string; ashQty: number;
+}
+export interface NamingWord { id: string; words: string }
+/** The Wick Tree's weekly sap (lamps.md 2.5): qty of `item` a wick from within `reach` tiles of the tree's spot; `refiner` (a seller) makes oilQty of `oil` from one, free. */
+export interface WickSapRules { item: string; qty: number; area: string; tx: number; ty: number; reach: number; refiner: string; oil: string; oilQty: number }
 export interface HomesteadData {
   tiers: HomeTier[];
   indoor: HomeGrid;
@@ -76,6 +90,11 @@ export interface HomesteadData {
   personalChest: { maxUnits: number };
   items: HomeItem[];
   stable: HomesteadStable;
+  lotLantern: LotLanternRules;
+  wayLamp: WayLampRules;
+  communalLamp: CommunalLampRules;
+  lampNaming: LampNamingRules;
+  wickSap: WickSapRules;
 }
 
 /** Throws on anything content/homestead.go would refuse. */
@@ -217,6 +236,13 @@ export interface PlacementGround {
   cleared: ReadonlySet<string>;
 }
 
+/**
+ * The lot's backland while its lantern burns (lotLit): whether a lot-local
+ * tile there is open land with nothing of the Wilds on it (the server's
+ * backland.buildable). Absent: the backland is dark, nothing goes there.
+ */
+export type BacklandGround = (x: number, y: number) => boolean;
+
 function footprintRect(it: HomeInstance, data: HomesteadData): HomeRect | null {
   const def = data.items.find((i) => i.id === it.itemDef);
   if (!def || it.x === null || it.y === null) return null;
@@ -256,7 +282,8 @@ function rectLit(lights: readonly Light[], r: HomeRect): boolean {
  */
 function everythingLit(items: readonly HomeInstance[], data: HomesteadData = HOMESTEAD_DATA): boolean {
   for (const it of items) {
-    if (it.scene !== 'outdoor') continue;
+    // The backland's pieces stand in the lot lantern's light.
+    if (it.scene !== 'outdoor' || it.x !== null && (it.x < 0 || it.x > 23)) continue;
     const r = footprintRect(it, data);
     if (r && !rectLit(lightsWithout(items, it.id, data), r)) return false;
   }
@@ -277,7 +304,8 @@ export function checkPlacement(
   y: number,
   rotation: number,
   data: HomesteadData = HOMESTEAD_DATA,
-  ground?: PlacementGround
+  ground?: PlacementGround,
+  backland?: BacklandGround | null
 ): PlacementProblem | null {
   const def = data.items.find((i) => i.id === instance.itemDef);
   if (!def || ![0, 90, 180, 270].includes(rotation) || !def.where.includes(scene)) return 'invalid-placement';
@@ -289,9 +317,12 @@ export function checkPlacement(
   }
   const grid = scene === 'indoor' ? data.indoor : landGrid(data);
   const [w, h] = rotatedFootprint(grownItem(def, instance, data), rotation);
-  if (x < 0 || y < 0 || x > grid.width - w || y > grid.height - h) return 'out-of-bounds';
+  // The backland behind the lot, while the lantern holds it.
+  const back = scene === 'outdoor' && home.gate !== undefined && inBackland(x, y, home.gate) && inBackland(x + w - 1, y + h - 1, home.gate);
+  if (back && !backland) return 'unlit';
+  if (!back && (x < 0 || y < 0 || x > grid.width - w || y > grid.height - h)) return 'out-of-bounds';
   const here = { x, y, w, h };
-  const reserved = scene === 'indoor' ? data.indoorReserved : outdoorReserved(home.gate ?? 0, data);
+  const reserved = scene === 'indoor' ? data.indoorReserved : back ? [] : outdoorReserved(home.gate ?? 0, data);
   if (reserved.some((r) => overlaps(here, r))) return 'placement-overlap';
   for (const other of home.items) {
     if (other.id === instance.id || other.scene !== scene) continue;
@@ -300,6 +331,12 @@ export function checkPlacement(
   }
   // Nothing goes down on top of something growing.
   if (scene === 'outdoor' && (home.plants ?? []).some((p) => overlaps(here, { x: p.x, y: p.y, w: 1, h: 1 }))) return 'plant-in-the-way';
+  if (back) {
+    // The lantern lights it all; posts and the stable stay on the lot.
+    if (def.id === data.lanternPosts.item || def.id === data.stable.item) return 'land-blocked';
+    for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) if (!backland!(tx, ty)) return 'land-blocked';
+    return null;
+  }
   if (scene === 'outdoor' && ground) {
     for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) if (!buildableKind(effectiveKind(ground.land, ground.cleared, tx, ty))) return 'land-blocked';
   }

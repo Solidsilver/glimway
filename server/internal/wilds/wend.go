@@ -3,13 +3,14 @@ package wilds
 import "glimway/content"
 
 // Pass 3, the Wend (open-map.md 2.2, decisions 2, 12 and 17). One river per
-// wick: a seeded polyline that enters the 0.8 frontier from one of
-// river.enters (north or west), bends through the west, and leaves at the
-// south limit's row no further east than river.leavesMaxCx, toward the
-// mill. It never comes into the Tangle (it keeps a margin from it), and
-// north of the Tangle it may run at most in the Whitequiet's west column
-// (which keeps it west of the Lantern Road too). Water is minWidth to
-// maxWidth tiles wide, varying smoothly; a bank runs along both sides.
+// world, the same every wick (lasting geography): a seeded polyline that
+// enters the 0.8 frontier from one of river.enters (north or west), bends
+// through the west, and leaves at the south limit's row no further east
+// than river.leavesMaxCx, toward the mill. It never comes into the Tangle
+// (it keeps a margin from it), and north of the Tangle it may run at most
+// in the Whitequiet's west column (which keeps it west of the Lantern Road
+// too). Water is minWidth to maxWidth tiles wide, varying smoothly; a bank
+// runs along both sides.
 //
 // The river is crossed only at fords (decision 12): where a route's centre
 // line runs over water, fordWidth tiles of shallows. Every route gets one,
@@ -70,7 +71,7 @@ func (b riverBounds) east(y int) int {
 func newRiver(w *world) *river {
 	data := contentRules().GetRiver()
 	S := chunkSize()
-	rng := NewRng(w.e.hash("wend"))
+	rng := NewRng(w.e.landform("wend"))
 	minCx, minCy, _, maxCy := frontierChunks()
 	X0, Y0, Y1 := minCx*S, minCy*S, (maxCy+1)*S-1
 	bounds := newRiverBounds()
@@ -133,7 +134,7 @@ func newRiver(w *world) *river {
 		pts = append(pts, piece...)
 	}
 	// Width wanders smoothly along the river.
-	n := noise{w.e.hash("wend-width")}
+	n := noise{w.e.landform("wend-width")}
 	half := make([]int, len(pts))
 	for i := range pts {
 		width := lo*fp + (hi-lo)*fp*n.at(i*fp/5, 0)>>16

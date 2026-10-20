@@ -162,6 +162,19 @@ func (r Rules) Eligible(ctx context.Context, tx *sql.Tx, s store.Snapshot, in po
 			epoch = e
 		}
 	}
+	// A claim in a held chunk names the wick epoch its chunk is pinned to
+	// (holds): good for the claimed entity's facts only, since sites and
+	// Echoes are footprints', which are never held.
+	held := false
+	if cx, cy, ok := EntityChunk(s.WorldID, in.Entity); epoch == nil && ok {
+		e, err := store.HeldEpoch(ctx, tx, s.WorldID, cx, cy)
+		if err != nil {
+			return false, err
+		}
+		if e != nil && e.Id == in.Epoch {
+			epoch, held = e, true
+		}
+	}
 	if epoch == nil {
 		return false, nil
 	}
@@ -170,7 +183,7 @@ func (r Rules) Eligible(ctx context.Context, tx *sql.Tx, s store.Snapshot, in po
 		return near(w, float64((int(cx)*S+int(tx))*16+8), float64((int(cy)*S+int(ty))*16+8))
 	}
 	if p.Source == "echo" {
-		if epoch.Kind != "wick" {
+		if epoch.Kind != "wick" || held {
 			return false, nil
 		}
 		sites, e := FootprintSites(ctx, tx, r.Chunks, s.WorldID, epoch, EchoFootprint)
@@ -198,6 +211,9 @@ func (r Rules) Eligible(ctx context.Context, tx *sql.Tx, s store.Snapshot, in po
 		return f != nil && cx == int(f.GetCx()+f.GetWidth())-1
 	}
 	if in.Site != "" && q.GetSite() != "" {
+		if held {
+			return false, nil
+		}
 		// Sites are the footprints' (the papers' sites never leave them).
 		for _, f := range content.WildsRules.Places {
 			if f.GetEpochKind() != epoch.Kind {
@@ -229,7 +245,7 @@ func (r Rules) Eligible(ctx context.Context, tx *sql.Tx, s store.Snapshot, in po
 	if in.Entity == "" || q.GetPoi() == "" && q.Tier == 0 {
 		return false, nil
 	}
-	cx, cy, ok := EntityChunk(in.Entity)
+	cx, cy, ok := EntityChunk(s.WorldID, in.Entity)
 	if !ok || wilds.EpochKindAt(cx, cy) != epoch.Kind || q.East && !east(cx, cy) {
 		return false, nil
 	}
@@ -255,15 +271,15 @@ func (r Rules) Eligible(ctx context.Context, tx *sql.Tx, s store.Snapshot, in po
 }
 
 // EntityChunk is the chunk an entity id names ("<kind>:<cx>:<cy>:<i>",
-// signed), inside the frontier.
-func EntityChunk(id string) (cx, cy int, ok bool) {
+// signed), inside the world's frontier.
+func EntityChunk(world, id string) (cx, cy int, ok bool) {
 	parts := strings.Split(id, ":")
 	if len(parts) != 4 || len(id) > 128 {
 		return 0, 0, false
 	}
 	x, e1 := strconv.Atoi(parts[1])
 	y, e2 := strconv.Atoi(parts[2])
-	if e1 != nil || e2 != nil || strconv.Itoa(x) != parts[1] || strconv.Itoa(y) != parts[2] || !frontier.Inside("", x, y) {
+	if e1 != nil || e2 != nil || strconv.Itoa(x) != parts[1] || strconv.Itoa(y) != parts[2] || !frontier.Inside(world, x, y) {
 		return 0, 0, false
 	}
 	return x, y, true

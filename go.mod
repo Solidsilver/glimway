@@ -5,6 +5,7 @@ go 1.26.0
 require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.12-20260825204119-511051f7f437.1
 	buf.build/go/protovalidate v1.4.0
+	github.com/BurntSushi/toml v1.6.0
 	github.com/coder/websocket v1.8.15
 	google.golang.org/protobuf v1.36.12
 	modernc.org/sqlite v1.60.1

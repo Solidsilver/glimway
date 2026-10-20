@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Session } from '../game/session'
   import { sfx } from '../game/sfx'
+  import { DEV_TOOLS } from '../lib/dev-tools'
   import { soundSettings, type SoundPrefs } from '../game/sound-settings'
   import { ui } from './store.svelte'
   import Icon from './Icon.svelte'
@@ -23,6 +24,8 @@
   import { CHANGELOG_URL, RUNNING } from '../lib/version'
   import { isTouchFirst } from './device'
   import { settings, type StickMode } from './settings.svelte'
+  import { loadTimingsText } from './loading.svelte'
+  import { loadingCopy } from '../content/loading'
 
   /** Ways to walk on a touch screen; the picture is a little phone seen from above. */
   const STICKS: Array<{ id: StickMode; name: string; note: string }> = [
@@ -65,6 +68,32 @@
   let logoutBusy = $state(false)
 
   /** Upload what's pending first, so the dialog says truthfully whether anything is unsent. */
+  /** The last loads' timings, as text for a chat (src/ui/loading.svelte.ts). */
+  async function copyTimings(): Promise<void> {
+    const text = loadTimingsText()
+    let ok = false
+    try {
+      await navigator.clipboard.writeText(text)
+      ok = true
+    } catch {
+      // No clipboard API here (or refused): the old way, from a selected field.
+      const field = document.createElement('textarea')
+      field.value = text
+      field.setAttribute('readonly', '')
+      field.style.position = 'fixed'
+      field.style.opacity = '0'
+      document.body.append(field)
+      field.select()
+      try {
+        ok = document.execCommand('copy')
+      } catch {
+        ok = false
+      }
+      field.remove()
+    }
+    ui.toast(ok ? { text: loadingCopy.copied, icon: 'check' } : { text: loadingCopy.copyFailed, kind: 'error' })
+  }
+
   async function requestLogout(): Promise<void> {
     logoutBusy = true
     const link = session.link
@@ -165,10 +194,10 @@
     </div>
   {/if}
 
-  {#if import.meta.env.DEV && onDev}
+  {#if DEV_TOOLS && onDev}
     <section class="card dev-row" data-testid="menu-dev">
       <h3 class="section-title"><Icon name="key" size={14} /> Dev</h3>
-      <p class="fine">Local playtesting: give yourself glims, materials and items. Only in dev builds. Key: <span class="kbd">`</span></p>
+      <p class="fine">Playtesting tools: give yourself glims, materials and items, or move the clock. Only in dev builds. Key: <span class="kbd">`</span></p>
       <button type="button" onclick={onDev}>Open dev mode</button>
     </section>
   {/if}
@@ -237,6 +266,7 @@
     <a href={CHANGELOG_URL} target="_blank" rel="noopener noreferrer" title={updateCopy.menuTitle}>{updateCopy.menuLine(RUNNING.version)}</a>
     <span class="build">{updateCopy.menuBuild(RUNNING.build)}</span>
     {#if onWhatsNew}<button type="button" class="ghost whats-new" onclick={onWhatsNew} data-testid="menu-whats-new">{whatsNewCopy.menu}</button>{/if}
+    <button type="button" class="ghost whats-new" onclick={copyTimings} data-testid="menu-load-timings">{loadingCopy.copyTimings}</button>
   </p>
 </Panel>
 

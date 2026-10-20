@@ -29,11 +29,21 @@ func gatherCaps(action string) (visit, day int) {
 	return int(c.GetVisit().GetDig()), int(c.GetDay().GetDig())
 }
 
-// ownLand: the caller's homestead when `area` is its land (nil, refused,
-// for anyone else's: visiting is read-only).
-func ownLand(ctx context.Context, tx *sql.Tx, s *store.Snapshot, area string, now int64, refusal string) (*homeView, error) {
+// ownLand: the caller's homestead when `area` is its land, or its
+// backland while the lantern burns (nil, refused, for anyone else's:
+// visiting is read-only). A turning due is judged first (settleTurning):
+// a backland lapsed since the last read is lapsed for this action too, never
+// lit until someone reads the state (step-back S2).
+func (a *Server) ownLand(ctx context.Context, tx *sql.Tx, s *store.Snapshot, area string, now int64, refusal string) (*homeView, error) {
+	if err := a.settleTurning(ctx, tx, s.WorldID, now); err != nil {
+		return nil, err
+	}
 	gate := homeGateAt(s)
-	if gate < 0 || !onPrivateLot(s, gate) {
+	back := gate < 0 && backlandGateAt(s) >= 0
+	if back {
+		gate = backlandGateAt(s)
+	}
+	if gate < 0 || !back && !onPrivateLot(s, gate) {
 		return nil, fail(409, refusal)
 	}
 	id, ok, err := memberOf(ctx, tx, s.AccountID)
@@ -49,6 +59,9 @@ func ownLand(ctx context.Context, tx *sql.Tx, s *store.Snapshot, area string, no
 	}
 	if h.Gate != gate {
 		return nil, fail(409, "not-your-land")
+	}
+	if back && !h.Lantern.Lit {
+		return nil, fail(409, refusal)
 	}
 	return &h, nil
 }
@@ -152,6 +165,11 @@ func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req 
 		if req.Target == "tangle-tree" && wilds.FootprintAt(cx, cy) != wilds.Footprint("tangle") {
 			return fail(409, "cannot-gather-here")
 		}
+		// Felling, breaking and digging change a camp's land: only those
+		// who may build there (claim_rules.go). Forage stays open to all.
+		if err := a.campBuilderAt(ctx, tx, s, cx, cy); err != nil {
+			return err
+		}
 		if !nearPiece(s, area, tx0, ty0) {
 			return fail(409, "too-far-away")
 		}
@@ -215,7 +233,7 @@ func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req 
 	lit := false
 	if homeGateAt(s) >= 0 && area == outdoorsArea {
 		var err error
-		if home, err = ownLand(ctx, tx, s, area, now, "cannot-gather-here"); err != nil {
+		if home, err = a.ownLand(ctx, tx, s, area, now, "cannot-gather-here"); err != nil {
 			return chunkError(err)
 		}
 		if len(req.Tile) != 2 {

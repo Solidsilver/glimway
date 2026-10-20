@@ -2,12 +2,12 @@ import { goLot } from './home-helpers'
 import { expect, test, type Page } from './fixtures'
 import { serverState, sql, accountOf, CONTRACT, served, reenter, seedStory } from './connected'
 import { readFileSync } from 'node:fs'
-import { inCommons, windowWhole, waitForArea, waitForLive, player, expectAreaCard, expectToast, SERVER_ANSWER_MS } from './helpers'
+import { chunkWhole, frames, inCommons, windowWhole, waitForArea, waitForLive, player, expectAreaCard, expectToast, SERVER_ANSWER_MS } from './helpers'
 import { area, earnGlims, freshPlayer, fund, go, homeAt, homes, hurt, landOf, lane, myHome, place, readOn, shot, silasSays, talk, throughGate, type Home, DEED_BOUGHT, yardBuild, pellSays, DEEDS, AT_PELL, manageDeed, giveUpPlace } from './home-helpers'
 import { HOMESTEAD_DATA } from '../src/lib/homestead.ts'
 import { PLACES } from '../src/lib/places.ts'
 import { LAND, buildableKind, clearable, clearedSet, effectiveKind, homeLights, isLit, type Land } from '../src/lib/homestead-land.ts'
-import { homeDoorstep, lotName } from '../src/lib/lots.ts'
+import { homeDoorstep, lotName, lotOrigin } from '../src/lib/lots.ts'
 
 /**
  * Homesteads, second version, against the real Go server
@@ -228,16 +228,16 @@ test('claim and guidance, then expansion: lantern posts, naming, clearing, cotta
   await silasSays(page, /See the Yard/)
   const shop = page.getByRole('dialog', { name: 'Silas’s Yard' })
   const first = HOMESTEAD_DATA.lanternPosts.costs[0]!.materials
-  await expect(shop.locator('.row', { hasText: 'Lantern Post' })).toContainText(`${first.timber} timber`)
+  await expect(shop.locator('.row', { hasText: 'Lantern post' })).toContainText(`${first.timber} timber`)
   // A camp opens on Build (the cottage is next); the stool is on Furnish.
   await shop.getByRole('tab', { name: 'Furnish' }).click()
   await shop.locator('[data-buy="wooden-stool"]').click()
-  await expect(shop.locator('.msg.ok')).toContainText('Wooden Stool is yours')
+  await expect(shop.locator('.msg.ok')).toContainText('Wooden stool is yours')
   await shop.getByRole('tab', { name: 'Build' }).click()
   await shop.locator('[data-buy="lantern-post"]').click()
-  await expect(shop.locator('.msg.ok')).toContainText('Lantern Post is yours')
+  await expect(shop.locator('.msg.ok')).toContainText('Lantern post is yours')
   const second = HOMESTEAD_DATA.lanternPosts.costs[1]!.materials
-  await expect(shop.locator('.row', { hasText: 'Lantern Post' })).toContainText(`${second.timber} timber`)
+  await expect(shop.locator('.row', { hasText: 'Lantern post' })).toContainText(`${second.timber} timber`)
   await shot(page, 'silas-shop-desktop')
   await shop.getByRole('button', { name: 'Close Silas’s yard' }).click()
   let home = await myHome(page)
@@ -250,7 +250,19 @@ test('claim and guidance, then expansion: lantern posts, naming, clearing, cotta
   const ground = await landOf(page, free.gate)
   const near = spotOn(home, ground, (x, y, k, lit) => lit && buildableKind(k) && Math.abs(x - S.x) <= 4 && y > S.y)
   await goLot(page, free.gate, near.x, near.y + 1)
+  // The warp's new scene reads the lot's home as it attaches, and a changed
+  // home rebuilds the lot chunk a frame or more later. That rebuild used to
+  // close a tray opened in between, without a word (lane A9; CI 39168271006,
+  // 38824358463). Press Arrange as soon as the read lands, before the
+  // rebuild has had its frames: the rebuild waits for the placement now.
+  const lot = lotOrigin(free.gate)
+  await chunkWhole(page, { tx: lot.tx + near.x, ty: lot.ty + near.y })
+  await expect.poll(async () => (await homes(page)).reading, { timeout: SERVER_ANSWER_MS }).toBe(0)
   await page.getByTestId('arrange').click()
+  await expect(tray.locator('[data-piece="wooden-stool"]').first()).toBeVisible()
+  await frames(page, 10)
+  await chunkWhole(page, { tx: lot.tx + near.x, ty: lot.ty + near.y })
+  await expect(tray, 'a lot rebuild never closes an open tray').toBeVisible()
   await carryTo(page, 'wooden-stool', near.x, near.y)
   await expect(tray.getByRole('button', { name: /Set it here/ })).toBeEnabled()
   await shot(page, 'placement-land-desktop')
@@ -420,7 +432,7 @@ test('a joint deed: two players sign at the deed table in Pell’s office', asyn
     await silasSays(other, /See the Yard/)
     const shop = other.getByRole('dialog', { name: 'Silas’s Yard' })
     await shop.locator('[data-buy="lantern-post"]').click()
-    await expect(shop.locator('.msg.ok')).toContainText('Lantern Post is yours', { timeout: SERVER_ANSWER_MS })
+    await expect(shop.locator('.msg.ok')).toContainText('Lantern post is yours', { timeout: SERVER_ANSWER_MS })
     await shop.getByRole('button', { name: 'Close Silas’s yard' }).click()
     expect((await myHome(page)).postsBought).toBe(1)
     await throughGate(other, gate)

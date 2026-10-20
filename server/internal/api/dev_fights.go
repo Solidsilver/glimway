@@ -25,7 +25,7 @@ import (
 // (409 not-here), never woken and never written around. A camp already down
 // this cycle answers 200 with nothing new; an unknown camp 404. Compiled only into `-tags dev` builds and mounted by the
 // dev server command (server/cmd/glimway-server/dev_routes.go) for callers
-// on this machine.
+// on this machine, or for the accounts a settings file's [dev] table allows.
 
 // DevFightFallPath is the route's path.
 const DevFightFallPath = "/api/dev/fight-fall"

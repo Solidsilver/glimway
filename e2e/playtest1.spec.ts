@@ -2,7 +2,7 @@ import { mkdirSync, readFileSync } from 'node:fs'
 import type { BrowserContext, Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 import { dialogueState, frames, holdUntil, openTalk, readDialogue, untilChoices, waitForLive, warp } from './helpers'
-import { allow, habiticaURL, newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, setHabitica, sql, syncFromMenu, waitForWorld, accountOf, refusal, seedMarks } from './connected'
+import { allow, habiticaURL, newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, setHabitica, sql, syncFromMenu, waitForWorld, accountOf, refusal, seedMarks, reenter } from './connected'
 import { claimDeed, earnGlims, freshPlayer, homes, intoCottage, toMyLand, go } from './home-helpers'
 import { HEIRLOOM_REFUSALS } from '../src/content/heirlooms.ts'
 import { lotOrigin } from '../src/lib/lots.ts'
@@ -189,6 +189,9 @@ for (const device of ['desktop', 'phone'] as const) {
       test('Silas hands over the axe on the first try, even from a stale saved spot', async ({ page }) => {
         const id = await freshPlayer(page, 'AxeTester')
         seedMarks(id, 'echo:hollis')
+        // The tab reads the mark from the server, so a later state read can't take back
+        // the flag Silas's offer reads (CI, 2026-10-18: no axe among his replies).
+        await reenter(page)
         await page.evaluate(() => (window as unknown as { __fsDevAddFlag: (f: string) => void }).__fsDevAddFlag('echo:hollis'))
         // Silas out in his yard (his cycle: minute 10 of the hour), by the sawhorse.
         await setHour(page, { minute: 10, server: true })
@@ -211,7 +214,8 @@ for (const device of ['desktop', 'phone'] as const) {
       test('a refused offer is the giver’s own reply, in the conversation', async ({ page }) => {
         const id = await freshPlayer(page, 'RefusedTester')
         seedMarks(id, 'echo:hollis')
-        await page.evaluate(() => (window as unknown as { __fsDevAddFlag: (f: string) => void }).__fsDevAddFlag('echo:hollis'))
+        // A server-written mark: the page learns it from a fresh read of its state.
+        await reenter(page)
         // The server says no (as it would to someone it measured too far off).
         await page.route('**/api/items/heirloom', async (route) => route.fulfill(await refusal(page, 'too-far-away')))
         await setHour(page, { minute: 10, server: true })

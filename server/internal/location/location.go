@@ -33,8 +33,9 @@ const Outdoors Space = "outdoors"
 // Beyond is the place id of generated ground outside every Wilds footprint.
 const Beyond = "beyond"
 
-// SourceKind is where a chunk's ground comes from. Held (a kept epoch,
-// Lamps) comes later, as a store-backed wrapper over SourceOf.
+// SourceKind is where a chunk's ground comes from. Held is store-backed:
+// SourceOf (content only) answers generated for a held chunk, and the
+// store's holds (store/holds.go) say which are held.
 type SourceKind int
 
 const (
@@ -44,6 +45,8 @@ const (
 	SourceFixed
 	// SourceGenerated: made by the Wilds generator, still or at the wick.
 	SourceGenerated
+	// SourceHeld: a generated wick chunk pinned to an older wick epoch.
+	SourceHeld
 )
 
 func (k SourceKind) String() string {
@@ -52,6 +55,8 @@ func (k SourceKind) String() string {
 		return "fixed"
 	case SourceGenerated:
 		return "generated"
+	case SourceHeld:
+		return "held"
 	}
 	return "none"
 }
@@ -200,6 +205,12 @@ func SourceOf(cx, cy int) Source {
 // made there (frontier.Inside), or a fixed footprint covers it.
 func OnGrid(world string, cx, cy int) bool {
 	return frontier.Inside(world, cx, cy) || fixedAt(cx, cy) != nil
+}
+
+// OnGridPublished is OnGrid as committed holds make the frontier, for
+// readers outside the store's transaction (the presence socket).
+func OnGridPublished(world string, cx, cy int) bool {
+	return frontier.InsidePublished(world, cx, cy) || fixedAt(cx, cy) != nil
 }
 
 // Anchor resolves "<place>:<anchor>" ("hearthwick:arch", "hearthwick:lot:3") to

@@ -2,10 +2,13 @@ package api
 
 import (
 	"glimway/content"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/store"
 	"net/http"
 	"slices"
 	"testing"
+
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 // The woodpile's wire shape (contract.WoodpileView) as these tests read it.
@@ -53,17 +56,21 @@ func (x *rig) craftAndPlace(c *http.Cookie, s *response, piece, key string) {
 	}
 	px, py := 2, 2
 	if size == 2 {
-		spots := litSpots(x.home(c))
+		// A spot the server takes: lit, and clear of this gate's house site
+		// and doorway and of anything placed or growing (litSpots alone
+		// knows none of those, so a lot that put them there failed).
+		h := x.home(c)
+		item := homeInstance{ID: id, ItemDef: piece}
 		px, py = -1, -1
-		for _, p := range spots {
-			for _, q := range spots {
-				if q[0] == p[0]+1 && q[1] == p[1] {
-					px, py = p[0], p[1]
-				}
+		for _, p := range litSpots(h) {
+			at := &contract.HomesteadRequest{Scene: scene, X: wrapperspb.Int32(int32(p[0])), Y: wrapperspb.Int32(int32(p[1])), Rotation: wrapperspb.Int32(0)}
+			if validatePlacement(h, item, at) == nil {
+				px, py = p[0], p[1]
+				break
 			}
 		}
 		if px < 0 {
-			x.t.Fatal("no adjacent lit tiles for the woodpile")
+			x.t.Fatal("no free lit spot for the woodpile")
 		}
 	}
 	x.standForHome(s, scene)

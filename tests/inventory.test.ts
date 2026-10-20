@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { assetOf, costLine, inventoryEntries, materialsFromPack, mendLabel, newestFirst, newTabs, unseen, wearWords, type InventoryEntry } from '../src/lib/inventory.ts';
+import { assetOf, carriedPiece, costLine, homePieces, inventoryEntries, materialsFromPack, mendLabel, newestFirst, newTabs, unseen, wearWords, type InventoryEntry } from '../src/lib/inventory.ts';
 /** Entries by tab, in the bag's usual order (nothing seen yet): the old tab groups. */
 const group = (entries: readonly InventoryEntry[]) => {
   const out = {} as Record<'tools' | 'supplies' | 'keepsakes' | 'home', { main: InventoryEntry[]; road: InventoryEntry[] }>;
@@ -22,7 +22,7 @@ test('a pack sorts into supplies, keepsakes and the road', () => {
   const g = group(entries);
   assert.deepEqual(names(g.supplies.main), ['Timber', 'Stone'], 'materials in their own order, only what you have');
   assert.deepEqual(g.supplies.main.map((e) => e.qty), [12, 4]);
-  assert.deepEqual(names(g.keepsakes.main), ['Ember Charm', 'Tin Whistle', 'Whittled Fox'], 'the charm first, then trinkets by name');
+  assert.deepEqual(names(g.keepsakes.main), ['Ember Charm', 'Tin whistle', 'Whittled fox'], 'the charm first, then trinkets by name');
   assert.deepEqual(g.tools.main, [], 'no tools yet');
   assert.deepEqual(g.tools.road.map((e) => e.id), ['field-journal', 'hearthwick-map', 'lantern-route-rubbing'], 'quest items in story order');
   assert.equal(g.tools.road[2].name, 'Wenna’s Naming, Copied Out', 'descriptions from existing content');
@@ -41,9 +41,9 @@ test('in a world, server counts win: materials, items and crafted pieces', () =>
     items: { 'tin-whistle': 2, 'lamp-wick': 5, 'wooden-peg': 1 },
   });
   const g = group(entries);
-  assert.deepEqual(g.supplies.main.map((e) => `${e.name}×${e.qty}`), ['Timber×3', 'Fiber×7', 'Amber×1', 'Lamp Wick×5', 'Wooden Peg×1']);
+  assert.deepEqual(g.supplies.main.map((e) => `${e.name}×${e.qty}`), ['Timber×3', 'Fiber×7', 'Amber×1', 'Lamp wick×5', 'Wooden peg×1']);
   assert.ok(g.supplies.main.find((e) => e.id === 'lamp-wick')!.blurb.length > 0, 'crafted pieces have a line');
-  assert.deepEqual(g.keepsakes.main.map((e) => `${e.name}×${e.qty}`), ['Tin Whistle×2']);
+  assert.deepEqual(g.keepsakes.main.map((e) => `${e.name}×${e.qty}`), ['Tin whistle×2']);
 });
 
 test('home goods count set-out and put-away pieces, by name', () => {
@@ -61,9 +61,9 @@ test('home goods count set-out and put-away pieces, by name', () => {
   assert.deepEqual(
     g.home.main.map((e) => [e.name, e.placed, e.stored]),
     [
-      ['Braided Rug', 1, 0],
-      ['Oak Table', 0, 1],
-      ['Wooden Stool', 1, 1],
+      ['Braided rug', 1, 0],
+      ['Oak table', 0, 1],
+      ['Wooden stool', 1, 1],
     ],
   );
   assert.ok(g.home.main.every((e) => e.tab === 'home' && e.blurb.length > 0));
@@ -123,4 +123,25 @@ test('the card helpers: cost lines, hand-over assets, wear in words', () => {
   assert.equal(wearWords({ ...tool, state: 'blunt' } as never), 'Blunt. Mend it to use it again.');
   assert.equal(wearWords({ ...tool, maxCondition: 0 } as never), 'Never wears');
   assert.equal(wearWords({ ...tool, wardenSet: true, condition: 30 } as never), 'Sharp');
+});
+
+test('carried home pieces come from the items read, deed or no deed (review B6)', () => {
+  const home = [
+    { id: 'bench', itemDef: 'garden-bench', scene: 'outdoor' },
+    { id: 'old-lamp', itemDef: 'way-lamp', scene: null },
+  ];
+  // No deed: nothing from a homestead, the pack's way-lamp still there to set.
+  const noDeed = homePieces(null, [{ id: 'lamp', itemDef: 'way-lamp' }]);
+  assert.deepEqual(noDeed, [{ id: 'lamp', itemDef: 'way-lamp', scene: null }]);
+  assert.equal(carriedPiece(noDeed, 'way-lamp'), 'lamp');
+  assert.equal(carriedPiece(noDeed, 'garden-bench'), null);
+  // With a deed: what's set out at home, then the pack as the items read has it.
+  const both = homePieces(home, [{ id: 'lamp', itemDef: 'way-lamp' }]);
+  assert.deepEqual(both.map((p) => p.id), ['bench', 'lamp']);
+  assert.equal(carriedPiece(both, 'garden-bench'), null);
+  // Before the items read lands, the homestead's copy of the pack stands in.
+  assert.deepEqual(homePieces(home, null).map((p) => p.id), ['bench', 'old-lamp']);
+  const entry = inventoryEntries({ pack: [], decorations: noDeed }).find((e) => e.id === 'way-lamp');
+  assert.equal(entry?.kind, 'decoration');
+  assert.equal(entry?.stored, 1);
 });

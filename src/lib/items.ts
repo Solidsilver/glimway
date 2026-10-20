@@ -286,6 +286,10 @@ export function effectLine(e: ItemEffect): string {
       return 'Refills a lantern';
     case 'light-post':
       return 'Lights a lantern post';
+    case 'travel-home':
+      return 'Takes you back to the north arch';
+    case 'travel-lamp':
+      return 'Takes you back to the lamp it’s bound to';
     case 'papers-glint':
       return 'Papers glint brighter';
     case 'notice-later':
@@ -426,7 +430,7 @@ export function offHandTuck(a: HeroActivity, now: number, tuckedUntil: number): 
   return { tucked: now < until, until };
 }
 
-/** "a comfrey salve", "2 Lamp Wicks", "Finn's oatcakes", "the Empty Chair". */
+/** "a comfrey salve", "2 Lamp wicks", "Finn's oatcakes", "the Empty Chair". */
 export function giftPhrase(itemId: string, qty: number): string {
   const name = itemName(itemId);
   // Preserve names that already carry an article, a maker's name, or proper-name casing.

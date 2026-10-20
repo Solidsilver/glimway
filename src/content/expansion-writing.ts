@@ -82,7 +82,7 @@ export const HEARTHWICK_COMMONS: LocationInfo = {
   name: 'Hearthwick Commons',
   eyebrow: 'East of the village gate',
   tagline: 'A polished hame hangs on the gate. Nobody takes it down.',
-  description: 'A wide clearing of tall grass and stumps past the east gate, where carters once staged for the lantern road. Every Carting Day a polished hame is hung on the Commons gate for the cart that never came home.'
+  description: 'A wide clearing of tall grass and stumps past the east gate, where carters once staged for the Lantern Road. Every Carting Day a polished hame is hung on the Commons gate for the cart that never came home.'
 };
 
 export const BUILDER_NPC_DATA: BuilderNPC = {
@@ -92,7 +92,7 @@ export const BUILDER_NPC_DATA: BuilderNPC = {
     firstMeeting: {
       speaker: 'Silas',
       lines: [
-        'Well now, a neighbour. I drove the lantern road twenty years. Was meant to drive the last run, too. Knee gave out at the fork. Now I build roofs.',
+        'Well now, a neighbour. I drove the Lantern Road twenty years. Was meant to drive the last run, too. Knee gave out at the fork. Now I build roofs.',
         'Clear yourself a plot and I\'ll help you lay the skids. No deep footings, mind. Out here a house sits on the land like a barge sits on a river.'
       ]
     },
@@ -195,24 +195,24 @@ export const BUILDING_BLURBS: Record<string, string> = {
 };
 
 export const DECORATIONS_GLIMS: Decoration[] = [
-  { id: 'wooden-stool', name: 'Wooden Stool', blurb: 'Three uneven legs, perfectly balanced. Silas swears he meant it.', category: 'furniture', footprint: [1, 1] },
-  { id: 'reading-chair', name: 'Reading Chair', blurb: 'Overstuffed, a little frayed, and exactly the right distance from the lamp.', category: 'furniture', footprint: [1, 2] },
-  { id: 'braided-rug', name: 'Braided Rug', blurb: 'Thick wool in old Carting colours, smelling faintly of lavender.', category: 'decor', footprint: [2, 2] },
-  { id: 'iron-lantern', name: 'Iron Lantern', blurb: 'A small indoor lamp with a clean wick. Tell it what it holds, and it holds it.', category: 'decor', footprint: [1, 1] },
-  { id: 'oak-table', name: 'Oak Table', blurb: 'Windfall oak, three leafy branches left at the stump. Scrubbed smooth by years of spilled tea.', category: 'furniture', footprint: [2, 2] },
-  { id: 'potted-fern', name: 'Potted Fern', blurb: 'Thriving despite being ignored. Ferns don\'t wander. They sulk.', category: 'decor', footprint: [1, 1] },
-  { id: 'bookshelf', name: 'Short Bookshelf', blurb: 'Holds exactly twelve field journals: one for every wick of the year.', category: 'furniture', footprint: [2, 1] },
-  { id: 'wash-basin', name: 'Wash Basin', blurb: 'Cold Wend water. Wakes you faster than any rooster.', category: 'utility', footprint: [1, 1] }
+  { id: 'wooden-stool', name: 'Wooden stool', blurb: 'Three uneven legs, perfectly balanced. Silas swears he meant it.', category: 'furniture', footprint: [1, 1] },
+  { id: 'reading-chair', name: 'Reading chair', blurb: 'Overstuffed, a little frayed, and exactly the right distance from the lamp.', category: 'furniture', footprint: [1, 2] },
+  { id: 'braided-rug', name: 'Braided rug', blurb: 'Thick wool in old Carting colours, smelling faintly of lavender.', category: 'decor', footprint: [2, 2] },
+  { id: 'iron-lantern', name: 'Iron lantern', blurb: 'A small indoor lamp with a clean wick. Tell it what it holds, and it holds it.', category: 'decor', footprint: [1, 1] },
+  { id: 'oak-table', name: 'Oak table', blurb: 'Windfall oak, three leafy branches left at the stump. Scrubbed smooth by years of spilled tea.', category: 'furniture', footprint: [2, 2] },
+  { id: 'potted-fern', name: 'Potted fern', blurb: 'Thriving despite being ignored. Ferns don\'t wander. They sulk.', category: 'decor', footprint: [1, 1] },
+  { id: 'bookshelf', name: 'Short bookshelf', blurb: 'Holds exactly twelve field journals: one for every wick of the year.', category: 'furniture', footprint: [2, 1] },
+  { id: 'wash-basin', name: 'Wash basin', blurb: 'Cold Wend water. Wakes you faster than any rooster.', category: 'utility', footprint: [1, 1] }
 ];
 
 export const DECORATIONS_MATERIAL: Decoration[] = [
-  { id: 'lantern-post', name: 'Lantern Post', blurb: 'Squared oak, an amber lamp on the crossbar. Set it at the edge of your light and give it a name: land only stays put where a named lamp holds it. Each one costs more than the last.', category: 'utility', footprint: [1, 1] },
-  { id: 'stone-hearth', name: 'Stone Hearth', blurb: 'Quarried stone, never drift-stone, or it steps into the kitchen while you sleep. Keeps a glow till morning.', category: 'utility', footprint: [2, 1] },
-  { id: 'carved-bed', name: 'Carved Bed', blurb: 'Raised well off the floor and stuffed with hay and dried mint. Sleep high.', category: 'furniture', footprint: [2, 2] },
-  { id: 'woven-basket', name: 'Woven Basket', blurb: 'For spare bootlaces, twine, and whatever the Wilds hand back.', category: 'decor', footprint: [1, 1] },
-  { id: 'display-stand', name: 'Display Stand', blurb: 'Show off your favourite whittled fox. Check which ear is the long one.', category: 'furniture', footprint: [1, 1] },
-  { id: 'tool-rack', name: 'Tool Rack', blurb: 'Clean your tools. Rust is just iron forgetting it is a saw.', category: 'decor', footprint: [2, 1] },
-  { id: 'amber-sconce', name: 'Amber Sconce', blurb: 'Candle-grade amber that keeps the light a few minutes after the flame is out.', category: 'decor', footprint: [1, 1] }
+  { id: 'lantern-post', name: 'Lantern post', blurb: 'Squared oak, an amber lamp on the crossbar. Its light widens the yard you can build in, and it takes a name for its sign. Each one costs more than the last.', category: 'utility', footprint: [1, 1] },
+  { id: 'stone-hearth', name: 'Stone hearth', blurb: 'Quarried stone, never drift-stone, or it steps into the kitchen while you sleep. Keeps a glow till morning.', category: 'utility', footprint: [2, 1] },
+  { id: 'carved-bed', name: 'Carved bed', blurb: 'Raised well off the floor and stuffed with hay and dried mint. Sleep high.', category: 'furniture', footprint: [2, 2] },
+  { id: 'woven-basket', name: 'Woven basket', blurb: 'For spare bootlaces, twine, and whatever the Wilds hand back.', category: 'decor', footprint: [1, 1] },
+  { id: 'display-stand', name: 'Display stand', blurb: 'Show off your favourite whittled fox. Check which ear is the long one.', category: 'furniture', footprint: [1, 1] },
+  { id: 'tool-rack', name: 'Tool rack', blurb: 'Clean your tools. Rust is just iron forgetting it is a saw.', category: 'decor', footprint: [2, 1] },
+  { id: 'amber-sconce', name: 'Amber sconce', blurb: 'Candle-grade amber that keeps the light a few minutes after the flame is out.', category: 'decor', footprint: [1, 1] }
 ];
 
 // 4. The Wilds
@@ -221,8 +221,8 @@ export const WILDS_INNER: WildsInner = {
   location: {
     name: 'The Tangle',
     eyebrow: 'Just past the Commons',
-    tagline: 'The scar of a stormy night. The paths keep their own hours.',
-    description: 'Iron-oak roots and sudden drops, torn up by a fast drift thirty years ago. The old road ran through here once. Now the ground moves when nobody is watching it.'
+    tagline: 'The scar of a stormy night. It keeps its torn shape.',
+    description: 'Iron-oak roots and sudden drops, torn up by a stir thirty years ago. The old road ran through here once. The land here doesn\'t turn: it holds the shape that night left.'
   }
 };
 
@@ -236,11 +236,11 @@ export const POIS: POI[] = [
 
 /** Objects the Wilds give back at a turning. Ids match content/wilds.json (the generator drops these). */
 export const TRINKETS: Trinket[] = [
-  { id: 'whittled-fox', name: 'Whittled Fox', blurb: 'A carter\'s door-fox in soft pine, one ear carved longer than the other. Meant for a lintel somewhere.' },
-  { id: 'beeswax-candle', name: 'Beeswax Candle', blurb: 'Never lit, saved for a birthday. The Wilds kept it a long while. Now they\'ve handed it back.' },
-  { id: 'river-glass-bead', name: 'River Glass Bead', blurb: 'Frosted green glass off a carter\'s harness, tumbled smooth. The Wend brings down what the first frost throws.' },
-  { id: 'spare-bootlace', name: 'Spare Bootlace', blurb: 'Waxed leather, still knotted in the double hitch runners use, as if the boot came off a moment ago.' },
-  { id: 'tin-whistle', name: 'Tin Whistle', blurb: 'Dented to one clear note. Runners dent their whistles until the note is theirs. Whose note this was, nobody says.' }
+  { id: 'whittled-fox', name: 'Whittled fox', blurb: 'A carter\'s door-fox in soft pine, one ear carved longer than the other. Meant for a lintel somewhere.' },
+  { id: 'beeswax-candle', name: 'Beeswax candle', blurb: 'Never lit, saved for a birthday. The Wilds kept it a long while. Now they\'ve handed it back.' },
+  { id: 'river-glass-bead', name: 'River glass bead', blurb: 'Frosted green glass off a carter\'s harness, tumbled smooth. The Wend brings down what the first frost throws.' },
+  { id: 'spare-bootlace', name: 'Spare bootlace', blurb: 'Waxed leather, still knotted in the double hitch runners use, as if the boot came off a moment ago.' },
+  { id: 'tin-whistle', name: 'Tin whistle', blurb: 'Dented to one clear note. Runners dent their whistles until the note is theirs. Whose note this was, nobody says.' }
 ];
 
 /**
@@ -250,9 +250,9 @@ export const TRINKETS: Trinket[] = [
  * there changes the Go parity vectors.
  */
 export const MORE_TRINKETS: Trinket[] = [
-  { id: 'work-glove', name: 'Work Glove', blurb: 'Taken off for a fiddly job and never fetched. It still holds the shape of the hand that left it.' },
-  { id: 'knotted-halter', name: 'Knotted Ox-Halter', blurb: 'Rope worked in a patient, talkative knot, the kind a driver ties while chatting to the oxen.' },
-  { id: 'road-nails', name: 'Stamped Road-Nails', blurb: 'Eleven iron nails, each stamped with the wheel and wave. Lantern-post nails. Eleven exactly.' }
+  { id: 'work-glove', name: 'Work glove', blurb: 'Taken off for a fiddly job and never fetched. It still holds the shape of the hand that left it.' },
+  { id: 'knotted-halter', name: 'Knotted ox-halter', blurb: 'Rope worked in a patient, talkative knot, the kind a driver ties while chatting to the oxen.' },
+  { id: 'road-nails', name: 'Stamped road-nails', blurb: 'Eleven iron nails, each stamped with the wheel and wave. Lantern-post nails. Eleven exactly.' }
 ];
 
 export const MATERIALS: Material[] = [

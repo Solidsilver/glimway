@@ -62,6 +62,8 @@ import { ReportPump } from '../lib/api/report-pump.ts'
 import type { HomeAction, HomeActionResponse, HomeOp, HomeView, ItemsOp, CommonsResponse, Snapshot } from '../lib/api/types.ts'
 import { contributeRequest, deskCopyRequest, hearthCraftRequest, homesteadRequest, itemsRequest, mailKeyedRequest, mailSendRequest, shelfRequest, storageRequest, craftRequest, type ItemsFields, type MailSendAction, type ShelfAction, type StorageMoveAction } from '../lib/api/requests.ts'
 import { EnvelopeSchema, PlayerStateSchema, PlayRequestSchema, type PlayerState } from '../lib/gen/glimway/v1/state_pb.js'
+import type { CampResult, CampsRead, LampNoticesRead, RecoveryCollectResult, RecoveryRead } from '../lib/gen/glimway/v1/camps_pb.js'
+import type { CommunalLampResult, CommunalLampsRead, LampLandmarksRead, WaysHomeRead, WaysHomeResult } from '../lib/gen/glimway/v1/lamps_pb.js'
 import { FallRequestSchema, MarkRequestSchema, ProfileReportSchema, QuestStepRequestSchema, SpendRequestSchema, TakePaperRequestSchema, type ProfileResult, type SettleEchoResult, type WildsClaimResult as WildsClaimProto, type WildsLanternResult as WildsLanternProto, type WildsClearResult, type WildsLayResult, type WildsLiftResult, type WildsDiscoverResult } from '../lib/gen/glimway/v1/operations_pb.js'
 import { ContributeRequestSchema, CraftRequestSchema, DeskCopyRequestSchema, HearthCraftRequestSchema, MailKeyedRequestSchema, MailSendRequestSchema, StorageMoveRequestSchema } from '../lib/gen/glimway/v1/village_pb.js'
 import { HomesteadRequestSchema, ShelfRequestSchema } from '../lib/gen/glimway/v1/homestead_pb.js'
@@ -74,12 +76,21 @@ import { rawUserFor } from '../lib/habitica/client.ts'
 import type { HabiticaProfile, VitalsSource } from '../lib/habitica/types.ts'
 import { FLAGS, WELCOME_GLIMS, type GlimSpend, type SpendReason } from '../lib/glims.ts'
 import type { GameState } from '../lib/state.ts'
+import { WAYS_HOME_LINES } from '../lib/ways-home.ts'
 import { EV, type Emit, type LinkPayload, type LinkStatus, type WildsSettledPayload } from './event-names.ts'
 import { serverNow } from './clock.ts'
 import { glimsGift } from '../content/purse.ts'
 import { unlockNotice, type MagicMarks } from '../lib/combat.ts'
 
 const HEARTBEAT_MS = 30_000
+
+/**
+ * Links of this page that are closing (a session ended for a Retry, a move,
+ * Back to the title), by lock name: until each has let its outbox lock go,
+ * a new link for the same account and device waits instead of finding the
+ * lock taken and calling itself superseded by its own page.
+ */
+const closing = new Map<string, Set<Promise<void>>>()
 /** After this long without an answer the chip says "Reaching the world…". */
 const REACHING_MS = 60_000
 
@@ -149,7 +160,7 @@ const ROUTE_PATHS: Record<MutationOp['kind'], (r: MutationRoute) => string> = {
 function routeFromPath(path: string): MutationRoute | null {
   const m = (re: RegExp) => re.exec(path)
   let x: RegExpExecArray | null
-  if ((x = m(/^\/api\/homestead\/(buy|place|move|remove|upgrade|claim|clear|invite|joint|leave)$/))) return { kind: 'home', op: x[1] }
+  if ((x = m(/^\/api\/homestead\/(buy|place|move|remove|upgrade|claim|clear|invite|joint|leave|lantern)$/))) return { kind: 'home', op: x[1] }
   if ((x = m(/^\/api\/items\/([a-z-]+)$/))) return { kind: 'items', op: x[1] }
   if ((x = m(/^\/api\/mail\/([^/]+)\/(claim|recall)$/))) return { kind: x[2] === 'claim' ? 'mail-claim' : 'mail-recall', id: decodeURIComponent(x[1]!) }
   if ((x = m(/^\/api\/projects\/([^/]+)\/contribute$/))) return { kind: 'contribute', id: decodeURIComponent(x[1]!) }
@@ -419,7 +430,8 @@ export class Link {
   private readonly now: () => number
   private readonly serverClock: () => number
   private readonly locks: LockLike | null
-  private readonly channel: ChannelLike | null
+  /** Null once stopped: a closed BroadcastChannel throws on every post. */
+  private channel: ChannelLike | null
   private lock: HeldLock | null = null
   /** The record's fence while this tab owns it (null: not the owner, never writes). */
   private fence: number | null = null
@@ -485,7 +497,11 @@ export class Link {
     // The same tab's lease resumes after a reload; another tab's never does.
     this.lease = record.client === init.clientId ? record.lease : null
     this.reports = new ReportBook(record.client === init.clientId ? record.reports : null)
-    if (record.client !== init.clientId || !record.reports) this.reports.reset(this.basis())
+    if (record.client !== init.clientId || !record.reports) {
+      this.reports.reset(this.basis())
+      // No place of this page's own: the hero starts at the world's, every move in it followed.
+      this.reports.moved = this.movedVersion()
+    }
     this.reporter = new ReportPump({
       reports: this.reports,
       lease: () => this.lease ?? '',
@@ -522,7 +538,10 @@ export class Link {
     const n = this.reports.next
     const pendingFall = n.boundary !== null && this.entries.some((e) => e.id === n.boundary && e.kind === 'fall')
     if (n.place && (pendingFall || n.basis >= (this.server.vitals?.vitalsSetVersion ?? 0))) {
-      const live = gameStateOf(create(PlayerStateSchema, { ...this.server, place: { ...this.server.place!, area: n.place.area, x: n.place.x, y: n.place.y } }))
+      // A move the world made since that place was noted (a way home whose
+      // answer was lost) puts the hero where it chose; attach follows it.
+      const place = this.movedVersion() > this.reports.moved ? this.server.place! : { ...this.server.place!, area: n.place.area, x: n.place.x, y: n.place.y }
+      const live = gameStateOf(create(PlayerStateSchema, { ...this.server, place }))
       return { ...view, area: live.area, position: live.position, hp: Math.min(n.hp, view.maxHp), mana: Math.min(n.mana, view.maxMana) }
     }
     return view
@@ -796,9 +815,31 @@ export class Link {
     return Math.max(this.server.vitals?.vitalsSetVersion ?? 0, this.server.place?.placeSetVersion ?? 0)
   }
 
+  /** The last place the world chose itself (`Place.movedVersion`; 0: none). */
+  private movedVersion(): number {
+    return this.server.place?.movedVersion ?? 0
+  }
+
+  /**
+   * The world chose the hero's place (a way home's landing, a reach
+   * settled around them, a room it recovered: `Place.movedVersion`) since
+   * the live place last followed such a move: the session goes there (the
+   * scene follows, EV.relocate). Checked as each state is adopted, answers
+   * and reads alike, and before any place is noted, so no report carries a
+   * basis whose move the hero hasn't made. A place the client sent itself
+   * is never a move, whatever the world echoes. True when it moved the hero.
+   */
+  private followMove(): boolean {
+    if (!this.session || this.movedVersion() <= this.reports.moved) return false
+    this.reports.moved = this.movedVersion()
+    this.refresh({ relocate: true })
+    return true
+  }
+
   private noteLive(): void {
     const s = this.session
     if (!s) return
+    this.followMove()
     this.reports.note(whereOf(s.state), Math.max(0, s.state.hp), Math.max(0, s.state.mana))
   }
 
@@ -848,6 +889,7 @@ export class Link {
     // A place watermark the screen now follows (no vitals written): name it.
     this.reports.rebase(this.basis())
     this.refresh({ vitals })
+    if (this.followMove()) this.noteLive()
     return true
   }
 
@@ -890,16 +932,25 @@ export class Link {
     if (this.fence !== null) return Promise.resolve(true)
     if (this.owning) return this.owning
     this.owning = (async () => {
-      const lock = await holdLock(this.locks, lockName(this.accountId, this.device), steal)
+      const name = lockName(this.accountId, this.device)
+      // A link of this page still closing holds the lock for a moment yet.
+      await Promise.all([...(closing.get(name) ?? [])])
+      if (this.stopped) return false
+      const lock = await holdLock(this.locks, name, steal)
       if (!lock) return false
       if (this.stopped) {
-        lock.release()
+        this.letGo(lock)
         return false
       }
       const record = await this.store.claim(this.accountId, this.device)
+      if (this.stopped) {
+        // Stopped while claiming: the lock must not outlive the link.
+        this.letGo(lock)
+        return false
+      }
       if (!record) {
         // The record couldn't be claimed (storage failed): try again with the next retry.
-        lock.release()
+        this.letGo(lock)
         this.storageFailed()
         return false
       }
@@ -929,7 +980,10 @@ export class Link {
     this.needsRead = this.entries.some((e) => e.sent)
     if (record.client === this.clientId && record.reports) {
       const live = this.reports.next
+      // A move this page already followed (attach, before the claim) stays followed.
+      const moved = this.reports.moved
       Object.assign(this.reports, new ReportBook(record.reports))
+      this.reports.moved = Math.max(this.reports.moved, moved)
       if (live.place) this.reports.note(live.place, live.hp, live.mana)
     }
     const state = record.server ? safeState(record.server) : null
@@ -941,7 +995,7 @@ export class Link {
   /** Another tab owns the outbox now (its Take over, or a newer tab without Web Locks): stop, write nothing. */
   private ownershipLost(): void {
     this.fence = null
-    this.lock?.release()
+    if (this.lock) this.letGo(this.lock)
     this.lock = null
     if (this.stopped) return
     this.release('hold')
@@ -1240,6 +1294,7 @@ export class Link {
     // A step's gift (paid once, by the server): the toast follows its answer.
     const gift = head.kind === 'quest-step' && (result as { case?: string; value?: { glims?: number } })?.case === 'questStep' ? (result as { value: { glims: number } }).value.glims : 0
     if (gift > 0) this.emitter(EV.toast, { text: glimsGift(gift), icon: 'glim', art: 'glims-few' })
+    this.landedLate(head, result)
     this.notify(head, { ok: true, state, result })
     return stored
   }
@@ -1299,8 +1354,24 @@ export class Link {
       if (!this.waiters.has(head.id)) this.emitter(EV.toast, { text: UNDONE[head.kind] ?? 'Something this device queued was already used for something else. It didn’t happen.', kind: 'error' })
       this.notify(head, { ok: false, code: 'idempotency-mismatch' })
     } else if (head.kind === 'mutation') this.notify(head, { ok: false, code: 'resolved' })
-    else this.notify(head, { ok: true, state: this.server, result })
+    else {
+      this.landedLate(head, result)
+      this.notify(head, { ok: true, state: this.server, result })
+    }
     return stored
+  }
+
+  /**
+   * A way home that went through after its caller stopped waiting (it heard
+   * `pending`, or the page reloaded): the hero has already been moved
+   * (`followMove`), so say why.
+   */
+  private landedLate(head: OutboxEntry, result: unknown): void {
+    if (head.kind !== 'ways-home' || this.waiters.has(head.id)) return
+    const r = result as { case?: string; value?: WaysHomeResult } | null
+    if (r?.case !== 'waysHome' || !r.value || r.value.action === 'bind') return
+    const b = r.value.binding
+    this.emitter(EV.toast, { text: WAYS_HOME_LINES.late(r.value.action === 'pouch' && b ? WAYS_HOME_LINES.arrivedBeside(b) : WAYS_HOME_LINES.arrived.turncap) })
   }
 
   /**
@@ -1514,11 +1585,16 @@ export class Link {
    * The hero arrived in a scene. A place in another area (or another Wilds
    * region) than the last report named is reported now, from where the
    * hero really stands after the arrival (a fresh region read included).
+   * Forced: after a reload the restored book already holds this place, so
+   * it isn't new, but the world records a turning only from a report
+   * (story.Record), and this page has named no place yet.
    */
   arrived(): void {
     this.noteLive()
     const area = this.reports.next.place?.area
-    if (area && area !== this.reports.reportedArea) this.reportSoon()
+    if (!area || area === this.reports.reportedArea) return
+    this.reportForced = true
+    this.reportSoon()
   }
 
   /** A signature cast happened on screen (counted against the server's cast budget). */
@@ -1536,12 +1612,15 @@ export class Link {
    * stands there, they're moved to the world's place (the scene follows,
    * EV.relocate), and the next report names it, so a reload starts there too.
    * `otherArea`: only when the world holds them in another area (an ignored
-   * place: within one area it's a stale sample, and the next report settles it).
+   * place: within one area it's a stale sample, and the next report settles it,
+   * so the place is due again even if the hero hasn't moved: otherwise the
+   * world keeps the older spot, and a reload's upload sends nothing new).
    */
   private followServerPlace(refused: WhereJson, opts: { otherArea?: boolean } = {}): void {
     const s = this.session
     const held = this.server.place
     if (!s || !held) return
+    if (held.area === refused.area && opts.otherArea && (held.x !== refused.x || held.y !== refused.y)) this.reports.again()
     if (held.area === refused.area && (opts.otherArea || (held.x === refused.x && held.y === refused.y))) return
     if (whereOf(s.state).area !== refused.area) return
     this.refresh({ relocate: true })
@@ -1967,6 +2046,75 @@ export class Link {
     return wildsOutcome(await this.operation('wilds-discover', { epoch: req.epoch, place: req.place }, { key: req.key, where: req.where, valid: value => !!value.discovery }))
   }
 
+  // ------------------------------------------------------------ camps (lamps.md 2.5, 2.7)
+
+  /** A camp operation (set, fill, place, remove, plant) from where the hero stands. Needs a connection. */
+  async camp(fields: OperationFields<'camp'>): Promise<WildsOutcome<CampResult>> {
+    if (!this.session) return { ok: false, code: 'unknown' }
+    return wildsOutcome(await this.operation('camp', fields))
+  }
+
+  /** The world's camps (GET /api/camps). */
+  async campsRead(): Promise<HomeRead<CampsRead>> {
+    return this.read(() => this.api.run(() => this.ops.camps()))
+  }
+
+  /** What waits for you in Pell's crates (GET /api/recovery). */
+  async recoveryRead(): Promise<HomeRead<RecoveryRead>> {
+    return this.read(() => this.api.run(() => this.ops.recovery()))
+  }
+
+  /** The lights you keep that are dimming (out of oil) and you haven't been told of this episode (GET /api/lamp-notices; the read records them). */
+  async lampNotices(): Promise<HomeRead<LampNoticesRead>> {
+    return this.read(() => this.api.run(() => this.ops.lampNotices()))
+  }
+
+  /**
+   * Take what waits at Pell's into the pack, at his desk: the entries picked
+   * (none: everything), any plant among them as its seed if it's in asSeed.
+   */
+  async recoveryCollect(pick: { entries?: readonly number[]; asSeed?: readonly number[] } = {}): Promise<WildsOutcome<RecoveryCollectResult>> {
+    if (!this.session) return { ok: false, code: 'unknown' }
+    return wildsOutcome(await this.operation('recovery-collect', { entries: [...(pick.entries ?? [])], asSeed: [...(pick.asSeed ?? [])] }))
+  }
+
+  // ------------------------------------------------------------ communal lamps (lamps.md 1.3, 2.4)
+
+  /** A communal-lamp operation (relight, tend, post, lift) from where the hero stands. Needs a connection. */
+  async communalLamp(fields: OperationFields<'communal-lamp'>): Promise<WildsOutcome<CommunalLampResult>> {
+    if (!this.session) return { ok: false, code: 'unknown' }
+    return wildsOutcome(await this.operation('communal-lamp', fields))
+  }
+
+  /** The world's lit communal lamps (GET /api/communal-lamps). */
+  async communalLampsRead(): Promise<HomeRead<CommunalLampsRead>> {
+    return this.read(() => this.api.run(() => this.ops.communalLamps()))
+  }
+
+  /** The landmarks a lamp may be named by (GET /api/lamp-landmarks/<lamp>). */
+  async lampLandmarksRead(lamp: string): Promise<HomeRead<LampLandmarksRead>> {
+    return this.read(() => this.api.run(() => this.ops.lampLandmarks(lamp)))
+  }
+
+  // ------------------------------------------------------------ ways home (lamps.md 1.4)
+
+  /**
+   * Bind your lamp-ash pouch to the lamp beside you, or travel by turncap or
+   * pouch. Travel is the server's: its landing is a move the world made, so
+   * the hero follows it as the answer is adopted (`followMove`), and the
+   * scene follows (EV.relocate). `pending`: it may still land later, and is
+   * told then (`landedLate`). Needs a connection.
+   */
+  async waysHome(fields: OperationFields<'ways-home'>): Promise<WildsOutcome<WaysHomeResult>> {
+    if (!this.session) return { ok: false, code: 'unknown' }
+    return wildsOutcome(await this.operation('ways-home', fields))
+  }
+
+  /** Your pouch's binding (GET /api/ways-home). */
+  async waysHomeRead(): Promise<HomeRead<WaysHomeRead>> {
+    return this.read(() => this.api.run(() => this.ops.waysHomeRead()))
+  }
+
   // ------------------------------------------------------------ fishing (design crafts 5.4)
 
   /** Cast a line from a bank with the rod in hand. The server freezes the band and the bite. */
@@ -2237,6 +2385,46 @@ export class Link {
     return { kept: this.entries.length }
   }
 
+  /**
+   * End this link once `after` settles (the session's last save): it
+   * stops, and resolves once its outbox lock is let go. Until then a new link
+   * of this page for the same outbox waits for it (`own`).
+   */
+  close(after: Promise<unknown> = Promise.resolve()): Promise<void> {
+    if (this.closed) return this.closed
+    const name = lockName(this.accountId, this.device)
+    const set = closing.get(name) ?? new Set<Promise<void>>()
+    closing.set(name, set)
+    const done: Promise<void> = after
+      .catch(() => undefined)
+      .then(async () => {
+        // A claim under way finishes first, then finds the link stopped and lets go.
+        const owning = this.owning
+        this.stop()
+        await owning?.catch(() => undefined)
+        await this.lockGone
+      })
+      .finally(() => {
+        set.delete(done)
+        if (!set.size && closing.get(name) === set) closing.delete(name)
+      })
+    set.add(done)
+    this.closed = done
+    return done
+  }
+
+  private closed: Promise<void> | null = null
+  /** Resolves once every outbox lock this link held is really let go (a browser releases it a moment after `release`). */
+  private lockGone: Promise<unknown> = Promise.resolve()
+
+  /** Release a lock this link acquired, and count its release among what `close` waits for. */
+  private letGo(lock: HeldLock): void {
+    const gone = lock.lost.catch(() => undefined)
+    const before = this.lockGone
+    this.lockGone = Promise.all([before, gone])
+    lock.release()
+  }
+
   stop(): void {
     this.stopped = true
     this.stopTimers()
@@ -2246,12 +2434,15 @@ export class Link {
     this.saveRetry = null
     for (const [, waiter] of this.waiters) waiter({ ok: false, code: 'pending' })
     this.waiters.clear()
-    this.lock?.release()
+    if (this.lock) this.letGo(this.lock)
     this.lock = null
     this.fence = null
     if (this.channel) {
       this.channel.onmessage = null
       this.channel.close()
+      // A save still draining (a report, a queued change) lands after this:
+      // its record is stored, and it tells no other tab.
+      this.channel = null
     }
     if (typeof window !== 'undefined') window.removeEventListener('online', this.onOnline)
   }

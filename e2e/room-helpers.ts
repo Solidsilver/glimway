@@ -1,6 +1,8 @@
 import { expect, type Page } from './fixtures'
-import { readDialogue, settled, waitForLive } from './helpers'
-import { moveServerClock } from './connected'
+import { readDialogue, settled, toastAfter, toastCount, waitForLive } from './helpers'
+import { moveServerClock, wickSlack } from './connected'
+import { calendarAt } from '../src/lib/calendar.ts'
+import { SEASON_SHIFT_NOTICE } from '../src/content/expansion-writing.ts'
 
 /**
  * Rooms (docs/design/indoors.md 2): front doors on the village map, the
@@ -82,6 +84,27 @@ export function nextMinute(now: number, minute: number, second = 5): number {
   return t > now ? t : t + 3600
 }
 
+/** How near the wick's turning setHour won't go: up to an hour on, and the spec runs on after it. */
+const TURNING_SLACK = 2 * 3600
+
+/**
+ * Keep both clocks clear of the wick's turning: within TURNING_SLACK of one,
+ * the world's clock goes an hour past it and the screen's with it
+ * (wickSlack), and a Turning the page plays for that is waited out. Without
+ * this, a spec run in the last hour of a wick set :20 past the turning, and
+ * the Turning held play mid-spec (CI 39176860378, 23:45 UTC on 2026-10-18).
+ */
+async function clearOfTurning(page: Page, now: number): Promise<number | null> {
+  if (calendarAt(now).nextTurning - now >= TURNING_SLACK) return null
+  const mark = await toastCount(page)
+  const open = await page.evaluate(() => (window as unknown as { __fsSafety?: () => { areaId: string } | null }).__fsSafety?.()?.areaId === 'outdoors')
+  const moved = await wickSlack(page, TURNING_SLACK)
+  if (!open) return moved
+  await toastAfter(page, mark, SEASON_SHIFT_NOTICE, 30_000)
+  await settled(page, { area: 'outdoors' })
+  return moved
+}
+
 /**
  * Set the hour so the residents stand where a spec expects them, on both
  * clocks: the game's (the dev clock) and, with `server`, the world's (moved
@@ -91,7 +114,10 @@ export function nextMinute(now: number, minute: number, second = 5): number {
  */
 export async function setHour(page: Page, opts: { minute?: number; second?: number; server?: boolean } = {}): Promise<number> {
   const minute = opts.minute ?? 57
-  let at = nextMinute(Math.floor(Date.now() / 1000), minute, opts.second)
+  const real = Math.floor(Date.now() / 1000)
+  // Past a turning, the world's clock leads real time for the rest of the spec.
+  const base = (await clearOfTurning(page, opts.server ? await moveServerClock(page, 0) : real)) ?? real
+  let at = nextMinute(base, minute, opts.second)
   if (opts.server) {
     at = nextMinute(await moveServerClock(page, 0), minute, opts.second)
     await moveServerClock(page, at)

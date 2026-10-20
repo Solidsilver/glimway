@@ -107,7 +107,7 @@ func (a *Server) keyedOpFinalized(w http.ResponseWriter, r *http.Request, op *co
 		where = nil
 	} else if where == nil || !validArea(where.Area) || !finiteWhere(where) {
 		return refuse(fail(409, "invalid-position"))
-	} else if !wildsWhereInside(where) {
+	} else if !wildsWhereInside(s.WorldID, where) {
 		return refuse(fail(409, "beyond-frontier"))
 	}
 	if _, err = tx.ExecContext(ctx, "SAVEPOINT gameplay"); err != nil {
@@ -119,6 +119,10 @@ func (a *Server) keyedOpFinalized(w http.ResponseWriter, r *http.Request, op *co
 		s.State.Position = rulesPosition(where)
 		if a.Config.Placement != nil {
 			err = a.Config.Placement.Record(ctx, tx, &s, where, now)
+		}
+		// Standing in a Wilds chunk keeps its Common paths this wick.
+		if err == nil && where.Area == outdoorsArea {
+			err = creditVisit(ctx, tx, s.WorldID, where.X, where.Y, now)
 		}
 	}
 	// Apply begins after the savepoint/placement; domain callbacks own their
@@ -148,6 +152,10 @@ func (a *Server) keyedOpFinalized(w http.ResponseWriter, r *http.Request, op *co
 		// items only.
 		if decision == rollbackOperation {
 			if _, e := tx.ExecContext(ctx, "ROLLBACK TO gameplay"); e != nil {
+				return e
+			}
+			// A hold taken (or let go) since is undone; so is its reach.
+			if e := store.RefreshReach(ctx, tx); e != nil {
 				return e
 			}
 		}
@@ -223,15 +231,15 @@ func finiteWhere(where *contract.Where) bool {
 }
 
 // wildsWhereInside: a Wilds `where` (world pixels, finite) stands in a chunk
-// inside the frontier (open-map.md 2.6); any other area is not the
+// inside the world's frontier (open-map.md 2.6, lamps.md 2.2); any other area is not the
 // frontier's business.
-func wildsWhereInside(where *contract.Where) bool {
+func wildsWhereInside(world string, where *contract.Where) bool {
 	if where.Area != outdoorsArea {
 		return true
 	}
 	tx, ty := wilds.TileOfPixel(where.X, where.Y)
 	cx, cy := wilds.ChunkOf(tx, ty)
-	return location.OnGrid("", cx, cy)
+	return location.OnGrid(world, cx, cy)
 }
 
 func rulesPosition(w *contract.Where) rules.Position { return rules.Position{X: w.X, Y: w.Y} }

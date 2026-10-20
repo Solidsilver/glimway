@@ -188,3 +188,33 @@ func Delete(ctx context.Context, e Execer, key Key) error {
 		key.WorldID, key.Realm, key.Layer, key.Chunk, key.Epoch, key.Entity)
 	return err
 }
+
+// Ending reads every row of one kind under an epoch of a realm and layer,
+// expired or not: the turning's read of what is ending, which judges rows
+// whose ends_at is that turning (lamps.md 2.7). Order: chunk, then entity.
+func Ending(ctx context.Context, q Lister, world, realm string, layer int, epoch, kind string) ([]Row, error) {
+	rows, err := q.QueryContext(ctx, `SELECT chunk, entity, state, changed_at, changed_by, ends_at FROM world_changes
+ WHERE world_id=? AND realm=? AND layer=? AND epoch=? AND kind=? ORDER BY chunk, entity`, world, realm, layer, epoch, kind)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []Row{}
+	for rows.Next() {
+		var (
+			row       Row
+			changedBy sql.NullString
+			endsAt    sql.NullInt64
+		)
+		if err = rows.Scan(&row.Chunk, &row.Entity, &row.State, &row.ChangedAt, &changedBy, &endsAt); err != nil {
+			return nil, err
+		}
+		row.WorldID, row.Realm, row.Layer, row.Epoch, row.Kind, row.ChangedBy = world, realm, layer, epoch, kind, changedBy.String
+		if endsAt.Valid {
+			end := endsAt.Int64
+			row.EndsAt = &end
+		}
+		out = append(out, row)
+	}
+	return out, rows.Err()
+}

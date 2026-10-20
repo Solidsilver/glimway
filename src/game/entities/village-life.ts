@@ -34,6 +34,8 @@ import { villageFor, type Village } from '../village'
 import { calendarFind } from '../../lib/wilds/stories'
 import { sellerFor } from '../../lib/items'
 import { sellerChoices } from '../../lib/purse'
+import { WICK_SAP, refineChoice } from '../../lib/wick-sap'
+import { itemsFor } from '../items'
 import { grantPaper } from '../papers'
 import type { Interactable, Interactables } from './interactables'
 import { expose } from '../dev-hooks'
@@ -220,6 +222,7 @@ export class VillageLayer {
       source: this.village.calendarSource,
       worldFlags: this.village.worldFlags,
       projectsStatus: this.village.projectsStatus,
+      mailStatus: this.village.mailStatus,
       loadProjects: () => this.village.loadProjects()
     }), scene)
     this.village.ensureCalendar()
@@ -232,18 +235,31 @@ export class VillageLayer {
 
   // ------------------------------------------------------------ interactions
 
-  /** The madder stall on Carting Day: what the dyers' scrap baskets hold. */
-  private visitStall(): void {
-    const stall = sellerFor('madder-stall')
+  /** A seller at a fixed spot (the madder stall on Carting Day, the chandler): what they sell, and the chandler's free refining of Wick Tree sap. */
+  private visitStall(id = 'madder-stall'): void {
+    const stall = sellerFor(id)
     if (!stall) return
     const connected = !!this.deps.session.link
+    const sap = id === WICK_SAP.refiner && connected ? itemsFor(this.deps.session).view?.stacks.filter((s) => s.itemDef === WICK_SAP.item).reduce((n, s) => n + s.qty, 0) ?? 0 : 0
+    const refine = refineChoice(sap)
     openDialogue({
-      id: 'village:stall',
+      id: `village:${id === 'madder-stall' ? 'stall' : id}`,
       speaker: stall.npc,
       lines: stall.goods.map((g) => g.line),
       choices: connected
-        ? [...sellerChoices(stall), { text: 'Not yet' }]
+        ? [...(refine ? [refine] : []), ...sellerChoices(stall), { text: 'Not yet' }]
         : undefined
+    })
+  }
+
+  /** The Wick Tree: once a wick, a jar of its sap for anyone (lamps.md 2.5). */
+  private visitWickTree(): void {
+    const connected = !!this.deps.session.link
+    openDialogue({
+      id: 'village:wick-tree',
+      speaker: 'The Wick Tree',
+      lines: ['Sap rises slow under the bark. A tap and a jar hang ready on the trunk.'],
+      choices: connected ? [{ text: 'Tap the tree for sap', action: 'sap:tap' }, { text: 'Not yet' }] : undefined
     })
   }
 
@@ -284,6 +300,17 @@ export class VillageLayer {
       const stall = sellerFor('madder-stall')!
       const at = contentPosition(stall.area, stall.tx, stall.ty)
       list.push({ id: 'village:stall', x: tileMid(at.tx), y: tileBottom(at.ty) + 2, label: stall.goods[0]?.label ?? 'Visit the madder stall', verb: 'Buy', marker: notice, markerOffset: 32, activate: () => this.visitStall() })
+    }
+    // The chandler sells hearth oil for the lot lanterns, any day.
+    const chandler = w.open ? sellerFor('chandler') : null
+    if (chandler?.area !== undefined && chandler.tx !== undefined && chandler.ty !== undefined) {
+      const at = contentPosition(chandler.area, chandler.tx, chandler.ty)
+      list.push({ id: 'village:chandler', x: tileMid(at.tx), y: tileBottom(at.ty) + 2, label: 'Visit the chandler', verb: 'Buy', markerOffset: 32, activate: () => this.visitStall('chandler') })
+    }
+    // The Wick Tree gives its sap any day, once a wick.
+    if (w.open) {
+      const at = contentPosition(WICK_SAP.area, WICK_SAP.tx, WICK_SAP.ty)
+      list.push({ id: 'village:wick-tree', x: tileMid(at.tx), y: tileBottom(at.ty) + 2, label: 'Tap the Wick Tree', verb: 'Tap', markerOffset: 32, activate: () => this.visitWickTree() })
     }
     // Only when it changed: replacing the list rebuilds its markers.
     const here = list.filter((i) => this.scope.has(Math.floor(i.x / TILE), Math.floor((i.y - 8) / TILE)))

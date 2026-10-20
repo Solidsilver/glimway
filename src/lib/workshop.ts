@@ -35,6 +35,13 @@ function validSwaps(r: Recipe): boolean {
   return true;
 }
 
+/** A starting recipe names neither a page nor where it's found; a found one names both, and its page is a paper. */
+function validRecipePage(r: { page: string; found: string }): boolean {
+  if ((r.page === '') !== (r.found === '')) return false;
+  if (r.page === '') return true;
+  return itemDef(r.page)?.kind === 'paper';
+}
+
 /** Throws on anything content/workshop.go would refuse. */
 export function validateCrafting(value: unknown): Crafting {
   const c = decodeContent(CraftingSchema, value, 'crafting', ['utilityItems', 'recipes', 'hearthRecipes']) as Crafting;
@@ -46,10 +53,12 @@ export function validateCrafting(value: unknown): Crafting {
     if (!d || d.kind !== 'part' || d.name !== v.name) return bad(`utility item ${v.id}`);
     items.add(v.id);
   }
-  // A bench recipe: tier 2, its output any catalogue good.
+  // A bench recipe: tier 2, its output any catalogue good; a found recipe
+  // names the page that teaches it, as a hearth recipe does.
   for (const r of c.recipes) {
     if (recipes.has(r.id)) return bad(`duplicate id ${r.id}`);
     if (r.minTier !== 2 || !validRecipeCosts(r.materials) || !validSwaps(r)) return bad(`recipe ${r.id}`);
+    if (!validRecipePage(r)) return bad(`recipe ${r.id} page`);
     if (r.output.kind !== 'decoration' && r.output.kind !== 'item' && r.output.kind !== 'instance') return bad(`recipe ${r.id} output`);
     if (r.output.kind === 'decoration') {
       const def = HOMESTEAD_DATA.items.find(v => v.id === r.output.id);
@@ -66,11 +75,7 @@ export function validateCrafting(value: unknown): Crafting {
   for (const r of c.hearthRecipes) {
     if (recipes.has(r.id)) return bad(`duplicate id ${r.id}`);
     if (r.minTier !== 1 || !validRecipeCosts(r.materials) || !validSwaps(r)) return bad(`hearth recipe ${r.id}`);
-    if ((r.page === '') !== (r.found === '')) return bad(`hearth recipe ${r.id} page`);
-    if (r.page !== '') {
-      const p = itemDef(r.page);
-      if (!p || p.kind !== 'paper') return bad(`hearth recipe ${r.id} page`);
-    }
+    if (!validRecipePage(r)) return bad(`hearth recipe ${r.id} page`);
     if (r.output.kind !== 'item' && r.output.kind !== 'material') return bad(`hearth recipe ${r.id} output`);
     const d = itemDef(r.output.id);
     if (!d || assetKind(d) !== r.output.kind) return bad(`hearth recipe ${r.id} output`);

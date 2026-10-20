@@ -31,6 +31,7 @@ export const PATH_REFUSALS: Record<string, string> = {
   'already-laid': 'There’s a path here already.',
   'cannot-lay-here': 'You can’t lay a path here.',
   'not-your-path': 'Someone else laid this. It’s theirs to lift.',
+  'not-your-land': 'A lot lantern holds this land. Only the lot’s own folk change its ground.',
   'too-far-away': 'Step a little closer.',
   'not-in-wilds': 'Paths are for the Wilds.',
   'epoch-ended': 'The drift has turned. The land is new.',
@@ -45,6 +46,8 @@ export const TURNS_CONFIRM = {
   title: 'Lay a path here?',
   yes: 'Lay it',
   no: 'Not here',
+  /** On land a lot lantern holds (roadmap 0.12): it keeps while the lantern burns. */
+  held: 'This land holds while the lantern burns. A path here stays with it; if the lantern goes dark, its stone or timber waits for you at Pell’s.',
 } as const;
 
 /** "Found by <name>" and the first finder's lines (open-map.md 2.10). */
@@ -83,8 +86,9 @@ export const MAP_LABELS = {
   retry: 'Try again',
   you: 'You',
   gate: 'Commons gate',
-  frontier: 'The drift',
+  frontier: 'The Whitequiet’s edge',
   road: 'The Lantern Road',
+  cutStone: 'The lamp stone with words cut in its side',
   river: 'The Wend',
   ways: 'Ways',
   places: 'Places',
@@ -99,6 +103,7 @@ export const MAP_LABELS = {
   wick: 'Walked this wick. The Beyond turns at the wick; the Tangle stays.',
   legend: 'Legend',
   keys: 'Arrow keys or WASD move the map (Shift for further), + and − zoom, Home centres on you, End shows it all. M or Escape closes it.',
+  controls: 'Map controls',
   zoomIn: 'Zoom in',
   zoomOut: 'Zoom out',
   centre: 'Centre on me',
@@ -111,7 +116,7 @@ export const MAP_LABELS = {
   zoom: 'Zoom {pct}%',
   legendWalked: 'Walked land',
   legendBlank: 'Not walked yet',
-  legendBeyond: 'Past the drift',
+  legendBeyond: 'Past the Whitequiet’s edge',
 } as const;
 
 /**
@@ -151,7 +156,7 @@ export const OPEN_MAP_CARDS = {
     name: 'The Wend',
     eyebrow: 'The river',
     tagline: 'Wide and dark. Cross at a ford.',
-    description: 'The river runs south toward the mill. Where a path meets it there is a ford of stepping stones; wading is slow. It finds a new course every wick.',
+    description: 'The river runs south toward the mill. Where a path meets it there is a ford of stepping stones; wading is slow. It keeps its bed; the land along it turns every wick.',
   },
 } as const;
 

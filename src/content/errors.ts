@@ -14,6 +14,8 @@
  */
 import { GATHERING_DATA } from '../lib/gathering.ts'
 import { MAIL } from '../lib/mail.ts'
+import { HOMESTEAD_DATA } from '../lib/homestead.ts'
+import { LAMP_OIL } from './camps.ts'
 
 type Table = Readonly<Record<string, string>>
 
@@ -41,6 +43,7 @@ export const ITEM_ERRORS: Table = {
   'cannot-gather-here': 'There’s nothing there to work.',
   'cannot-plant-here': 'Plant it on your own land.',
   'not-your-land': 'That’s someone else’s land. Leave it as you found it.',
+  'not-your-camp': 'This is someone else’s camp, and they say who builds here. You’re welcome to walk through and tend the lamp.',
   'land-blocked': 'There’s no open ground to plant in here.',
   'not-a-seed': 'That isn’t something you can plant.',
   'wrong-tool': 'That isn’t the tool for this.',
@@ -73,6 +76,7 @@ export const ITEM_ERRORS: Table = {
   'invalid-region': 'The woods have shifted under you. Step back a moment.',
   'not-in-season': 'Not now — that belongs to another season. Come back when it turns.',
   'sold-out': 'That’s all they had today. Come back tomorrow.',
+  'already-tapped': 'You’ve had the Wick Tree’s sap this wick. It gives again at the turning.',
   'invalid-seller': 'There’s nothing like that to buy here.',
   'invalid-good': 'There’s nothing like that to buy here.',
   'condition-unmet': 'You aren’t ready for that yet.',
@@ -170,8 +174,47 @@ export const HOME_ERRORS: Table = {
   // The stable (crafts.md 3.2).
   'stable-full': 'One stable to a homestead, and six stalls to a stable.',
   'stalls-in-use': 'Empty the stalls first, and bring home any mount that’s out.',
+  // Lot lanterns (roadmap 0.12).
+  'lantern-full': LAMP_OIL.full('The lantern', HOMESTEAD_DATA.lotLantern.maxWicks),
+  'no-home': 'Nobody holds the deed to this lot. There’s no one to light it for.',
+  'cannot-hold': 'The woods behind won’t hold just now. Try again after the turning.',
+  'not-your-land': 'That’s someone else’s land. Leave it as you found it.',
+  'too-far-away': 'Stand by the lantern to fill it.',
+  // Camps (roadmap 0.13).
+  'no-camp': 'There’s no way-lamp here to set things down by.',
+  'camp-not-empty': 'Everything here has to come up before the lamp does, or you can pack up the whole camp.',
+  'not-your-camp': 'This is someone else’s camp, and they say who builds here. You’re welcome to walk through and tend the lamp.',
+  'not-in-world': 'You can only name people who live in this world.',
+  // Communal lamps (roadmap 0.13).
+  'no-lamp': 'There’s no lamp there to see to.',
+  'lamp-lit': 'Someone’s already lit it. It’s burning.',
+  'not-common': 'A communal lamp goes on open common ground: not in town, the Tangle, a lot’s backland or a camp.',
+  'not-your-lamp': 'That lamp’s someone else’s to take down. Leave it burning.',
+  // The Keeper's hand (roadmap 0.13).
+  'needs-keeper': 'That wants a Keeper’s hand. Mara keeps the ledger; ask her about the road.',
+  'lamp-named': 'It has its naming already. A lamp keeps the one it was given.',
+  'invalid-naming': 'That naming doesn’t hold together. Pick each part again from what’s offered.',
   resolved: 'Your last order with Silas went through after all. Check what you have before trying again.',
   pending: 'No answer yet — it may have gone through. We’ll find out when the connection is back; nothing will be charged twice.'
+}
+
+/**
+ * Ways home (lamps.md 1.4): binding a lamp-ash pouch, and travelling by
+ * turncap or pouch. A refusal never spends the item, so each line says so
+ * where it might worry someone.
+ */
+export const WAYS_HOME_ERRORS: Table = {
+  'in-a-fight': 'Not while something’s fighting you. Get clear, then hold still.',
+  'pouch-unbound': 'Your pouch isn’t bound to a lamp yet. Stand by one and bind it.',
+  'lamp-elsewhere': 'That lamp burns in another world. Your pouch is safe; bind it to a lamp here.',
+  'lamp-packed': 'That lamp’s packed away at Pell’s. Your pouch is safe; bind it to another.',
+  'lamp-unlit': 'That lamp’s gone dark. Your pouch keeps till someone lights it again.',
+  'lamp-gone': 'That lamp isn’t standing any more. Your pouch is safe; bind it to another.',
+  'no-landing': 'There’s no open ground beside that lamp just now. Your pouch is safe.',
+  'not-needed': 'You’re on safe ground already. Keep the turncap for the woods.',
+  'no-lamp': 'Stand by a lit lamp to bind your pouch to it.',
+  'invalid-item': 'You don’t have one with you.',
+  pending: 'No answer yet. It may still go through when the world answers; nothing is spent twice.'
 }
 
 /**
@@ -258,5 +301,6 @@ export const villageErrorText = (code: string): string => errorText(VILLAGE_ERRO
 export const homeErrorText = (code: string): string => errorText(HOME_ERRORS, code, 'Silas didn’t catch that. Nothing changed — try again in a moment.')
 export const spendErrorText = (code: string): string => errorText(SPEND_ERRORS, code, 'The lantern didn’t answer. Nothing was spent — try again in a moment.')
 export const companionErrorText = (code: string): string => errorText(COMPANION_ERRORS, code)
+export const waysHomeErrorText = (code: string): string => errorText(WAYS_HOME_ERRORS, code, 'The way home didn’t open. Nothing was spent; try again in a moment.')
 export const purseErrorText = (code: string): string => errorText(PURSE_ERRORS, code, 'The top-up didn’t start. Nothing moved — try again in a moment.')
 export const questErrorText = (code: string): string => errorText(QUEST_ERRORS, code, 'That story step didn’t take. Nothing was lost.')

@@ -16,17 +16,21 @@ const (
 
 // Kept is a kept neighbour: a stored chunk of another epoch beside the one
 // being made (in 0.8, a Tangle chunk beside a wick chunk). Only its two
-// edge tiles facing the new chunk are read.
+// edge tiles facing the new chunk are read. Held is set for a held chunk
+// (a wick chunk pinned to an older wick epoch): its coordinates say wick,
+// but the new chunk treats it as kept, as it does the Tangle.
 type Kept struct {
 	CX, CY int
 	Chunk  *contract.WorldChunk
+	Held   bool
 }
 
 // GenerateV3 makes one chunk of the open map: a pure function of (e, cx,
 // cy), plus kept neighbours' stored edges at a seam. Pass every neighbour
-// (diagonals too) whose EpochKindAt differs from e.Kind; a missing one is
-// read as generator v3 makes it, which is exact while it was made by v3.
-// The frontier is the caller's to check: this makes any chunk.
+// (diagonals too) whose EpochKindAt differs from e.Kind, and every held
+// neighbour pinned to another epoch; a missing one is read as generator v3
+// makes it, which is exact while it was made by v3 (a held one must be
+// passed). The frontier is the caller's to check: this makes any chunk.
 func GenerateV3(e Epoch, cx, cy int, kept []Kept) (Chunk, error) {
 	if err := e.check(); err != nil {
 		return Chunk{}, err
@@ -49,6 +53,9 @@ func (w *world) chunk(cx, cy int, kept []Kept) (Chunk, error) {
 	kr := &keptReader{w: w.still(), stored: map[[2]int]*contract.WorldChunk{}, made: map[[2]int][]baseTile{}}
 	for _, k := range kept {
 		kr.stored[[2]int{k.CX, k.CY}] = k.Chunk
+		if k.Held && k.Chunk != nil && w.wick && !(k.CX == cx && k.CY == cy) {
+			w.held[[2]int{k.CX, k.CY}] = true
+		}
 	}
 	base := w.fill(cx*S, cy*S, cx*S+S-1, cy*S+S-1, kr)
 

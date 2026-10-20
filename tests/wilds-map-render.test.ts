@@ -364,3 +364,32 @@ test('the renderer culls label boxes to the viewport before fitting, yours inclu
   assert.ok(shown.some((l) => l.kind === 'place'), JSON.stringify(shown));
   assert.equal(shown.some((l) => l.kind === 'you'), false);
 });
+
+// Tier layers are independent of terrain and must never extend knowledge.
+test('Built shading and dimming hatches stay inside explored chunks; Common has only a dashed extent', async () => {
+  const { create } = await import('@bufbuild/protobuf');
+  const { ChunkLandStatusSchema } = await import('../src/lib/gen/glimway/v1/wilds_pb.js');
+  const land = (cx: number, tier: string, dimming = false) => create(ChunkLandStatusSchema, { chunk: { realm: 'wilds', cx, cy: -2 }, tier, dimming, nextTurning: dimming ? 'turns' : tier === 'built' ? 'held' : '' });
+  const r = new MapRenderer(make);
+  r.setInput(input({ chunks: [chunk(-1,-2),chunk(0,-2)], land: [land(-1,'built',true),land(0,'common'),land(1,'built',true)] }), 'tiers');
+  const rec = recorder();
+  const ctx = rec.ctx as unknown as import('../src/ui/map-renderer.ts').MapCtx;
+  const fills: { style: string; x: number; y: number; w: number; h: number }[] = [];
+  const dashes: number[][] = [];
+  const lines: [number,number][] = [];
+  ctx.fillRect = (x,y,w,h) => { fills.push({ style: String(ctx.fillStyle),x,y,w,h }); };
+  ctx.setLineDash = (dash) => { dashes.push([...dash]); };
+  ctx.moveTo = (x,y) => { if (ctx.strokeStyle === '#9d6325') lines.push([x,y]); };
+  ctx.lineTo = (x,y) => { if (ctx.strokeStyle === '#9d6325') lines.push([x,y]); };
+  const v={cx:0,cy:-36,scale:4};const vp={w:384,h:240};
+  r.draw(ctx,v,vp,1);
+  const held = fills.filter((f) => f.style === 'rgba(229,171,72,0.22)');
+  assert.equal(held.length,1,'no shading on Common or unknown land');
+  assert.deepEqual(held[0],{ style: 'rgba(229,171,72,0.22)',x:96,y:72,w:96,h:96 });
+  assert.ok(dashes.some((d) => d[0]===3 && d[1]===4),'Common uses a dashed boundary');
+  assert.ok(lines.length>2,'Dimming is hatched');
+  assert.ok(lines.every(([x,y]) => x>=96 && x<=192 && y>=72 && y<=168),'hatching never leaves the known chunk');
+  fills.length=0;
+  r.draw(ctx,v,vp,1,false);
+  assert.equal(fills.filter((f) => f.style === 'rgba(229,171,72,0.22)').length,0,'the Lamps toggle hides the layer');
+});

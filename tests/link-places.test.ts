@@ -120,3 +120,24 @@ test('an ignored place in the same area is a stale sample: nobody is pulled back
   assert.equal(r.session.state.area, 'outdoors');
   assert.deepEqual(r.session.state.position, { x: 520, y: 260 }, 'where the hero walked to');
 });
+
+test('an ignored place in the same area goes again on the world’s newest watermark, so a reload’s upload settles it', async (t) => {
+  const r = await rig(t);
+  await online(r);
+  r.session.state.position = { x: 520, y: 260 };
+  // An operation's place (an earlier spot) landed after this report was captured: the world keeps it.
+  const held = S({ version: 2, x: 100, y: 100 });
+  held.place.placeSetVersion = 2;
+  const answer = (placeIgnored: boolean) => (c: Call) => env(held, { report: { seq: c.body.seq, accepted: true, staleBasis: false, casts: 0, client: c.body.client, generation: c.body.generation, basis: c.body.basis, placeIgnored, abilityCasts: {}, allyHeal: 0 } });
+  r.server.on('POST /api/report', answer(true));
+  r.link.reportSoon();
+  await r.link.flush();
+  assert.equal(r.server.sent('POST /api/report').length, 1);
+  // The update notice's Reload: everything goes up first (e2e version.spec).
+  r.server.on('POST /api/report', answer(false));
+  assert.equal(await r.link.settle(), 'saved');
+  const sent = r.server.sent('POST /api/report').map((c) => c.body);
+  assert.equal(sent.length, 2, 'the ignored place went again');
+  assert.deepEqual([sent[1]!.place, sent[1]!.basis], [{ area: 'outdoors', x: 520, y: 260 }, 2]);
+  assert.deepEqual(r.session.state.position, { x: 520, y: 260 });
+});

@@ -1,0 +1,64 @@
+# Glimway server settings (TOML). Generated from server/internal/settings
+# (go test ./server/internal/settings -run TestExample -update); don't edit by hand.
+#
+# Point the server at this file with -config <path> or GLIMWAY_CONFIG=<path>.
+# Each setting is shown at its default. Layers, lowest first: the defaults,
+# this file, GLIMWAY_* variables, then flags. A variable or flag pins its
+# setting: a reload reads the file again, but the variable still wins.
+#
+# "live": takes effect on reload (SIGHUP: systemctl reload, docker kill -s HUP),
+#         and players stay connected. A file that doesn't parse or check is
+#         refused, and the running settings stay.
+# "restart": takes effect at the next start.
+
+# [dev] Dev mode: who gets the playtesting tools ([server.dev] and [web.dev] list them). Needs a dev build (go build -tags dev); a release build refuses to start with enable = true.
+[dev]
+
+# Turn dev mode on. Every tool in [server.dev] and [web.dev] follows this unless set itself.
+# (live; GLIMWAY_DEV_ENABLE)
+# enable = false
+
+# Habitica user ids that get the tools. Empty: every signed-in player on this server.
+# (live; GLIMWAY_DEV_ACCOUNTS)
+# accounts = []
+
+# [server] The server's own settings.
+
+# [server.login] Sign-in limits.
+[server.login]
+
+# Most sign-in proofs at once against Habitica. Flag: -login-concurrency.
+# (restart; GLIMWAY_SERVER_LOGIN_CONCURRENCY or GLIMWAY_LOGIN_CONCURRENCY)
+# concurrency = 4
+
+# Sign-in attempts a minute per IP (or IPv6 /64). Flag: -login-rate.
+# (restart; GLIMWAY_SERVER_LOGIN_RATE or GLIMWAY_LOGIN_RATE)
+# rate = 10
+
+# Most calls to Habitica's sign-in a minute, retries included. Flag: -login-global-rate.
+# (restart; GLIMWAY_SERVER_LOGIN_GLOBAL_RATE or GLIMWAY_LOGIN_GLOBAL_RATE)
+# global_rate = 60
+
+# [server.dev] Dev mode's server tools (routes under /api/dev/).
+[server.dev]
+
+# Grants: glims, materials and items from the dev panel.
+# (live; GLIMWAY_SERVER_DEV_GRANT)
+# grant = false
+
+# Moving the server clock forward. World-wide and forward-only.
+# (live; GLIMWAY_SERVER_DEV_CLOCK)
+# clock = false
+
+# Finishing a camp's fight at once.
+# (live; GLIMWAY_SERVER_DEV_FIGHT_FALL)
+# fight_fall = false
+
+# [web] The web client's settings: the server hands them to each signed-in player (GET /api/web-settings), so a change needs no new web build.
+
+# [web.dev] Dev mode's client tools.
+[web.dev]
+
+# The browser's window.__fs* playtest hooks: warps, reads, console tools.
+# (live; GLIMWAY_WEB_DEV_HOOKS)
+# hooks = false

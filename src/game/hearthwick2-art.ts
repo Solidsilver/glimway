@@ -3,7 +3,8 @@
  * hearthwick-2.md 7): the Wick Tree in each Mark, the hearth-stone, the
  * town's new buildings (townhouses, cottages, the inn, chandler, land
  * office, smithy, guildhouse, Orrin's workshop, the barn), the shop signs,
- * the town and farm dressing, the lot stakes and side gateposts, and the
+ * the town and farm dressing, the lot stakes (including the dimming state)
+ * and side gateposts, and the
  * wildgate arch.
  * The build packs each frame's whole canvas at 64 texels per 16-px tile
  * (scripts/build-atlases.ts → hearthwick2.webp, loaded as
@@ -16,7 +17,7 @@
  */
 import type Phaser from 'phaser'
 import { PACKED_MANIFEST_KEY, type PackedManifest } from './atlas-plan.ts'
-import { explodeFrames, registerAnims } from './art-pass.ts'
+import { explodingFrames, registerAnims, type Steps } from './art-pass.ts'
 import { TILE } from '../lib/tile.ts'
 
 /** Texture key of the packed Hearthwick 2 atlas (./packed.ts loads it). */
@@ -27,13 +28,13 @@ export const hw2Art = (frame: string): string => `hw2:${frame}`
 /** A looping piece's first frame's texture key → its loop's animation key. */
 const loops = new Map<string, string>()
 
-/** Make the pass's textures and loops, once. False when the pack didn't load. */
-export function createHearthwick2Art(scene: Phaser.Scene): boolean {
+/** Make the pass's textures and loops, once, a texture a step (./art-pass.ts `Steps`). False when the pack didn't load. */
+export function* createHearthwick2Art(scene: Phaser.Scene): Steps<boolean> {
   const packed = (scene.cache.json.get(PACKED_MANIFEST_KEY) as PackedManifest | undefined)?.hearthwick2
   if (!packed) return false
   const perPx = packed.density / TILE
   const frames = Object.entries(packed.frames).map(([key, r]) => ({ key, width: r[2] / perPx, height: r[3] / perPx }))
-  const made = explodeFrames(scene, HEARTHWICK2_PACKED_KEY, { ...packed, density: perPx }, frames, hw2Art)
+  const made = yield* explodingFrames(scene, HEARTHWICK2_PACKED_KEY, { ...packed, density: perPx }, frames, hw2Art)
   if (!made) return false
   const held = new Set(made.held.map((f) => f.key))
   registerAnims(scene, packed.animations, (f) => held.has(f), hw2Art)

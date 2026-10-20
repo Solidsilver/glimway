@@ -294,7 +294,7 @@ func TestWildsNearMakesEpochsAndChunks(t *testing.T) {
 		t.Fatal("the window's chunks", listed)
 	}
 	for _, e := range commons.Entities {
-		cx, cy, ok := story.EntityChunk(e.Id)
+		cx, cy, ok := story.EntityChunk("", e.Id)
 		if !ok || location.SourceOf(cx, cy).Kind != location.SourceGenerated {
 			t.Fatal("state off generated chunks", e.Id)
 		}

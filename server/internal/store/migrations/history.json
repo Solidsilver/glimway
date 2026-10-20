@@ -150,5 +150,11 @@
     "sha256": "23c9aed59b159b82424f96df3366e4b7daf7c80808c0ecd3050ae90b9b5347aa",
     "backfill": "migration_037_backfill.go",
     "backfillSha256": "43d6aacda852c33b0db4ea6f603646d240d07685f80938d59cffb3dd31b2d304"
+  },
+  {
+    "name": "038_lamps.sql",
+    "sha256": "aa6b9ec9b51a156630941ba048f22c1b9d3b0b87b25a437d8871907a4516d93d",
+    "backfill": "migration_038_backfill.go",
+    "backfillSha256": "3b62aa9b337e2722f8d5eb67c18abbf2e977e6373a8e8d6c41df3eaab255ab16"
   }
 ]

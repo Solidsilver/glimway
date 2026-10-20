@@ -16,11 +16,13 @@ import { itemInfo } from '../../content/world'
 import { echoCampSpeaker, echoForKeepsake } from '../../content/echoes'
 import { foundToast, paperById } from '../../content/papers'
 import { ADA_OIL_REPLIES, HEIRLOOMS, HEIRLOOM_IDS, countAdaOilGifts, type HeirloomId } from '../../content/heirlooms'
-import { spendErrorText } from '../../content/errors'
+import { itemErrorText, spendErrorText } from '../../content/errors'
 import { CHARM_ITEM, ROAD_LANTERNS, type GlimSpend, type RoadLanternId } from '../../lib/glims'
 import { yieldLine } from '../../lib/gathering'
 import { sellerFor } from '../../lib/items'
 import { parseBuy } from '../../lib/purse'
+import { REFINED_LINE, WICK_SAP, alreadyTappedLine, tapLines } from '../../lib/wick-sap'
+import { serverNow } from '../clock'
 import { echoSettled } from '../../lib/wilds/stories'
 import { TILE, tileMid } from '../../lib/tile'
 import { refreshLanternVisuals, type LightProp } from '../area/lanterns'
@@ -39,6 +41,8 @@ import type { Hero } from '../entities/hero'
 import type { HomesteadLayer } from '../entities/homesteads'
 import type { WildsEntities } from '../wilds/entities'
 import type { WildsPaths } from '../wilds/paths'
+import type { WildsCamps } from '../wilds/camps'
+import type { WildsCommunalLamps } from '../wilds/communal-lamps'
 
 export interface WorldActionDeps {
   scene: Phaser.Scene
@@ -51,6 +55,10 @@ export interface WorldActionDeps {
   wilds: () => WildsEntities | null
   /** The open map's path work (a confirmed lay comes back as `path:lay:…`). */
   paths: () => WildsPaths | null
+  /** Camps (lamps.md 2.5): the way-lamp's talk comes back as `camp:…`. */
+  camps: () => WildsCamps | null
+  /** Communal lamps (lamps.md 1.3): a lamp's talk comes back as `communal-lamp:…`. */
+  communalLamps: () => WildsCommunalLamps | null
   /** Write where the hero stands into the save (it rides along with a write). */
   notePosition: () => void
   /** A paid outcome changes what the markers and the prompt say. */
@@ -74,6 +82,8 @@ export class WorldActions {
     ['echo:settle:', (siteId) => void this.deps.wilds()?.settleEcho(siteId)],
     // The confirm before laying on land that turns (open-map.md 2.9).
     ['path:', (rest) => this.deps.paths()?.onAction(rest)],
+    ['camp:', (rest) => this.deps.camps()?.onAction(rest)],
+    ['communal-lamp:', (rest) => this.deps.communalLamps()?.onAction(rest)],
     ['heirloom:grant:', (id) => this.grantHeirloom(id)],
     [
       'buy:',
@@ -82,7 +92,10 @@ export class WorldActions {
         const buy = parseBuy(rest)
         if (buy) this.marketBuy(buy.seller, buy.good)
       }
-    ]
+    ],
+    // The Wick Tree's weekly sap, and the chandler's refining (lamps.md 2.5).
+    ['sap:tap', () => this.tapSap()],
+    ['sap:refine', () => this.refineSap()]
   ]
 
   constructor(private deps: WorldActionDeps) {}
@@ -174,6 +187,33 @@ export class WorldActions {
         if (!bought) return
         const line = sellerFor(bought.seller)?.goods.find((g) => g.item === bought.itemDef)?.line
         bus.emit(EV.toast, { text: line ?? `Bought: ${yieldLine([{ itemDef: bought.itemDef, qty: bought.qty }])}.`, icon: 'bag', art: `icon-${bought.itemDef}` })
+      }
+    )
+  }
+
+  /** A jar of the Wick Tree's sap, once a wick; already tapped, the tree says when it gives again. */
+  private tapSap(): void {
+    this.withServer(
+      () => itemsFor(this.deps.session).tapSap(),
+      (value) => {
+        const got = value.tapped ?? { itemDef: WICK_SAP.item, qty: WICK_SAP.qty }
+        openDialogue({ id: 'wick-tree-tapped', speaker: 'The Wick Tree', lines: tapLines(!!value.firstTap) }, { sound: null })
+        bus.emit(EV.toast, { text: `Tapped: ${yieldLine([got])}.`, icon: 'bag', kind: 'gain', gain: { to: 'bag', itemDef: got.itemDef, qty: got.qty } })
+      },
+      (code) => {
+        if (code === 'already-tapped') openDialogue({ id: 'wick-tree-tapped', speaker: 'The Wick Tree', lines: [alreadyTappedLine(serverNow())] }, { sound: null })
+        else bus.emit(EV.toast, { text: itemErrorText(code), kind: 'error' })
+      }
+    )
+  }
+
+  /** The chandler refines a jar of sap into hearth oil, for nothing. */
+  private refineSap(): void {
+    this.withServer(
+      () => itemsFor(this.deps.session).refineSap(),
+      (value) => {
+        const got = value.refined ?? { itemDef: WICK_SAP.oil, qty: WICK_SAP.oilQty }
+        bus.emit(EV.toast, { text: REFINED_LINE, icon: 'bag', art: `icon-${got.itemDef}`, kind: 'gain', gain: { to: 'bag', itemDef: got.itemDef, qty: got.qty } })
       }
     )
   }

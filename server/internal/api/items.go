@@ -55,6 +55,8 @@ func (a *Server) itemsMutation(w http.ResponseWriter, r *http.Request) error {
 			err = a.gather(ctx, tx, s, &req, now, out)
 		case "plant":
 			err = a.plant(ctx, tx, s, &req, now, out)
+		case "uproot":
+			err = a.uprootHomePlant(ctx, tx, s, &req, now, out)
 		case "return":
 			err = a.returnKeepsake(ctx, tx, s, &req, now, out)
 		case "heirloom":
@@ -63,14 +65,18 @@ func (a *Server) itemsMutation(w http.ResponseWriter, r *http.Request) error {
 			err = a.giveAdaOil(ctx, tx, s, &req, now, out)
 		case "buy":
 			err = a.marketBuy(ctx, tx, s, &req, now, out)
+		case "tap":
+			err = a.tapWickSap(ctx, tx, s, now, out)
+		case "refine":
+			err = a.refineWickSap(ctx, tx, s, now, out)
 		default:
 			err = fail(404, "not-found")
 		}
 		if err != nil {
 			return nil, err
 		}
-		if (op == "gather" && out.Land != nil || op == "plant") && homeGateAt(s) >= 0 {
-			world, gate := s.WorldID, homeGateAt(s)
+		if gate := max(homeGateAt(s), backlandGateAt(s)); (op == "gather" && out.Land != nil || op == "plant" || op == "uproot") && gate >= 0 {
+			world := s.WorldID
 			notify = append(notify, func() { a.homeChanged(world, gate) })
 		}
 		if err = settleSlots(ctx, tx, s); err != nil {

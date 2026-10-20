@@ -14,54 +14,66 @@ import (
 	"testing/fstest"
 )
 
-// These deployed SQL pairs are independent literals: editing both a migration
-// and history.json must still fail. New migrations may only append to this list.
-var deployedMigrationHistory = []struct{ name, sha256 string }{
-	{"001_core.sql", "8d251af61fac207051ee99cbdfa98b980c29a20e6216e9281152da70c534d38d"},
-	{"002_fix_round.sql", "fc7c2574a6fb452bf7e86d859c0832f5d64e475307b021650f0aebce8dc26145"},
-	{"003_loss_and_admission.sql", "03d7c0295dcf81caa0c670dc1c4eabf3aeef2b5426981e309856c54b30bdb457"},
-	{"004_homestead_wilds.sql", "bccf874235052a7e66a94f12dd14c64b79a5d2c495c4b66f84a6d59c0802f3c7"},
-	{"005_checkpoint_sessions_contract.sql", "e51bab32eef2b0f3a88d2493e26d752c8eddba81bf88f33eff0ef312de67ce8d"},
-	{"006_lantern_creations.sql", "2124f9bb67d4b86135d4bfcef34a57e4e1059c5d8b3d992afb281633948ff688"},
-	{"007_library_shelves.sql", "9b9c94c42bc6bf02ff5293635e6a36e9eaeab1cc69ce995a52f1f37a1ec6b225"},
-	{"008_phase5.sql", "b095257a6ba64906781d119f3eec14dd9c39d95967e36440f866cd08aca6ec81"},
-	{"009_mail_returns.sql", "691334b41483a1d87a215f27abb8bf4e7ba2d30f16a635b82885457e855981a9"},
-	{"010_homesteads_v2.sql", "6f6c14f1c71df4ecd56d6866139c88391cf8dd301404b5fa7ff8d2716eff0785"},
-	{"011_homestead_departures.sql", "6a351d0d4d3b06b147746b62f988ba6cbe76e3893a22b4f75d99bbc202f01991"},
-	{"012_items.sql", "cd0fbe4233a21174fdd8fcc152281e1b3233e621255a7658ddf47522fa6ce7ef"},
-	{"013_mail_instances.sql", "1c49670901a5430fb6446419662344ad889bb3062114870d7f46944fce54a894"},
-	{"014_woodpile_seasoning.sql", "f532b1c1fd3547716365eab83879158582f592c63a48cea7f8da238a64fa25f8"},
-	{"016_village_repairs.sql", "5ff2e84fdc1aa47366fc7b9da33aa541ed54b829aea30a0c26ca59377a050e2f"},
-	{"017_warden_tools.sql", "e5eaa778f2f0da5c22eab128369e70ca0a736a8b80fd9010c19fa54c8e6dcf87"},
-	{"018_warden_find_spacing.sql", "37c991042811dddd5b0a483473ea36e979f17cb65f39c2cadf99dd1093fe123b"},
-	{"019_gathering.sql", "8d3c08761035dae922e0259d366c5139ad75dc5f84e635c73d3c6f668e3b5cc8"},
-	{"020_gifts.sql", "3fdd183a9d63173d1c732556210c881af835605b76f598e3bd5cb772ecb4b562"},
-	{"021_storm_finds.sql", "6fe650f856984afa59a53b1a96a1e780f9b45cf5eeaa6942082fe24d75046cfd"},
-	{"022_party_worlds.sql", "3687da163aca2d304d403cb724582ba3944501369136be629f0e840dbf8f556e"},
-	{"023_party_owned_worlds.sql", "b016f955f1cd28de8a415b342418c803bb3c1dd6eec60ce4ff803d3c1ea36e34"},
-	{"024_party_admission.sql", "73350c4f225764acd62aabad30122d499c519b4686fc39e5a28f10e1e0fa7176"},
-	{"025_world_choice.sql", "6604e5831add696cbd7353d7aa42e69d71bc7fb2bb609bf1d387c98962ad78e9"},
-	{"026_accounts.sql", "3e7f7e5dd78e4874b54988f435ca64073bca6a3e489c2c7e47822c5b518c8055"},
-	{"027_server_state.sql", "b63ad01f87910ac7d584742f533e483c920878a6a20736eb63bbcc89e731c29d"},
-	{"028_story_move.sql", "cfb4aec0ba8d982306476395e5ae664d6504fd267463b025669fe514274a6d17"},
-	{"029_quest_tree.sql", "1ac4d6841116fbad0b9acd83fa204524d9bac1650b84146968e5732f3e5e2b61"},
-	{"030_crafts.sql", "3526f439d53c1d40ecc8d670834ee8d106d6e9394bc0bebae3d6d3d7df81a78a"},
-	{"031_level_mark.sql", "ec3b602bfc0b5dbb84d79d02e9607e50fe8013a08ba7795934fd5e038880a79a"},
-	{"032_purse_wardrobe.sql", "f825679bee5cdbe86e2cb0ab9c6cf1c6bde0b37dd0fe4baed3175d24fe5added"},
-	{"033_glims.sql", "ebd0e090feee61d36467b80b25d5418cae9dc2af7d598186dbab5bb316f61fd9"},
-	{"034_open_map.sql", "9c30f3440aaa0926c6d3a3c8e96688b6d570b9f211552f6b94e8a25e550d8cc7"},
-	{"035_fight_falls.sql", "a334a045f6322118cc6d675380a6285f3a217ffdd5c188a2d96e595d39835af5"},
-	{"036_outdoors.sql", "45af553fb7b6450c3848cad3d451a1897ba1e804c26ab28dee8a1b5bf7e20b57"},
-	{"037_one_town.sql", "23c9aed59b159b82424f96df3366e4b7daf7c80808c0ecd3050ae90b9b5347aa"},
+// Migrations a release has shipped (v0.11.2 shipped through 037). These are
+// independent literals, so editing both a migration (or its backfill) and
+// history.json must still fail. A release that ships pending migrations
+// appends them here; nothing listed is ever edited.
+//
+// Migrations after the last shipped one are pending: history.json's hashes
+// still check them (an unrecorded edit fails), but a coordinated edit of the
+// SQL and its manifest entry is allowed until a release ships them. A
+// database that already ran an edited pending migration (a dev or alpha
+// server) is not upgraded by the edit: reset it.
+var shippedMigrationHistory = []struct{ name, sha256, backfillSHA256 string }{
+	{"001_core.sql", "8d251af61fac207051ee99cbdfa98b980c29a20e6216e9281152da70c534d38d", ""},
+	{"002_fix_round.sql", "fc7c2574a6fb452bf7e86d859c0832f5d64e475307b021650f0aebce8dc26145", ""},
+	{"003_loss_and_admission.sql", "03d7c0295dcf81caa0c670dc1c4eabf3aeef2b5426981e309856c54b30bdb457", "92a8281da70fae2c6d756cff1bb0b9864ced81408afca4dc99884859eacb162f"},
+	{"004_homestead_wilds.sql", "bccf874235052a7e66a94f12dd14c64b79a5d2c495c4b66f84a6d59c0802f3c7", ""},
+	{"005_checkpoint_sessions_contract.sql", "e51bab32eef2b0f3a88d2493e26d752c8eddba81bf88f33eff0ef312de67ce8d", ""},
+	{"006_lantern_creations.sql", "2124f9bb67d4b86135d4bfcef34a57e4e1059c5d8b3d992afb281633948ff688", ""},
+	{"007_library_shelves.sql", "9b9c94c42bc6bf02ff5293635e6a36e9eaeab1cc69ce995a52f1f37a1ec6b225", ""},
+	{"008_phase5.sql", "b095257a6ba64906781d119f3eec14dd9c39d95967e36440f866cd08aca6ec81", ""},
+	{"009_mail_returns.sql", "691334b41483a1d87a215f27abb8bf4e7ba2d30f16a635b82885457e855981a9", ""},
+	{"010_homesteads_v2.sql", "6f6c14f1c71df4ecd56d6866139c88391cf8dd301404b5fa7ff8d2716eff0785", ""},
+	{"011_homestead_departures.sql", "6a351d0d4d3b06b147746b62f988ba6cbe76e3893a22b4f75d99bbc202f01991", ""},
+	{"012_items.sql", "cd0fbe4233a21174fdd8fcc152281e1b3233e621255a7658ddf47522fa6ce7ef", ""},
+	{"013_mail_instances.sql", "1c49670901a5430fb6446419662344ad889bb3062114870d7f46944fce54a894", ""},
+	{"014_woodpile_seasoning.sql", "f532b1c1fd3547716365eab83879158582f592c63a48cea7f8da238a64fa25f8", ""},
+	{"016_village_repairs.sql", "5ff2e84fdc1aa47366fc7b9da33aa541ed54b829aea30a0c26ca59377a050e2f", ""},
+	{"017_warden_tools.sql", "e5eaa778f2f0da5c22eab128369e70ca0a736a8b80fd9010c19fa54c8e6dcf87", ""},
+	{"018_warden_find_spacing.sql", "37c991042811dddd5b0a483473ea36e979f17cb65f39c2cadf99dd1093fe123b", ""},
+	{"019_gathering.sql", "8d3c08761035dae922e0259d366c5139ad75dc5f84e635c73d3c6f668e3b5cc8", ""},
+	{"020_gifts.sql", "3fdd183a9d63173d1c732556210c881af835605b76f598e3bd5cb772ecb4b562", ""},
+	{"021_storm_finds.sql", "6fe650f856984afa59a53b1a96a1e780f9b45cf5eeaa6942082fe24d75046cfd", ""},
+	{"022_party_worlds.sql", "3687da163aca2d304d403cb724582ba3944501369136be629f0e840dbf8f556e", ""},
+	{"023_party_owned_worlds.sql", "b016f955f1cd28de8a415b342418c803bb3c1dd6eec60ce4ff803d3c1ea36e34", ""},
+	{"024_party_admission.sql", "73350c4f225764acd62aabad30122d499c519b4686fc39e5a28f10e1e0fa7176", ""},
+	{"025_world_choice.sql", "6604e5831add696cbd7353d7aa42e69d71bc7fb2bb609bf1d387c98962ad78e9", ""},
+	{"026_accounts.sql", "3e7f7e5dd78e4874b54988f435ca64073bca6a3e489c2c7e47822c5b518c8055", "0b0b46e9ff250c5db9f4c5ad014bf7a8a4296689d9d798c313f43a3b37101feb"},
+	{"027_server_state.sql", "b63ad01f87910ac7d584742f533e483c920878a6a20736eb63bbcc89e731c29d", ""},
+	{"028_story_move.sql", "cfb4aec0ba8d982306476395e5ae664d6504fd267463b025669fe514274a6d17", "dc5a19f0d8bab0bafc52401e8f1f9444456c213c51286804033b471981850520"},
+	{"029_quest_tree.sql", "1ac4d6841116fbad0b9acd83fa204524d9bac1650b84146968e5732f3e5e2b61", ""},
+	{"030_crafts.sql", "3526f439d53c1d40ecc8d670834ee8d106d6e9394bc0bebae3d6d3d7df81a78a", ""},
+	{"031_level_mark.sql", "ec3b602bfc0b5dbb84d79d02e9607e50fe8013a08ba7795934fd5e038880a79a", ""},
+	{"032_purse_wardrobe.sql", "f825679bee5cdbe86e2cb0ab9c6cf1c6bde0b37dd0fe4baed3175d24fe5added", ""},
+	{"033_glims.sql", "ebd0e090feee61d36467b80b25d5418cae9dc2af7d598186dbab5bb316f61fd9", ""},
+	{"034_open_map.sql", "9c30f3440aaa0926c6d3a3c8e96688b6d570b9f211552f6b94e8a25e550d8cc7", ""},
+	{"035_fight_falls.sql", "a334a045f6322118cc6d675380a6285f3a217ffdd5c188a2d96e595d39835af5", ""},
+	{"036_outdoors.sql", "45af553fb7b6450c3848cad3d451a1897ba1e804c26ab28dee8a1b5bf7e20b57", ""},
+	{"037_one_town.sql", "23c9aed59b159b82424f96df3366e4b7daf7c80808c0ecd3050ae90b9b5347aa", "43d6aacda852c33b0db4ea6f603646d240d07685f80938d59cffb3dd31b2d304"},
 }
 
-func checkDeployedHistory(history []migrationRecord) error {
-	if len(history) < len(deployedMigrationHistory) {
-		return fmt.Errorf("deployed migration history shortened")
+// The newest migration live databases have run: the base of the populated
+// upgrade test (TestUpgradeFromLastRelease).
+const lastShippedMigration = "037_one_town.sql"
+
+func checkShippedHistory(history []migrationRecord) error {
+	if len(history) < len(shippedMigrationHistory) {
+		return fmt.Errorf("shipped migration history shortened")
 	}
-	for i, want := range deployedMigrationHistory {
-		if history[i].Name != want.name || history[i].SHA256 != want.sha256 {
-			return fmt.Errorf("deployed migration history changed: %s", want.name)
+	for i, want := range shippedMigrationHistory {
+		if history[i].Name != want.name || history[i].SHA256 != want.sha256 || history[i].BackfillSHA256 != want.backfillSHA256 {
+			return fmt.Errorf("shipped migration history changed: %s", want.name)
 		}
 	}
 	return nil
@@ -86,8 +98,10 @@ func checkMigrationIntegrity(source fs.FS) error {
 		}
 		return nil
 	}
-	if err := checkDeployedHistory(history); err != nil {
-		return err
+	// Each entry's own checks first, so a refusal names what is wrong with
+	// it; the shipped list is compared last, against the checked manifest.
+	if len(history) < len(shippedMigrationHistory) {
+		return fmt.Errorf("shipped migration history shortened")
 	}
 	usedBackfills := map[string]bool{}
 	for _, m := range history {
@@ -109,7 +123,7 @@ func checkMigrationIntegrity(source fs.FS) error {
 	if len(usedBackfills) != len(migrationBackfills) {
 		return fmt.Errorf("migration history omits a registered backfill")
 	}
-	return checkDeployedHistory(history)
+	return checkShippedHistory(history)
 }
 
 func copyMigrationFS(t *testing.T) fstest.MapFS {
@@ -156,13 +170,23 @@ func TestMigrationHistoryRefusals(t *testing.T) {
 		{"changed SQL", func(f fstest.MapFS, _ *[]migrationRecord) {
 			f["migrations/001_core.sql"].Data = append(f["migrations/001_core.sql"].Data, []byte("-- changed\n")...)
 		}, "checksum mismatch: migrations/001_core.sql"},
-		{"valid JSON changed hash", func(_ fstest.MapFS, h *[]migrationRecord) { (*h)[0].SHA256 = strings.Repeat("0", 64) }, "deployed migration history changed"},
+		{"valid JSON changed hash", func(_ fstest.MapFS, h *[]migrationRecord) { (*h)[0].SHA256 = strings.Repeat("0", 64) }, "checksum mismatch: migrations/001_core.sql"},
 		{"coordinated SQL and hash edit", func(f fstest.MapFS, h *[]migrationRecord) {
 			raw := append(f["migrations/001_core.sql"].Data, []byte("-- changed\n")...)
 			f["migrations/001_core.sql"].Data = raw
 			digest := sha256.Sum256(raw)
 			(*h)[0].SHA256 = hex.EncodeToString(digest[:])
-		}, "deployed migration history changed"},
+		}, "shipped migration history changed"},
+		{"coordinated backfill and hash edit", func(f fstest.MapFS, h *[]migrationRecord) {
+			raw := append(f["migration_003_backfill.go"].Data, []byte("// changed\n")...)
+			f["migration_003_backfill.go"].Data = raw
+			digest := sha256.Sum256(raw)
+			(*h)[2].BackfillSHA256 = hex.EncodeToString(digest[:])
+		}, "shipped migration history changed"},
+		{"changed pending SQL", func(f fstest.MapFS, h *[]migrationRecord) {
+			path := "migrations/" + (*h)[len(shippedMigrationHistory)].Name
+			f[path].Data = append(f[path].Data, []byte("-- changed\n")...)
+		}, "checksum mismatch: migrations/038_"},
 		{"changed backfill", func(f fstest.MapFS, _ *[]migrationRecord) {
 			f["migration_003_backfill.go"].Data = append(f["migration_003_backfill.go"].Data, []byte("// changed\n")...)
 		}, "checksum mismatch: migration_003_backfill.go"},
@@ -173,8 +197,8 @@ func TestMigrationHistoryRefusals(t *testing.T) {
 			(*h)[3].Backfill = (*h)[2].Backfill
 			(*h)[3].BackfillSHA256 = (*h)[2].BackfillSHA256
 		}, "unregistered or duplicate backfill"},
-		{"shortened deployed history", func(f fstest.MapFS, h *[]migrationRecord) {
-			for len(*h) >= len(deployedMigrationHistory) {
+		{"shortened shipped history", func(f fstest.MapFS, h *[]migrationRecord) {
+			for len(*h) >= len(shippedMigrationHistory) {
 				last := (*h)[len(*h)-1]
 				delete(f, "migrations/"+last.Name)
 				if last.Backfill != "" {
@@ -182,7 +206,7 @@ func TestMigrationHistoryRefusals(t *testing.T) {
 				}
 				*h = (*h)[:len(*h)-1]
 			}
-		}, "deployed migration history shortened"},
+		}, "shipped migration history shortened"},
 		{"omitted registered backfill", func(_ fstest.MapFS, h *[]migrationRecord) { (*h)[2].Backfill = ""; (*h)[2].BackfillSHA256 = "" }, "omits a registered backfill"},
 	}
 	for _, tt := range tests {
@@ -204,6 +228,37 @@ func TestMigrationHistoryRefusals(t *testing.T) {
 				t.Fatalf("got %v, want %q", err, tt.want)
 			}
 		})
+	}
+}
+
+// Until a release ships it, a pending migration may be edited together with
+// its manifest entry.
+func TestPendingMigrationsMayBeEdited(t *testing.T) {
+	source := copyMigrationFS(t)
+	history, err := readMigrationHistory(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(history) <= len(shippedMigrationHistory) {
+		t.Skip("no pending migrations")
+	}
+	if history[len(shippedMigrationHistory)-1].Name != lastShippedMigration {
+		t.Fatalf("the shipped list ends at %s, want %s", history[len(shippedMigrationHistory)-1].Name, lastShippedMigration)
+	}
+	for i := len(shippedMigrationHistory); i < len(history); i++ {
+		path := "migrations/" + history[i].Name
+		raw := append(source[path].Data, []byte("-- edited before release\n")...)
+		source[path].Data = raw
+		digest := sha256.Sum256(raw)
+		history[i].SHA256 = hex.EncodeToString(digest[:])
+	}
+	raw, err := json.Marshal(history)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source["migrations/history.json"].Data = raw
+	if err := checkMigrationIntegrity(source); err != nil {
+		t.Fatal(err)
 	}
 }
 

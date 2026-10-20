@@ -1,6 +1,6 @@
 import { anchor } from '../src/lib/location.ts'
 import type { FsHooks } from '../src/game/dev-hooks.ts'
-import { expect, type Page } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 import type { TilePoint } from './positions.ts'
 
 /**
@@ -29,6 +29,15 @@ export type ExitView = ReturnType<FsHooks['__fsWorld']>['exits'][number]
  * waits use it, so it costs time only when a test fails.
  */
 export const SERVER_ANSWER_MS = 15_000
+
+/**
+ * How long a test waits for the title after something in the page reloads it
+ * (a logout: upload what's pending, end the session, then a full reload). A
+ * `page.reload()` waits for the load event on its own; an in-page reload
+ * doesn't, so the wait covers the whole module load through Vite. That takes
+ * ~1 s here, but on a shared, loaded CI host it ran past the 5 s default.
+ */
+export const PAGE_RELOAD_MS = 30_000
 
 /** Per page and per text: the newest toast an expectToast already matched. */
 const toastsMatched = new WeakMap<Page, Map<string, number>>()
@@ -338,9 +347,15 @@ export async function pressOn(page: Page, id: string, tile?: { tx: number; ty: n
   await page.keyboard.press('e')
 }
 
-/** Set the area's creatures aside (frozen, off the map). Creatures of chunks attached later come back: park again after a move. */
-export async function parkCreatures(page: Page): Promise<void> {
-  await page.evaluate(() => window.__fsDevParkCreatures?.())
+/**
+ * Set the area's creatures aside (frozen, off the map). Creatures of chunks
+ * attached later come back: park again after a move. `keep`: every later
+ * scene of this tab starts parked, a reload included (a server camp's room
+ * still chases the parked hero, so its enemies can stand on him the moment
+ * the scene is built again).
+ */
+export async function parkCreatures(page: Page, opts: { keep?: boolean } = {}): Promise<void> {
+  await page.evaluate((keep) => window.__fsDevParkCreatures?.(keep), opts.keep ?? false)
 }
 
 /** The frame state now (null before the world is up). */
@@ -718,12 +733,53 @@ export async function readDialogue(page: Page, opts: { pick?: RegExp; picked?: (
   throw new Error('the conversation never closed')
 }
 
-/** Press E at an interactable once its prompt shows and world input is live; the conversation opens. */
+/** Press E at an interactable once it's ready (pressToTalk); the conversation opens. */
 export async function openTalk(page: Page, prompt: RegExp | string): Promise<void> {
-  await expect(page.locator('.prompt')).toContainText(prompt)
-  await waitForLive(page)
-  await page.keyboard.press('e')
+  await pressToTalk(page, prompt)
   await expect(page.getByRole('dialog', { name: /Conversation with/ })).toBeVisible()
+}
+
+/**
+ * The annotation type of a helper's in-test retry: an action pressed or sent
+ * again inside one attempt. Playwright doesn't count it as flaky (the test
+ * passed), so scripts/e2e-artifacts.mjs counts these next to the flaky tests.
+ */
+export const HELPER_RETRY = 'helper retry'
+
+/** Record one in-test retry (HELPER_RETRY) on the running test. */
+export function noteHelperRetry(helper: string, detail: string): void {
+  test.info().annotations.push({ type: HELPER_RETRY, description: `${helper}: ${detail}` })
+}
+
+/**
+ * Press E at `prompt` once it's ready, and a conversation opens. Ready: the
+ * prompt shows, world input is live, and the elected target has held still
+ * (same point, same place) for a few frames.
+ *
+ * One press for anything that stays put. Only a walking resident (one with a
+ * pose in `__fsNpcs`: Silas on his cycle) can step out of reach between the
+ * read and the press, and that E opens nothing (CI, 2026-10-18:
+ * homestead.spec.ts). Then this presses again, as a player would, up to three
+ * presses, and records each extra press (noteHelperRetry).
+ */
+export async function pressToTalk(page: Page, prompt: RegExp | string): Promise<void> {
+  const before = (await dialogueState(page)).opened
+  for (let press = 1; ; press++) {
+    await expect(page.locator('.prompt')).toContainText(prompt)
+    await waitForLive(page)
+    const target = await steady(page, async () => ({ live: (await frame(page))?.live === true, t: (await targetNow(page)).target }), {
+      frames: 4, seconds: 5, ready: (v) => v.live && !!v.t, message: `a still target at ${prompt}`,
+    }).then((v) => v.t, () => null)
+    if (!target) throw new Error(`no still target at ${prompt}: ${await diagnose(page)}`)
+    await page.keyboard.press('e')
+    const opened = await waitGame(page, () => dialogueState(page), (d) => d.opened > before, { seconds: 5, message: `a conversation at ${prompt}` }).then(() => true, () => false)
+    if (opened) return
+    const walker = await page.evaluate((id) => (window.__fsNpcs?.() ?? []).some((n) => n.id === id), target.id)
+    if (!walker || press >= 3 || (await dialogueState(page)).open) {
+      throw new Error(`E at ${prompt} (${target.id}${walker ? ', a walking resident' : ''}) opened no conversation after ${press} press${press > 1 ? 'es' : ''}: ${await diagnose(page)}`)
+    }
+    noteHelperRetry('pressToTalk', `E at ${prompt} (${target.id}) opened nothing; press ${press + 1}`)
+  }
 }
 
 /**

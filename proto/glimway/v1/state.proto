@@ -1,8 +1,10 @@
 syntax = "proto3";
 package glimway.v1;
 option go_package = "glimway/server/internal/gen/glimway/v1;contract";
+import "glimway/v1/camps.proto";
 import "glimway/v1/companions.proto";
 import "glimway/v1/fishing.proto";
+import "glimway/v1/lamps.proto";
 import "glimway/v1/profile.proto";
 import "glimway/v1/operations.proto";
 import "glimway/v1/op.proto";
@@ -77,6 +79,9 @@ message Envelope {
     WildsClearResult wilds_clear = 43; WildsLayResult wilds_lay = 44;
     WildsLiftResult wilds_lift = 45;
     WildsDiscoverResult wilds_discover = 46;
+    CampResult camp = 47; RecoveryCollectResult recovery_collect = 48;
+    CommunalLampResult communal_lamp = 49;
+    WaysHomeResult ways_home = 50;
   }
 }
 message LoginRequest { string user_id = 1; string token = 2; string invite = 3; string party = 4; }

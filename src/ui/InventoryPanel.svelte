@@ -7,14 +7,17 @@
   import { itemErrorText } from '../content/errors'
   import { presence } from '../game/presence'
   import { bus, EV } from '../game/events'
-  import { assetOf, fitTargets, inventoryEntries, mendLabel, modelEntries, newestFirst, newTabs, wearWords, type InventoryEntry, type InventoryTab } from '../lib/inventory'
+  import { assetOf, CARRIED_PLANT_WORDS, carriedPiece, fitTargets, homePieces, inventoryEntries, mendLabel, modelEntries, newestFirst, newTabs, wearWords, type InventoryEntry, type InventoryTab } from '../lib/inventory'
   import { conditionFraction, fittingLine, itemDef, itemName, ITEM_RULES } from '../lib/items'
   import type { InstanceView } from '../lib/api/types'
   import { INVENTORY_FILTERS, inventoryCopy } from '../content/inventory'
   import { beltFor, heldSlot, KIND_WORDS, type BeltKind } from '../lib/belt'
   import { GATHERING_DATA, isPlantableSeed, PLANTS_FULL_LINE } from '../lib/gathering'
-  import { plantTileNear } from '../lib/homestead'
-  import { lotOrigin, lotAtPixel } from '../lib/lots'
+  import { HOMESTEAD_DATA, homeItem, plantTileNear } from '../lib/homestead'
+  import { backlandAtPixel, inBackland, lotOrigin, lotAtPixel } from '../lib/lots'
+  import { campAtTile } from '../lib/camps'
+  import { isKeeper } from '../lib/lamp-naming'
+  import { campsKnown } from '../game/wilds/camps-state'
   import { ui } from './store.svelte'
   import { home } from './home.svelte'
   import { inventory } from './inventory.svelte'
@@ -31,6 +34,8 @@
   import { glimsPhrase, purseCopy } from '../content/purse'
   import Glim from './Glim.svelte'
   import { parseAmount } from '../lib/purse'
+  import { WAYS_HOME_LINES, wayOf, type WayHome } from '../lib/ways-home'
+  import type { WaysHomeBinding } from '../lib/gen/glimway/v1/lamps_pb.js'
 
   /**
    * Everything you carry, in one place (I or the HUD's bag button). At the
@@ -86,7 +91,13 @@
 
   const kit = $derived(ui.kit)
 
+  /** Your lamp-ash pouch's binding (lamps.md 1.4), once read. */
+  let pouchBinding = $state<WaysHomeBinding | null>(null)
+
   onMount(() => {
+    // Where the hero stands now: the frame loop writes it once a second, and
+    // the land, camp and plant buttons read it (step into a camp and press I).
+    bus.emit(EV.notePosition)
     inventory.syncPack(session.state.inventory)
     // In a world, ask for the item model and your home's pieces, both read
     // now (a home read already out may predate a change). Offline, what's
@@ -94,7 +105,12 @@
     if (session.link) {
       void items.load()
       void homes.fresh()
+      void session.link.waysHomeRead().then((r) => {
+        if (r.ok) pouchBinding = r.value.binding ?? null
+      })
     }
+    const onBound = (d: { binding: WaysHomeBinding | null }) => (pouchBinding = d.binding)
+    bus.on(EV.waysHomeBound, onBound)
     // The card sits under the pinned header (side column): measure it.
     const ro = new ResizeObserver(() => {
       if (!headEl || !panelEl) return
@@ -102,6 +118,7 @@
     })
     if (headEl) ro.observe(headEl)
     return () => {
+      bus.off(EV.waysHomeBound, onBound)
       ro.disconnect()
       // Everything carried was on screen (the bag opens on All): seen now.
       markTab('all')
@@ -113,10 +130,16 @@
     return connected && items.view ? items.view : null
   })
 
+  /** Home pieces: set out at your homestead, and in your pack with or without a deed. */
+  const pieces = $derived.by(() => {
+    void changed.value
+    return homePieces(homes.mine?.items, items.view?.carried)
+  })
+
   const entries = $derived.by<InventoryEntry[]>(() => {
     void changed.value
     const pack = inventory.pack.length ? inventory.pack : session.state.inventory
-    const decorations = homes.mine?.items ?? []
+    const decorations = pieces
     if (model) return modelEntries(model, { pack, decorations })
     return inventoryEntries({
       pack,
@@ -302,6 +325,19 @@
     void act(`use:${e.key}`, () => items.useItem(e.id, e.maker ? e.maker.id : '', ui.unmoored), `You used ${giftPhrase(e.id, 1)}.`)
   }
 
+  /** A way home (lamps.md 1.4): the pack closes, and you hold still in the world. */
+  function travelBy(way: WayHome): void {
+    bus.emit(EV.notePosition)
+    onClose()
+    bus.emit(EV.waysHome, { way })
+  }
+
+  /** Bind your pouch to the lamp beside you (the world answers with a line). */
+  function bindPouch(): void {
+    bus.emit(EV.notePosition)
+    bus.emit(EV.waysHomeBind)
+  }
+
   function pocketIt(e: InventoryEntry): void {
     if (e.pocket) {
       void act(`pocket:${e.key}`, () => items.pocket(e.pocket!, null), `${e.name} is back in your pack.`)
@@ -322,18 +358,69 @@
   }
 
   function myLandGate(): number | null {
-    return session.state.area === 'outdoors' ? lotAtPixel(session.state.position.x, session.state.position.y) : null
+    if (session.state.area !== 'outdoors') return null
+    const { x, y } = session.state.position
+    const lot = lotAtPixel(x, y)
+    if (lot !== null) return lot
+    // Your backland, while your lantern burns (lotLit).
+    const back = backlandAtPixel(x, y)
+    return back !== null && homes.mine?.gate === back && homes.mine.lantern.lit ? back : null
   }
 
-  /** Seeds and saplings go into your own land, at your feet. */
+  /** The camp you stand in, in the Wilds (lamps.md 2.5), if any. */
+  function campHere() {
+    if (session.state.area !== 'outdoors' || myLandGate() !== null) return null
+    const { x, y } = session.state.position
+    return campAtTile(campsKnown(session.link).list, Math.floor(x / 16), Math.floor((y - 1) / 16))
+  }
+
+  /** A carried (not set out) home piece of this kind. */
+  function carried(def: string): string | null {
+    return carriedPiece(pieces, def)
+  }
+
+  /** A carried way-lamp can be set in the Wilds, outside any camp; the server says where it holds. */
+  function lampSettable(e: InventoryEntry): boolean {
+    return e.kind === 'decoration' && e.id === HOMESTEAD_DATA.wayLamp.item && session.state.area === 'outdoors' && myLandGate() === null && !campHere() && carried(e.id) !== null
+  }
+
+  /** A carried outdoor piece can be set out at a camp you may build at. */
+  function campSettable(e: InventoryEntry): boolean {
+    const def = homeItem(e.id)
+    return e.kind === 'decoration' && !!campHere()?.builder && !!def?.where.includes('outdoor') && e.id !== HOMESTEAD_DATA.lanternPosts.item && e.id !== HOMESTEAD_DATA.stable.item && carried(e.id) !== null
+  }
+
+  function setAtCamp(e: InventoryEntry, action: 'set' | 'place'): void {
+    const itemId = carried(e.id)
+    if (!itemId) return
+    bus.emit(EV.notePosition)
+    bus.emit(EV.campDo, { action, itemId })
+    onClose()
+  }
+
+  /** A carried way-lamp set beside you as a communal lamp: no oil, kept by passers-by (lamps.md 1.3). */
+  function setCommunal(e: InventoryEntry): void {
+    const itemId = carried(e.id)
+    if (!itemId) return
+    bus.emit(EV.notePosition)
+    bus.emit(EV.communalPost, { itemId })
+    onClose()
+  }
+
+  /** Seeds and saplings go into your own land, at your feet, or at a camp you build at. */
   function plantable(e: InventoryEntry): boolean {
     const gate = myLandGate()
-    return isPlantableSeed(e.id) && gate !== null && homes.mine?.gate === gate
+    return (isPlantableSeed(e.id) || !!e.carriedPlant) && (gate !== null && homes.mine?.gate === gate || !!campHere()?.builder)
   }
 
   function plantIt(e: InventoryEntry): void {
     // Where the hero stands now (the server measures reach from the save).
     bus.emit(EV.notePosition)
+    if (myLandGate() === null && campHere()?.builder) {
+      bus.emit(EV.campDo, { action: 'plant', itemDef: e.id, ...(e.carriedPlant ? { itemId: e.carriedPlant.id } : {}) })
+      onClose()
+      return
+    }
     const gate = myLandGate()
     const mine = homes.mine
     if (mine && (mine.plants?.length ?? 0) >= GATHERING_DATA.plantsPerHome) {
@@ -341,7 +428,10 @@
       return
     }
     const o = gate !== null && session.state.area === 'outdoors' ? lotOrigin(gate) : { tx: 0, ty: 0 }
-    const localTile = mine ? plantTileNear(mine, { x: session.state.position.x - o.tx * 16, y: session.state.position.y - o.ty * 16 }) : null
+    const at = { x: session.state.position.x - o.tx * 16, y: session.state.position.y - o.ty * 16 }
+    // In the backland the seed goes in at your feet (the server checks the ground there).
+    const feet: [number, number] = [Math.floor(at.x / 16), Math.floor(at.y / 16)]
+    const localTile = !mine ? null : inBackland(feet[0], feet[1], mine.gate) ? feet : plantTileNear(mine, at)
     if (gate === null || !localTile || mine?.gate !== gate) {
       action.say(itemErrorText('land-blocked'), 'error')
       return
@@ -351,7 +441,7 @@
     void act(
       `plant:${e.key}`,
       () =>
-        items.plant(e.id, tile).then((r) => {
+        items.plant(e.id, tile, e.carriedPlant?.id).then((r) => {
           // The scene draws it now; the home's state keeps it for next time.
           if (r.ok && r.value.plant && session.link?.worldId === worldId) {
             bus.emit(EV.planted, { plant: r.value.plant, gate, worldId })
@@ -359,7 +449,7 @@
           }
           return r
         }),
-      `You planted ${giftPhrase(e.id, 1)}.`
+      e.carriedPlant ? CARRIED_PLANT_WORDS.planted(itemName(e.id)) : `You planted ${giftPhrase(e.id, 1)}.`
     )
   }
 
@@ -526,10 +616,21 @@
   {#if e.helps && e.helps.length > 0}<small class="helps">{e.helps.join(' · ')}</small>{/if}
   {#if e.rule && e.kind === 'tool'}<small class="rule">{e.rule}</small>{/if}
   {#if e.kind === 'decoration'}<small class="where">{where(e)}</small>{/if}
+  {#if model && e.section === 'main' && (lampSettable(e) || campSettable(e))}
+    <span class="acts">
+      <!-- A camp's Built lamp takes the Keeper's hand; a communal one takes nothing (lamps.md 2.8). -->
+      {#if lampSettable(e)}<button type="button" class="act primary" data-act="set-lamp" disabled={action.busy !== null || !isKeeper(session.state.flags)} title={isKeeper(session.state.flags) ? undefined : inventoryCopy.keeperNote} onclick={() => setAtCamp(e, 'set')}>{inventoryCopy.actions.setLamp}</button>{/if}
+      {#if lampSettable(e)}<button type="button" class="act" data-act="set-communal-lamp" disabled={action.busy !== null} onclick={() => setCommunal(e)}>{inventoryCopy.actions.setCommunal}</button>{/if}
+      {#if campSettable(e)}<button type="button" class="act primary" data-act="set-out" disabled={action.busy !== null} onclick={() => setAtCamp(e, 'place')}>{inventoryCopy.actions.setOut}</button>{/if}
+    </span>
+  {/if}
+  {#if model && e.section === 'main' && lampSettable(e) && !isKeeper(session.state.flags)}<small class="rule">{inventoryCopy.keeperNote}</small>{/if}
   {#if e.section === 'road'}<small class="rule">{inventoryCopy.roadNote}</small>{/if}
   {#if !full && model && e.section === 'main' && e.kind !== 'decoration' && e.kind !== 'material'}
     <small class="rule pick-hint">{inventoryCopy.pickToAct}</small>
   {:else if model && e.section === 'main' && e.kind !== 'decoration' && e.kind !== 'material'}
+    {@const way = wayOf(e.id)}
+    {#if way === 'pouch'}<small class="rule" data-testid="pouch-binding">{pouchBinding ? WAYS_HOME_LINES.boundTo(pouchBinding) : WAYS_HOME_LINES.unbound}</small>{/if}
     {#if k && k === hand.kind}
       <!-- In hand now: the belt, to take something else in hand (or put it away for the weapon). -->
       {@render beltRow()}
@@ -537,6 +638,8 @@
     <span class="acts">
       {#if k && k !== hand.kind}<button type="button" class="act primary" data-act="hold" onclick={() => hold(k)}>{inventoryCopy.holdThis}</button>{/if}
       {#if e.usable && session.state.hp > 0}<button type="button" class="act primary" data-act="use" disabled={action.busy !== null} onclick={() => useIt(e)}>{inventoryCopy.actions.use}</button>{/if}
+      {#if way && connected}<button type="button" class="act primary" data-act="travel" disabled={action.busy !== null} onclick={() => travelBy(way)}>{way === 'turncap' ? inventoryCopy.actions.goHome : inventoryCopy.actions.goToLamp}</button>{/if}
+      {#if way === 'pouch' && connected && session.state.area === 'outdoors'}<button type="button" class="act" data-act="bind" disabled={action.busy !== null} onclick={bindPouch}>{WAYS_HOME_LINES.bind}</button>{/if}
       {#if e.pocketable}<button type="button" class="act" data-act="pocket" disabled={action.busy !== null} onclick={() => pocketIt(e)}>{e.pocket ? inventoryCopy.actions.unpocket : inventoryCopy.actions.pocket}</button>{/if}
       {#if e.carryable}<button type="button" class="act" data-act="carry" disabled={action.busy !== null} onclick={() => carryIt(e)}>{e.inHand ? inventoryCopy.actions.putAway : inventoryCopy.actions.carry}</button>{/if}
       {#if e.mendable}<button type="button" class="act" data-act="mend" aria-expanded={open === `mend:${e.key}`} disabled={action.busy !== null} onclick={() => toggleOpen(`mend:${e.key}`)}>{inventoryCopy.actions.mend}…</button>{/if}

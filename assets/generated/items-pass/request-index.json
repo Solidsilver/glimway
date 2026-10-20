@@ -2840,5 +2840,22 @@
     ],
     "role": "world-sprite",
     "scaleGroup": "mill-hopper"
+  },
+  {
+    "key": "item-way-lamp",
+    "itemId": "way-lamp",
+    "category": "Home goods",
+    "priority": "P1",
+    "name": "Way-lamp",
+    "state": null,
+    "look": "Hooded wayside lamp on a stone footing, steadily lit",
+    "width": 16,
+    "height": 16,
+    "origin": [
+      0.5,
+      1
+    ],
+    "fit": "cell",
+    "role": "inventory-icon"
   }
 ]

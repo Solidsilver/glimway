@@ -17,11 +17,17 @@
         in rec {
           glimway-server = pkgs.callPackage ./nix/server.nix { inherit build; };
           glimway-web = pkgs.callPackage ./nix/web.nix { inherit build; };
+          # Dev builds (dev mode's tools), for a staging instance only.
+          glimway-server-dev = pkgs.callPackage ./nix/server.nix { inherit build; devTools = true; };
+          glimway-web-dev = pkgs.callPackage ./nix/web.nix { inherit build; devTools = true; };
           default = glimway-server;
         });
 
       nixosModules.default = import ./deploy/nixos/glimway.nix;
       nixosModules.glimway = self.nixosModules.default;
+      # A staging instance (services.glimway-dev) that can run beside the live
+      # one on the same host, from a second input such as the dev branch.
+      nixosModules.dev = import ./deploy/nixos/glimway-dev.nix;
 
       devShells = forAllSystems (system:
         let pkgs = import nixpkgs { inherit system; }; in {

@@ -114,6 +114,44 @@ export declare type Homestead = Message<"glimway.content.v1.Homestead"> & {
    * @generated from field: glimway.content.v1.HomesteadStable stable = 14;
    */
   stable?: HomesteadStable | undefined;
+
+  /**
+   * The lot lantern on each lot's back line (hearthwick-2.md 6): lit, it
+   * holds the backland chunk behind the lot across turnings.
+   *
+   * @generated from field: glimway.content.v1.LotLantern lot_lantern = 15;
+   */
+  lotLantern?: LotLantern | undefined;
+
+  /**
+   * The way-lamp (roadmap 0.13; lamps.md 2.5): set in the Wilds, it holds
+   * one chunk as a camp while it has oil.
+   *
+   * @generated from field: glimway.content.v1.WayLamp way_lamp = 16;
+   */
+  wayLamp?: WayLamp | undefined;
+
+  /**
+   * Communal lamps (roadmap 0.13; lamps.md 1.3, 2.4): Common light, kept by
+   * presence, never by oil.
+   *
+   * @generated from field: glimway.content.v1.CommunalLamp communal_lamp = 17;
+   */
+  communalLamp?: CommunalLamp | undefined;
+
+  /**
+   * Naming a lamp from parts (lamps.md 2.8).
+   *
+   * @generated from field: glimway.content.v1.LampNamingRules lamp_naming = 18;
+   */
+  lampNaming?: LampNamingRules | undefined;
+
+  /**
+   * The Wick Tree's weekly sap and the chandler's refining (lamps.md 2.5).
+   *
+   * @generated from field: glimway.content.v1.WickSap wick_sap = 19;
+   */
+  wickSap?: WickSap | undefined;
 };
 
 /**
@@ -220,6 +258,44 @@ export declare type HomesteadValid = Message<"glimway.content.v1.Homestead"> & {
    * @generated from field: glimway.content.v1.HomesteadStable stable = 14;
    */
   stable: HomesteadStableValid;
+
+  /**
+   * The lot lantern on each lot's back line (hearthwick-2.md 6): lit, it
+   * holds the backland chunk behind the lot across turnings.
+   *
+   * @generated from field: glimway.content.v1.LotLantern lot_lantern = 15;
+   */
+  lotLantern: LotLanternValid;
+
+  /**
+   * The way-lamp (roadmap 0.13; lamps.md 2.5): set in the Wilds, it holds
+   * one chunk as a camp while it has oil.
+   *
+   * @generated from field: glimway.content.v1.WayLamp way_lamp = 16;
+   */
+  wayLamp: WayLampValid;
+
+  /**
+   * Communal lamps (roadmap 0.13; lamps.md 1.3, 2.4): Common light, kept by
+   * presence, never by oil.
+   *
+   * @generated from field: glimway.content.v1.CommunalLamp communal_lamp = 17;
+   */
+  communalLamp: CommunalLampValid;
+
+  /**
+   * Naming a lamp from parts (lamps.md 2.8).
+   *
+   * @generated from field: glimway.content.v1.LampNamingRules lamp_naming = 18;
+   */
+  lampNaming: LampNamingRulesValid;
+
+  /**
+   * The Wick Tree's weekly sap and the chandler's refining (lamps.md 2.5).
+   *
+   * @generated from field: glimway.content.v1.WickSap wick_sap = 19;
+   */
+  wickSap: WickSapValid;
 };
 
 /**
@@ -227,6 +303,276 @@ export declare type HomesteadValid = Message<"glimway.content.v1.Homestead"> & {
  * Use `create(HomesteadSchema)` to create a new message.
  */
 export declare const HomesteadSchema: GenMessage<Homestead, {validType: HomesteadValid}>;
+
+/**
+ * The Wick Tree's weekly sap (lamps.md 2.5): once a calendar wick, anyone
+ * standing within reach tiles of the tree's spot (area, tx, ty) taps qty
+ * of `item`; at `refiner` (a seller) one of it refines, free, into
+ * oil_qty of `oil`. Code checks that the item, the oil and the seller exist.
+ *
+ * @generated from message glimway.content.v1.WickSap
+ */
+export declare type WickSap = Message<"glimway.content.v1.WickSap"> & {
+  /**
+   * @generated from field: string item = 1;
+   */
+  item: string;
+
+  /**
+   * @generated from field: int32 qty = 2;
+   */
+  qty: number;
+
+  /**
+   * @generated from field: string area = 3;
+   */
+  area: string;
+
+  /**
+   * @generated from field: int32 tx = 4;
+   */
+  tx: number;
+
+  /**
+   * @generated from field: int32 ty = 5;
+   */
+  ty: number;
+
+  /**
+   * @generated from field: int32 reach = 6;
+   */
+  reach: number;
+
+  /**
+   * @generated from field: string refiner = 7;
+   */
+  refiner: string;
+
+  /**
+   * @generated from field: string oil = 8;
+   */
+  oil: string;
+
+  /**
+   * @generated from field: int32 oil_qty = 9;
+   */
+  oilQty: number;
+};
+
+export declare type WickSapValid = WickSap;
+
+/**
+ * Describes the message glimway.content.v1.WickSap.
+ * Use `create(WickSapSchema)` to create a new message.
+ */
+export declare const WickSapSchema: GenMessage<WickSap, {validType: WickSapValid}>;
+
+/**
+ * Communal lamps (lamps.md 2.5's "Communal stone relight" and "New communal
+ * post"): anyone relights a dark lamp stone of the Lantern Road, burning
+ * relight_qty of `relight` (0: free), or sets the way-lamp piece as a
+ * communal post, with no oil and no store. reach is how far, in tiles, a
+ * player may relight, tend, set or lift from.
+ *
+ * @generated from message glimway.content.v1.CommunalLamp
+ */
+export declare type CommunalLamp = Message<"glimway.content.v1.CommunalLamp"> & {
+  /**
+   * @generated from field: string relight = 1;
+   */
+  relight: string;
+
+  /**
+   * @generated from field: int32 relight_qty = 2;
+   */
+  relightQty: number;
+
+  /**
+   * @generated from field: int32 reach = 3;
+   */
+  reach: number;
+};
+
+export declare type CommunalLampValid = CommunalLamp;
+
+/**
+ * Describes the message glimway.content.v1.CommunalLamp.
+ * Use `create(CommunalLampSchema)` to create a new message.
+ */
+export declare const CommunalLampSchema: GenMessage<CommunalLamp, {validType: CommunalLampValid}>;
+
+/**
+ * Naming a lamp from parts (lamps.md 2.8), never free text: "You are the
+ * <ordinal> lamp <relation> <landmark>. Behind you <behind>; ahead <ahead>.
+ * <closing>" and the short name "<Ordinal> lamp <relation> <landmark>". A
+ * landmark is one the server finds near the lamp (a place's landmark by
+ * its kind, a site by its kind, within one chunk of the lamp's) or a
+ * fallback, always offered; behind and ahead are a side phrase or an
+ * offered landmark. A lamp's first naming gives ash_qty of `ash`, once.
+ * Ids are unique within each list, and no side shares a fallback's id
+ * (code rules).
+ *
+ * @generated from message glimway.content.v1.LampNamingRules
+ */
+export declare type LampNamingRules = Message<"glimway.content.v1.LampNamingRules"> & {
+  /**
+   * @generated from field: repeated glimway.content.v1.NamingWord ordinals = 1;
+   */
+  ordinals: NamingWord[];
+
+  /**
+   * @generated from field: repeated glimway.content.v1.NamingWord relations = 2;
+   */
+  relations: NamingWord[];
+
+  /**
+   * @generated from field: repeated glimway.content.v1.NamingWord fallbacks = 3;
+   */
+  fallbacks: NamingWord[];
+
+  /**
+   * @generated from field: map<string, string> places = 4;
+   */
+  places: { [key: string]: string };
+
+  /**
+   * @generated from field: map<string, string> sites = 5;
+   */
+  sites: { [key: string]: string };
+
+  /**
+   * @generated from field: repeated glimway.content.v1.NamingWord sides = 6;
+   */
+  sides: NamingWord[];
+
+  /**
+   * @generated from field: repeated glimway.content.v1.NamingWord closings = 7;
+   */
+  closings: NamingWord[];
+
+  /**
+   * @generated from field: string ash = 8;
+   */
+  ash: string;
+
+  /**
+   * @generated from field: int32 ash_qty = 9;
+   */
+  ashQty: number;
+};
+
+export declare type LampNamingRulesValid = LampNamingRules;
+
+/**
+ * Describes the message glimway.content.v1.LampNamingRules.
+ * Use `create(LampNamingRulesSchema)` to create a new message.
+ */
+export declare const LampNamingRulesSchema: GenMessage<LampNamingRules, {validType: LampNamingRulesValid}>;
+
+/**
+ * One part a naming may use: its id, and the words it puts in the sentence.
+ *
+ * @generated from message glimway.content.v1.NamingWord
+ */
+export declare type NamingWord = Message<"glimway.content.v1.NamingWord"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string words = 2;
+   */
+  words: string;
+};
+
+export declare type NamingWordValid = NamingWord;
+
+/**
+ * Describes the message glimway.content.v1.NamingWord.
+ * Use `create(NamingWordSchema)` to create a new message.
+ */
+export declare const NamingWordSchema: GenMessage<NamingWord, {validType: NamingWordValid}>;
+
+/**
+ * The way-lamp's camp (lamps.md 2.5): `item` is the home piece set as the
+ * lamp (a camp-only piece); its oil works as the lot lantern's does. reach
+ * is how far, in tiles, a player may set, fill or build from.
+ *
+ * @generated from message glimway.content.v1.WayLamp
+ */
+export declare type WayLamp = Message<"glimway.content.v1.WayLamp"> & {
+  /**
+   * @generated from field: string item = 1;
+   */
+  item: string;
+
+  /**
+   * @generated from field: string oil = 2;
+   */
+  oil: string;
+
+  /**
+   * @generated from field: int32 max_wicks = 3;
+   */
+  maxWicks: number;
+
+  /**
+   * @generated from field: int32 wicks_per_oil = 4;
+   */
+  wicksPerOil: number;
+
+  /**
+   * @generated from field: int32 reach = 5;
+   */
+  reach: number;
+};
+
+export declare type WayLampValid = WayLamp;
+
+/**
+ * Describes the message glimway.content.v1.WayLamp.
+ * Use `create(WayLampSchema)` to create a new message.
+ */
+export declare const WayLampSchema: GenMessage<WayLamp, {validType: WayLampValid}>;
+
+/**
+ * The lot lantern's oil (roadmap 0.12): one `oil` item adds wicks_per_oil
+ * wicks, up to max_wicks; one wick burns at each turning, then it dims
+ * for a wick before it goes dark. stake_y is the lot-local row of the
+ * lantern-line stake that carries it.
+ *
+ * @generated from message glimway.content.v1.LotLantern
+ */
+export declare type LotLantern = Message<"glimway.content.v1.LotLantern"> & {
+  /**
+   * @generated from field: string oil = 1;
+   */
+  oil: string;
+
+  /**
+   * @generated from field: int32 max_wicks = 2;
+   */
+  maxWicks: number;
+
+  /**
+   * @generated from field: int32 wicks_per_oil = 3;
+   */
+  wicksPerOil: number;
+
+  /**
+   * @generated from field: int32 stake_y = 4;
+   */
+  stakeY: number;
+};
+
+export declare type LotLanternValid = LotLantern;
+
+/**
+ * Describes the message glimway.content.v1.LotLantern.
+ * Use `create(LotLanternSchema)` to create a new message.
+ */
+export declare const LotLanternSchema: GenMessage<LotLantern, {validType: LotLanternValid}>;
 
 /**
  * The stable's growth rules (docs/design/crafts.md 3.1, 3.2, 6.3). The

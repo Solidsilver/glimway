@@ -1,5 +1,6 @@
 import type Phaser from 'phaser'
 import { PACKED_BASE, PACKED_MANIFEST_KEY, SCALED_ATLASES } from './atlas-plan.ts'
+import { loadStaged } from './art-pass.ts'
 import { COMMONS_PACKED_KEY } from './commons-pass.ts'
 import { RUNTIME_PACKED_KEY } from './runtime-art.ts'
 import { ITEMS_PACKED_KEY } from './items-pass.ts'
@@ -20,23 +21,24 @@ import { HEARTHWICK2_PACKED_KEY } from './hearthwick2-art.ts'
  * ground tiles and people (residents, held tools) as lossless
  * WebP (identical texels, ~35% smaller than PNG), and the hero walk,
  * enemy, foreground and props atlases under the texture keys the scenes
- * already use. A file that fails to load leaves the code-drawn fallbacks in
- * charge.
+ * already use. The atlases boot only copies frames out of are staged
+ * (./art-pass.ts `loadStaged`): never uploaded as textures of their own.
+ * A file that fails to load leaves the code-drawn fallbacks in charge.
  */
 export function preloadPacked(scene: Phaser.Scene, base: string = PACKED_BASE): void {
   scene.load.json(PACKED_MANIFEST_KEY, `${base}atlases.json`)
-  scene.load.image(COMMONS_PACKED_KEY, `${base}commons.webp`)
-  scene.load.image(RUNTIME_PACKED_KEY, `${base}runtime.webp`)
-  scene.load.image(ITEMS_PACKED_KEY, `${base}items.webp`)
+  loadStaged(scene, COMMONS_PACKED_KEY, `${base}commons.webp`)
+  loadStaged(scene, RUNTIME_PACKED_KEY, `${base}runtime.webp`)
+  loadStaged(scene, ITEMS_PACKED_KEY, `${base}items.webp`)
   scene.load.image('fingersnap-terrain-runtime', `${base}terrain.webp`)
   scene.load.image(GROUND_PACKED_KEY, `${base}ground.webp`)
-  scene.load.image(PEOPLE_PACKED_KEY, `${base}people.webp`)
-  scene.load.image(BUILDINGS_PACKED_KEY, `${base}buildings.webp`)
-  scene.load.image(INDOORS_PACKED_KEY, `${base}indoors.webp`)
-  scene.load.image(CRAFTS_PACKED_KEY, `${base}crafts.webp`)
-  scene.load.image(PURSE_PACKED_KEY, `${base}purse.webp`)
-  scene.load.image(GLIMS_PACKED_KEY, `${base}glims.webp`)
-  scene.load.image(OPEN_MAP_PACKED_KEY, `${base}open-map.webp`)
-  scene.load.image(HEARTHWICK2_PACKED_KEY, `${base}hearthwick2.webp`)
+  loadStaged(scene, PEOPLE_PACKED_KEY, `${base}people.webp`)
+  loadStaged(scene, BUILDINGS_PACKED_KEY, `${base}buildings.webp`)
+  loadStaged(scene, INDOORS_PACKED_KEY, `${base}indoors.webp`)
+  loadStaged(scene, CRAFTS_PACKED_KEY, `${base}crafts.webp`)
+  loadStaged(scene, PURSE_PACKED_KEY, `${base}purse.webp`)
+  loadStaged(scene, GLIMS_PACKED_KEY, `${base}glims.webp`)
+  loadStaged(scene, OPEN_MAP_PACKED_KEY, `${base}open-map.webp`)
+  loadStaged(scene, HEARTHWICK2_PACKED_KEY, `${base}hearthwick2.webp`)
   for (const a of SCALED_ATLASES) scene.load.atlas(a.key, `${base}${a.key}.png`, `${base}${a.key}.json`)
 }

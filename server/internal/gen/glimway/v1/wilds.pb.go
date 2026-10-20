@@ -1920,6 +1920,8 @@ func (x *WildsPersonalClaim) GetAt() float64 {
 }
 
 // All time fields are Unix seconds.
+// epoch: the epoch the place was found in (this wick's, or a held chunk's
+// pinned one: place ids repeat across wicks).
 type WildsDiscovery struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	EntityId      string                 `protobuf:"bytes,1,opt,name=entity_id,json=entityId,proto3" json:"entity_id,omitempty"`
@@ -1927,6 +1929,7 @@ type WildsDiscovery struct {
 	DiscovererId  string                 `protobuf:"bytes,3,opt,name=discoverer_id,json=discovererId,proto3" json:"discoverer_id,omitempty"`
 	DisplayName   string                 `protobuf:"bytes,4,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	At            float64                `protobuf:"fixed64,5,opt,name=at,proto3" json:"at,omitempty"`
+	Epoch         string                 `protobuf:"bytes,6,opt,name=epoch,proto3" json:"epoch,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1994,6 +1997,13 @@ func (x *WildsDiscovery) GetAt() float64 {
 		return x.At
 	}
 	return 0
+}
+
+func (x *WildsDiscovery) GetEpoch() string {
+	if x != nil {
+		return x.Epoch
+	}
+	return ""
 }
 
 // All time fields are Unix seconds.
@@ -2255,11 +2265,14 @@ func (x *WildsRegionResult) GetEchoes() []*EchoAssignment {
 	return nil
 }
 
-// The frontier the server enforces (open-map.md 2.6): in 0.8 a rectangle
-// (contract 8); 0.9's lamps add held chunks beside it.
+// The frontier the server enforces (open-map.md 2.6; lamps.md 2.2): the
+// content's reach around the footprints, and every chunk within the
+// content's held_slack of a held chunk (held: the world's held keys, by cy
+// then cx), no further south than south_limit. rect bounds the union.
 type WildsFrontier struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Rect          *WildsChunkRect        `protobuf:"bytes,1,opt,name=rect,proto3" json:"rect,omitempty"`
+	Held          []*WildsChunkKey       `protobuf:"bytes,2,rep,name=held,proto3" json:"held,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2297,6 +2310,13 @@ func (*WildsFrontier) Descriptor() ([]byte, []int) {
 func (x *WildsFrontier) GetRect() *WildsChunkRect {
 	if x != nil {
 		return x.Rect
+	}
+	return nil
+}
+
+func (x *WildsFrontier) GetHeld() []*WildsChunkKey {
+	if x != nil {
+		return x.Held
 	}
 	return nil
 }
@@ -2771,9 +2791,16 @@ type WildsNearResult struct {
 	// Ways with a tile in the window.
 	Ways []*WildsWay `protobuf:"bytes,14,rep,name=ways,proto3" json:"ways,omitempty"`
 	// Every chunk of the window on the grid (location.OnGrid), row-major:
-	// its source ("fixed" or "generated") and the epoch its body is read
-	// under (a fixed chunk's pseudo-epoch). Only generated chunks carry state.
-	Chunks        []*NearChunk `protobuf:"bytes,15,rep,name=chunks,proto3" json:"chunks,omitempty"`
+	// its source ("fixed", "generated" or "held") and the epoch its body is
+	// read under (a fixed chunk's pseudo-epoch, a held chunk's pinned wick
+	// epoch). Only generated and held chunks carry state.
+	Chunks []*NearChunk `protobuf:"bytes,15,rep,name=chunks,proto3" json:"chunks,omitempty"`
+	// The wick epochs the window's held chunks are pinned to, other than this
+	// wick (roadmap 0.12 holds): their entity states, claims and ground
+	// changes ride under them.
+	Held []*WildsEpoch `protobuf:"bytes,16,rep,name=held,proto3" json:"held,omitempty"`
+	// Status of the occupied chunk only: neighbouring reads are not exploration.
+	Land          *WildsMapStatus `protobuf:"bytes,17,opt,name=land,proto3" json:"land,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2909,6 +2936,20 @@ func (x *WildsNearResult) GetWays() []*WildsWay {
 func (x *WildsNearResult) GetChunks() []*NearChunk {
 	if x != nil {
 		return x.Chunks
+	}
+	return nil
+}
+
+func (x *WildsNearResult) GetHeld() []*WildsEpoch {
+	if x != nil {
+		return x.Held
+	}
+	return nil
+}
+
+func (x *WildsNearResult) GetLand() *WildsMapStatus {
+	if x != nil {
+		return x.Land
 	}
 	return nil
 }
@@ -3253,6 +3294,374 @@ func (x *HomesteadLand) GetGeneratorVersion() uint32 {
 	return 0
 }
 
+// Read-only map status. Exploration is device-local, as for map terrain:
+// callers submit only explored keys, in batches of at most 256. This read
+// neither generates terrain nor credits presence. No capabilities ride here.
+type WildsMapRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Explored      []*WildsChunkKey       `protobuf:"bytes,1,rep,name=explored,proto3" json:"explored,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WildsMapRequest) Reset() {
+	*x = WildsMapRequest{}
+	mi := &file_glimway_v1_wilds_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WildsMapRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WildsMapRequest) ProtoMessage() {}
+
+func (x *WildsMapRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_wilds_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WildsMapRequest.ProtoReflect.Descriptor instead.
+func (*WildsMapRequest) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *WildsMapRequest) GetExplored() []*WildsChunkKey {
+	if x != nil {
+		return x.Explored
+	}
+	return nil
+}
+
+type WildsMapStatus struct {
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Wick   string                 `protobuf:"bytes,1,opt,name=wick,proto3" json:"wick,omitempty"`
+	Chunks []*ChunkLandStatus     `protobuf:"bytes,2,rep,name=chunks,proto3" json:"chunks,omitempty"`
+	// Explored lamps and the reader's own lot lantern (its known fixed stake).
+	Lamps         []*MapLamp `protobuf:"bytes,3,rep,name=lamps,proto3" json:"lamps,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WildsMapStatus) Reset() {
+	*x = WildsMapStatus{}
+	mi := &file_glimway_v1_wilds_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WildsMapStatus) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WildsMapStatus) ProtoMessage() {}
+
+func (x *WildsMapStatus) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_wilds_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WildsMapStatus.ProtoReflect.Descriptor instead.
+func (*WildsMapStatus) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *WildsMapStatus) GetWick() string {
+	if x != nil {
+		return x.Wick
+	}
+	return ""
+}
+
+func (x *WildsMapStatus) GetChunks() []*ChunkLandStatus {
+	if x != nil {
+		return x.Chunks
+	}
+	return nil
+}
+
+func (x *WildsMapStatus) GetLamps() []*MapLamp {
+	if x != nil {
+		return x.Lamps
+	}
+	return nil
+}
+
+type ChunkLandStatus struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Chunk *WildsChunkKey         `protobuf:"bytes,1,opt,name=chunk,proto3" json:"chunk,omitempty"`
+	// wild, common, built; permanent and still are outside oil upkeep.
+	Tier    string `protobuf:"bytes,2,opt,name=tier,proto3" json:"tier,omitempty"`
+	Visited bool   `protobuf:"varint,3,opt,name=visited,proto3" json:"visited,omitempty"`
+	ClaimId string `protobuf:"bytes,4,opt,name=claim_id,json=claimId,proto3" json:"claim_id,omitempty"`
+	Dimming bool   `protobuf:"varint,5,opt,name=dimming,proto3" json:"dimming,omitempty"`
+	Reserve uint32 `protobuf:"varint,6,opt,name=reserve,proto3" json:"reserve,omitempty"` // charged wicks, excluding the warning wick
+	Cost    uint32 `protobuf:"varint,7,opt,name=cost,proto3" json:"cost,omitempty"`       // wicks charged each turning
+	// held, dimming, turns, released, carries, paths-turn, lamps-carry,
+	// lamps-turn (a chunk whose only Common work is communal lamps),
+	// detail-turns, permanent
+	NextTurning string `protobuf:"bytes,8,opt,name=next_turning,json=nextTurning,proto3" json:"next_turning,omitempty"`
+	// Built terrain stays pinned even when its mark is far outside the near window.
+	Epoch *WildsEpoch `protobuf:"bytes,9,opt,name=epoch,proto3" json:"epoch,omitempty"`
+	// Known Common paths, so a map read outside the near window keeps their line.
+	Ground *GroundChanges `protobuf:"bytes,10,opt,name=ground,proto3" json:"ground,omitempty"`
+	// A Built claim's keeper, as the reader sees it (the in-world chip):
+	// keeper is a camp's setter's display name (empty for a lot lantern);
+	// yours: the reader set this camp, or lives on this lantern's lot.
+	Keeper        string `protobuf:"bytes,11,opt,name=keeper,proto3" json:"keeper,omitempty"`
+	Yours         bool   `protobuf:"varint,12,opt,name=yours,proto3" json:"yours,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ChunkLandStatus) Reset() {
+	*x = ChunkLandStatus{}
+	mi := &file_glimway_v1_wilds_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChunkLandStatus) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChunkLandStatus) ProtoMessage() {}
+
+func (x *ChunkLandStatus) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_wilds_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChunkLandStatus.ProtoReflect.Descriptor instead.
+func (*ChunkLandStatus) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *ChunkLandStatus) GetChunk() *WildsChunkKey {
+	if x != nil {
+		return x.Chunk
+	}
+	return nil
+}
+
+func (x *ChunkLandStatus) GetTier() string {
+	if x != nil {
+		return x.Tier
+	}
+	return ""
+}
+
+func (x *ChunkLandStatus) GetVisited() bool {
+	if x != nil {
+		return x.Visited
+	}
+	return false
+}
+
+func (x *ChunkLandStatus) GetClaimId() string {
+	if x != nil {
+		return x.ClaimId
+	}
+	return ""
+}
+
+func (x *ChunkLandStatus) GetDimming() bool {
+	if x != nil {
+		return x.Dimming
+	}
+	return false
+}
+
+func (x *ChunkLandStatus) GetReserve() uint32 {
+	if x != nil {
+		return x.Reserve
+	}
+	return 0
+}
+
+func (x *ChunkLandStatus) GetCost() uint32 {
+	if x != nil {
+		return x.Cost
+	}
+	return 0
+}
+
+func (x *ChunkLandStatus) GetNextTurning() string {
+	if x != nil {
+		return x.NextTurning
+	}
+	return ""
+}
+
+func (x *ChunkLandStatus) GetEpoch() *WildsEpoch {
+	if x != nil {
+		return x.Epoch
+	}
+	return nil
+}
+
+func (x *ChunkLandStatus) GetGround() *GroundChanges {
+	if x != nil {
+		return x.Ground
+	}
+	return nil
+}
+
+func (x *ChunkLandStatus) GetKeeper() string {
+	if x != nil {
+		return x.Keeper
+	}
+	return ""
+}
+
+func (x *ChunkLandStatus) GetYours() bool {
+	if x != nil {
+		return x.Yours
+	}
+	return false
+}
+
+type MapLamp struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// lot-lantern, way-lamp, common-lamp (a communal light: a relit road stone
+	// or a communal post, id its stable lamp id; name, naming and namer stay
+	// empty until a Keeper names it).
+	Kind          string           `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
+	X             int32            `protobuf:"zigzag32,3,opt,name=x,proto3" json:"x,omitempty"`
+	Y             int32            `protobuf:"zigzag32,4,opt,name=y,proto3" json:"y,omitempty"` // world tiles; never reveal adjacent terrain
+	At            float64          `protobuf:"fixed64,5,opt,name=at,proto3" json:"at,omitempty"`
+	Name          string           `protobuf:"bytes,6,opt,name=name,proto3" json:"name,omitempty"`
+	Naming        string           `protobuf:"bytes,7,opt,name=naming,proto3" json:"naming,omitempty"`
+	Namer         string           `protobuf:"bytes,8,opt,name=namer,proto3" json:"namer,omitempty"`
+	Land          *ChunkLandStatus `protobuf:"bytes,9,opt,name=land,proto3" json:"land,omitempty"`
+	MageLit       bool             `protobuf:"varint,10,opt,name=mage_lit,json=mageLit,proto3" json:"mage_lit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MapLamp) Reset() {
+	*x = MapLamp{}
+	mi := &file_glimway_v1_wilds_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MapLamp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MapLamp) ProtoMessage() {}
+
+func (x *MapLamp) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_wilds_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MapLamp.ProtoReflect.Descriptor instead.
+func (*MapLamp) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *MapLamp) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *MapLamp) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *MapLamp) GetX() int32 {
+	if x != nil {
+		return x.X
+	}
+	return 0
+}
+
+func (x *MapLamp) GetY() int32 {
+	if x != nil {
+		return x.Y
+	}
+	return 0
+}
+
+func (x *MapLamp) GetAt() float64 {
+	if x != nil {
+		return x.At
+	}
+	return 0
+}
+
+func (x *MapLamp) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *MapLamp) GetNaming() string {
+	if x != nil {
+		return x.Naming
+	}
+	return ""
+}
+
+func (x *MapLamp) GetNamer() string {
+	if x != nil {
+		return x.Namer
+	}
+	return ""
+}
+
+func (x *MapLamp) GetLand() *ChunkLandStatus {
+	if x != nil {
+		return x.Land
+	}
+	return nil
+}
+
+func (x *MapLamp) GetMageLit() bool {
+	if x != nil {
+		return x.MageLit
+	}
+	return false
+}
+
 var File_glimway_v1_wilds_proto protoreflect.FileDescriptor
 
 const file_glimway_v1_wilds_proto_rawDesc = "" +
@@ -3421,13 +3830,14 @@ const file_glimway_v1_wilds_proto_rawDesc = "" +
 	"\x0ecamp_claimable\x18\b \x01(\bR\rcampClaimable\"A\n" +
 	"\x12WildsPersonalClaim\x12\x1b\n" +
 	"\tentity_id\x18\x01 \x01(\tR\bentityId\x12\x0e\n" +
-	"\x02at\x18\x02 \x01(\x01R\x02at\"\x9c\x01\n" +
+	"\x02at\x18\x02 \x01(\x01R\x02at\"\xb2\x01\n" +
 	"\x0eWildsDiscovery\x12\x1b\n" +
 	"\tentity_id\x18\x01 \x01(\tR\bentityId\x12\x15\n" +
 	"\x06poi_id\x18\x02 \x01(\tR\x05poiId\x12#\n" +
 	"\rdiscoverer_id\x18\x03 \x01(\tR\fdiscovererId\x12!\n" +
 	"\fdisplay_name\x18\x04 \x01(\tR\vdisplayName\x12\x0e\n" +
-	"\x02at\x18\x05 \x01(\x01R\x02at\"\xf2\x01\n" +
+	"\x02at\x18\x05 \x01(\x01R\x02at\x12\x14\n" +
+	"\x05epoch\x18\x06 \x01(\tR\x05epoch\"\xf2\x01\n" +
 	"\fWildsLantern\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bowner_id\x18\x02 \x01(\tR\aownerId\x12!\n" +
@@ -3451,9 +3861,10 @@ const file_glimway_v1_wilds_proto_rawDesc = "" +
 	"\x06echoes\x18\a \x03(\v2\x1a.glimway.v1.EchoAssignmentR\x06echoes\x1a<\n" +
 	"\x0eMaterialsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01:\x02\x18\x01\"?\n" +
+	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01:\x02\x18\x01\"n\n" +
 	"\rWildsFrontier\x12.\n" +
-	"\x04rect\x18\x01 \x01(\v2\x1a.glimway.v1.WildsChunkRectR\x04rect\"f\n" +
+	"\x04rect\x18\x01 \x01(\v2\x1a.glimway.v1.WildsChunkRectR\x04rect\x12-\n" +
+	"\x04held\x18\x02 \x03(\v2\x19.glimway.v1.WildsChunkKeyR\x04held\"f\n" +
 	"\fGroundChange\x12\x0e\n" +
 	"\x02tx\x18\x01 \x01(\rR\x02tx\x12\x0e\n" +
 	"\x02ty\x18\x02 \x01(\rR\x02ty\x12\x16\n" +
@@ -3485,7 +3896,7 @@ const file_glimway_v1_wilds_proto_rawDesc = "" +
 	"\x04path\x18\t \x03(\v2\x15.glimway.v1.WorldTileR\x04path\x12,\n" +
 	"\x06sign_a\x18\n" +
 	" \x01(\v2\x15.glimway.v1.WorldTileR\x05signA\x12,\n" +
-	"\x06sign_b\x18\v \x01(\v2\x15.glimway.v1.WorldTileR\x05signB\"\xe5\x06\n" +
+	"\x06sign_b\x18\v \x01(\v2\x15.glimway.v1.WorldTileR\x05signB\"\xc1\a\n" +
 	"\x0fWildsNearResult\x12,\n" +
 	"\x05still\x18\x01 \x01(\v2\x16.glimway.v1.WildsEpochR\x05still\x12*\n" +
 	"\x04wick\x18\x02 \x01(\v2\x16.glimway.v1.WildsEpochR\x04wick\x125\n" +
@@ -3502,7 +3913,9 @@ const file_glimway_v1_wilds_proto_rawDesc = "" +
 	"\tmaterials\x18\f \x03(\v2*.glimway.v1.WildsNearResult.MaterialsEntryR\tmaterials\x122\n" +
 	"\aglimpse\x18\r \x03(\v2\x18.glimway.v1.WildsGlimpseR\aglimpse\x12(\n" +
 	"\x04ways\x18\x0e \x03(\v2\x14.glimway.v1.WildsWayR\x04ways\x12-\n" +
-	"\x06chunks\x18\x0f \x03(\v2\x15.glimway.v1.NearChunkR\x06chunks\x1a<\n" +
+	"\x06chunks\x18\x0f \x03(\v2\x15.glimway.v1.NearChunkR\x06chunks\x12*\n" +
+	"\x04held\x18\x10 \x03(\v2\x16.glimway.v1.WildsEpochR\x04held\x12.\n" +
+	"\x04land\x18\x11 \x01(\v2\x1a.glimway.v1.WildsMapStatusR\x04land\x1a<\n" +
 	"\x0eMaterialsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"j\n" +
@@ -3530,7 +3943,39 @@ const file_glimway_v1_wilds_proto_rawDesc = "" +
 	"\x05width\x18\x01 \x01(\rR\x05width\x12\x16\n" +
 	"\x06height\x18\x02 \x01(\rR\x06height\x12\x14\n" +
 	"\x05cells\x18\x03 \x03(\tR\x05cells\x12+\n" +
-	"\x11generator_version\x18\x04 \x01(\rR\x10generatorVersion*T\n" +
+	"\x11generator_version\x18\x04 \x01(\rR\x10generatorVersion\"H\n" +
+	"\x0fWildsMapRequest\x125\n" +
+	"\bexplored\x18\x01 \x03(\v2\x19.glimway.v1.WildsChunkKeyR\bexplored\"\x84\x01\n" +
+	"\x0eWildsMapStatus\x12\x12\n" +
+	"\x04wick\x18\x01 \x01(\tR\x04wick\x123\n" +
+	"\x06chunks\x18\x02 \x03(\v2\x1b.glimway.v1.ChunkLandStatusR\x06chunks\x12)\n" +
+	"\x05lamps\x18\x03 \x03(\v2\x13.glimway.v1.MapLampR\x05lamps\"\x85\x03\n" +
+	"\x0fChunkLandStatus\x12/\n" +
+	"\x05chunk\x18\x01 \x01(\v2\x19.glimway.v1.WildsChunkKeyR\x05chunk\x12\x12\n" +
+	"\x04tier\x18\x02 \x01(\tR\x04tier\x12\x18\n" +
+	"\avisited\x18\x03 \x01(\bR\avisited\x12\x19\n" +
+	"\bclaim_id\x18\x04 \x01(\tR\aclaimId\x12\x18\n" +
+	"\adimming\x18\x05 \x01(\bR\adimming\x12\x18\n" +
+	"\areserve\x18\x06 \x01(\rR\areserve\x12\x12\n" +
+	"\x04cost\x18\a \x01(\rR\x04cost\x12!\n" +
+	"\fnext_turning\x18\b \x01(\tR\vnextTurning\x12,\n" +
+	"\x05epoch\x18\t \x01(\v2\x16.glimway.v1.WildsEpochR\x05epoch\x121\n" +
+	"\x06ground\x18\n" +
+	" \x01(\v2\x19.glimway.v1.GroundChangesR\x06ground\x12\x16\n" +
+	"\x06keeper\x18\v \x01(\tR\x06keeper\x12\x14\n" +
+	"\x05yours\x18\f \x01(\bR\x05yours\"\xe7\x01\n" +
+	"\aMapLamp\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\f\n" +
+	"\x01x\x18\x03 \x01(\x11R\x01x\x12\f\n" +
+	"\x01y\x18\x04 \x01(\x11R\x01y\x12\x0e\n" +
+	"\x02at\x18\x05 \x01(\x01R\x02at\x12\x12\n" +
+	"\x04name\x18\x06 \x01(\tR\x04name\x12\x16\n" +
+	"\x06naming\x18\a \x01(\tR\x06naming\x12\x14\n" +
+	"\x05namer\x18\b \x01(\tR\x05namer\x12/\n" +
+	"\x04land\x18\t \x01(\v2\x1b.glimway.v1.ChunkLandStatusR\x04land\x12\x19\n" +
+	"\bmage_lit\x18\n" +
+	" \x01(\bR\amageLit*T\n" +
 	"\x03Dir\x12\x13\n" +
 	"\x0fDIR_UNSPECIFIED\x10\x00\x12\r\n" +
 	"\tDIR_NORTH\x10\x01\x12\f\n" +
@@ -3564,7 +4009,7 @@ func file_glimway_v1_wilds_proto_rawDescGZIP() []byte {
 }
 
 var file_glimway_v1_wilds_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_glimway_v1_wilds_proto_msgTypes = make([]protoimpl.MessageInfo, 36)
+var file_glimway_v1_wilds_proto_msgTypes = make([]protoimpl.MessageInfo, 40)
 var file_glimway_v1_wilds_proto_goTypes = []any{
 	(Dir)(0),                       // 0: glimway.v1.Dir
 	(SiteKind)(0),                  // 1: glimway.v1.SiteKind
@@ -3603,10 +4048,14 @@ var file_glimway_v1_wilds_proto_goTypes = []any{
 	(*WildsMaterial)(nil),          // 34: glimway.v1.WildsMaterial
 	(*WildsLoot)(nil),              // 35: glimway.v1.WildsLoot
 	(*HomesteadLand)(nil),          // 36: glimway.v1.HomesteadLand
-	nil,                            // 37: glimway.v1.WildsRegionResult.MaterialsEntry
-	nil,                            // 38: glimway.v1.WildsNearResult.MaterialsEntry
-	(*wrapperspb.DoubleValue)(nil), // 39: google.protobuf.DoubleValue
-	(*wrapperspb.StringValue)(nil), // 40: google.protobuf.StringValue
+	(*WildsMapRequest)(nil),        // 37: glimway.v1.WildsMapRequest
+	(*WildsMapStatus)(nil),         // 38: glimway.v1.WildsMapStatus
+	(*ChunkLandStatus)(nil),        // 39: glimway.v1.ChunkLandStatus
+	(*MapLamp)(nil),                // 40: glimway.v1.MapLamp
+	nil,                            // 41: glimway.v1.WildsRegionResult.MaterialsEntry
+	nil,                            // 42: glimway.v1.WildsNearResult.MaterialsEntry
+	(*wrapperspb.DoubleValue)(nil), // 43: google.protobuf.DoubleValue
+	(*wrapperspb.StringValue)(nil), // 44: google.protobuf.StringValue
 }
 var file_glimway_v1_wilds_proto_depIdxs = []int32{
 	0,  // 0: glimway.v1.Exit.dir:type_name -> glimway.v1.Dir
@@ -3625,48 +4074,58 @@ var file_glimway_v1_wilds_proto_depIdxs = []int32{
 	10, // 13: glimway.v1.Placed.art:type_name -> glimway.v1.PlacedArt
 	11, // 14: glimway.v1.Placed.prop:type_name -> glimway.v1.PlacedProp
 	12, // 15: glimway.v1.Placed.exit:type_name -> glimway.v1.PlacedExit
-	39, // 16: glimway.v1.WildsEpoch.ends_at:type_name -> google.protobuf.DoubleValue
-	40, // 17: glimway.v1.WildsEntityState.by:type_name -> google.protobuf.StringValue
-	39, // 18: glimway.v1.WildsEntityState.at:type_name -> google.protobuf.DoubleValue
-	40, // 19: glimway.v1.WildsLantern.lit_by:type_name -> google.protobuf.StringValue
-	39, // 20: glimway.v1.WildsLantern.lit_at:type_name -> google.protobuf.DoubleValue
+	43, // 16: glimway.v1.WildsEpoch.ends_at:type_name -> google.protobuf.DoubleValue
+	44, // 17: glimway.v1.WildsEntityState.by:type_name -> google.protobuf.StringValue
+	43, // 18: glimway.v1.WildsEntityState.at:type_name -> google.protobuf.DoubleValue
+	44, // 19: glimway.v1.WildsLantern.lit_by:type_name -> google.protobuf.StringValue
+	43, // 20: glimway.v1.WildsLantern.lit_at:type_name -> google.protobuf.DoubleValue
 	17, // 21: glimway.v1.WildsRegionResult.epoch:type_name -> glimway.v1.WildsEpoch
 	18, // 22: glimway.v1.WildsRegionResult.entities:type_name -> glimway.v1.WildsEntityState
 	19, // 23: glimway.v1.WildsRegionResult.personal_claims:type_name -> glimway.v1.WildsPersonalClaim
 	20, // 24: glimway.v1.WildsRegionResult.discoveries:type_name -> glimway.v1.WildsDiscovery
 	21, // 25: glimway.v1.WildsRegionResult.lanterns:type_name -> glimway.v1.WildsLantern
-	37, // 26: glimway.v1.WildsRegionResult.materials:type_name -> glimway.v1.WildsRegionResult.MaterialsEntry
+	41, // 26: glimway.v1.WildsRegionResult.materials:type_name -> glimway.v1.WildsRegionResult.MaterialsEntry
 	22, // 27: glimway.v1.WildsRegionResult.echoes:type_name -> glimway.v1.EchoAssignment
 	15, // 28: glimway.v1.WildsFrontier.rect:type_name -> glimway.v1.WildsChunkRect
-	25, // 29: glimway.v1.GroundChanges.changes:type_name -> glimway.v1.GroundChange
-	14, // 30: glimway.v1.ChunkGroundChanges.chunk:type_name -> glimway.v1.WildsChunkKey
-	26, // 31: glimway.v1.ChunkGroundChanges.changes:type_name -> glimway.v1.GroundChanges
-	14, // 32: glimway.v1.WildsGlimpse.chunk:type_name -> glimway.v1.WildsChunkKey
-	29, // 33: glimway.v1.WildsWay.path:type_name -> glimway.v1.WorldTile
-	29, // 34: glimway.v1.WildsWay.sign_a:type_name -> glimway.v1.WorldTile
-	29, // 35: glimway.v1.WildsWay.sign_b:type_name -> glimway.v1.WorldTile
-	17, // 36: glimway.v1.WildsNearResult.still:type_name -> glimway.v1.WildsEpoch
-	17, // 37: glimway.v1.WildsNearResult.wick:type_name -> glimway.v1.WildsEpoch
-	24, // 38: glimway.v1.WildsNearResult.frontier:type_name -> glimway.v1.WildsFrontier
-	14, // 39: glimway.v1.WildsNearResult.center:type_name -> glimway.v1.WildsChunkKey
-	18, // 40: glimway.v1.WildsNearResult.entities:type_name -> glimway.v1.WildsEntityState
-	19, // 41: glimway.v1.WildsNearResult.personal_claims:type_name -> glimway.v1.WildsPersonalClaim
-	20, // 42: glimway.v1.WildsNearResult.discoveries:type_name -> glimway.v1.WildsDiscovery
-	21, // 43: glimway.v1.WildsNearResult.lanterns:type_name -> glimway.v1.WildsLantern
-	22, // 44: glimway.v1.WildsNearResult.echoes:type_name -> glimway.v1.EchoAssignment
-	27, // 45: glimway.v1.WildsNearResult.ground:type_name -> glimway.v1.ChunkGroundChanges
-	38, // 46: glimway.v1.WildsNearResult.materials:type_name -> glimway.v1.WildsNearResult.MaterialsEntry
-	28, // 47: glimway.v1.WildsNearResult.glimpse:type_name -> glimway.v1.WildsGlimpse
-	30, // 48: glimway.v1.WildsNearResult.ways:type_name -> glimway.v1.WildsWay
-	32, // 49: glimway.v1.WildsNearResult.chunks:type_name -> glimway.v1.NearChunk
-	14, // 50: glimway.v1.NearChunk.chunk:type_name -> glimway.v1.WildsChunkKey
-	34, // 51: glimway.v1.WildsLoot.materials:type_name -> glimway.v1.WildsMaterial
-	40, // 52: glimway.v1.WildsLoot.trinket:type_name -> google.protobuf.StringValue
-	53, // [53:53] is the sub-list for method output_type
-	53, // [53:53] is the sub-list for method input_type
-	53, // [53:53] is the sub-list for extension type_name
-	53, // [53:53] is the sub-list for extension extendee
-	0,  // [0:53] is the sub-list for field type_name
+	14, // 29: glimway.v1.WildsFrontier.held:type_name -> glimway.v1.WildsChunkKey
+	25, // 30: glimway.v1.GroundChanges.changes:type_name -> glimway.v1.GroundChange
+	14, // 31: glimway.v1.ChunkGroundChanges.chunk:type_name -> glimway.v1.WildsChunkKey
+	26, // 32: glimway.v1.ChunkGroundChanges.changes:type_name -> glimway.v1.GroundChanges
+	14, // 33: glimway.v1.WildsGlimpse.chunk:type_name -> glimway.v1.WildsChunkKey
+	29, // 34: glimway.v1.WildsWay.path:type_name -> glimway.v1.WorldTile
+	29, // 35: glimway.v1.WildsWay.sign_a:type_name -> glimway.v1.WorldTile
+	29, // 36: glimway.v1.WildsWay.sign_b:type_name -> glimway.v1.WorldTile
+	17, // 37: glimway.v1.WildsNearResult.still:type_name -> glimway.v1.WildsEpoch
+	17, // 38: glimway.v1.WildsNearResult.wick:type_name -> glimway.v1.WildsEpoch
+	24, // 39: glimway.v1.WildsNearResult.frontier:type_name -> glimway.v1.WildsFrontier
+	14, // 40: glimway.v1.WildsNearResult.center:type_name -> glimway.v1.WildsChunkKey
+	18, // 41: glimway.v1.WildsNearResult.entities:type_name -> glimway.v1.WildsEntityState
+	19, // 42: glimway.v1.WildsNearResult.personal_claims:type_name -> glimway.v1.WildsPersonalClaim
+	20, // 43: glimway.v1.WildsNearResult.discoveries:type_name -> glimway.v1.WildsDiscovery
+	21, // 44: glimway.v1.WildsNearResult.lanterns:type_name -> glimway.v1.WildsLantern
+	22, // 45: glimway.v1.WildsNearResult.echoes:type_name -> glimway.v1.EchoAssignment
+	27, // 46: glimway.v1.WildsNearResult.ground:type_name -> glimway.v1.ChunkGroundChanges
+	42, // 47: glimway.v1.WildsNearResult.materials:type_name -> glimway.v1.WildsNearResult.MaterialsEntry
+	28, // 48: glimway.v1.WildsNearResult.glimpse:type_name -> glimway.v1.WildsGlimpse
+	30, // 49: glimway.v1.WildsNearResult.ways:type_name -> glimway.v1.WildsWay
+	32, // 50: glimway.v1.WildsNearResult.chunks:type_name -> glimway.v1.NearChunk
+	17, // 51: glimway.v1.WildsNearResult.held:type_name -> glimway.v1.WildsEpoch
+	38, // 52: glimway.v1.WildsNearResult.land:type_name -> glimway.v1.WildsMapStatus
+	14, // 53: glimway.v1.NearChunk.chunk:type_name -> glimway.v1.WildsChunkKey
+	34, // 54: glimway.v1.WildsLoot.materials:type_name -> glimway.v1.WildsMaterial
+	44, // 55: glimway.v1.WildsLoot.trinket:type_name -> google.protobuf.StringValue
+	14, // 56: glimway.v1.WildsMapRequest.explored:type_name -> glimway.v1.WildsChunkKey
+	39, // 57: glimway.v1.WildsMapStatus.chunks:type_name -> glimway.v1.ChunkLandStatus
+	40, // 58: glimway.v1.WildsMapStatus.lamps:type_name -> glimway.v1.MapLamp
+	14, // 59: glimway.v1.ChunkLandStatus.chunk:type_name -> glimway.v1.WildsChunkKey
+	17, // 60: glimway.v1.ChunkLandStatus.epoch:type_name -> glimway.v1.WildsEpoch
+	26, // 61: glimway.v1.ChunkLandStatus.ground:type_name -> glimway.v1.GroundChanges
+	39, // 62: glimway.v1.MapLamp.land:type_name -> glimway.v1.ChunkLandStatus
+	63, // [63:63] is the sub-list for method output_type
+	63, // [63:63] is the sub-list for method input_type
+	63, // [63:63] is the sub-list for extension type_name
+	63, // [63:63] is the sub-list for extension extendee
+	0,  // [0:63] is the sub-list for field type_name
 }
 
 func init() { file_glimway_v1_wilds_proto_init() }
@@ -3681,7 +4140,7 @@ func file_glimway_v1_wilds_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_glimway_v1_wilds_proto_rawDesc), len(file_glimway_v1_wilds_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   36,
+			NumMessages:   40,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

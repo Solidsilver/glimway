@@ -8,6 +8,7 @@ import { PAPERS as COMMONS_PAPERS } from '../src/game/homestead.ts';
 import { calendarAt } from '../src/lib/calendar.ts';
 import { createNewGame, validateSave } from '../src/lib/state.ts';
 import projects from '../content/projects.json' with { type: 'json' };
+import { questById } from '../src/lib/quests.ts';
 
 // The outer Wilds' terrain, sites, crossing and Echo assignments are the
 // server's now (server/internal/wilds: goldens and invariants); these are the
@@ -84,6 +85,12 @@ test('every findable paper has a way into the game (or is reported as needing a 
   for (const p of PAPERS) {
     const k = p.source.kind;
     if (k === 'library-start' || k === 'placed' || k === 'quest' || k === 'gift') continue;
+    // A later quest's step hands it over in its `papers` (the Keeper's hand).
+    if (k === 'quest-step') {
+      const s = p.source;
+      assert.ok(questById(s.quest)?.steps.find((x) => x.id === s.step)?.papers.includes(p.id), `${p.id}: ${s.quest}:${s.step} grants it`);
+      continue;
+    }
     if (!hooked.has(p.id) && !(p.id in UNBUILT_PAPERS)) missing.push(p.id);
   }
   assert.deepEqual(missing, []);

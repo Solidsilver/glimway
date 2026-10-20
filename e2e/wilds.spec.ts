@@ -171,6 +171,9 @@ test('connected: harvest, clear a camp, chest, POI, reload in place, the fallen 
   // The hero was set down without a scene change: this tab saves the spot, then the world has it.
   await page.evaluate(() => (window as unknown as { __fsDevSaveSoon: () => void }).__fsDevSaveSoon())
   await expect.poll(() => page.evaluate(() => (window as unknown as { __fsDevSaved: () => { pending: boolean } }).__fsDevSaved().pending)).toBe(false)
+  // Parked from the reload's first frame: the camps' rooms chased the parked
+  // hero, and one touch would knock him ~20 px before the check.
+  await parkCreatures(page, { keep: true })
   await reenter(page, 'outdoors')
   await waitForWilds(page)
   const reloaded = await wilds(page)
@@ -180,7 +183,10 @@ test('connected: harvest, clear a camp, chest, POI, reload in place, the fallen 
 
   // Defeat in the Wilds leaves a lantern (reported before recovery).
   const hurtAt = reloaded.position
+  // The world's answer says why no lantern was left, if none was (it failed once on a random world, CI 39181365344).
+  const fell = page.waitForResponse((r) => r.request().method() === 'POST' && new URL(r.url()).pathname === '/api/fall')
   await page.evaluate((n) => (window as unknown as { __fsDevHurt: (n: number) => void }).__fsDevHurt(n), 999)
+  const fall = JSON.stringify(((await (await fell).json().catch(() => null)) as { fall?: unknown } | null)?.fall ?? null)
   // Defeat wakes the hero in the village; walk back in and find the lantern.
   await page.waitForFunction(() => {
     const s = (window as unknown as { __fsSafety?: () => { areaId: string; transitioning: boolean; position?: { x: number; y: number } } | null }).__fsSafety?.()
@@ -188,7 +194,7 @@ test('connected: harvest, clear a camp, chest, POI, reload in place, the fallen 
   }, undefined, { timeout: 20_000 })
   await warp(page, 'outdoors', Math.floor(hurtAt.x / TILE), Math.floor(hurtAt.y / TILE))
   await waitForWilds(page)
-  await expect.poll(async () => (await wilds(page)).lanterns.some((l) => l.own && !l.lit)).toBe(true)
+  await expect.poll(async () => (await wilds(page)).lanterns.some((l) => l.own && !l.lit), { message: `the fallen lantern, at ${JSON.stringify(hurtAt)} in epoch ${(await wilds(page)).epochId}; the fall answered ${fall}` }).toBe(true)
   const lantern = (await wilds(page)).lanterns.find((l) => l.own)!
   expect(lantern.x).toBe(Math.floor(hurtAt.x / 16))
   expect(lantern.y).toBe(Math.floor(hurtAt.y / 16))

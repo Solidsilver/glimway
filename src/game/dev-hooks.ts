@@ -1,8 +1,9 @@
 /**
  * Playtest hooks: the `window.__fs*` handles the e2e suite reads and drives
- * the game through (docs/playtest.md). They exist in dev builds only (e2e
- * runs the Vite dev server), so a production bundle carries none of them,
- * and a hook tied to a scene is deleted when that scene ends (shuts down or
+ * the game through (docs/playtest.md). They exist only in builds with dev
+ * tools (the Vite dev server, which e2e runs, and a staging server's
+ * dev-tools build for players its dev mode allows; src/lib/dev-tools.ts), so
+ * a release bundle installs none of them, and a hook tied to a scene is deleted when that scene ends (shuts down or
  * is destroyed), so it never keeps a dead scene alive.
  *
  * FsHooks is the one list of them, typed; `e2e/` can import it
@@ -28,6 +29,8 @@ import type { LibraryOpenPayload } from './event-names.ts'
 import type { PerfReport } from './perf.ts'
 import type { InteractableView } from './entities/interactables.ts'
 import { onSceneEnd, type SceneEvents } from './scene-end.ts'
+import { DEV_LOCAL, DEV_TOOLS } from '../lib/dev-tools.ts'
+import { onWebSettings, webSettings } from '../lib/web-settings.ts'
 
 type Box = { x: number; y: number; w: number; h: number }
 type Insets = { top: number; right: number; bottom: number; left: number }
@@ -77,7 +80,7 @@ export interface FsHooks {
   __fsWilds: () => ReturnType<WildsEntities['debug']> | null
   __fsWildsWindow: () => ReturnType<WildsWindow['debug']> | null
   /** The scene's display-list size, running tweens and static bodies, and what is listed (type:texture, counted). */
-  __fsSceneSize: () => { list: number; tweens: number; transientTweens: number; statics: number; textures: number; listeners: number; kinds: Record<string, number> }
+  __fsSceneSize: () => { list: number; tweens: number; transientTweens: number; tweening: string[]; statics: number; textures: number; listeners: number; kinds: Record<string, number> }
   /** The walking-performance instruments (src/game/perf.ts; only with `?perf=1`): everything as JSON, the walk's phase, a fresh start. */
   __fsPerf: () => PerfReport
   __fsPerfPhase: (name: string) => void
@@ -88,6 +91,10 @@ export interface FsHooks {
   __fsPathTile: (tx: number, ty: number) => PathTile | null
   /** Way signs drawn and places asked about, and the discoveries the store holds. */
   __fsMarks: () => (ReturnType<WildsMarks['debug']> & { discoveries: { id: string; by: string; name: string }[]; places: { id: string; kind: string; tx: number; ty: number }[] }) | null
+  /** The camps the open map last read, and the spot beside the hero a lamp, piece or seed would go. */
+  __fsCamps: () => { camps: { id: string; cx: number; cy: number; x: number; y: number; oil: number; dimming: boolean; pieces: { id: string; itemDef: string; x: number; y: number }[]; plants: { id: string; itemDef: string }[] }[]; spot: { tx: number; ty: number } | null } | null
+  /** The lit communal lamps the open map last read (lamps.md 1.3). */
+  __fsCommunalLamps: () => { lamps: { id: string; kind: string; x: number; y: number; visited: boolean; name: string }[]; stones: { site: string; frame: string }[] } | null
   /** This wick's rumour as the link holds it. */
   __fsRumour: () => ({ epoch: string; place: string; site: string; landmark: string; compass: string; ring: number; pastRiver: boolean; opened: boolean; current: boolean } | null)
   /** The workable pieces of this area and, at home, the lamps whose light holds the ground. */
@@ -116,6 +123,8 @@ export interface FsHooks {
    * and whether it is a fading canopy.
    */
   __fsArtAt: (tx: number, ty: number) => { frame: string; fades: boolean }[]
+  /** Live images whose texture key starts with a prefix, where they stand in world px (the lot lantern's stake). */
+  __fsImagesNamed: (prefix: string) => { key: string; x: number; y: number }[]
   /** The sync-safety snapshot the UI's sync gate reads (sync-safety.ts). */
   __fsSafety: () => SyncSafety | null
   /** The seat, and the depths the hero and the layered avatar are drawn at. */
@@ -149,7 +158,7 @@ export interface FsHooks {
   __fsDevFrameTimes: (ms: number, finish?: boolean) => Promise<{ frames: number; gap: { p50: number; p95: number }; step: { p50: number; p95: number }; canvas: [number, number] }>
   __fsDevDodge: (dx: number, dy: number) => void
   __fsDevAttack: () => void
-  __fsDevParkCreatures: () => void
+  __fsDevParkCreatures: (keep?: boolean) => void
   /** Local (curated) enemies take `n`; a server camp's enemies only show it (their room decides). */
   __fsDevStrike: (n: number, type?: EnemyType) => void
   /** Finish a generated camp's fight for this account (a `-tags dev` server's /api/dev/fight-fall), then read the Wilds again. */
@@ -243,14 +252,74 @@ export interface FsHooks {
 }
 
 /**
- * Put a playtest hook on `window` (dev builds only; a no-op otherwise).
+ * Put a playtest hook on `window` (builds with dev tools only; a no-op
+ * otherwise). Under the Vite dev server it goes on at once. In a dev-tools
+ * build it follows this player's grant (web.dev.hooks): on while the server
+ * gives it, off again when the grant goes (another account, a revoke).
  * The returned disposer removes only this registration. With a scene, it is deleted when that scene shuts down or is destroyed, unless a
  * newer registration has taken the name meanwhile.
  */
 export function expose<K extends keyof FsHooks>(name: K, fn: FsHooks[K], scene?: { events: SceneEvents }): () => void {
-  // `?.`: Node tests load modules that expose hooks, and have no import.meta.env.
-  if (import.meta.env?.DEV) return hook(window as unknown as Partial<FsHooks>, name, fn, scene)
-  return () => {}
+  if (!DEV_TOOLS) return () => {}
+  if (DEV_LOCAL) return hook(window as unknown as Partial<FsHooks>, name, fn, scene)
+  if (!windowGate) {
+    const gate = gatedHooks(window as unknown as Partial<FsHooks>)
+    gate.set(!!webSettings().dev?.hooks)
+    onWebSettings((s) => gate.set(!!s.dev?.hooks))
+    windowGate = gate
+  }
+  return windowGate.expose(name, fn, scene)
+}
+
+let windowGate: HookGate | null = null
+
+export interface HookGate {
+  /** Grant (true) or take away (false): every registration goes on or comes off at once. */
+  set(on: boolean): void
+  /** expose, under the gate. */
+  expose<K extends keyof FsHooks>(name: K, fn: FsHooks[K], scene?: { events: SceneEvents }): () => void
+}
+
+/**
+ * Hooks behind a grant, on `target`: each registration is on the target
+ * while the gate is on and off it otherwise, kept until it is disposed (or
+ * its scene ends), so a later grant puts it back.
+ */
+export function gatedHooks(target: Partial<FsHooks>): HookGate {
+  type Entry = { install: () => void; remove: () => void }
+  const entries = new Set<Entry>()
+  let on = false
+  return {
+    set(next) {
+      if (next === on) return
+      on = next
+      // Insertion order: the newest registration of a name goes on last, and wins.
+      for (const e of entries) {
+        if (on) e.install()
+        else e.remove()
+      }
+    },
+    expose(name, fn, scene) {
+      let dispose: (() => void) | null = null
+      const entry: Entry = {
+        install: () => {
+          if (!dispose) dispose = hook(target, name, fn)
+        },
+        remove: () => {
+          dispose?.()
+          dispose = null
+        }
+      }
+      entries.add(entry)
+      if (on) entry.install()
+      const cancel = () => {
+        entry.remove()
+        entries.delete(entry)
+      }
+      if (scene) onSceneEnd(scene, cancel)
+      return cancel
+    }
+  }
 }
 
 /** Who registered each hook last, per target: the same function can be registered twice. */

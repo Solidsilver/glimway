@@ -4,13 +4,16 @@ import { ApiError } from './errors.ts';
 import { decodeWire } from './wire.ts';
 import { decodePlayerState, validatePlayerState } from './state-contract.ts';
 import { EnvelopeSchema, LoginRequestSchema, PlayRequestSchema, SessionResponseSchema, StateResponseSchema, PlayResponseSchema, WorldChooseRequestSchema, type Envelope, type LoginRequest, type PlayRequest, type SessionResponse, type StateResponse, type PlayResponse } from '../gen/glimway/v1/state_pb.js';
-import { WildsNearResultSchema, HomesteadLandSchema, type WorldChunk, type WildsNearResult, type HomesteadLand } from '../gen/glimway/v1/wilds_pb.js';
+import { WildsMapRequestSchema, WildsMapStatusSchema, type WildsMapStatus, WildsNearResultSchema, HomesteadLandSchema, type WorldChunk, type WildsNearResult, type HomesteadLand } from '../gen/glimway/v1/wilds_pb.js';
 import { decodeChunk } from './chunks.ts';
-import { validateNear } from './near.ts';
+import { validateNear, validateMapStatus } from './near.ts';
+import { loadWilds } from '../wilds/data.ts';
 import { type CompanionsRequest, type MountHomeRequest, type MountOutRequest, type StableExtendRequest, type StallRequest } from '../gen/glimway/v1/companions_pb.js';
 import { WardrobeReadSchema, type WardrobeCheckRequest, type WardrobeRead, type WardrobeRequest } from '../gen/glimway/v1/wardrobe_pb.js';
 import { FishingWatersSchema, type FishCastRequest, type FishSettleRequest, type FishCancelRequest, type FishingWaters } from '../gen/glimway/v1/fishing_pb.js';
 import { PurseReadSchema, type PurseRead, type PurseTopUpRequest } from '../gen/glimway/v1/purse_pb.js';
+import { CampsReadSchema, LampNoticesReadSchema, RecoveryReadSchema, type CampRequest, type CampsRead, type LampNoticesRead, type RecoveryCollectRequest, type RecoveryRead } from '../gen/glimway/v1/camps_pb.js';
+import { CommunalLampsReadSchema, LampLandmarksReadSchema, WaysHomeReadSchema, type CommunalLampRequest, type CommunalLampsRead, type LampLandmarksRead, type WaysHomeRead, type WaysHomeRequest } from '../gen/glimway/v1/lamps_pb.js';
 import { type ReportRequest, type QuestStepRequest, type MarkRequest, type TakePaperRequest, type SettleEchoRequest, type FallRequest, type ProfileReport, type SpendRequest, type WildsClaimRequest, type WildsLanternRequest, type WildsClearRequest, type WildsLayRequest, type WildsLiftRequest, type WildsDiscoverRequest } from '../gen/glimway/v1/operations_pb.js';
 
 export type Transport = (method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown, extra?: { headers?: Record<string, string>; binary?: boolean; keepalive?: boolean }) => Promise<unknown>;
@@ -25,6 +28,8 @@ export interface OperationsApi {
   chunk(epoch: string, layer: number, cx: number, cy: number): Promise<WorldChunk>;
   /** The open map's near read around a chunk (open-map.md 2.4). */
   near(cx: number, cy: number): Promise<WildsNearResult>;
+  /** Read-only status for explored keys; never credits a visit. */
+  mapStatus(explored: readonly { cx: number; cy: number }[]): Promise<WildsMapStatus>;
   homeLand(gate: number): Promise<HomesteadLand>;
   report(request: ReportRequest, options?: { keepalive?: boolean }): Promise<Envelope>;
   questStep(request: QuestStepRequest): Promise<Envelope>;
@@ -41,6 +46,22 @@ export interface OperationsApi {
   wildsLay(request: WildsLayRequest): Promise<Envelope>;
   wildsLift(request: WildsLiftRequest): Promise<Envelope>;
   wildsDiscover(request: WildsDiscoverRequest): Promise<Envelope>;
+  /** Camps (lamps.md 2.5): set, fill, place, remove, plant; and the world's camps. */
+  camp(request: CampRequest): Promise<Envelope>;
+  camps(): Promise<CampsRead>;
+  /** Pell's recovery crate (lamps.md 2.7): what waits, and collecting it. */
+  recovery(): Promise<RecoveryRead>;
+  recoveryCollect(request: RecoveryCollectRequest): Promise<Envelope>;
+  /** The lights you keep that started dimming this wick, each told once (lamps.md 2.5). */
+  lampNotices(): Promise<LampNoticesRead>;
+  /** Communal lamps (lamps.md 1.3, 2.4): relight, tend, post, lift; and the world's lit ones. */
+  communalLamp(request: CommunalLampRequest): Promise<Envelope>;
+  communalLamps(): Promise<CommunalLampsRead>;
+  /** The landmarks a naming of this lamp may use (lamps.md 2.8). */
+  lampLandmarks(lamp: string): Promise<LampLandmarksRead>;
+  /** Ways home (lamps.md 1.4): bind your pouch, travel by turncap or pouch; and your pouch's binding. */
+  waysHome(request: WaysHomeRequest): Promise<Envelope>;
+  waysHomeRead(): Promise<WaysHomeRead>;
   /** Companions and the stable (crafts.md 6.2). */
   companions(request: CompanionsRequest): Promise<Envelope>;
   stall(request: StallRequest): Promise<Envelope>;
@@ -90,6 +111,11 @@ export function createOperationsApi(send: Transport): OperationsApi {
     async worldChoose(choice) { return validatedSession(await send('POST', '/api/world/choose', toJson(WorldChooseRequestSchema, create(WorldChooseRequestSchema, { choice })))); },
     async logout() { await send('DELETE', '/api/session'); },
     async chunk(epoch, layer, cx, cy) { const raw = await send('GET', `/api/wilds/chunk/${encodeURIComponent(epoch)}/${layer}/${cx}/${cy}`, undefined, { binary: true }); return validated(() => { if (!(raw instanceof Uint8Array)) throw new Error('missing binary chunk'); const chunk = decodeChunk(raw); if (chunk.epochId !== epoch || chunk.layer !== layer || chunk.cx !== cx || chunk.cy !== cy) throw new Error("chunk identity mismatch"); return chunk; }); },
+    async mapStatus(explored) {
+      const req = create(WildsMapRequestSchema, { explored: explored.map((k) => ({ ...k, realm: loadWilds().realm, layer: 0 })) });
+      const raw = await send('POST', '/api/wilds/map', toJson(WildsMapRequestSchema, req));
+      return validated(() => validateMapStatus(decodeWire(WildsMapStatusSchema, raw), explored));
+    },
     async near(cx, cy) { const raw = await send('GET', `/api/wilds/near/${cx}/${cy}`); return validated(() => validateNear(decodeWire(WildsNearResultSchema, raw), cx, cy)); },
     async homeLand(gate) { const raw = await send('GET', `/api/homestead/land/${gate}`); return validated(() => {
       const out = decodeWire(HomesteadLandSchema, raw);
@@ -110,6 +136,16 @@ export function createOperationsApi(send: Transport): OperationsApi {
     async wildsLay(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['wilds-lay'], req)); },
     async wildsLift(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['wilds-lift'], req)); },
     async wildsDiscover(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['wilds-discover'], req)); },
+    async camp(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['camp'], req)); },
+    async camps() { return decodeMixed(await send('GET', '/api/camps'), (r) => decodeWire(CampsReadSchema, r)).result; },
+    async recovery() { return decodeMixed(await send('GET', '/api/recovery'), (r) => decodeWire(RecoveryReadSchema, r)).result; },
+    async recoveryCollect(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['recovery-collect'], req)); },
+    async lampNotices() { const raw = await send('GET', '/api/lamp-notices'); return validated(() => decodeWire(LampNoticesReadSchema, raw)); },
+    async communalLamp(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['communal-lamp'], req)); },
+    async communalLamps() { return decodeMixed(await send('GET', '/api/communal-lamps'), (r) => decodeWire(CommunalLampsReadSchema, r)).result; },
+    async lampLandmarks(lamp) { return decodeMixed(await send('GET', `/api/lamp-landmarks/${encodeURIComponent(lamp)}`), (r) => decodeWire(LampLandmarksReadSchema, r)).result; },
+    async waysHome(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['ways-home'], req)); },
+    async waysHomeRead() { return decodeMixed(await send('GET', '/api/ways-home'), (r) => decodeWire(WaysHomeReadSchema, r)).result; },
     async companions(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['companions'], req)); },
     async stall(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['stall'], req)); },
     async mountOut(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['mount-out'], req)); },

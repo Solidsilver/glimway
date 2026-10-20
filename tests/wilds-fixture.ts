@@ -9,7 +9,7 @@
  * - `road`: the first chunk of the Beyond with a dark lamp stone;
  * - `ford`: the first with a ford over the Wend;
  * - `ford-bend`, `ford-bend-east`, `ford-diagonal-west`, `ford-diagonal-east`: bent crossings
- *   of `v3-0`, wick `t:1789948800:1790553600` (TestRiverCrossingFixtures).
+ *   of `v3-0`, wick `t:1791158400:1791763200` (TestRiverCrossingFixtures).
  */
 import { readFileSync } from 'node:fs';
 import { clone } from '@bufbuild/protobuf';

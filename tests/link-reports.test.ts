@@ -215,6 +215,30 @@ test('arriving on the open map reports it; walking on from the Commons across th
   assert.deepEqual(reports(r)[1]!.place, { area: 'outdoors', x: 40, y: 424 });
 });
 
+test('after a reload, the first arrival reports the place even though the restored book already holds it', async (t) => {
+  const store = memoryOutboxStore();
+  const here = S({ area: 'outdoors', x: 88, y: -1496 });
+  const first = await rig(t, { store, state: here });
+  await online(first, here);
+  first.link.arrived();
+  await first.link.flush();
+  assert.equal(reports(first).length, 1);
+  await first.link.persist();
+  first.link.stop();
+
+  // The reloaded page stands where the last report said: nothing is new, but
+  // the world records a turning since then only from a report (e2e wilds-outer).
+  const record = await store.load('fixture-account', 'dev');
+  const next = await rig(t, { store, record, state: here });
+  await online(next, here);
+  next.link.arrived();
+  await next.link.flush();
+  assert.deepEqual(reports(next).map((b) => b.place), [{ area: 'outdoors', x: 88, y: -1496 }]);
+  next.link.arrived();
+  await next.link.flush();
+  assert.equal(reports(next).length, 1, 'once: a second arrival in the same area waits for the deadline');
+});
+
 test('a fall names where the hero stands when it falls', async (t) => {
   const r = await rig(t);
   r.session.state.area = 'woodland';

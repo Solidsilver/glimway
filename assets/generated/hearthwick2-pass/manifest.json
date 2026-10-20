@@ -51,6 +51,10 @@
     {
       "key": "garden-set-source",
       "file": "sheets/generated-garden-set.png"
+    },
+    {
+      "key": "lantern-stake-dim-source",
+      "file": "sheets/generated-lantern-stake-dim.png"
     }
   ],
   "frames": [
@@ -1039,6 +1043,40 @@
       ],
       "role": "edge-prop",
       "file": "frames/wildgate-arch.png"
+    },
+    {
+      "key": "lantern-stake-2",
+      "source": "lantern-stake-dim-source",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 1024,
+        "h": 1536
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 96
+      },
+      "destinationRect": {
+        "x": 11,
+        "y": 8,
+        "w": 41,
+        "h": 88
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 96
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "lot-prop",
+      "file": "frames/lantern-stake-2.png"
     },
     {
       "key": "shop-sign-bread",

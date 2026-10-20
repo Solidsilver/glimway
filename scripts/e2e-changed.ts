@@ -8,6 +8,9 @@
  *   - a changed spec runs itself;
  *   - a changed file under a mapped path runs that rule's specs (and the
  *     smoke tier, for rules marked `smoke`: the scene everything runs in);
+ *     a path starting with `!` takes files back out of its rule, and a rule
+ *     marked `fallback` (a broad catch-all) applies only to files no other
+ *     rule covers;
  *   - shared test infrastructure (the map's `full` list) runs the full suite;
  *   - a changed source file no rule covers adds the smoke tier (and is named,
  *     so the map can learn it);
@@ -21,7 +24,7 @@
 import { execFileSync, spawnSync } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
 
-type Map = { full: string[]; ignore: string[]; rules: { paths: string[]; specs: string[]; smoke?: boolean }[] }
+type Map = { full: string[]; ignore: string[]; rules: { paths: string[]; specs: string[]; smoke?: boolean; fallback?: boolean }[] }
 
 const map = JSON.parse(readFileSync('e2e/changed-map.json', 'utf8')) as Map
 const base = process.env.E2E_BASE || 'dev'
@@ -46,7 +49,10 @@ function glob(pattern: string): RegExp {
   }
   return new RegExp(`^${re}$`)
 }
-const matches = (file: string, patterns: string[]) => patterns.some((p) => glob(p).test(file))
+/** Any pattern matches, and no `!pattern` takes the file back out. */
+const matches = (file: string, patterns: string[]) =>
+  patterns.some((p) => !p.startsWith('!') && glob(p).test(file)) &&
+  !patterns.some((p) => p.startsWith('!') && glob(p.slice(1)).test(file))
 
 // E2E_CHANGED="a.ts,b.ts" plans for that list instead of git (try the map).
 const given = process.env.E2E_CHANGED?.split(',').map((f) => f.trim()).filter(Boolean)
@@ -89,7 +95,10 @@ for (const file of changed) {
     }
     continue
   }
-  const hits = map.rules.filter((r) => matches(file, r.paths))
+  const covering = map.rules.filter((r) => matches(file, r.paths))
+  // Catch-alls (fallback rules) apply only to files no specific rule covers.
+  const specific = covering.filter((r) => !r.fallback)
+  const hits = specific.length ? specific : covering
   for (const r of hits) for (const s of r.specs) specs.add(s)
   if (hits.some((r) => r.smoke)) smoke = true
   if (hits.length) reasons.push(`${file} → ${[...new Set(hits.flatMap((r) => r.specs))].join(', ')}${hits.some((r) => r.smoke) ? ' + smoke' : ''}`)
@@ -123,8 +132,12 @@ if (full) {
 }
 if (listOnly) process.exit(0)
 
-const run = (extra: string[]) => spawnSync('npx', ['playwright', 'test', ...extra, ...passThrough], { stdio: 'inherit' }).status ?? 1
+const run = (extra: string[], env: Record<string, string> = {}) => spawnSync('npx', ['playwright', 'test', ...extra, ...passThrough], { stdio: 'inherit', env: { ...process.env, ...env } }).status ?? 1
 let status = 0
 if (full || pw.length) status = run(pw)
-if (!full && smoke) status = run(['--grep', '@smoke']) || status
+// A second pass has its own output folder and report: Playwright empties its
+// output folder as it starts, which took the first pass's traces and JSON
+// report with it (scripts/e2e-artifacts.mjs reads both).
+const smokeOut = pw.length ? ['--output', 'test-results/smoke'] : []
+if (!full && smoke) status = run(['--grep', '@smoke', ...smokeOut], pw.length ? { E2E_RESULTS: 'test-results/smoke/e2e-results.json' } : {}) || status
 process.exit(status)

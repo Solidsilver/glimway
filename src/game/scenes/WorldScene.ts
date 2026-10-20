@@ -11,6 +11,7 @@
  * (src/game/presence.ts).
  */
 import Phaser from 'phaser'
+import { DEV_TOOLS } from '../../lib/dev-tools'
 import type { AreaId, QuestEvent } from '../../lib/state'
 import { buildGround } from '../area/terrain'
 import { buildSolids, clearSolidTile, type Solids } from '../area/collision'
@@ -61,11 +62,15 @@ import { fingerInBracken } from '../../lib/quests'
 import { OUTDOORS_AREA, isWildsArea, chunkOfPixel, chunkKey } from '../wilds/coords'
 import { contentPosition } from '../../lib/location'
 import { holdOnSafe, stopAtEdge } from '../safe-barrier'
-import { prepareWilds } from '../wilds/store'
-import { WildsWindow } from '../wilds/window'
-import { waitingFixedAt } from '../wilds/wilds-world'
+import { prepareWilds, wildsFrontier } from '../wilds/store'
+import { WildsWindow, onWindow } from '../wilds/window'
+import { followFrontier, waitingFixedAt } from '../wilds/wilds-world'
 import { WildsPaths } from '../wilds/paths'
 import { WildsMarks } from '../wilds/marks'
+import { WildsCamps } from '../wilds/camps'
+import { WildsCommunalLamps } from '../wilds/communal-lamps'
+import { WaysHome } from '../ways-home'
+import { fightingYou } from '../../lib/ways-home'
 import { watchRumour } from '../rumour-watch'
 import { loadWilds } from '../../lib/wilds/data'
 import { displayArea, setWildsLand } from '../../content/world'
@@ -79,7 +84,9 @@ import { WildsEntities } from '../wilds/entities'
 import { enemiesNearForSync, setSyncSafety } from '../sync-safety'
 import { onSceneEnd } from '../scene-end'
 import { exposeWorldHooks } from './world-dev-hooks'
-import { playHold, runFrame, type WorldFrame } from './world-frame'
+import { playHold, runFrame, type PlayHold, type WorldFrame } from './world-frame'
+import { FadeHold } from './fade-hold'
+import { TravelHold } from './travel-hold'
 import { perfWatch } from '../perf'
 import { Unmoored } from '../entities/unmoored'
 import { WorldActions } from './world-actions'
@@ -138,6 +145,10 @@ export class WorldScene extends Phaser.Scene {
   private paths: WildsPaths | null = null
   /** Way signs, finders' names and first finds on the open map (null in curated areas). */
   private marks: WildsMarks | null = null
+  private camps: WildsCamps | null = null
+  private communalLamps: WildsCommunalLamps | null = null
+  /** The turncap and the lamp-ash pouch (lamps.md 1.4): their pause, then travel. */
+  private waysHome!: WaysHome
   /** The drift's line is said once a scene build (open-map.md 2.6). */
   private driftSaid = false
   /** Which of the open map's places the HUD names now. */
@@ -165,11 +176,13 @@ export class WorldScene extends Phaser.Scene {
   private offHand: OffHandVisual | null = null
   /** Keys, the belt and the mouse (./world-controls.ts). */
   private controls!: WorldControls
-  private transitioning = false
+  /** Leaving this build, or a Turning holding play (./travel-hold.ts): a relocation waits out the hold. */
+  private readonly travel = new TravelHold<RelocatePayload>()
+  private get transitioning(): boolean {
+    return this.travel.still
+  }
   /** Dark while the ground's transitions are painted (a first visit; see create). */
-  private holdingFade = false
-  /** Which scene build's hold is current (a restart starts a new one). */
-  private fadeHold = 0
+  private readonly fadeHold = new FadeHold()
   private reducedMotion = false
   private captureReleased = false
   private cinematic = false
@@ -199,9 +212,8 @@ export class WorldScene extends Phaser.Scene {
   }
 
   init(data: SceneData): void {
-    this.transitioning = false
-    this.holdingFade = false
-    this.fadeHold++
+    this.travel.reset()
+    this.fadeHold.cancel()
     this.pendingEntry = data?.entry ?? null
     this.pendingDefeatToast = data?.fromDefeat === true
     this.pendingFacing = data?.facing ?? null
@@ -223,6 +235,7 @@ export class WorldScene extends Phaser.Scene {
   private actions!: WorldActions
 
   create(): void {
+    bus.emit(EV.loadStage, { stage: 'paint' })
     this.session = this.registry.get('session') as Session
     const state = this.session.state
     const arrival = arrive(this.session, { entry: this.pendingEntry })
@@ -233,6 +246,8 @@ export class WorldScene extends Phaser.Scene {
     this.window = null
     this.paths = null
     this.marks = null
+    this.camps = null
+    this.communalLamps = null
     this.driftSaid = false
     this.occluders = []
     this.cinematic = false
@@ -382,7 +397,7 @@ export class WorldScene extends Phaser.Scene {
         this.window?.fixturesReady()
       }
       bus.on(EV.fixedReady, late)
-      this.events.once('shutdown', () => bus.off(EV.fixedReady, late))
+      onSceneEnd(this, () => bus.off(EV.fixedReady, late))
     }
     this.actions = new WorldActions({
       scene: this,
@@ -394,6 +409,8 @@ export class WorldScene extends Phaser.Scene {
       homesteads: () => this.homesteads,
       wilds: () => this.wilds,
       paths: () => this.paths,
+      camps: () => this.camps,
+      communalLamps: () => this.communalLamps,
       notePosition: () => this.notePosition(),
       refresh: () => {
         this.refreshMarkers()
@@ -458,10 +475,10 @@ export class WorldScene extends Phaser.Scene {
       })
       // ?perf=1 samples the open map's display list and tweens (src/game/perf.ts).
       perfWatch(this)
-      this.events.once('shutdown', () => perfWatch(null))
+      onSceneEnd(this, () => perfWatch(null))
       // The HUD names the land you stand in (the meadow, the Wend) from the loaded chunks.
       setWildsLand(landName)
-      this.events.once('shutdown', () => setWildsLand(null))
+      onSceneEnd(this, () => setWildsLand(null))
       this.paths = new WildsPaths(this, {
         session: this.session,
         interactables: this.interactables,
@@ -478,6 +495,21 @@ export class WorldScene extends Phaser.Scene {
         reducedMotion: this.reducedMotion,
         hero: () => this.hero.sprite,
         notePosition: () => this.notePosition()
+      })
+      this.camps = new WildsCamps(this, {
+        session: this.session,
+        interactables: this.interactables,
+        solids: this.solids.group,
+        hero: () => this.hero.sprite,
+        notePosition: () => this.notePosition()
+      })
+      this.communalLamps = new WildsCommunalLamps(this, {
+        session: this.session,
+        interactables: this.interactables,
+        solids: this.solids.group,
+        hero: () => this.hero.sprite,
+        notePosition: () => this.notePosition(),
+        reducedMotion: this.reducedMotion
       })
       // The first window is painted behind the fade (the near read and its
       // chunks came in before this build: prepareWilds).
@@ -500,19 +532,21 @@ export class WorldScene extends Phaser.Scene {
     if (holding) {
       const cam = this.cameras.main
       cam.fadeOut(1, 12, 12, 20)
-      this.holdingFade = true
-      // Only a newer scene build cancels this hold (a paused scene still lifts it).
-      const token = ++this.fadeHold
+      // Only a newer scene build or a move away cancels this hold (a paused
+      // scene, or a Turning holding play, still lifts it): a move's fade-out
+      // must finish, or the scene never restarts (fadeIn always forces).
+      const lift = this.fadeHold.start()
       const show = () => {
-        if (token !== this.fadeHold || !this.holdingFade) return
-        this.holdingFade = false
-        // Already leaving (a warp or an exit during the hold): its fade-out
-        // must finish, or the scene never restarts (fadeIn always forces).
-        if (!this.transitioning) cam.fadeIn(280, 12, 12, 20)
+        if (!lift()) return
+        cam.fadeIn(280, 12, 12, 20)
+        bus.emit(EV.worldShown)
       }
       void holding.then(show, show)
       this.time.delayedCall(1200, show)
-    } else this.cameras.main.fadeIn(280, 12, 12, 20)
+    } else {
+      this.cameras.main.fadeIn(280, 12, 12, 20)
+      bus.emit(EV.worldShown)
+    }
 
     // Input
     this.controls = new WorldControls(this, {
@@ -525,14 +559,15 @@ export class WorldScene extends Phaser.Scene {
       live: () => this.worldLive(),
       act: () => this.handleAction()
     })
-    this.events.once('shutdown', () => {
+    onSceneEnd(this, (destroyed) => {
       clearMapPosition(this)
       // A restart mid-beat must never leave the HUD hidden and input blocked.
       if (this.cinematic) {
         this.cinematic = false
         bus.emit(EV.cinematic, { active: false })
       }
-      this.input.keyboard?.enableGlobalCapture()
+      // A destroyed game's keyboard went with it.
+      if (!destroyed) this.input.keyboard?.enableGlobalCapture()
     })
 
     this.session.emitArea()
@@ -547,16 +582,8 @@ export class WorldScene extends Phaser.Scene {
     this.finger = null
     this.drawFinger()
     emitPortraits(this)
-    const unlisten = listen({
-      [EV.quest]: () => this.refreshMarkers(),
-      [EV.profileChanged]: () => this.onProfileChanged(),
-      [EV.worldRefresh]: () => this.onWorldRefresh(),
-      [EV.relocate]: (p) => this.onRelocate(p),
-      [EV.notePosition]: () => this.notePosition(),
-      [EV.dialogueClosed]: (p) => this.onDialogueClosed(p)
-    })
-    this.events.once('shutdown', () => {
-      unlisten()
+    this.listenBus()
+    onSceneEnd(this, () => {
       // Epoch bump: in-flight avatar/companion loads must not add objects to a
       // dead scene or fight a rebuilt scene's own composition. Hero combat
       // timing and the avatar's carried state ride out the restart.
@@ -569,7 +596,7 @@ export class WorldScene extends Phaser.Scene {
     this.presenceArea = presenceAreaFor(this.world.areaId, { x: this.hero.sprite.x, y: this.hero.sprite.y })
     feed?.setArea(this.presenceArea)
     this.remotePlayers = createRemotePlayers(this, feed, this.presenceArea, false, this.reducedMotion)
-    this.events.once('shutdown', () => this.remotePlayers.clear())
+    onSceneEnd(this, () => this.remotePlayers.clear())
     // Pet a pet (crafts.md 2.1): your follower, friends' and the yard's.
     this.petting = new Petting(
       this,
@@ -584,6 +611,14 @@ export class WorldScene extends Phaser.Scene {
       () => heldNow().kind
     )
     presenceMoments(this, { session: this.session, world: this.world, enemies: this.enemies, hero: () => this.hero.sprite })
+    this.waysHome = new WaysHome(this, {
+      session: this.session,
+      hero: () => this.hero.sprite,
+      threatened: () => fightingYou(this.world.areaId, this.hero.sprite, this.enemies.enemies),
+      transitioning: () => this.transitioning,
+      notePosition: () => this.notePosition(),
+      reducedMotion: this.reducedMotion
+    })
     this.goalGuide = new GoalGuide(this, {
       world: this.world,
       position: () => this.hero.sprite,
@@ -623,14 +658,15 @@ export class WorldScene extends Phaser.Scene {
         areaId: this.world.areaId,
         position: { x: px, y: py },
         safe: isSafeArea(this.world.areaId, { x: px, y: py }),
-        transitioning: this.transitioning,
+        // Still dark at its start (the loading screen is up): not yet a world to sync in.
+        transitioning: this.transitioning || this.fadeHold.active,
         dialogueOpen: uiState.dialogueOpen,
         enemiesNear: enemiesNearForSync(this.world.areaId, { x: px, y: py }, this.enemies.enemies)
       }
     })
     onSceneEnd(this, dropSafety)
     // Playtest hooks (docs/playtest.md), dev builds only.
-    if (import.meta.env.DEV) exposeWorldHooks(this, { papers, pickups, repairs })
+    if (DEV_TOOLS) exposeWorldHooks(this, { papers, pickups, repairs })
 
     if (this.pendingDefeatToast) {
       this.pendingDefeatToast = false
@@ -650,9 +686,11 @@ export class WorldScene extends Phaser.Scene {
       unmoored: this.unmoored,
       window: () => this.window,
       wilds: () => this.wilds,
-      moving: () => this.transitioning,
+      moving: () => this.travel.leaving,
       hold: (on) => {
-        this.transitioning = on
+        // Letting go takes the server's relocation kept meanwhile, before any position sample.
+        const kept = this.travel.hold(on)
+        if (kept) this.onRelocate(kept)
       }
     })
     if (this.pendingTurned) {
@@ -697,7 +735,7 @@ export class WorldScene extends Phaser.Scene {
         persisting: this.session.persistenceInFlight,
         placing: !!this.homesteads?.placing
       }),
-    still: (time, dt) => this.holdStill(time, dt),
+    still: (time, dt, hold) => this.holdStill(time, dt, hold),
     play: (time, dt) => this.play(time, dt)
   }
 
@@ -764,8 +802,11 @@ export class WorldScene extends Phaser.Scene {
    * Play held (a panel, a conversation, a transition, a cinematic, a sync's
    * write, placing a piece): the hero stands still, the screen stays alive.
    */
-  private holdStill(time: number, dt: number): void {
+  private holdStill(time: number, dt: number, hold: PlayHold): void {
     this.hero.halt()
+    // Something else took the screen: a way home's pause lets go. A sync's
+    // write is no doing of the player's, and leaves it be.
+    if (hold !== 'persisting') this.waysHome.letGo()
     // Still breathing while a conversation or panel holds the screen.
     this.avatar.update(time)
     this.interactables.hideKeyHint()
@@ -785,6 +826,10 @@ export class WorldScene extends Phaser.Scene {
     this.projectiles.update(dt)
     this.paths?.update()
     this.marks?.update()
+    this.camps?.update()
+    this.communalLamps?.update()
+    this.waysHome.update()
+    this.followFrontier()
     this.checkDrift()
     this.updateDiscoveries()
     this.checkExits()
@@ -916,16 +961,27 @@ export class WorldScene extends Phaser.Scene {
     this.safeSpot = at
   }
 
-  /** Dev: the steering toward the next waypoint (dropping those reached). */
+  /**
+   * Dev: the steering toward the next waypoint (dropping those reached).
+   * Arcade has already stepped the body this frame (postUpdate copies it to
+   * the sprite), so it steers from the body. The last stretch is walked at a
+   * pace that ends on the waypoint: a slow frame steps the hero six pixels
+   * or more, which went a tile past a waypoint near its edge.
+   */
   private devSteer(): Phaser.Math.Vector2 {
     const h = this.hero.sprite
-    while (this.devWalk?.length && Math.hypot(this.devWalk[0].x - h.x, this.devWalk[0].y - h.y) < 3) this.devWalk.shift()
+    const body = h.body as Phaser.Physics.Arcade.Body
+    const at = { x: h.x + body.position.x - body.prevFrame.x, y: h.y + body.position.y - body.prevFrame.y }
+    while (this.devWalk?.length && Math.hypot(this.devWalk[0].x - at.x, this.devWalk[0].y - at.y) < 3) this.devWalk.shift()
     if (!this.devWalk?.length) {
       this.devWalk = null
       return new Phaser.Math.Vector2(0, 0)
     }
-    const d = new Phaser.Math.Vector2(this.devWalk[0].x - h.x, this.devWalk[0].y - h.y)
-    return d.normalize()
+    const d = new Phaser.Math.Vector2(this.devWalk[0].x - at.x, this.devWalk[0].y - at.y)
+    const left = d.length()
+    // The step this frame took; from a standstill, full pace.
+    const step = Math.hypot(body.position.x - body.prevFrame.x, body.position.y - body.prevFrame.y)
+    return d.normalize().scale(step > 0 ? Math.min(1, left / step) : 1)
   }
 
   /**
@@ -934,10 +990,11 @@ export class WorldScene extends Phaser.Scene {
    * measures reach from where the hero really is).
    */
   private notePosition(): void {
-    if (this.transitioning || !this.fixedReady(this.hero.sprite.x, this.hero.sprite.y)) return
+    if (!this.fixedReady(this.hero.sprite.x, this.hero.sprite.y)) return
     // Positions are the scene's pixels everywhere; on the open map those are
     // world pixels (one convention for saves, reloads, claims and reports).
-    this.session.state.position = { x: Math.round(this.hero.sprite.x), y: Math.round(this.hero.sprite.y) }
+    // Not while leaving or held: the save may name a destination this sprite hasn't reached.
+    this.travel.note(this.session.state, this.hero.sprite)
   }
 
   /** Tell the presence feed where the hero is (it paces the wire itself). */
@@ -959,6 +1016,17 @@ export class WorldScene extends Phaser.Scene {
     // One pose at a time: a line in the water, else the saddle.
     const pose = fishingPose() ?? (this.avatar.riding ? 'riding' : null)
     feed.position({ x: this.hero.sprite.x, y: this.hero.sprite.y, facing: this.hero.facing, moving, ...(pose ? { pose } : {}) })
+  }
+
+  /**
+   * Held land moves the frontier (lamps.md 2.2): when a near read names a
+   * new one, the hero's bounds and the camera's follow it.
+   */
+  private followFrontier(): void {
+    const open = this.world.open
+    if (!open || !followFrontier(open)) return
+    this.physics.world.setBounds(open.bounds.x, open.bounds.y, open.bounds.w, open.bounds.h)
+    this.camera.reframe()
   }
 
   /**
@@ -1027,6 +1095,24 @@ export class WorldScene extends Phaser.Scene {
     this.finger = this.add.image(x, y, 'signpost-finger').setOrigin(0.5, 1).setAngle(-12).setDepth(y - 4)
   }
 
+  /**
+   * The bus events this scene answers, until it ends: a restart shuts it
+   * down, a world move destroys its game. A destroyed scene still listening
+   * would answer the next world's events (its relocation, before the new
+   * scene hears it).
+   */
+  private listenBus(): void {
+    const unlisten = listen({
+      [EV.quest]: () => this.refreshMarkers(),
+      [EV.profileChanged]: () => this.onProfileChanged(),
+      [EV.worldRefresh]: () => this.onWorldRefresh(),
+      [EV.relocate]: (p) => this.onRelocate(p),
+      [EV.notePosition]: () => this.notePosition(),
+      [EV.dialogueClosed]: (p) => this.onDialogueClosed(p)
+    })
+    onSceneEnd(this, unlisten)
+  }
+
   private onProfileChanged(): void {
     // A sync may have brought glims: glim-spot markers can change.
     this.refreshMarkers()
@@ -1050,12 +1136,17 @@ export class WorldScene extends Phaser.Scene {
    * another device played). Same area: step there (on the open map, only
    * where the window can stand you; else the scene rebuilds around the new
    * spot). Another area: rebuild the scene, which places the hero from the
-   * session state.
+   * session state. While a Turning holds play it waits for the hold to lift;
+   * while leaving, the next build reads it from the save.
    */
   private onRelocate(p: RelocatePayload): void {
-    if (this.transitioning) return
+    if (!this.travel.relocate(p)) return
     this.safeSpot = null
     if (isWildsArea(p.area) && this.world.open) {
+      // Standing where the reach no longer is (it shrank at a turning), the
+      // world moved them to the nearest open ground in it: they hear why.
+      const was = chunkOfPixel(this.hero.sprite.x, this.hero.sprite.y)
+      if (wildsFrontier() && !onWindow(was.cx, was.cy)) bus.emit(EV.toast, { text: loadWilds().words.turned, icon: 'map', kind: 'thought' })
       const at = this.world.open.standAt(p.x, p.y)
       if (at && Math.hypot(at.x - this.hero.sprite.x, at.y - this.hero.sprite.y) < 24 * TILE) {
         this.hero.sprite.setPosition(at.x, at.y)
@@ -1282,7 +1373,7 @@ export class WorldScene extends Phaser.Scene {
     this.notePosition()
     this.session.defeat()
     this.hero.sprite.setVelocity(0, 0)
-    this.tweens.add({ targets: this.avatar.container ?? this.hero.sprite, scaleY: (this.avatar.container ?? this.hero.sprite).scaleY * 0.6, duration: 380, ease: 'Quad.easeIn' })
+    if (!this.reducedMotion) this.tweens.add({ targets: this.avatar.container ?? this.hero.sprite, scaleY: (this.avatar.container ?? this.hero.sprite).scaleY * 0.6, duration: 380, ease: 'Quad.easeIn' })
     this.hero.sprite.setTint(0x8a7a9a)
     // The scene wakes once the fall is queued and its recovery shown.
     this.moveTo({ save: false }, { fromDefeat: true }, { fadeMs: 1100, inDark: () => this.session.falling ?? undefined })
@@ -1300,7 +1391,8 @@ export class WorldScene extends Phaser.Scene {
     data: SceneData,
     opts: { fadeMs?: number | null; inDark?: () => unknown } = {}
   ): void {
-    this.transitioning = true
+    this.travel.leave()
+    this.fadeHold.cancel()
     // Where this scene's hero stood is no longer where you are: the map falls back to the save until the next scene says.
     clearMapPosition(this)
     const state = this.session.state

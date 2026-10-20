@@ -46,6 +46,95 @@ message Homestead {
   repeated HomeItem items = 13 [(buf.validate.field).repeated.min_items = 1];
   // The stable: one placed piece that grows east a bay at a time (3.2).
   HomesteadStable stable = 14 [(buf.validate.field).required = true];
+  // The lot lantern on each lot's back line (hearthwick-2.md 6): lit, it
+  // holds the backland chunk behind the lot across turnings.
+  LotLantern lot_lantern = 15 [(buf.validate.field).required = true];
+  // The way-lamp (roadmap 0.13; lamps.md 2.5): set in the Wilds, it holds
+  // one chunk as a camp while it has oil.
+  WayLamp way_lamp = 16 [(buf.validate.field).required = true];
+  // Communal lamps (roadmap 0.13; lamps.md 1.3, 2.4): Common light, kept by
+  // presence, never by oil.
+  CommunalLamp communal_lamp = 17 [(buf.validate.field).required = true];
+  // Naming a lamp from parts (lamps.md 2.8).
+  LampNamingRules lamp_naming = 18 [(buf.validate.field).required = true];
+  // The Wick Tree's weekly sap and the chandler's refining (lamps.md 2.5).
+  WickSap wick_sap = 19 [(buf.validate.field).required = true];
+}
+
+// The Wick Tree's weekly sap (lamps.md 2.5): once a calendar wick, anyone
+// standing within reach tiles of the tree's spot (area, tx, ty) taps qty
+// of `item`; at `refiner` (a seller) one of it refines, free, into
+// oil_qty of `oil`. Code checks that the item, the oil and the seller exist.
+message WickSap {
+  string item = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  int32 qty = 2 [(buf.validate.field).int32 = {gte: 1, lte: 12}];
+  string area = 3 [(buf.validate.field).string = {in: ["hearthwick"]}];
+  int32 tx = 4 [(buf.validate.field).int32 = {gte: 0, lte: 1048576}];
+  int32 ty = 5 [(buf.validate.field).int32 = {gte: 0, lte: 1048576}];
+  int32 reach = 6 [(buf.validate.field).int32 = {gte: 1, lte: 8}];
+  string refiner = 7 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  string oil = 8 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  int32 oil_qty = 9 [(buf.validate.field).int32 = {gte: 1, lte: 12}];
+}
+
+// Communal lamps (lamps.md 2.5's "Communal stone relight" and "New communal
+// post"): anyone relights a dark lamp stone of the Lantern Road, burning
+// relight_qty of `relight` (0: free), or sets the way-lamp piece as a
+// communal post, with no oil and no store. reach is how far, in tiles, a
+// player may relight, tend, set or lift from.
+message CommunalLamp {
+  string relight = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  int32 relight_qty = 2 [(buf.validate.field).int32 = {gte: 0, lte: 12}];
+  int32 reach = 3 [(buf.validate.field).int32 = {gte: 1, lte: 8}];
+}
+
+// Naming a lamp from parts (lamps.md 2.8), never free text: "You are the
+// <ordinal> lamp <relation> <landmark>. Behind you <behind>; ahead <ahead>.
+// <closing>" and the short name "<Ordinal> lamp <relation> <landmark>". A
+// landmark is one the server finds near the lamp (a place's landmark by
+// its kind, a site by its kind, within one chunk of the lamp's) or a
+// fallback, always offered; behind and ahead are a side phrase or an
+// offered landmark. A lamp's first naming gives ash_qty of `ash`, once.
+// Ids are unique within each list, and no side shares a fallback's id
+// (code rules).
+message LampNamingRules {
+  repeated NamingWord ordinals = 1 [(buf.validate.field).repeated = {min_items: 1, max_items: 40}];
+  repeated NamingWord relations = 2 [(buf.validate.field).repeated = {min_items: 1, max_items: 12}];
+  repeated NamingWord fallbacks = 3 [(buf.validate.field).repeated = {min_items: 1, max_items: 12}];
+  map<string, string> places = 4;
+  map<string, string> sites = 5;
+  repeated NamingWord sides = 6 [(buf.validate.field).repeated = {min_items: 1, max_items: 24}];
+  repeated NamingWord closings = 7 [(buf.validate.field).repeated = {min_items: 1, max_items: 12}];
+  string ash = 8 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  int32 ash_qty = 9 [(buf.validate.field).int32 = {gte: 1, lte: 5}];
+}
+
+// One part a naming may use: its id, and the words it puts in the sentence.
+message NamingWord {
+  string id = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,40}$"];
+  string words = 2 [(buf.validate.field).string = {min_len: 1, max_len: 40}];
+}
+
+// The way-lamp's camp (lamps.md 2.5): `item` is the home piece set as the
+// lamp (a camp-only piece); its oil works as the lot lantern's does. reach
+// is how far, in tiles, a player may set, fill or build from.
+message WayLamp {
+  string item = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  string oil = 2 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  int32 max_wicks = 3 [(buf.validate.field).int32 = {gte: 1, lte: 12}];
+  int32 wicks_per_oil = 4 [(buf.validate.field).int32 = {gte: 1, lte: 12}];
+  int32 reach = 5 [(buf.validate.field).int32 = {gte: 1, lte: 8}];
+}
+
+// The lot lantern's oil (roadmap 0.12): one `oil` item adds wicks_per_oil
+// wicks, up to max_wicks; one wick burns at each turning, then it dims
+// for a wick before it goes dark. stake_y is the lot-local row of the
+// lantern-line stake that carries it.
+message LotLantern {
+  string oil = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  int32 max_wicks = 2 [(buf.validate.field).int32 = {gte: 1, lte: 12}];
+  int32 wicks_per_oil = 3 [(buf.validate.field).int32 = {gte: 1, lte: 12}];
+  int32 stake_y = 4 [(buf.validate.field).int32 = {gte: 2, lte: 21}];
 }
 
 // The stable's growth rules (docs/design/crafts.md 3.1, 3.2, 6.3). The
@@ -235,8 +324,8 @@ message HomeItem {
   };
   option (buf.validate.message).cel = {
     id: "home_item.where"
-    message: "where is one or two distinct scenes (indoor, outdoor, gate)"
-    expression: "size(this.where) > 0 && size(this.where) <= 2 && this.where.all(w, w in [\"indoor\", \"outdoor\", \"gate\"]) && (size(this.where) == 1 || this.where[0] != this.where[1])"
+    message: "where is one or two distinct scenes (indoor, outdoor, gate, camp)"
+    expression: "size(this.where) > 0 && size(this.where) <= 2 && this.where.all(w, w in [\"indoor\", \"outdoor\", \"gate\", \"camp\"]) && (size(this.where) == 1 || this.where[0] != this.where[1])"
   };
   string id = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
   string name = 2;

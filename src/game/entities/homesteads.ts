@@ -157,6 +157,7 @@ export class HomesteadLayer {
     // Read-only view of homesteads for playtests; `fresh()` awaits a fresh read of the lane and your home.
     expose('__fsHomes', Object.assign(() => ({
       status: this.homes.status,
+      reading: this.homes.reading,
       claimed: this.homes.claimed,
       myGate: this.homes.myGate,
       gateCount: this.homes.gateCount,
@@ -406,7 +407,7 @@ export class HomesteadLayer {
       eyebrow: `${lotName(gate)} · Behind the Commons gates`,
       title: mine ? 'Your land' : home ? this.placeName(home, gate) : 'Unclaimed land',
       body: mine
-        ? 'Held by lamplight. Set a named lantern post at the edge to hold more.'
+        ? 'Held by lamplight. A lantern post at the edge, named for its sign, widens the yard you can build in.'
         : home
           ? home.desolate
             ? 'Nobody has lit these lamps in a while. The wild is coming back.'
@@ -490,7 +491,8 @@ export class HomesteadLayer {
 
   readonly fixedHooks: FixedHooks = {
     attach: (key) => this.attachFixedChunk(key),
-    detach: (key, refreshing) => this.detachFixedChunk(key, refreshing)
+    detach: (key, refreshing) => this.detachFixedChunk(key, refreshing),
+    busy: (key) => this.lots?.placingIn(key) ?? false
   }
 
   /** Per frame: the way to your gate, and whether the hero may arrange their place. */

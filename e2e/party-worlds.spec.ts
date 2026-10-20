@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import { newUser, serverState, setHabitica, TOKEN, waitForWorld, CONTRACT } from './connected'
 import { partyOwner, settledElsewhere, signInPage } from './party-helpers'
-import { expectToast, waitForWilds, warp, wilds } from './helpers'
+import { expectToast, SERVER_ANSWER_MS, waitForWilds, warp, wilds } from './helpers'
 
 /**
  * Party worlds (docs/expansion-design.md "Worlds"): a party's world belongs
@@ -10,6 +10,13 @@ import { expectToast, waitForWilds, warp, wilds } from './helpers'
  */
 
 type Remote = { id: string; name: string }
+type Hooks = {
+  __fsItems: (() => unknown) & { load: () => Promise<unknown> }
+  __fsPlayer: () => { x: number; y: number }
+  __fsWorld: () => { areaId: string }
+  __fsTileSolid: (tx: number, ty: number) => boolean
+  __fsEmit: (event: string, payload: unknown) => void
+}
 const remotes = (page: Page) => page.evaluate(() => ((window as unknown as { __fsRemote?: () => Remote[] }).__fsRemote?.() ?? []) as Remote[])
 
 const worldView = async (page: Page) => (await page.request.get('/api/world', CONTRACT)).json()
@@ -81,7 +88,7 @@ test('a settled member is asked once, then moves into the party’s world', asyn
   await warp(other, 'woodland', 15, 20)
   await other.keyboard.press('Escape')
   const offer = other.getByTestId('world-party-offer')
-  await expect(offer).toContainText('Your party has a world of its own here.')
+  await expect(offer).toContainText('Your party has a world of its own here.', { timeout: SERVER_ANSWER_MS })
   await offer.getByRole('button', { name: 'Join them…' }).click()
   const move = other.getByRole('dialog', { name: 'Move to your party’s world?' })
   await expect(move).toBeVisible()
@@ -94,9 +101,11 @@ test('a settled member is asked once, then moves into the party’s world', asyn
   await other.keyboard.press('Escape')
   // The Menu's world card draws the offer only once its GET /api/world has
   // landed (WorldCard refreshes on mount): wait for the reply's button before
-  // clicking it, or the click waits out the test on an empty Menu.
+  // clicking it, or the click waits out the test on an empty Menu. The read
+  // queues behind the arrival's (the client's calls go one at a time): over
+  // 4 s on a busy runner (CI, 2026-10-18).
   const joinOffer = other.getByTestId('world-party-offer').getByRole('button', { name: 'Join them…' })
-  await expect(joinOffer).toBeVisible()
+  await expect(joinOffer).toBeVisible({ timeout: SERVER_ANSWER_MS })
   await joinOffer.click()
   await expect(move).toContainText('Comes with you')
   await expect(move).toContainText('Your personal chest')
@@ -109,6 +118,30 @@ test('a settled member is asked once, then moves into the party’s world', asyn
   await waitForWorld(other)
 
   expect((await serverState(other)).body.worldId).toBe(world)
+  // The move destroyed the old game without a reload: none of its scene still
+  // answers (step-back 2 2026-10-18, C1). A pack refresh keeps this world's
+  // pack model (the old belt tracker swapped it for an empty one).
+  await expect.poll(() => other.evaluate(async () => {
+    const hooks = window as unknown as Hooks
+    const r = (await hooks.__fsItems.load()) as { ok: boolean; code?: string }
+    return { read: r.ok ? 'ok' : r.code, view: hooks.__fsItems() !== null }
+  }), { timeout: SERVER_ANSWER_MS, message: 'the pack is still read after a refresh' }).toEqual({ read: 'ok', view: true })
+  // A relocation, as a way home's landing sends it, reaches this scene (the
+  // old one threw on its torn-down hero before this one heard it).
+  const at = await other.evaluate(() => (window as unknown as Hooks).__fsPlayer())
+  const area = await other.evaluate(() => (window as unknown as Hooks).__fsWorld().areaId)
+  const to = await other.evaluate(({ x, y }) => {
+    const hooks = window as unknown as Hooks
+    const tile = (n: number) => Math.floor(n / 16)
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (!hooks.__fsTileSolid(tile(x) + dx, tile(y) + dy)) return { x: x + dx * 16, y: y + dy * 16 }
+    return null
+  }, at)
+  expect(to, 'an open tile beside Hal').not.toBeNull()
+  await other.evaluate(({ area, to }) => (window as unknown as Hooks).__fsEmit('game:relocate', { area, x: to.x, y: to.y }), { area, to: to! })
+  await expect.poll(async () => {
+    const p = await other.evaluate(() => (window as unknown as Hooks).__fsPlayer())
+    return Math.hypot(p.x - to!.x, p.y - to!.y)
+  }, { message: 'the hero stands where the relocation put them' }).toBeLessThan(4)
   // Presence came along: they see each other in Olive's village.
   await expect.poll(async () => (await remotes(other)).map((r) => r.name), { timeout: 15_000 }).toEqual(['Olive'])
   await expect.poll(async () => (await remotes(page)).map((r) => r.name), { timeout: 15_000 }).toEqual(['Hal'])

@@ -114,6 +114,65 @@
     }
   },
   {
+    "name": "glimway.v1.ChunkLandStatus",
+    "case": "empty",
+    "json": {
+      "chunk": null,
+      "tier": "",
+      "visited": false,
+      "claimId": "",
+      "dimming": false,
+      "reserve": 0,
+      "cost": 0,
+      "nextTurning": "",
+      "epoch": null,
+      "ground": null,
+      "keeper": "",
+      "yours": false
+    }
+  },
+  {
+    "name": "glimway.v1.ChunkLandStatus",
+    "case": "populated",
+    "json": {
+      "chunk": {
+        "realm": "fixture",
+        "layer": 1,
+        "cx": 1,
+        "cy": 1
+      },
+      "tier": "fixture",
+      "visited": true,
+      "claimId": "fixture",
+      "dimming": true,
+      "reserve": 1,
+      "cost": 1,
+      "nextTurning": "fixture",
+      "epoch": {
+        "id": "fixture",
+        "worldSeed": "fixture",
+        "generatorVersion": 1,
+        "season": "fixture",
+        "startsAt": 1,
+        "endsAt": 1,
+        "kind": "fixture"
+      },
+      "ground": {
+        "changes": [
+          {
+            "tx": 1,
+            "ty": 1,
+            "change": "fixture",
+            "by": "fixture",
+            "at": 1
+          }
+        ]
+      },
+      "keeper": "fixture",
+      "yours": true
+    }
+  },
+  {
     "name": "glimway.v1.CommittedOperation",
     "case": "empty",
     "json": {
@@ -298,7 +357,12 @@
               "pet": "fixture",
               "slot": 1
             }
-          ]
+          ],
+          "lantern": {
+            "lit": true,
+            "oil": 1,
+            "dimming": true
+          }
         }
       ]
     }
@@ -510,7 +574,12 @@
             "pet": "fixture",
             "slot": 1
           }
-        ]
+        ],
+        "lantern": {
+          "lit": true,
+          "oil": 1,
+          "dimming": true
+        }
       },
       "inventory": {
         "materials": {
@@ -852,7 +921,12 @@
             "pet": "fixture",
             "slot": 1
           }
-        ]
+        ],
+        "lantern": {
+          "lit": true,
+          "oil": 1,
+          "dimming": true
+        }
       },
       "inventory": {
         "materials": {
@@ -1104,7 +1178,8 @@
           "x": 88,
           "y": 968,
           "placeSetVersion": 0,
-          "wickEpoch": ""
+          "wickEpoch": "",
+          "movedVersion": 0
         },
         "story": {
           "quests": {},
@@ -1261,7 +1336,8 @@
           "x": 88,
           "y": 968,
           "placeSetVersion": 0,
-          "wickEpoch": ""
+          "wickEpoch": "",
+          "movedVersion": 0
         },
         "story": {
           "quests": {},
@@ -1314,7 +1390,8 @@
           "poiId": "",
           "discovererId": "fixture-account",
           "displayName": "Fixture",
-          "at": 1791400000
+          "at": 1791400000,
+          "epoch": "wick-epoch"
         },
         "first": true,
         "loot": {
@@ -1418,7 +1495,8 @@
           "x": 88,
           "y": 968,
           "placeSetVersion": 0,
-          "wickEpoch": ""
+          "wickEpoch": "",
+          "movedVersion": 0
         },
         "story": {
           "quests": {},
@@ -1483,7 +1561,8 @@
           "x": 88,
           "y": 968,
           "placeSetVersion": 0,
-          "wickEpoch": ""
+          "wickEpoch": "",
+          "movedVersion": 0
         },
         "lantern": "placed",
         "reason": "",
@@ -1571,7 +1650,8 @@
           "x": 88,
           "y": 968,
           "placeSetVersion": 0,
-          "wickEpoch": ""
+          "wickEpoch": "",
+          "movedVersion": 0
         },
         "story": {
           "quests": {},
@@ -1636,7 +1716,8 @@
           "x": 88,
           "y": 968,
           "placeSetVersion": 0,
-          "wickEpoch": ""
+          "wickEpoch": "",
+          "movedVersion": 0
         },
         "lantern": "none",
         "reason": "daily-cap",
@@ -1724,7 +1805,8 @@
           "x": 88,
           "y": 968,
           "placeSetVersion": 0,
-          "wickEpoch": ""
+          "wickEpoch": "",
+          "movedVersion": 0
         },
         "story": {
           "quests": {},
@@ -1789,7 +1871,8 @@
           "x": 88,
           "y": 968,
           "placeSetVersion": 0,
-          "wickEpoch": ""
+          "wickEpoch": "",
+          "movedVersion": 0
         },
         "lantern": "none",
         "reason": "epoch-missing",
@@ -1877,7 +1960,8 @@
           "x": 88,
           "y": 968,
           "placeSetVersion": 0,
-          "wickEpoch": ""
+          "wickEpoch": "",
+          "movedVersion": 0
         },
         "story": {
           "quests": {},
@@ -1942,7 +2026,8 @@
           "x": 88,
           "y": 968,
           "placeSetVersion": 0,
-          "wickEpoch": ""
+          "wickEpoch": "",
+          "movedVersion": 0
         },
         "lantern": "none",
         "reason": "invalid-place",
@@ -2030,7 +2115,8 @@
           "x": 88,
           "y": 968,
           "placeSetVersion": 0,
-          "wickEpoch": ""
+          "wickEpoch": "",
+          "movedVersion": 0
         },
         "story": {
           "quests": {},
@@ -2095,7 +2181,8 @@
           "x": 88,
           "y": 968,
           "placeSetVersion": 0,
-          "wickEpoch": ""
+          "wickEpoch": "",
+          "movedVersion": 0
         },
         "lantern": "none",
         "reason": "not-wilds",
@@ -2183,7 +2270,8 @@
           "x": 88,
           "y": 968,
           "placeSetVersion": 0,
-          "wickEpoch": ""
+          "wickEpoch": "",
+          "movedVersion": 0
         },
         "story": {
           "quests": {},
@@ -2338,7 +2426,8 @@
           "x": 1,
           "y": 1,
           "placeSetVersion": 1,
-          "wickEpoch": "fixture"
+          "wickEpoch": "fixture",
+          "movedVersion": 1
         },
         "story": {
           "quests": {
@@ -2523,7 +2612,8 @@
           "x": 88,
           "y": 968,
           "placeSetVersion": 0,
-          "wickEpoch": ""
+          "wickEpoch": "",
+          "movedVersion": 0
         },
         "story": {
           "quests": {
@@ -2677,7 +2767,8 @@
           "x": 88,
           "y": 968,
           "placeSetVersion": 0,
-          "wickEpoch": ""
+          "wickEpoch": "",
+          "movedVersion": 0
         },
         "story": {
           "quests": {},
@@ -2816,7 +2907,8 @@
           "x": 88,
           "y": 968,
           "placeSetVersion": 0,
-          "wickEpoch": ""
+          "wickEpoch": "",
+          "movedVersion": 0
         },
         "story": {
           "quests": {},
@@ -2954,7 +3046,8 @@
           "x": 88,
           "y": 968,
           "placeSetVersion": 0,
-          "wickEpoch": ""
+          "wickEpoch": "",
+          "movedVersion": 0
         },
         "story": {
           "quests": {},
@@ -3113,7 +3206,8 @@
           "x": 88,
           "y": 968,
           "placeSetVersion": 0,
-          "wickEpoch": ""
+          "wickEpoch": "",
+          "movedVersion": 0
         },
         "story": {
           "quests": {},
@@ -3734,7 +3828,8 @@
           "x": 88,
           "y": 968,
           "placeSetVersion": 0,
-          "wickEpoch": ""
+          "wickEpoch": "",
+          "movedVersion": 0
         },
         "story": {
           "quests": {},
@@ -4391,7 +4486,8 @@
           "x": 88,
           "y": 968,
           "placeSetVersion": 0,
-          "wickEpoch": ""
+          "wickEpoch": "",
+          "movedVersion": 0
         },
         "story": {
           "quests": {},
@@ -4554,7 +4650,8 @@
           "x": 88,
           "y": 968,
           "placeSetVersion": 0,
-          "wickEpoch": ""
+          "wickEpoch": "",
+          "movedVersion": 0
         },
         "story": {
           "quests": {},
@@ -4746,7 +4843,8 @@
         "x": 1,
         "y": 1,
         "placeSetVersion": 1,
-        "wickEpoch": "fixture"
+        "wickEpoch": "fixture",
+        "movedVersion": 1
       },
       "lantern": "fixture",
       "reason": "fixture",
@@ -5388,7 +5486,12 @@
             "pet": "fixture",
             "slot": 1
           }
-        ]
+        ],
+        "lantern": {
+          "lit": true,
+          "oil": 1,
+          "dimming": true
+        }
       },
       "inventory": {
         "materials": {
@@ -6142,6 +6245,74 @@
     }
   },
   {
+    "name": "glimway.v1.MapLamp",
+    "case": "empty",
+    "json": {
+      "id": "",
+      "kind": "",
+      "x": 0,
+      "y": 0,
+      "at": 0,
+      "name": "",
+      "naming": "",
+      "namer": "",
+      "land": null,
+      "mageLit": false
+    }
+  },
+  {
+    "name": "glimway.v1.MapLamp",
+    "case": "populated",
+    "json": {
+      "id": "fixture",
+      "kind": "fixture",
+      "x": 1,
+      "y": 1,
+      "at": 1,
+      "name": "fixture",
+      "naming": "fixture",
+      "namer": "fixture",
+      "land": {
+        "chunk": {
+          "realm": "fixture",
+          "layer": 1,
+          "cx": 1,
+          "cy": 1
+        },
+        "tier": "fixture",
+        "visited": true,
+        "claimId": "fixture",
+        "dimming": true,
+        "reserve": 1,
+        "cost": 1,
+        "nextTurning": "fixture",
+        "epoch": {
+          "id": "fixture",
+          "worldSeed": "fixture",
+          "generatorVersion": 1,
+          "season": "fixture",
+          "startsAt": 1,
+          "endsAt": 1,
+          "kind": "fixture"
+        },
+        "ground": {
+          "changes": [
+            {
+              "tx": 1,
+              "ty": 1,
+              "change": "fixture",
+              "by": "fixture",
+              "at": 1
+            }
+          ]
+        },
+        "keeper": "fixture",
+        "yours": true
+      },
+      "mageLit": true
+    }
+  },
+  {
     "name": "glimway.v1.MarkRequest",
     "case": "empty",
     "json": {
@@ -6340,6 +6511,25 @@
             "itemDef": "fixture",
             "at": 1
           }
+        ],
+        "carried": [
+          {
+            "id": "fixture",
+            "itemDef": "fixture",
+            "scene": "fixture",
+            "x": 1,
+            "y": 1,
+            "rotation": 1,
+            "name": "fixture",
+            "stalls": 1
+          }
+        ],
+        "plants": [
+          {
+            "id": "fixture",
+            "itemDef": "fixture",
+            "plantedAt": 1
+          }
         ]
       }
     }
@@ -6459,7 +6649,8 @@
       "x": 0,
       "y": 0,
       "placeSetVersion": 0,
-      "wickEpoch": ""
+      "wickEpoch": "",
+      "movedVersion": 0
     }
   },
   {
@@ -6470,7 +6661,8 @@
       "x": 1,
       "y": 1,
       "placeSetVersion": 1,
-      "wickEpoch": "fixture"
+      "wickEpoch": "fixture",
+      "movedVersion": 1
     }
   },
   {
@@ -6713,7 +6905,8 @@
           "x": 1,
           "y": 1,
           "placeSetVersion": 1,
-          "wickEpoch": "fixture"
+          "wickEpoch": "fixture",
+          "movedVersion": 1
         },
         "story": {
           "quests": {
@@ -6887,7 +7080,8 @@
           "x": 88,
           "y": 968,
           "placeSetVersion": 0,
-          "wickEpoch": ""
+          "wickEpoch": "",
+          "movedVersion": 0
         },
         "story": {
           "quests": {},
@@ -7035,7 +7229,8 @@
         "x": 1,
         "y": 1,
         "placeSetVersion": 1,
-        "wickEpoch": "fixture"
+        "wickEpoch": "fixture",
+        "movedVersion": 1
       },
       "story": {
         "quests": {
@@ -7204,7 +7399,8 @@
         "x": 88,
         "y": 968,
         "placeSetVersion": 0,
-        "wickEpoch": ""
+        "wickEpoch": "",
+        "movedVersion": 0
       },
       "story": {
         "quests": {},
@@ -7639,7 +7835,8 @@
           "x": 1,
           "y": 1,
           "placeSetVersion": 1,
-          "wickEpoch": "fixture"
+          "wickEpoch": "fixture",
+          "movedVersion": 1
         },
         "story": {
           "quests": {
@@ -7813,7 +8010,8 @@
           "x": 88,
           "y": 968,
           "placeSetVersion": 0,
-          "wickEpoch": ""
+          "wickEpoch": "",
+          "movedVersion": 0
         },
         "story": {
           "quests": {},
@@ -8122,7 +8320,8 @@
           "x": 1,
           "y": 1,
           "placeSetVersion": 1,
-          "wickEpoch": "fixture"
+          "wickEpoch": "fixture",
+          "movedVersion": 1
         },
         "story": {
           "quests": {
@@ -8421,7 +8620,8 @@
           "x": 1,
           "y": 1,
           "placeSetVersion": 1,
-          "wickEpoch": "fixture"
+          "wickEpoch": "fixture",
+          "movedVersion": 1
         },
         "story": {
           "quests": {
@@ -8593,7 +8793,8 @@
           "x": 88,
           "y": 968,
           "placeSetVersion": 0,
-          "wickEpoch": ""
+          "wickEpoch": "",
+          "movedVersion": 0
         },
         "story": {
           "quests": {},
@@ -9225,7 +9426,8 @@
         "poiId": "fixture",
         "discovererId": "fixture",
         "displayName": "fixture",
-        "at": 1
+        "at": 1,
+        "epoch": "fixture"
       },
       "first": true,
       "loot": {
@@ -9250,7 +9452,8 @@
       "poiId": "",
       "discovererId": "",
       "displayName": "",
-      "at": 0
+      "at": 0,
+      "epoch": ""
     }
   },
   {
@@ -9261,7 +9464,8 @@
       "poiId": "fixture",
       "discovererId": "fixture",
       "displayName": "fixture",
-      "at": 1
+      "at": 1,
+      "epoch": "fixture"
     }
   },
   {
@@ -9352,7 +9556,8 @@
     "name": "glimway.v1.WildsFrontier",
     "case": "empty",
     "json": {
-      "rect": null
+      "rect": null,
+      "held": []
     }
   },
   {
@@ -9364,7 +9569,15 @@
         "minCy": 1,
         "maxCx": 1,
         "maxCy": 1
-      }
+      },
+      "held": [
+        {
+          "realm": "fixture",
+          "layer": 1,
+          "cx": 1,
+          "cy": 1
+        }
+      ]
     }
   },
   {
@@ -9719,6 +9932,132 @@
     }
   },
   {
+    "name": "glimway.v1.WildsMapRequest",
+    "case": "empty",
+    "json": {
+      "explored": []
+    }
+  },
+  {
+    "name": "glimway.v1.WildsMapRequest",
+    "case": "populated",
+    "json": {
+      "explored": [
+        {
+          "realm": "fixture",
+          "layer": 1,
+          "cx": 1,
+          "cy": 1
+        }
+      ]
+    }
+  },
+  {
+    "name": "glimway.v1.WildsMapStatus",
+    "case": "empty",
+    "json": {
+      "wick": "",
+      "chunks": [],
+      "lamps": []
+    }
+  },
+  {
+    "name": "glimway.v1.WildsMapStatus",
+    "case": "populated",
+    "json": {
+      "wick": "fixture",
+      "chunks": [
+        {
+          "chunk": {
+            "realm": "fixture",
+            "layer": 1,
+            "cx": 1,
+            "cy": 1
+          },
+          "tier": "fixture",
+          "visited": true,
+          "claimId": "fixture",
+          "dimming": true,
+          "reserve": 1,
+          "cost": 1,
+          "nextTurning": "fixture",
+          "epoch": {
+            "id": "fixture",
+            "worldSeed": "fixture",
+            "generatorVersion": 1,
+            "season": "fixture",
+            "startsAt": 1,
+            "endsAt": 1,
+            "kind": "fixture"
+          },
+          "ground": {
+            "changes": [
+              {
+                "tx": 1,
+                "ty": 1,
+                "change": "fixture",
+                "by": "fixture",
+                "at": 1
+              }
+            ]
+          },
+          "keeper": "fixture",
+          "yours": true
+        }
+      ],
+      "lamps": [
+        {
+          "id": "fixture",
+          "kind": "fixture",
+          "x": 1,
+          "y": 1,
+          "at": 1,
+          "name": "fixture",
+          "naming": "fixture",
+          "namer": "fixture",
+          "land": {
+            "chunk": {
+              "realm": "fixture",
+              "layer": 1,
+              "cx": 1,
+              "cy": 1
+            },
+            "tier": "fixture",
+            "visited": true,
+            "claimId": "fixture",
+            "dimming": true,
+            "reserve": 1,
+            "cost": 1,
+            "nextTurning": "fixture",
+            "epoch": {
+              "id": "fixture",
+              "worldSeed": "fixture",
+              "generatorVersion": 1,
+              "season": "fixture",
+              "startsAt": 1,
+              "endsAt": 1,
+              "kind": "fixture"
+            },
+            "ground": {
+              "changes": [
+                {
+                  "tx": 1,
+                  "ty": 1,
+                  "change": "fixture",
+                  "by": "fixture",
+                  "at": 1
+                }
+              ]
+            },
+            "keeper": "fixture",
+            "yours": true
+          },
+          "mageLit": true
+        }
+      ]
+    }
+  },
+  {
     "name": "glimway.v1.WildsMaterial",
     "case": "empty",
     "json": {
@@ -9752,7 +10091,9 @@
       "materials": {},
       "glimpse": [],
       "ways": [],
-      "chunks": []
+      "chunks": [],
+      "held": [],
+      "land": null
     }
   },
   {
@@ -9783,7 +10124,15 @@
           "minCy": 1,
           "maxCx": 1,
           "maxCy": 1
-        }
+        },
+        "held": [
+          {
+            "realm": "fixture",
+            "layer": 1,
+            "cx": 1,
+            "cy": 1
+          }
+        ]
       },
       "center": {
         "realm": "fixture",
@@ -9816,7 +10165,8 @@
           "poiId": "fixture",
           "discovererId": "fixture",
           "displayName": "fixture",
-          "at": 1
+          "at": 1,
+          "epoch": "fixture"
         }
       ],
       "lanterns": [
@@ -9912,7 +10262,110 @@
           "source": "fixture",
           "epoch": "fixture"
         }
-      ]
+      ],
+      "held": [
+        {
+          "id": "fixture",
+          "worldSeed": "fixture",
+          "generatorVersion": 1,
+          "season": "fixture",
+          "startsAt": 1,
+          "endsAt": 1,
+          "kind": "fixture"
+        }
+      ],
+      "land": {
+        "wick": "fixture",
+        "chunks": [
+          {
+            "chunk": {
+              "realm": "fixture",
+              "layer": 1,
+              "cx": 1,
+              "cy": 1
+            },
+            "tier": "fixture",
+            "visited": true,
+            "claimId": "fixture",
+            "dimming": true,
+            "reserve": 1,
+            "cost": 1,
+            "nextTurning": "fixture",
+            "epoch": {
+              "id": "fixture",
+              "worldSeed": "fixture",
+              "generatorVersion": 1,
+              "season": "fixture",
+              "startsAt": 1,
+              "endsAt": 1,
+              "kind": "fixture"
+            },
+            "ground": {
+              "changes": [
+                {
+                  "tx": 1,
+                  "ty": 1,
+                  "change": "fixture",
+                  "by": "fixture",
+                  "at": 1
+                }
+              ]
+            },
+            "keeper": "fixture",
+            "yours": true
+          }
+        ],
+        "lamps": [
+          {
+            "id": "fixture",
+            "kind": "fixture",
+            "x": 1,
+            "y": 1,
+            "at": 1,
+            "name": "fixture",
+            "naming": "fixture",
+            "namer": "fixture",
+            "land": {
+              "chunk": {
+                "realm": "fixture",
+                "layer": 1,
+                "cx": 1,
+                "cy": 1
+              },
+              "tier": "fixture",
+              "visited": true,
+              "claimId": "fixture",
+              "dimming": true,
+              "reserve": 1,
+              "cost": 1,
+              "nextTurning": "fixture",
+              "epoch": {
+                "id": "fixture",
+                "worldSeed": "fixture",
+                "generatorVersion": 1,
+                "season": "fixture",
+                "startsAt": 1,
+                "endsAt": 1,
+                "kind": "fixture"
+              },
+              "ground": {
+                "changes": [
+                  {
+                    "tx": 1,
+                    "ty": 1,
+                    "change": "fixture",
+                    "by": "fixture",
+                    "at": 1
+                  }
+                ]
+              },
+              "keeper": "fixture",
+              "yours": true
+            },
+            "mageLit": true
+          }
+        ]
+      }
     }
   },
   {
@@ -9943,7 +10396,8 @@
           "minCy": -8,
           "maxCx": 4,
           "maxCy": 7
-        }
+        },
+        "held": []
       },
       "center": {
         "realm": "hearthwick",
@@ -9976,7 +10430,8 @@
           "poiId": "",
           "discovererId": "fixture-account",
           "displayName": "Fixture",
-          "at": 1791400000
+          "at": 1791400000,
+          "epoch": "wick-epoch"
         }
       ],
       "lanterns": [
@@ -10551,7 +11006,9 @@
           "source": "generated",
           "epoch": "wick-epoch"
         }
-      ]
+      ],
+      "held": [],
+      "land": null
     }
   },
   {
@@ -10640,7 +11097,8 @@
           "poiId": "fixture",
           "discovererId": "fixture",
           "displayName": "fixture",
-          "at": 1
+          "at": 1,
+          "epoch": "fixture"
         }
       ],
       "lanterns": [
@@ -10846,7 +11304,12 @@
             "pet": "fixture",
             "slot": 1
           }
-        ]
+        ],
+        "lantern": {
+          "lit": true,
+          "oil": 1,
+          "dimming": true
+        }
       },
       "inventory": {
         "materials": {
@@ -12933,7 +13396,8 @@
           "x": 88,
           "y": 968,
           "placeSetVersion": 0,
-          "wickEpoch": ""
+          "wickEpoch": "",
+          "movedVersion": 0
         },
         "story": {
           "quests": {},
@@ -13172,7 +13636,8 @@
           "x": 88,
           "y": 968,
           "placeSetVersion": 0,
-          "wickEpoch": ""
+          "wickEpoch": "",
+          "movedVersion": 0
         },
         "story": {
           "quests": {},
@@ -13236,7 +13701,9 @@
             "instance": null
           },
           "pickedUp": [],
-          "thanks": []
+          "thanks": [],
+          "carried": [],
+          "plants": []
         }
       }
     }
@@ -13320,7 +13787,8 @@
           "x": 88,
           "y": 968,
           "placeSetVersion": 0,
-          "wickEpoch": ""
+          "wickEpoch": "",
+          "movedVersion": 0
         },
         "story": {
           "quests": {},
@@ -13458,7 +13926,8 @@
           "x": 88,
           "y": 968,
           "placeSetVersion": 0,
-          "wickEpoch": ""
+          "wickEpoch": "",
+          "movedVersion": 0
         },
         "story": {
           "quests": {},
@@ -13720,7 +14189,8 @@
           "x": 88,
           "y": 968,
           "placeSetVersion": 0,
-          "wickEpoch": ""
+          "wickEpoch": "",
+          "movedVersion": 0
         },
         "story": {
           "quests": {},
@@ -13864,7 +14334,8 @@
           "x": 88,
           "y": 968,
           "placeSetVersion": 0,
-          "wickEpoch": ""
+          "wickEpoch": "",
+          "movedVersion": 0
         },
         "story": {
           "quests": {},
@@ -13996,7 +14467,8 @@
           "x": 88,
           "y": 968,
           "placeSetVersion": 0,
-          "wickEpoch": ""
+          "wickEpoch": "",
+          "movedVersion": 0
         },
         "story": {
           "quests": {},
@@ -14066,7 +14538,9 @@
             "instance": null
           },
           "pickedUp": [],
-          "thanks": []
+          "thanks": [],
+          "carried": [],
+          "plants": []
         },
         "wear": null,
         "used": "",
@@ -14088,7 +14562,10 @@
         "heirloom": "",
         "adaOilCount": 0,
         "bought": null,
-        "glimsGiven": 0
+        "glimsGiven": 0,
+        "tapped": null,
+        "firstTap": false,
+        "refined": null
       }
     }
   }

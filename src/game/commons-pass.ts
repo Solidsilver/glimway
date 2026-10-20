@@ -1,7 +1,7 @@
 import type Phaser from 'phaser'
 import { PACKED_MANIFEST_KEY, blitKey, fitRect, type PackedManifest, type PackedRect } from './atlas-plan.ts'
 import { artDataUrl, artSource, contextDensity, drawArt, resampleFor } from './density.ts'
-import { explodeFrames, registerAnims, type PassAnimation, type PassRect, type PassSource } from './art-pass.ts'
+import { explodingFrames, registerAnims, type Steps, type PassAnimation, type PassRect, type PassSource } from './art-pass.ts'
 
 /**
  * Typed port of `assets/generated/commons-pass/integration.js`: the Commons
@@ -96,14 +96,15 @@ export function commonsFrame(key: string): CommonsPassFrame | null {
  * the packed atlas, which holds the measured source rect box-filtered into
  * the native canvas at ART_DENSITY (scripts/build-atlases.ts), and drawn at
  * its native world size (./density.ts). Frames missing from the atlas are
- * left out, and so are animations missing any frame. Returns the manifest,
- * or null when the pack didn't load.
+ * left out, and so are animations missing any frame. A texture a step
+ * (./art-pass.ts `Steps`); returns the manifest, or null when the pack
+ * didn't load.
  */
-export function createCommonsPass(scene: Phaser.Scene): CommonsPassManifest | null {
+export function* createCommonsPass(scene: Phaser.Scene): Steps<CommonsPassManifest | null> {
   const manifest = scene.cache.json.get(COMMONS_PASS_MANIFEST_KEY) as CommonsPassManifest | undefined
   const packed = (scene.cache.json.get(PACKED_MANIFEST_KEY) as PackedManifest | undefined)?.commons
   if (!manifest || !Array.isArray(manifest.frames)) return null
-  const made = explodeFrames(scene, COMMONS_PACKED_KEY, packed, manifest.frames, artKey)
+  const made = yield* explodingFrames(scene, COMMONS_PACKED_KEY, packed, manifest.frames, artKey)
   if (!made || !packed) return null
   aliases = { ...manifest.aliases }
   frames = new Map(made.held.map((f) => [f.key, f]))

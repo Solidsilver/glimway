@@ -1181,6 +1181,130 @@ export enum ErrorCode {
    * @generated from enum value: ERROR_CODE_BEYOND_FRONTIER = 230;
    */
   BEYOND_FRONTIER = 230,
+
+  /**
+   * 0.12 Lot lanterns (hearthwick-2.md 6).
+   *
+   * @generated from enum value: ERROR_CODE_LANTERN_FULL = 231;
+   */
+  LANTERN_FULL = 231,
+
+  /**
+   * @generated from enum value: ERROR_CODE_NO_HOME = 232;
+   */
+  NO_HOME = 232,
+
+  /**
+   * @generated from enum value: ERROR_CODE_CANNOT_HOLD = 233;
+   */
+  CANNOT_HOLD = 233,
+
+  /**
+   * 0.13 Camps (lamps.md 2.5, 2.7).
+   *
+   * @generated from enum value: ERROR_CODE_NO_CAMP = 234;
+   */
+  NO_CAMP = 234,
+
+  /**
+   * @generated from enum value: ERROR_CODE_CAMP_NOT_EMPTY = 235;
+   */
+  CAMP_NOT_EMPTY = 235,
+
+  /**
+   * 0.13 Communal lamps (lamps.md 1.3, 2.4).
+   *
+   * @generated from enum value: ERROR_CODE_NO_LAMP = 236;
+   */
+  NO_LAMP = 236,
+
+  /**
+   * @generated from enum value: ERROR_CODE_LAMP_LIT = 237;
+   */
+  LAMP_LIT = 237,
+
+  /**
+   * @generated from enum value: ERROR_CODE_NOT_COMMON = 238;
+   */
+  NOT_COMMON = 238,
+
+  /**
+   * @generated from enum value: ERROR_CODE_NOT_YOUR_LAMP = 239;
+   */
+  NOT_YOUR_LAMP = 239,
+
+  /**
+   * 0.13 Ways home (lamps.md 1.4).
+   *
+   * @generated from enum value: ERROR_CODE_IN_A_FIGHT = 240;
+   */
+  IN_A_FIGHT = 240,
+
+  /**
+   * @generated from enum value: ERROR_CODE_POUCH_UNBOUND = 241;
+   */
+  POUCH_UNBOUND = 241,
+
+  /**
+   * @generated from enum value: ERROR_CODE_LAMP_ELSEWHERE = 242;
+   */
+  LAMP_ELSEWHERE = 242,
+
+  /**
+   * @generated from enum value: ERROR_CODE_LAMP_PACKED = 243;
+   */
+  LAMP_PACKED = 243,
+
+  /**
+   * @generated from enum value: ERROR_CODE_LAMP_UNLIT = 244;
+   */
+  LAMP_UNLIT = 244,
+
+  /**
+   * @generated from enum value: ERROR_CODE_LAMP_GONE = 245;
+   */
+  LAMP_GONE = 245,
+
+  /**
+   * @generated from enum value: ERROR_CODE_NO_LANDING = 246;
+   */
+  NO_LANDING = 246,
+
+  /**
+   * 0.13 The Keeper's hand and naming (lamps.md 2.8).
+   *
+   * @generated from enum value: ERROR_CODE_NEEDS_KEEPER = 247;
+   */
+  NEEDS_KEEPER = 247,
+
+  /**
+   * @generated from enum value: ERROR_CODE_LAMP_NAMED = 248;
+   */
+  LAMP_NAMED = 248,
+
+  /**
+   * @generated from enum value: ERROR_CODE_INVALID_NAMING = 249;
+   */
+  INVALID_NAMING = 249,
+
+  /**
+   * 0.13 Who may build at a camp (lamps.md 2.5).
+   *
+   * @generated from enum value: ERROR_CODE_NOT_YOUR_CAMP = 250;
+   */
+  NOT_YOUR_CAMP = 250,
+
+  /**
+   * @generated from enum value: ERROR_CODE_NOT_IN_WORLD = 251;
+   */
+  NOT_IN_WORLD = 251,
+
+  /**
+   * 0.13 The Wick Tree's weekly sap (lamps.md 2.5).
+   *
+   * @generated from enum value: ERROR_CODE_ALREADY_TAPPED = 252;
+   */
+  ALREADY_TAPPED = 252,
 }
 
 /**

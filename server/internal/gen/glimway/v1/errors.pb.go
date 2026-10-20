@@ -263,6 +263,35 @@ const (
 	ErrorCode_ERROR_CODE_NOT_YOUR_PATH   ErrorCode = 228
 	ErrorCode_ERROR_CODE_CANNOT_LAY_HERE ErrorCode = 229
 	ErrorCode_ERROR_CODE_BEYOND_FRONTIER ErrorCode = 230
+	// 0.12 Lot lanterns (hearthwick-2.md 6).
+	ErrorCode_ERROR_CODE_LANTERN_FULL ErrorCode = 231
+	ErrorCode_ERROR_CODE_NO_HOME      ErrorCode = 232
+	ErrorCode_ERROR_CODE_CANNOT_HOLD  ErrorCode = 233
+	// 0.13 Camps (lamps.md 2.5, 2.7).
+	ErrorCode_ERROR_CODE_NO_CAMP        ErrorCode = 234
+	ErrorCode_ERROR_CODE_CAMP_NOT_EMPTY ErrorCode = 235
+	// 0.13 Communal lamps (lamps.md 1.3, 2.4).
+	ErrorCode_ERROR_CODE_NO_LAMP       ErrorCode = 236
+	ErrorCode_ERROR_CODE_LAMP_LIT      ErrorCode = 237
+	ErrorCode_ERROR_CODE_NOT_COMMON    ErrorCode = 238
+	ErrorCode_ERROR_CODE_NOT_YOUR_LAMP ErrorCode = 239
+	// 0.13 Ways home (lamps.md 1.4).
+	ErrorCode_ERROR_CODE_IN_A_FIGHT     ErrorCode = 240
+	ErrorCode_ERROR_CODE_POUCH_UNBOUND  ErrorCode = 241
+	ErrorCode_ERROR_CODE_LAMP_ELSEWHERE ErrorCode = 242
+	ErrorCode_ERROR_CODE_LAMP_PACKED    ErrorCode = 243
+	ErrorCode_ERROR_CODE_LAMP_UNLIT     ErrorCode = 244
+	ErrorCode_ERROR_CODE_LAMP_GONE      ErrorCode = 245
+	ErrorCode_ERROR_CODE_NO_LANDING     ErrorCode = 246
+	// 0.13 The Keeper's hand and naming (lamps.md 2.8).
+	ErrorCode_ERROR_CODE_NEEDS_KEEPER   ErrorCode = 247
+	ErrorCode_ERROR_CODE_LAMP_NAMED     ErrorCode = 248
+	ErrorCode_ERROR_CODE_INVALID_NAMING ErrorCode = 249
+	// 0.13 Who may build at a camp (lamps.md 2.5).
+	ErrorCode_ERROR_CODE_NOT_YOUR_CAMP ErrorCode = 250
+	ErrorCode_ERROR_CODE_NOT_IN_WORLD  ErrorCode = 251
+	// 0.13 The Wick Tree's weekly sap (lamps.md 2.5).
+	ErrorCode_ERROR_CODE_ALREADY_TAPPED ErrorCode = 252
 )
 
 // Enum value maps for ErrorCode.
@@ -499,6 +528,28 @@ var (
 		228: "ERROR_CODE_NOT_YOUR_PATH",
 		229: "ERROR_CODE_CANNOT_LAY_HERE",
 		230: "ERROR_CODE_BEYOND_FRONTIER",
+		231: "ERROR_CODE_LANTERN_FULL",
+		232: "ERROR_CODE_NO_HOME",
+		233: "ERROR_CODE_CANNOT_HOLD",
+		234: "ERROR_CODE_NO_CAMP",
+		235: "ERROR_CODE_CAMP_NOT_EMPTY",
+		236: "ERROR_CODE_NO_LAMP",
+		237: "ERROR_CODE_LAMP_LIT",
+		238: "ERROR_CODE_NOT_COMMON",
+		239: "ERROR_CODE_NOT_YOUR_LAMP",
+		240: "ERROR_CODE_IN_A_FIGHT",
+		241: "ERROR_CODE_POUCH_UNBOUND",
+		242: "ERROR_CODE_LAMP_ELSEWHERE",
+		243: "ERROR_CODE_LAMP_PACKED",
+		244: "ERROR_CODE_LAMP_UNLIT",
+		245: "ERROR_CODE_LAMP_GONE",
+		246: "ERROR_CODE_NO_LANDING",
+		247: "ERROR_CODE_NEEDS_KEEPER",
+		248: "ERROR_CODE_LAMP_NAMED",
+		249: "ERROR_CODE_INVALID_NAMING",
+		250: "ERROR_CODE_NOT_YOUR_CAMP",
+		251: "ERROR_CODE_NOT_IN_WORLD",
+		252: "ERROR_CODE_ALREADY_TAPPED",
 	}
 	ErrorCode_value = map[string]int32{
 		"ERROR_CODE_UNSPECIFIED":               0,
@@ -732,6 +783,28 @@ var (
 		"ERROR_CODE_NOT_YOUR_PATH":             228,
 		"ERROR_CODE_CANNOT_LAY_HERE":           229,
 		"ERROR_CODE_BEYOND_FRONTIER":           230,
+		"ERROR_CODE_LANTERN_FULL":              231,
+		"ERROR_CODE_NO_HOME":                   232,
+		"ERROR_CODE_CANNOT_HOLD":               233,
+		"ERROR_CODE_NO_CAMP":                   234,
+		"ERROR_CODE_CAMP_NOT_EMPTY":            235,
+		"ERROR_CODE_NO_LAMP":                   236,
+		"ERROR_CODE_LAMP_LIT":                  237,
+		"ERROR_CODE_NOT_COMMON":                238,
+		"ERROR_CODE_NOT_YOUR_LAMP":             239,
+		"ERROR_CODE_IN_A_FIGHT":                240,
+		"ERROR_CODE_POUCH_UNBOUND":             241,
+		"ERROR_CODE_LAMP_ELSEWHERE":            242,
+		"ERROR_CODE_LAMP_PACKED":               243,
+		"ERROR_CODE_LAMP_UNLIT":                244,
+		"ERROR_CODE_LAMP_GONE":                 245,
+		"ERROR_CODE_NO_LANDING":                246,
+		"ERROR_CODE_NEEDS_KEEPER":              247,
+		"ERROR_CODE_LAMP_NAMED":                248,
+		"ERROR_CODE_INVALID_NAMING":            249,
+		"ERROR_CODE_NOT_YOUR_CAMP":             250,
+		"ERROR_CODE_NOT_IN_WORLD":              251,
+		"ERROR_CODE_ALREADY_TAPPED":            252,
 	}
 )
 
@@ -767,7 +840,7 @@ var File_glimway_v1_errors_proto protoreflect.FileDescriptor
 const file_glimway_v1_errors_proto_rawDesc = "" +
 	"\n" +
 	"\x17glimway/v1/errors.proto\x12\n" +
-	"glimway.v1*\xa29\n" +
+	"glimway.v1*\x9f>\n" +
 	"\tErrorCode\x12\x1a\n" +
 	"\x16ERROR_CODE_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17ERROR_CODE_INVALID_JSON\x10\x01\x12\"\n" +
@@ -1000,7 +1073,29 @@ const file_glimway_v1_errors_proto_rawDesc = "" +
 	"\x17ERROR_CODE_ALREADY_LAID\x10\xe3\x01\x12\x1d\n" +
 	"\x18ERROR_CODE_NOT_YOUR_PATH\x10\xe4\x01\x12\x1f\n" +
 	"\x1aERROR_CODE_CANNOT_LAY_HERE\x10\xe5\x01\x12\x1f\n" +
-	"\x1aERROR_CODE_BEYOND_FRONTIER\x10\xe6\x01B1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
+	"\x1aERROR_CODE_BEYOND_FRONTIER\x10\xe6\x01\x12\x1c\n" +
+	"\x17ERROR_CODE_LANTERN_FULL\x10\xe7\x01\x12\x17\n" +
+	"\x12ERROR_CODE_NO_HOME\x10\xe8\x01\x12\x1b\n" +
+	"\x16ERROR_CODE_CANNOT_HOLD\x10\xe9\x01\x12\x17\n" +
+	"\x12ERROR_CODE_NO_CAMP\x10\xea\x01\x12\x1e\n" +
+	"\x19ERROR_CODE_CAMP_NOT_EMPTY\x10\xeb\x01\x12\x17\n" +
+	"\x12ERROR_CODE_NO_LAMP\x10\xec\x01\x12\x18\n" +
+	"\x13ERROR_CODE_LAMP_LIT\x10\xed\x01\x12\x1a\n" +
+	"\x15ERROR_CODE_NOT_COMMON\x10\xee\x01\x12\x1d\n" +
+	"\x18ERROR_CODE_NOT_YOUR_LAMP\x10\xef\x01\x12\x1a\n" +
+	"\x15ERROR_CODE_IN_A_FIGHT\x10\xf0\x01\x12\x1d\n" +
+	"\x18ERROR_CODE_POUCH_UNBOUND\x10\xf1\x01\x12\x1e\n" +
+	"\x19ERROR_CODE_LAMP_ELSEWHERE\x10\xf2\x01\x12\x1b\n" +
+	"\x16ERROR_CODE_LAMP_PACKED\x10\xf3\x01\x12\x1a\n" +
+	"\x15ERROR_CODE_LAMP_UNLIT\x10\xf4\x01\x12\x19\n" +
+	"\x14ERROR_CODE_LAMP_GONE\x10\xf5\x01\x12\x1a\n" +
+	"\x15ERROR_CODE_NO_LANDING\x10\xf6\x01\x12\x1c\n" +
+	"\x17ERROR_CODE_NEEDS_KEEPER\x10\xf7\x01\x12\x1a\n" +
+	"\x15ERROR_CODE_LAMP_NAMED\x10\xf8\x01\x12\x1e\n" +
+	"\x19ERROR_CODE_INVALID_NAMING\x10\xf9\x01\x12\x1d\n" +
+	"\x18ERROR_CODE_NOT_YOUR_CAMP\x10\xfa\x01\x12\x1c\n" +
+	"\x17ERROR_CODE_NOT_IN_WORLD\x10\xfb\x01\x12\x1e\n" +
+	"\x19ERROR_CODE_ALREADY_TAPPED\x10\xfc\x01B1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
 
 var (
 	file_glimway_v1_errors_proto_rawDescOnce sync.Once

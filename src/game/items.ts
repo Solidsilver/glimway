@@ -121,9 +121,13 @@ export class Items {
     }
     return r
   }
-  /** Plant a seed or sapling on your own land, at a tile beside you. */
-  plant(itemDef: string, tile: [number, number]) {
-    return this.run('plant', { itemDef, tile })
+  /** Plant a seed or sapling on your own land, at a tile beside you, or a carried plant (its id) set in again, its growth kept. */
+  plant(itemDef: string, tile: [number, number], carried?: string) {
+    return this.run('plant', { itemDef, tile, ...(carried ? { instance: carried } : {}) })
+  }
+  /** Dig up a plant on your own land with the trowel: it comes up whole into the pack, its growth kept. */
+  uproot(plantId: string) {
+    return this.run('uproot', { target: plantId })
   }
   /** One use of a tool (gathering wears tools through gather; the dev hook calls this). */
   async useTool(instance: string, action?: string) {
@@ -216,6 +220,14 @@ export class Items {
   buy(seller: string, good: string) {
     const price = sellerFor(seller)?.goods.find((g) => g.item === good)?.glims ?? 0
     return this.run('buy', { seller, good }, -price)
+  }
+  /** Tap the Wick Tree for this wick's sap (the server keeps it to one a wick). */
+  tapSap() {
+    return this.run('tap', {})
+  }
+  /** The chandler refines a jar of sap into hearth oil, free. */
+  refineSap() {
+    return this.run('refine', {})
   }
 
   // ------------------------------------------------------------ reads

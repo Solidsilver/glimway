@@ -11,6 +11,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"sync"
@@ -33,6 +34,10 @@ const ChunkCacheSize = 512
 // an epoch names a generator version it can't make.
 var ErrGeneratorUnavailable = errors.New("generator unavailable")
 
+// ErrHeldBlobMissing: a held chunk has no stored blob. It is never made
+// again (that would unfreeze it), so its reads fail until it is restored.
+var ErrHeldBlobMissing = errors.New("held chunk blob missing")
+
 type Chunks struct {
 	// Now is the clock for epoch lifetimes on chunk reads (the port's read
 	// takes no time). Nil is time.Now.
@@ -40,6 +45,12 @@ type Chunks struct {
 	// Generator makes chunks on demand and names the version new epochs
 	// use. Nil: none can be made (generator-unavailable).
 	Generator chunks.Generator
+	// Holders judge the holds of each holder kind at the turning
+	// (holds.go). A kind with none keeps its holds.
+	Holders map[string]Holder
+	// Commons judges Common work at the turning, after the holds
+	// (commons.go). Nil: none is judged, and it turns with the land.
+	Commons Commons
 
 	mu    sync.Mutex
 	order *list.List // front: most recent
@@ -109,7 +120,11 @@ func (c *Chunks) EpochByID(ctx context.Context, tx *sql.Tx, world, id string) (*
 // always finds its kept side. A wick epoch's season is the wick's bounds,
 // "t:<startsAt>:<endsAt>", and its chunks are made on demand. Making one
 // deletes the world's ended wick epochs and an epoch of another generator
-// version left for the same season, with everything stored under them.
+// version left for the same season, with everything stored under them, but
+// for epochs a hold pins. Making a wick epoch is the turning: the holds are
+// judged then, once for each calendar turning since the last one judged
+// (holds.go), then Common work (commons.go), before any chunk of it is made
+// but those Common work carries onto, and before the ended wick is deleted.
 // A Create that races another for the same season answers the one stored.
 func (c *Chunks) Create(ctx context.Context, tx *sql.Tx, world, kind string, now int64) (*contract.WildsEpoch, error) {
 	if kind != EpochStill && kind != EpochWick {
@@ -128,7 +143,10 @@ func (c *Chunks) Create(ctx context.Context, tx *sql.Tx, world, kind string, now
 		end := day.NextTurning
 		ends = &end
 	}
-	if err := deleteStaleEpochs(ctx, tx, world, kind, season, version, content.CalendarAt(content.CalendarRules, now).StartsAt); err != nil {
+	// Only another version's epoch for this season goes before the insert:
+	// the wick that ended stays for the turning to judge (and a missed
+	// turning's older one with it), and goes after.
+	if err := deleteStaleEpochs(ctx, tx, world, kind, season, version, math.MinInt64); err != nil {
 		return nil, err
 	}
 	var seed string
@@ -156,6 +174,31 @@ func (c *Chunks) Create(ctx context.Context, tx *sql.Tx, world, kind string, now
 		}
 		return e, nil
 	}
+	if kind == EpochWick {
+		ended, err := endedWick(ctx, tx, world, e)
+		if err != nil {
+			return nil, err
+		}
+		lapsed, err := c.judgeTurnings(ctx, tx, world, e, now)
+		if err != nil {
+			return nil, err
+		}
+		if c.Commons != nil {
+			if err = c.Commons.Turn(ctx, tx, world, ended, e, lapsed, now); err != nil {
+				return nil, err
+			}
+		}
+		wickStart := content.CalendarAt(content.CalendarRules, now).StartsAt
+		if err = deleteStaleEpochs(ctx, tx, world, kind, season, version, wickStart); err != nil {
+			return nil, err
+		}
+		if err = trimVisits(ctx, tx, world, wickStart); err != nil {
+			return nil, err
+		}
+		if err = trimPinned(ctx, tx, world, wickStart); err != nil {
+			return nil, err
+		}
+	}
 	if kind == EpochStill {
 		for _, p := range content.WildsRules.Places {
 			if p.GetEpochKind() != EpochStill {
@@ -179,9 +222,10 @@ func (c *Chunks) Create(ctx context.Context, tx *sql.Tx, world, kind string, now
 // lanterns (all cascading) and world changes in the Wilds' realm (another
 // realm's rows are that realm's to keep). The wick that ended at this
 // one's start stays until the next turning, so a late claim on it still
-// hears "epoch-ended" rather than "epoch-not-found".
+// hears "epoch-ended" rather than "epoch-not-found". An epoch a hold pins
+// stays, with its stored chunks and ground changes (trimPinned trims it).
 func deleteStaleEpochs(ctx context.Context, tx *sql.Tx, world, kind, season string, version int, wickStart int64) error {
-	const stale = "(SELECT id FROM wild_epochs WHERE world_id=? AND (kind=? AND season=? AND generator_version!=? OR kind='wick' AND ends_at<?))"
+	const stale = "(SELECT id FROM wild_epochs WHERE world_id=? AND (kind=? AND season=? AND generator_version!=? OR kind='wick' AND ends_at<?) AND id NOT IN (SELECT epoch_id FROM holds))"
 	if _, err := tx.ExecContext(ctx, "DELETE FROM world_changes WHERE world_id=? AND realm=? AND epoch IN "+stale, world, content.WildsRules.GetRealm(), world, kind, season, version, wickStart); err != nil {
 		return err
 	}
@@ -195,7 +239,9 @@ func deleteStaleEpochs(ctx context.Context, tx *sql.Tx, world, kind, season stri
 // generator version. The blob is stored under a unique key, so of two racing
 // first reads one blob wins and both answer it. Another world's epoch, an
 // epoch of another generator version and a chunk that can't be made are all
-// sql.ErrNoRows; an ended epoch is chunks.ErrEpochEnded.
+// sql.ErrNoRows; an ended epoch is chunks.ErrEpochEnded. A held chunk
+// (holds.go) is read under its pinned epoch, ended or of an older version,
+// from its stored blob only.
 //
 // The memory cache is shared by every transaction, but a chunk made in one
 // may be rolled back with it (a refused operation, a savepoint). So a cache
@@ -235,10 +281,11 @@ func (c *Chunks) Chunk(ctx context.Context, tx *sql.Tx, world, epoch string, lay
 	var e contract.WildsEpoch
 	var starts int64
 	var ends sql.NullInt64
-	var stored bool
+	var stored, held bool
 	err := tx.QueryRowContext(ctx, `SELECT id,world_seed,kind,generator_version,season,starts_at,ends_at,
- EXISTS(SELECT 1 FROM wilds_chunks WHERE epoch_id=wild_epochs.id AND layer=? AND cx=? AND cy=?)
- FROM wild_epochs WHERE id=? AND world_id=?`, layer, cx, cy, epoch, world).Scan(&e.Id, &e.WorldSeed, &e.Kind, &e.GeneratorVersion, &e.Season, &starts, &ends, &stored)
+ EXISTS(SELECT 1 FROM wilds_chunks WHERE epoch_id=wild_epochs.id AND layer=? AND cx=? AND cy=?),
+ EXISTS(SELECT 1 FROM holds WHERE world_id=wild_epochs.world_id AND realm=? AND layer=? AND cx=? AND cy=? AND epoch_id=wild_epochs.id)
+ FROM wild_epochs WHERE id=? AND world_id=?`, layer, cx, cy, content.WildsRules.GetRealm(), layer, cx, cy, epoch, world).Scan(&e.Id, &e.WorldSeed, &e.Kind, &e.GeneratorVersion, &e.Season, &starts, &ends, &stored, &held)
 	if err != nil {
 		return nil, err
 	}
@@ -246,13 +293,22 @@ func (c *Chunks) Chunk(ctx context.Context, tx *sql.Tx, world, epoch string, lay
 	if ends.Valid {
 		e.EndsAt = wrapperspb.Double(float64(ends.Int64))
 	}
+	key := chunkKey{epoch, layer, cx, cy}
+	// A held chunk is its pinned epoch's stored blob, whatever the epoch's
+	// end or generator version: never made again. Without its blob it is
+	// lost terrain, not new land.
+	if held {
+		if !stored {
+			return nil, fmt.Errorf("held chunk %d,%d of %s: %w", cx, cy, epoch, ErrHeldBlobMissing)
+		}
+		return c.readStored(ctx, tx, key)
+	}
 	if int(e.GeneratorVersion) != c.version() {
 		return nil, sql.ErrNoRows
 	}
 	if e.EndsAt != nil && e.EndsAt.Value <= float64(c.readNow(ctx)) {
 		return nil, chunks.ErrEpochEnded
 	}
-	key := chunkKey{epoch, layer, cx, cy}
 	if !stored {
 		c.drop(key)
 		m, err := c.make(ctx, tx, world, &e, layer, cx, cy)
@@ -262,6 +318,11 @@ func (c *Chunks) Chunk(ctx context.Context, tx *sql.Tx, world, epoch string, lay
 		c.put(key, m)
 		return proto.Clone(m).(*contract.WorldChunk), nil
 	}
+	return c.readStored(ctx, tx, key)
+}
+
+// readStored answers a stored chunk, through the memory cache.
+func (c *Chunks) readStored(ctx context.Context, tx *sql.Tx, key chunkKey) (*contract.WorldChunk, error) {
 	if m := c.get(key); m != nil {
 		return proto.Clone(m).(*contract.WorldChunk), nil
 	}
@@ -296,6 +357,37 @@ func (c *Chunks) make(ctx context.Context, tx *sql.Tx, world string, e *contract
 	}
 	var kept []chunks.Kept
 	if e.Kind == EpochWick {
+		// Held chunks round it, pinned to other wick epochs, are kept as
+		// the Tangle is; a chunk held under another epoch is never made in
+		// this one.
+		heldAt := map[[2]int]string{}
+		rows, err := tx.QueryContext(ctx, "SELECT cx,cy,epoch_id FROM holds WHERE world_id=? AND realm=? AND layer=0 AND cx BETWEEN ? AND ? AND cy BETWEEN ? AND ? AND epoch_id!=?", world, content.WildsRules.GetRealm(), cx-1, cx+1, cy-1, cy+1, e.Id)
+		if err != nil {
+			return nil, err
+		}
+		for rows.Next() {
+			var hx, hy int
+			var id string
+			if err = rows.Scan(&hx, &hy, &id); err != nil {
+				rows.Close()
+				return nil, err
+			}
+			heldAt[[2]int{hx, hy}] = id
+		}
+		rows.Close()
+		if err = rows.Err(); err != nil {
+			return nil, err
+		}
+		if _, ok := heldAt[[2]int{x, y}]; ok {
+			return nil, sql.ErrNoRows
+		}
+		for d, id := range heldAt {
+			m, err := c.Chunk(ctx, tx, world, id, 0, int32(d[0]), int32(d[1]))
+			if err != nil {
+				return nil, fmt.Errorf("held side of %d,%d: %w", x, y, err)
+			}
+			kept = append(kept, chunks.Kept{CX: d[0], CY: d[1], Chunk: m, Held: true})
+		}
 		var still *contract.WildsEpoch
 		for dy := int32(-1); dy <= 1; dy++ {
 			for dx := int32(-1); dx <= 1; dx++ {

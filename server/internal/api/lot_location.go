@@ -27,10 +27,23 @@ func homeGateAt(s *store.Snapshot) int {
 func localHomeTile(s *store.Snapshot, x, y int) (int, int) {
 	if s.State.Area == outdoorsArea {
 		g := homeGateAt(s)
+		if g < 0 {
+			g = backlandGateAt(s) // its backland, past the lot
+		}
 		if g >= 0 {
 			ox, oy := chunks.LotOrigin(g)
 			return x - ox, y - oy
 		}
+	}
+	return x, y
+}
+
+// worldHomeTile is localHomeTile turned round: a home tile of gate's in the
+// tiles the player's area measures in.
+func worldHomeTile(s *store.Snapshot, gate, x, y int) (int, int) {
+	if s.State.Area == outdoorsArea {
+		ox, oy := chunks.LotOrigin(gate)
+		return x + ox, y + oy
 	}
 	return x, y
 }

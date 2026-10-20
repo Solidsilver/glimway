@@ -507,7 +507,11 @@ async function main(): Promise<void> {
   for (const b of BACKDROPS) read(b.source)
 
   // ---- bake in Chromium
-  const browser = await chromium.launch()
+  const browser = await chromium.launch({
+    ...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
+      ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH }
+      : {}),
+  })
   const page = await browser.newPage()
   await page.route(`${ORIGIN}**`, (route) => {
     const path = decodeURIComponent(new URL(route.request().url()).pathname.slice(1))

@@ -20,6 +20,10 @@ LANDMARK_SOURCE = Image.open(SRC / 'landmarks-generated.png').convert('RGBA')
 SPLIT_OAK_SOURCE = Image.open(SRC / 'landmark-split-oak-generated.png').convert('RGBA')
 STANDING_STONE_SOURCE = Image.open(SRC / 'standing-stone-round3-generated.png').convert('RGBA')
 WAY_SIGN_SOURCE = Image.open(SRC / 'way-sign-round3-generated.png').convert('RGBA')
+WAY_LAMP_SOURCE = Image.open(SRC / 'way-lamp-generated.png').convert('RGBA')
+LAMP_STONES_SOURCE = Image.open(SRC / 'lamp-stones-generated.png').convert('RGBA')
+LAMP_FLAMES_SOURCE = Image.open(SRC / 'lamp-stone-flames-generated.png').convert('RGBA')
+MAP_LAMPS_SOURCE = Image.open(SRC / 'map-lamp-icons-generated.png').convert('RGBA')
 
 # Source cuts in the generated 1402x1122 transparent prop sheet. Crops are kept
 # here so every frame can be rebuilt without depending on the generation tool.
@@ -51,6 +55,50 @@ def palette_limit(img: Image.Image, colors=32) -> Image.Image:
     rgb = img.convert('RGB').quantize(colors=colors, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE).convert('RGB')
     rgb.putalpha(alpha)
     return rgb
+
+def match_palette(img: Image.Image, palette_image: Image.Image) -> Image.Image:
+    """Map every opaque pixel to the exact colors used by the canonical dark lamp stone."""
+    palette = sorted({p[:3] for p in palette_image.convert('RGBA').getdata() if p[3]})
+    src = img.convert('RGBA'); out = Image.new('RGBA', src.size, (0,0,0,0))
+    sp, dp = src.load(), out.load()
+    for y in range(src.height):
+        for x in range(src.width):
+            r,g,b,a = sp[x,y]
+            if a:
+                color = min(palette, key=lambda q:(q[0]-r)**2+(q[1]-g)**2+(q[2]-b)**2)
+                dp[x,y] = (*color,255)
+    return out
+
+def largest_opaque_component(img: Image.Image) -> Image.Image:
+    """Discard detached generator flecks while retaining the largest sprite cluster."""
+    img=img.convert('RGBA')
+    alpha=img.getchannel('A').point(lambda a:255 if a>=128 else 0)
+    w,h=img.size; data=alpha.tobytes(); seen=bytearray(w*h); best=[]
+    for start,value in enumerate(data):
+        if not value or seen[start]: continue
+        stack=[start]; seen[start]=1; pixels=[]
+        while stack:
+            pos=stack.pop(); pixels.append(pos); x=pos%w; y=pos//w
+            for ny in range(max(0,y-1),min(h,y+2)):
+                for nx in range(max(0,x-1),min(w,x+2)):
+                    nxt=ny*w+nx
+                    if data[nxt] and not seen[nxt]: seen[nxt]=1; stack.append(nxt)
+        if len(pixels)>len(best): best=pixels
+    out=Image.new('RGBA',img.size,(0,0,0,0)); src=img.load(); dst=out.load()
+    for pos in best:
+        x=pos%w; y=pos//w; r,g,b,a=src[x,y]; dst[x,y]=(r,g,b,255)
+    box=out.getchannel('A').getbbox()
+    return out.crop(box) if box else out
+
+def fit_sprite(img: Image.Image, canvas: tuple[int,int]) -> Image.Image:
+    """Fit a generated transparent sprite with nearest-neighbour pixels."""
+    img=largest_opaque_component(img)
+    w,h=canvas; scale=min(w/img.width,h/img.height)
+    size=(max(1,round(img.width*scale)),max(1,round(img.height*scale)))
+    img=img.resize(size,Image.Resampling.NEAREST)
+    result=Image.new('RGBA',canvas,(0,0,0,0))
+    result.alpha_composite(img,((w-size[0])//2,h-size[1]))
+    return result
 
 def crop_sprite(key, canvas):
     cut = PROP_CUTS[key]
@@ -266,6 +314,73 @@ for key,(col,row,foot) in {
     else:
         generated_prop(key,'landmarks-generated',LANDMARK_SOURCE,col,row,3,2,foot,20)
 
+# Extract only the flame from each generated lit source cell and place it in
+# the canonical dark stone's niche. This keeps the stone pixels, canvas, foot,
+# outline and palette identical across the animation.
+stone_palette = Image.open(OUT/'lamp-stone-dark.png').convert('RGBA')
+flame_boxes = [(520,210,650,350),(840,210,970,350),(1160,210,1290,350)]
+relit_lamps=[]
+for i,box in enumerate(flame_boxes):
+    cell_w=LAMP_FLAMES_SOURCE.width//3
+    flame=fit_sprite(LAMP_FLAMES_SOURCE.crop((i*cell_w,0,(i+1)*cell_w,LAMP_FLAMES_SOURCE.height)),(12,22))
+    im=stone_palette.copy()
+    # The generated flame fills the existing niche; canonical stone pixels
+    # remain untouched everywhere else.
+    im.alpha_composite(flame,(26,43))
+    im.save(OUT/f'lamp-stone-relit-{i}.png',optimize=True)
+    relit_lamps.append(im)
+    key=f'lamp-stone-relit-{i}'
+    cell_w=LAMP_FLAMES_SOURCE.width//3
+    frames[key]={'file':f'frames/{key}.png','source':'lamp-stone-flames-generated',
+      'sourceRect':{'x':i*cell_w,'y':0,'w':cell_w,'h':LAMP_FLAMES_SOURCE.height},
+      'canvas':{'w':64,'h':128},'footprint':{'w':1,'h':1},
+      'footPoint':{'x':32,'y':128},'kind':'transparent-prop'}
+
+# A flat inscription panel comes from the fifth generated source image. Keep
+# its carved pseudo-writing and moss, and pair it with the exact canonical lamp.
+panel_box=(1670,105,2172,660)
+panel=fit_pixel_art(LAMP_STONES_SOURCE.crop(panel_box),(58,108),32)
+panel=match_palette(panel,stone_palette)
+route_dark=Image.new('RGBA',(128,128),(0,0,0,0))
+route_dark.alpha_composite(stone_palette,(0,0)); route_dark.alpha_composite(panel,(67,20))
+route_dark.save(OUT/'route-stone-dark.png',optimize=True)
+frames['route-stone-dark']={'file':'frames/route-stone-dark.png','source':'lamp-stones-generated',
+  'sourceRect':{'x':panel_box[0],'y':panel_box[1],'w':panel_box[2]-panel_box[0],'h':panel_box[3]-panel_box[1]},
+  'canvas':{'w':128,'h':128},'footprint':{'w':2,'h':1},'footPoint':{'x':64,'y':128},'kind':'transparent-prop'}
+for i,lamp in enumerate(relit_lamps):
+    im=Image.new('RGBA',(128,128),(0,0,0,0)); im.alpha_composite(lamp,(0,0)); im.alpha_composite(panel,(67,20))
+    key=f'route-stone-relit-{i}'; im.save(OUT/f'{key}.png',optimize=True)
+    cell_w=LAMP_FLAMES_SOURCE.width//3
+    frames[key]={'file':f'frames/{key}.png','source':'lamp-stone-flames-generated',
+      'sourceRect':{'x':i*cell_w,'y':0,'w':cell_w,'h':LAMP_FLAMES_SOURCE.height},
+      'canvas':{'w':128,'h':128},'footprint':{'w':2,'h':1},'footPoint':{'x':64,'y':128},'kind':'transparent-prop'}
+
+# The generated three-state wayside lamp is kept on one fixed canvas. Its
+# states share a union crop before fitting, then the builder reduces it to
+# 2x2 texel clusters and the Wilds palette just like the other props.
+lamp_cell_width = WAY_LAMP_SOURCE.width // 3
+lamp_cells = [WAY_LAMP_SOURCE.crop((i*lamp_cell_width+6, 6, (i+1)*lamp_cell_width-6, WAY_LAMP_SOURCE.height-6)) for i in range(3)]
+lamp_union = Image.new('L', lamp_cells[0].size, 0)
+for cell in lamp_cells:
+    lamp_union = ImageChops.lighter(lamp_union, cell.getchannel('A'))
+lamp_bbox = lamp_union.getbbox()
+for i,cell in enumerate(lamp_cells):
+    cell = cell.crop(lamp_bbox)
+    half = fit_pixel_art(cell, (32,48), 24)
+    im = half.resize((64,96), Image.Resampling.NEAREST)
+    # Keep the game's canonical outline color in the limited palette.
+    px = im.load()
+    for yy in range(im.height):
+        for xx in range(im.width):
+            r,g,b,a = px[xx,yy]
+            if a and max(r,g,b) < 64: px[xx,yy] = (58,42,40,a)
+    key = f'way-lamp-{i}'
+    im.save(OUT/f'{key}.png', optimize=True)
+    frames[key] = {'file':f'frames/{key}.png','source':'way-lamp-generated',
+      'sourceRect':{'x':i*lamp_cell_width+6,'y':6,'w':lamp_cell_width-12,'h':WAY_LAMP_SOURCE.height-12},
+      'canvas':{'w':64,'h':96},'footprint':{'w':1,'h':1},
+      'footPoint':{'x':32,'y':96},'kind':'transparent-prop'}
+
 # Round-3 portrait replacements remove the tiny source cuts and stray fragments.
 round3_prop(STANDING_STONE_SOURCE,'landmark-standing-stone',(56,204),'standing-stone-round3-generated')
 round3_prop(WAY_SIGN_SOURCE,'way-sign',(56,104),'way-sign-round3-generated')
@@ -299,15 +414,18 @@ for i,im in enumerate(veil_frames):
       'sourceRect':{'x':0,'y':i*veil_h,'w':veil_w,'h':veil_h},'canvas':{'w':192,'h':64},
       'footprint':{'w':3,'h':1},'footPoint':{'x':96,'y':64},'kind':'transparent-boundary-overlay'}
 
-# Map icon, drawn as a compact single-cell map with road and landmarks.
-icon=Image.new('RGBA',(32,32),(0,0,0,0)); d=ImageDraw.Draw(icon)
-d.polygon([(5,7),(13,4),(21,7),(27,4),(27,24),(20,27),(12,24),(5,27)],fill=(213,195,151,255),outline=(61,47,36,255))
-d.line((13,5,13,24),fill=(91,67,48,255),width=1); d.line((20,7,20,26),fill=(91,67,48,255),width=1)
-d.line([(8,20),(11,17),(16,18),(18,13),(23,11)],fill=(73,103,55,255),width=2)
-d.ellipse((21,9,24,12),fill=(147,114,68,255),outline=(61,47,36,255))
+# Keep the map tab icon and add the two authored lamp marks.
+icon=Image.open(SRC/'map-icon-source.png').convert('RGBA')
 icon.save(OUT/'icon-map-tab.png',optimize=True)
 frames['icon-map-tab']={'file':'frames/icon-map-tab.png','source':'icon-map-tab','sourceRect':{'x':0,'y':0,'w':32,'h':32},'canvas':{'w':32,'h':32},'footprint':{'w':1,'h':1},'footPoint':{'x':16,'y':32},'kind':'ui-icon'}
-icon.save(SRC/'map-icon-source.png',optimize=True)
+cell_w=MAP_LAMPS_SOURCE.width//2
+for i,key in enumerate(['map-lamp-lit','map-lamp-dimming']):
+    rect=(i*cell_w,0,(i+1)*cell_w,MAP_LAMPS_SOURCE.height)
+    im=fit_sprite(MAP_LAMPS_SOURCE.crop(rect),(60,60))
+    im.save(OUT/f'{key}.png',optimize=True)
+    frames[key]={'file':f'frames/{key}.png','source':'map-lamp-icons-generated',
+      'sourceRect':{'x':rect[0],'y':rect[1],'w':rect[2]-rect[0],'h':rect[3]-rect[1]},
+      'canvas':{'w':64,'h':64},'footprint':{'w':1,'h':1},'footPoint':{'x':32,'y':64},'kind':'ui-icon'}
 
 # Source catalog with hashes, dimensions, modes.
 source_files={
@@ -318,6 +436,10 @@ source_files={
  'ford-water-round3-generated':'ford-water-round3-generated.png',
  'standing-stone-round3-generated':'standing-stone-round3-generated.png',
  'way-sign-round3-generated':'way-sign-round3-generated.png',
+ 'way-lamp-generated':'way-lamp-generated.png',
+ 'lamp-stones-generated':'lamp-stones-generated.png',
+ 'lamp-stone-flames-generated':'lamp-stone-flames-generated.png',
+ 'map-lamp-icons-generated':'map-lamp-icons-generated.png',
 }
 for k,file in source_files.items():
     im=Image.open(SRC/file)
@@ -326,7 +448,9 @@ for k,file in source_files.items():
 
 animations=[{'key':'ford-h-ripple','frames':[f'ford-h-{i}' for i in range(3)],'frameRate':1.5,'repeat':-1},
             {'key':'ford-v-ripple','frames':[f'ford-v-{i}' for i in range(3)],'frameRate':1.5,'repeat':-1},
-            {'key':'frontier-veil','frames':[f'frontier-veil-{i}' for i in range(4)],'frameRate':2,'repeat':-1}]
+            {'key':'frontier-veil','frames':[f'frontier-veil-{i}' for i in range(4)],'frameRate':2,'repeat':-1},
+            {'key':'lamp-stone-relit','frames':[f'lamp-stone-relit-{i}' for i in range(3)],'frameRate':1.2,'repeat':-1},
+            {'key':'route-stone-relit','frames':[f'route-stone-relit-{i}' for i in range(3)],'frameRate':1.2,'repeat':-1}]
 manifest={'version':1,'density':4,'worldTileSize':16,'frameCount':len(frames),'sources':sources,'frames':frames,'animations':animations}
 atlas={'frames':{k:{'source':v['source'],'x':v['sourceRect']['x'],'y':v['sourceRect']['y'],'w':v['sourceRect']['w'],'h':v['sourceRect']['h'],'canvas':v['canvas'],'footprint':v['footprint'],**({'footPoint':v['footPoint']} if 'footPoint' in v else {})} for k,v in frames.items()},'animations':animations}
 (ROOT/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')

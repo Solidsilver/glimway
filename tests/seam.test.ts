@@ -14,6 +14,7 @@ import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import { readFileSync } from 'node:fs';
 import { registerHooks } from 'node:module';
+import { TravelHold } from '../src/game/scenes/travel-hold.ts';
 
 // Phaser is a stub in node tests: give it what a fixed chunk's collision and glows touch.
 const Phaser = (await import('phaser')).default as Record<string, unknown>;
@@ -836,7 +837,7 @@ test('zero HP mouth slide and safeSpot stay on attached fixed ground', async () 
     setVelocity(x: number, y: number) { this.velocity = { x, y }; } };
   h.body = body;
   Object.assign(s, { hero: { sprite: h, halt() {} }, session: { zeroHpLocked: true, state: { position: {} } },
-    world: { areaId: 'outdoors' }, window: { hasFixed: (cx: number, cy: number) => cx === 0 && cy === 1 }, safeSpot: null });
+    world: { areaId: 'outdoors' }, window: { hasFixed: (cx: number, cy: number) => cx === 0 && cy === 1 }, safeSpot: null, travel: new TravelHold() });
   s['holdSafe'](1 / 60);
   s['holdFixed'](1 / 60);
   assert.deepEqual({ x: h.x, y: h.y }, { x: 382, y: 386 });
@@ -921,8 +922,8 @@ test('window shutdown destroys chunks still waiting in the drain', () => {
   const w = Object.create(WildsWindow.prototype) as InstanceType<typeof WildsWindow>;
   const dropped: string[] = [];
   const chunks = (key: string) => new Map([[key, { destroy: () => dropped.push(key) }]]);
-  Object.assign(w, { attached: chunks('generated'), fixed: chunks('fixed'), drifts: chunks('drift'),
-    paints: new Map(), far: new Map(), waiters: [] });
+  Object.assign(w, { attached: chunks('generated'), fixed: chunks('fixed'), drifts: chunks('drift'), walls: new Map(),
+    paints: new Map(), far: new Map(), waiters: [], landHere: { clear() {} } });
   w['destroy']();
   w['destroy']();
   assert.deepEqual(dropped, ['generated', 'fixed', 'drift']);
@@ -1148,6 +1149,7 @@ test('six claimed lots build in slices, refresh and detach without retaining hom
     id: `home-${gate}`, worldId: 'guest', gate, tier: gate % 2 ? 2 : 0, landSeed: gate,
     member: gate === 0, desolate: false, members: [{ id: `owner-${gate}`, displayName: 'Owner' }],
     cleared: [], stumps: [], plants: [], yardPets: [{ pet: 'Cat-Base', ownerId: `owner-${gate}`, slot: 1 }], stalls: [],
+    lantern: { lit: false, oil: 0, dimming: false },
     items: [
       { id: `stool-${gate}`, itemDef: 'wooden-stool', scene: 'outdoor', x: 9, y: 11, rotation: 0 },
       { id: `stable-${gate}`, itemDef: 'stable', scene: 'outdoor', x: 14, y: 11, rotation: 0, stalls: 1 }
@@ -1333,6 +1335,7 @@ test('real window chunks slice three lot facades, defer Arrange refresh and clea
     id: `home-${gate}`, worldId: 'guest', gate, tier: gate % 2 ? 2 : 0, landSeed: gate,
     member: gate === 0, desolate: false, members: [{ id: `owner-${gate}`, displayName: 'Owner' }],
     cleared: [], stumps: [], plants: [], yardPets: [{ pet: 'Cat-Base', ownerId: `owner-${gate}`, slot: 1 }], stalls: [],
+    lantern: { lit: false, oil: 0, dimming: false },
     items: [
       { id: `stool-${gate}`, itemDef: 'wooden-stool', scene: 'outdoor', x: 9, y: 11, rotation: 0 },
       { id: `stable-${gate}`, itemDef: 'stable', scene: 'outdoor', x: 14, y: 11, rotation: 0, stalls: 1 }

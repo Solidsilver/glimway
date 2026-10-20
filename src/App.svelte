@@ -1,5 +1,7 @@
 <script lang="ts">
   import { expose } from './game/dev-hooks'
+  import { DEV_TOOLS, devPanelOn, devTools } from './lib/dev-tools'
+  import { loadWebSettings, onWebSettings, resetWebSettings, type DevTools } from './lib/web-settings'
   import { onMount } from 'svelte'
   import type Phaser from 'phaser'
   import {
@@ -44,6 +46,9 @@
   import LibraryPanel from './ui/LibraryPanel.svelte'
   import { homesteadsFor, type ArrangeView, type NamePrompt as NamePromptView, type PlacementView } from './game/homestead'
   import NamePrompt from './ui/NamePrompt.svelte'
+  import LampNamingPanel from './ui/LampNamingPanel.svelte'
+  import type { LampNamingAsk } from './lib/lamp-naming'
+  import type { LandChip } from './lib/wilds/land-chip'
   import { HOMESTEAD_DATA } from './lib/homestead'
   import { home } from './ui/home.svelte'
   import YardPanel from './ui/YardPanel.svelte'
@@ -53,6 +58,7 @@
   import HearthPanel from './ui/HearthPanel.svelte'
   import DeskPanel from './ui/DeskPanel.svelte'
   import WoodpilePanel from './ui/WoodpilePanel.svelte'
+  import CratePanel from './ui/CratePanel.svelte'
   import GateShelfPanel from './ui/GateShelfPanel.svelte'
   import MailPanel from './ui/MailPanel.svelte'
   import { villageFor, type VillagePanel } from './game/village'
@@ -77,6 +83,7 @@
   import { accountName, api, connectedSession, probeServer } from './ui/account'
   import { AccountFlow } from './ui/account-flow.svelte'
   import { prepareWilds, resetWilds } from './game/wilds/store'
+  import { forgetCamps } from './game/wilds/camps-state'
   import { clearCache, loadCache, loadLatestCache, saveCache } from './lib/api/cache'
   import type { Snapshot, WorldChoice } from './lib/api/types'
   import type { HabiticaProfile } from './lib/habitica/types'
@@ -98,17 +105,25 @@
   import { watchPlayInsets, type Docks } from './ui/play-insets'
   import { goalTarget, pinned, pinnedOpenQuest, spotQuests, pinnedProgress, pinnedQuest, recordGuideSteps, setPinned, usePinFor } from './game/guide-pin'
   import { BLOCKS, blocked, layersUp } from './ui/layers'
+  import { loading } from './ui/loading.svelte'
+  import LoadingScreen from './ui/LoadingScreen.svelte'
+  import type { LoadKind } from './lib/loading'
   import { confirms } from './ui/confirm.svelte'
   import { setSpotQuests } from './game/room-spots'
 
   type Phase = 'loading' | 'title' | 'playing'
   type Panel = 'journal' | 'map' | 'character' | 'inventory' | 'menu' | 'library' | 'shop' | 'deed' | 'dev' | VillagePanel | null
 
-  // Dev mode (local playtesting only): the panel exists in Vite dev mode and
-  // nowhere else. A production build replaces import.meta.env.DEV with false,
-  // so this import (and the panel's code and words) never reaches its bundle.
+  // Dev mode: the panel exists only in builds with dev tools (the Vite dev
+  // server, or a staging server's dev-tools build; src/lib/dev-tools.ts). A
+  // release build replaces DEV_TOOLS with false, so this import (and the
+  // panel's code and words) never reaches its bundle. In a dev-tools build it
+  // shows only for a player the server's dev mode gives a panel tool.
   let DevPanel = $state<typeof import('./ui/dev/DevPanel.svelte').default | null>(null)
-  if (import.meta.env.DEV) void import('./ui/dev/DevPanel.svelte').then((m) => (DevPanel = m.default))
+  if (DEV_TOOLS) void import('./ui/dev/DevPanel.svelte').then((m) => (DevPanel = m.default))
+  /** This player's dev tools (null: none, or a release build), from the web settings. */
+  let dev = $state<DevTools | null>(devTools())
+  const devPanel = $derived(DEV_TOOLS && devPanelOn(dev))
 
   let phase = $state<Phase>('loading')
   let panel = $state<Panel>(null)
@@ -130,6 +145,8 @@
 
   let stageEl: HTMLDivElement
   let game: Phaser.Game | null = null
+  /** enterSession's calls mid-game, counted: only the latest starts a game. */
+  let entering = 0
   let session = $state<Session | null>(null)
   const touch = isTouchFirst()
   // Quests come first at a room's spots (the sponge bowl, the hoist, the reading lamp).
@@ -271,6 +288,9 @@
         .then((snap) => account.afterMove(snap, worldCopy.landed))
         .catch(() => ui.toast({ text: worldCopy.landed, icon: 'world' }))
     }
+    const onLandHere = (p: { chip: LandChip | null }) => {
+      ui.landHere = p.chip
+    }
     const onUnmoored = (p: { active: boolean }) => {
       ui.unmoored = p.active
     }
@@ -302,6 +322,9 @@
     }
     const onNamePrompt = (v: NamePromptView) => {
       home.namePrompt = v
+    }
+    const onLampNaming = (v: LampNamingAsk) => {
+      home.lampNaming = v
     }
     const onHomeGoal = (v: { text: string | null }) => {
       home.goal = v?.text ?? null
@@ -353,6 +376,7 @@
       [EV.presence]: onPresence,
       [EV.linkNotice]: onLinkNotice,
       [EV.unmoored]: onUnmoored,
+      [EV.landHere]: onLandHere,
       [EV.mutationResolved]: onResolved,
       [EV.wilds]: onWilds,
       [EV.libraryOpen]: onOpenLibrary,
@@ -362,6 +386,7 @@
       [EV.homePlacement]: onPlacement,
       [EV.homeThumbs]: onThumbs,
       [EV.homeNamePrompt]: onNamePrompt,
+      [EV.lampNamingOpen]: onLampNaming,
       [EV.homeGoal]: onHomeGoal,
       [EV.homeRoom]: onRoom,
       [EV.villageOpen]: onVillageOpen,
@@ -401,6 +426,9 @@
   onMount(() => {
     const cleanupBus = wireBus()
     const stopUpdates = watchForUpdates()
+    // The web settings (the server's [web] table): read now, and again on sign-in.
+    const stopWebSettings = onWebSettings(() => (dev = devTools()))
+    void loadWebSettings()
 
     // Hidden: save now, in queue order. Leaving (pagehide): the last upload
     // may skip a busy queue, since the page won't wait for it.
@@ -434,6 +462,7 @@
       stopPresence()
       cleanupBus()
       stopUpdates()
+      stopWebSettings()
       document.removeEventListener('visibilitychange', onVisibility)
       window.removeEventListener('pagehide', onHide)
       session?.destroy()
@@ -448,23 +477,104 @@
   async function begin(): Promise<void> {
     if (!session || !stageEl || phase !== 'title' || starting) return
     starting = true
-    // The Wilds need their region before the first chunk builds: the world's
-    // frozen epoch, read through the link.
-    await prepareWilds(session)
-    // The Commons builds for the lane as the server holds it: reading the
-    // lane here, before the scene builds, saves a rebuild (a second ground
-    // repaint) when the scene's own read arrives and the lane has grown.
-    await homesteadsFor(session).load().catch(() => {})
-    // World text (damage numbers, exit labels) uses the display font: make
-    // sure it is ready before the first frame draws any.
+    if (await readLand(session, 'enter')) startWorld(session)
+  }
+
+  /** The boot running now: a Retry, Back or a newer world makes an older one let go. */
+  let bootRun = 0
+
+  /**
+   * Read what the first frame needs, under the loading screen's "land"
+   * stage. False when a newer boot took over, or a read failed (the loading
+   * screen offers Retry).
+   */
+  async function readLand(s: Session, kind: LoadKind): Promise<boolean> {
+    const run = ++bootRun
+    const current = () => run === bootRun && session === s
+    loading.stage('land', kind)
     try {
-      await Promise.race([document.fonts.load('10px "Pixelify Sans"'), new Promise((r) => setTimeout(r, 1200))])
+      // The Wilds need their region before the first chunk builds: the world's
+      // frozen epoch, read through the link.
+      await prepareWilds(s)
+      if (!current()) return false
+      // The Commons builds for the lane as the server holds it: reading the
+      // lane here, before the scene builds, saves a rebuild (a second ground
+      // repaint) when the scene's own read arrives and the lane has grown.
+      await homesteadsFor(s).load().catch(() => {})
+      if (!current()) return false
+      // World text (damage numbers, exit labels) uses the display font: make
+      // sure it is ready before the first frame draws any.
+      try {
+        await Promise.race([document.fonts.load('10px "Pixelify Sans"'), new Promise((r) => setTimeout(r, 1200))])
+      } catch {
+        /* fall back to monospace */
+      }
+      return current()
     } catch {
-      /* fall back to monospace */
+      if (current()) loading.fail()
+      return false
     }
-    phase = 'playing'
-    game = startGame(stageEl, session)
-    whatsNew.start()
+  }
+
+  /** Start the game for `s` (the loading screen stays until its first frame: EV.worldShown). */
+  function startWorld(s: Session): void {
+    if (phase !== 'playing') {
+      phase = 'playing'
+      void loadWebSettings()
+      game = startGame(stageEl, s)
+      whatsNew.start()
+    } else {
+      // Never beside one still running.
+      stopGame(game)
+      game = startGame(stageEl, s)
+    }
+  }
+
+  /**
+   * The loading screen's Retry. Still connecting: a fresh attempt (the
+   * account flow ends this one first). Past that: the same session boots
+   * the world again; nothing is claimed or sent anew.
+   */
+  function retryLoad(): void {
+    if (loading.view?.stage === 'connect') {
+      void account.retry()
+      return
+    }
+    const s = session
+    if (!s || !stageEl) return
+    loading.cancel('retry')
+    stopGame(game)
+    game = null
+    areaShown = false
+    panel = null
+    void readLand(s, 'retry').then((ok) => ok && startWorld(s))
+  }
+
+  /** The loading screen's way back to the title: the attempt or the session ends, and Continue starts afresh. */
+  function backFromLoad(): void {
+    if (loading.view?.stage === 'connect') {
+      account.backToTitle()
+      return
+    }
+    loading.cancel('title')
+    bootRun++
+    // Its link lets the outbox go before the next Continue claims it (src/game/link.ts close).
+    session?.destroy()
+    session = null
+    ui.link = null
+    leaveForTitle()
+  }
+
+  /** Stop the game and show the title (Continue works again). */
+  function leaveForTitle(): void {
+    resetWebSettings()
+    stopPresence()
+    stopGame(game)
+    game = null
+    areaShown = false
+    panel = null
+    starting = false
+    phase = 'title'
   }
 
   // ------------------------------------------------------------ connected play
@@ -477,6 +587,7 @@
     connect: connectedSession,
     nameOf: (snapshot, cache) => accountName(snapshot, cache),
     ui,
+    loading,
     host: {
       session: () => session,
       starting: () => starting,
@@ -484,14 +595,13 @@
       closePanel: () => (panel = null),
       leaveWorld: () => {
         resetWilds()
+        forgetCamps()
         villageUi.waiting = 0
       },
       toTitle: () => {
-        stopPresence()
-        stopGame(game)
-        game = null
-        areaShown = false
-        phase = 'title'
+        loading.cancel('title')
+        bootRun++
+        leaveForTitle()
       },
       reload: () => window.location.reload()
     }
@@ -501,6 +611,9 @@
   async function enterSession(next: Session): Promise<void> {
     const prev = session
     session = next
+    // Its dev tools are its own: the last account's go now, before a scene can use them.
+    if (prev !== next) resetWebSettings()
+    void loadWebSettings()
     ui.vitalsSource = next.vitalsSource
     ui.importedProfile = next.importedProfile
     ui.questKnown = false // a different journey: its first quest reading is not a change
@@ -512,14 +625,16 @@
     // Presence follows connected play (and its lease).
     startPresence(next.link!)
     if (phase === 'playing') {
+      const call = ++entering
       panel = null
       stopGame(game)
+      game = null
       areaShown = false
-      await prepareWilds(next)
-      // The new world's lane may count different gates: read it before the
-      // scenes build (see begin()).
-      await homesteadsFor(next).load().catch(() => {})
-      game = startGame(stageEl, next)
+      // The new world's land and lane, then its game (see begin()), under the
+      // loading screen. Another call meanwhile (another session, or this one
+      // again) takes over: readLand's run says so, and only the latest starts a game.
+      if (!(await readLand(next, 'move')) || call !== entering) return
+      startWorld(next)
     } else {
       await begin()
     }
@@ -527,6 +642,7 @@
 
   function logout(): void {
     confirmLogout = false
+    resetWebSettings()
     purseUi.reset()
     ui.showPurse(null)
     void account.logout()
@@ -566,7 +682,7 @@
       move: account.moving !== null,
       confirm: confirms.open > 0,
       logout: confirmLogout,
-      naming: home.namePrompt !== null,
+      naming: home.namePrompt !== null || home.lampNaming !== null,
       'leave-deed': home.leaveAsk !== null,
       panel: panel !== null,
       ending: ui.endingOpen,
@@ -575,7 +691,8 @@
       placement: !!home.placement,
       'link-notice': !!ui.linkNotice,
       banner: ui.bannerUp,
-      reloading: update.reloading
+      reloading: update.reloading,
+      loading: loading.active
     })
   )
 
@@ -624,8 +741,8 @@
     if (['KeyJ', 'KeyC', 'KeyI', 'KeyM', 'Escape'].includes(e.code)) (e as KeyboardEvent & { fsConsumed?: boolean }).fsConsumed = true
     // A held Escape closes one thing: its repeats don't go on to open the Menu behind it.
     if (e.code === 'Escape' && e.repeat) return
-    // Dev mode (Vite dev only): ` opens and closes the dev panel.
-    if (import.meta.env.DEV && e.code === 'Backquote') {
+    // Dev mode: ` opens and closes the dev panel.
+    if (devPanel && e.code === 'Backquote') {
       ;(e as KeyboardEvent & { fsConsumed?: boolean }).fsConsumed = true
       toggle('dev')
       return
@@ -675,7 +792,7 @@
   /** May the map open now? One answer for M and the HUD's button. */
   function mapAllowed(): boolean {
     if (phase !== 'playing' || blocked(layers, BLOCKS.appKeys)) return false
-    return !home.placement && !home.namePrompt && !home.leaveAsk
+    return !home.placement && !home.namePrompt && !home.lampNaming && !home.leaveAsk
   }
   // The map over everything: no emote picker or HUD explanation left open under it.
   $effect(() => {
@@ -804,6 +921,8 @@
   })
 
   const showPrompt = $derived(!!ui.prompt.label && !blocked(layers, BLOCKS.actionPrompt))
+  /** The loading screen is what shows (a lease question or the move screen comes first). */
+  const loadingUp = $derived(loading.active && !account.gate && !account.moving && !leaseBlock)
 </script>
 
 <svelte:window onkeydown={onKeyGlobal} />
@@ -812,6 +931,8 @@
   <div class="stage" bind:this={stageEl}></div>
 
   {#if phase === 'playing' && session}
+    <!-- Until the world's first frame, the HUD and the touch pad are neither seen nor used (the loading screen is up). -->
+    <div class="world-ui" class:veiled={loading.active} inert={loading.active} data-testid="world-ui">
     <Hud
       onJournal={() => toggle('journal')}
       onMap={openMap}
@@ -841,6 +962,7 @@
     <!-- Under the full-screen map the touch pad is out of reach, for pointers and assistive tech alike. -->
     <div class="covered" inert={mapOpen}>{#if !home.placement}<TouchControls />{/if}</div>
     <HomeBar hidden={blocked(layers, BLOCKS.homeBar)} dockBottom={controlsDock} />
+    </div>
     <Banners />
     <Toasts />
     <Moments {session} />
@@ -888,6 +1010,8 @@
       <DeskPanel {session} onClose={() => (panel = null)} />
     {:else if panel === 'woodpile'}
       <WoodpilePanel {session} onClose={() => (panel = null)} />
+    {:else if panel === 'crate'}
+      <CratePanel {session} onClose={() => (panel = null)} />
     {:else if panel === 'shelf'}
       <GateShelfPanel {session} gate={shelfGate} onClose={() => (panel = null)} />
     {:else if panel === 'mail'}
@@ -909,8 +1033,8 @@
             }
           : undefined}
       />
-    {:else if import.meta.env.DEV && panel === 'dev' && DevPanel}
-      <DevPanel {session} onClose={() => toggle('dev')} />
+    {:else if devPanel && panel === 'dev' && DevPanel}
+      <DevPanel {session} tools={dev} onClose={() => toggle('dev')} />
     {:else if panel === 'menu'}
       <MenuPanel
         {session}
@@ -923,13 +1047,13 @@
           panel = null
           whatsNew.openLatest()
         }}
-        onDev={import.meta.env.DEV ? () => (panel = 'dev') : undefined}
+        onDev={devPanel ? () => (panel = 'dev') : undefined}
       />
     {/if}
   {/if}
 
-  {#if phase !== 'playing'}
-    <div class="title-screen">
+  {#if phase !== 'playing' || loadingUp}
+    <div class="title-screen" class:entering={loadingUp}>
       <img class="bg" src="/assets/fingersnap/packed/fingersnap-village.webp" alt="" />
       <div class="shade" aria-hidden="true"></div>
       <div class="fireflies" aria-hidden="true">
@@ -942,10 +1066,12 @@
         <div class="logo">
           <span class="lamp"><Icon name="lantern" size={34} /></span>
           <h1>Glimway</h1>
-          <p class="tagline">Relight the old lantern road.</p>
+          <p class="tagline">Relight the old Lantern Road.</p>
         </div>
 
-        {#if phase === 'loading'}
+        {#if loadingUp && loading.view}
+          <LoadingScreen view={loading.view} onRetry={retryLoad} onBack={backFromLoad} />
+        {:else if phase === 'loading'}
           <p class="status"><span class="spark"></span> Lighting the lamps…</p>
         {:else}
           <div class="actions">
@@ -1069,6 +1195,24 @@
     />
   {/if}
 
+  {#if home.lampNaming}
+    {@const ask = home.lampNaming}
+    <LampNamingPanel
+      landmarks={ask.landmarks}
+      onName={(parts) => {
+        // `ask` follows home.lampNaming: read it before the field is cleared.
+        const { lamp, kind } = ask
+        home.lampNaming = null
+        bus.emit(EV.lampNamed, { lamp, kind, parts })
+      }}
+      onCancel={() => {
+        const { lamp, kind } = ask
+        home.lampNaming = null
+        bus.emit(EV.lampNamed, { lamp, kind, parts: null })
+      }}
+    />
+  {/if}
+
   {#if home.leaveAsk}
     <ConfirmDialog
       title={PELL_DEED.giveUpTitle}
@@ -1152,6 +1296,14 @@
   }
   @keyframes prompt-in {
     from { opacity: 0; transform: translate(-50%, 6px); }
+  }
+
+  /* The HUD group while the loading screen is up: kept mounted (it listens), not seen. */
+  .world-ui {
+    display: contents;
+  }
+  .world-ui.veiled {
+    visibility: hidden;
   }
 
   /* ---- title screen ---- */

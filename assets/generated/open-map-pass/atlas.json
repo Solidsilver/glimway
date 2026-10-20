@@ -380,6 +380,196 @@
         "y": 128
       }
     },
+    "lamp-stone-relit-0": {
+      "source": "lamp-stone-flames-generated",
+      "x": 0,
+      "y": 0,
+      "w": 724,
+      "h": 724,
+      "canvas": {
+        "w": 64,
+        "h": 128
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "lamp-stone-relit-1": {
+      "source": "lamp-stone-flames-generated",
+      "x": 724,
+      "y": 0,
+      "w": 724,
+      "h": 724,
+      "canvas": {
+        "w": 64,
+        "h": 128
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "lamp-stone-relit-2": {
+      "source": "lamp-stone-flames-generated",
+      "x": 1448,
+      "y": 0,
+      "w": 724,
+      "h": 724,
+      "canvas": {
+        "w": 64,
+        "h": 128
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "route-stone-dark": {
+      "source": "lamp-stones-generated",
+      "x": 1670,
+      "y": 105,
+      "w": 502,
+      "h": 555,
+      "canvas": {
+        "w": 128,
+        "h": 128
+      },
+      "footprint": {
+        "w": 2,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      }
+    },
+    "route-stone-relit-0": {
+      "source": "lamp-stone-flames-generated",
+      "x": 0,
+      "y": 0,
+      "w": 724,
+      "h": 724,
+      "canvas": {
+        "w": 128,
+        "h": 128
+      },
+      "footprint": {
+        "w": 2,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      }
+    },
+    "route-stone-relit-1": {
+      "source": "lamp-stone-flames-generated",
+      "x": 724,
+      "y": 0,
+      "w": 724,
+      "h": 724,
+      "canvas": {
+        "w": 128,
+        "h": 128
+      },
+      "footprint": {
+        "w": 2,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      }
+    },
+    "route-stone-relit-2": {
+      "source": "lamp-stone-flames-generated",
+      "x": 1448,
+      "y": 0,
+      "w": 724,
+      "h": 724,
+      "canvas": {
+        "w": 128,
+        "h": 128
+      },
+      "footprint": {
+        "w": 2,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 128
+      }
+    },
+    "way-lamp-0": {
+      "source": "way-lamp-generated",
+      "x": 6,
+      "y": 6,
+      "w": 712,
+      "h": 712,
+      "canvas": {
+        "w": 64,
+        "h": 96
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 96
+      }
+    },
+    "way-lamp-1": {
+      "source": "way-lamp-generated",
+      "x": 730,
+      "y": 6,
+      "w": 712,
+      "h": 712,
+      "canvas": {
+        "w": 64,
+        "h": 96
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 96
+      }
+    },
+    "way-lamp-2": {
+      "source": "way-lamp-generated",
+      "x": 1454,
+      "y": 6,
+      "w": 712,
+      "h": 712,
+      "canvas": {
+        "w": 64,
+        "h": 96
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 96
+      }
+    },
     "path-stone-0": {
       "source": "ground-tiles-generated",
       "x": 6,
@@ -854,6 +1044,44 @@
         "x": 16,
         "y": 32
       }
+    },
+    "map-lamp-lit": {
+      "source": "map-lamp-icons-generated",
+      "x": 0,
+      "y": 0,
+      "w": 887,
+      "h": 887,
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "map-lamp-dimming": {
+      "source": "map-lamp-icons-generated",
+      "x": 887,
+      "y": 0,
+      "w": 887,
+      "h": 887,
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
     }
   },
   "animations": [
@@ -886,6 +1114,26 @@
         "frontier-veil-3"
       ],
       "frameRate": 2,
+      "repeat": -1
+    },
+    {
+      "key": "lamp-stone-relit",
+      "frames": [
+        "lamp-stone-relit-0",
+        "lamp-stone-relit-1",
+        "lamp-stone-relit-2"
+      ],
+      "frameRate": 1.2,
+      "repeat": -1
+    },
+    {
+      "key": "route-stone-relit",
+      "frames": [
+        "route-stone-relit-0",
+        "route-stone-relit-1",
+        "route-stone-relit-2"
+      ],
+      "frameRate": 1.2,
       "repeat": -1
     }
   ]

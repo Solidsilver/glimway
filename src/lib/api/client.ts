@@ -509,7 +509,11 @@ interface ChannelLike {
 
 export interface ClaimOptions {
   storage?: StorageLike | null;
-  /** How long to wait for another live page to say it holds the id. */
+  /**
+   * How long to wait for another live page to say it holds a stored id. The
+   * holder answers between its frames: a busy game page took longer than
+   * 150 ms in CI (2026-10-18), and the duplicate kept its id.
+   */
   waitMs?: number;
   /** Injectable for tests; defaults to BroadcastChannel when the browser has it. */
   makeChannel?: (name: string) => ChannelLike | null;
@@ -540,7 +544,7 @@ export interface ClientIdClaim {
  */
 export async function claimClientId(opts: ClaimOptions = {}): Promise<ClientIdClaim> {
   const storage = opts.storage === undefined ? safeSessionStorage() : opts.storage;
-  const waitMs = opts.waitMs ?? 150;
+  const waitMs = opts.waitMs ?? 500;
   const makeChannel =
     opts.makeChannel ??
     ((name: string) => {
@@ -580,9 +584,13 @@ export async function claimClientId(opts: ClaimOptions = {}): Promise<ClientIdCl
         reclaimLost = true;
       }
     };
-    ch.postMessage({ type: 'who', id, nonce });
-    await new Promise((r) => setTimeout(r, waitMs));
-    if (lost) id = newKey();
+    // A fresh id is nobody else's: only a stored one (a reload, a copied
+    // tab) waits to hear whether a live page holds it.
+    if (id === stored) {
+      ch.postMessage({ type: 'who', id, nonce });
+      await new Promise((r) => setTimeout(r, waitMs));
+      if (lost) id = newKey();
+    }
   }
   held = true;
   try {
@@ -620,6 +628,8 @@ export async function claimClientId(opts: ClaimOptions = {}): Promise<ClientIdCl
       if (channel) {
         channel.onmessage = null;
         channel.close();
+        // A closed BroadcastChannel throws on every post: a later reclaim keeps its id.
+        channel = null;
       }
     },
   };

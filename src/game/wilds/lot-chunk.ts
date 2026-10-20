@@ -1,6 +1,6 @@
 import type { HomeView, StallView } from '../../lib/api/types.ts'
 import { nextHomecoming } from '../../lib/companions.ts'
-import { lotAt, lotOrigin, lotAtPixel, lotService } from '../../lib/lots.ts'
+import { backlandAtPixel, lotAt, lotOrigin, lotAtPixel, lotService } from '../../lib/lots.ts'
 import { TILE } from '../../lib/tile.ts'
 import { buildLand, type LandWorld } from '../lot-land.ts'
 import { HomesteadLayer } from '../entities/homesteads.ts'
@@ -38,7 +38,9 @@ export class LotHomes {
   active(): HomesteadLayer | null {
     const placing = [...this.lots.values()].find((l) => l.child.arranging.placement)
     if (placing) return placing.child
-    const p = this.root.deps.hero(), g = lotAtPixel(p.x, p.y)
+    // In a lot's backland while its lantern burns, that lot's services reach (lotLit).
+    const p = this.root.deps.hero(), back = backlandAtPixel(p.x, p.y)
+    const g = lotAtPixel(p.x, p.y) ?? (back !== null && this.root.homes.homes.get(back)?.lantern.lit ? back : null)
     return g === null ? null : this.lots.get(g)?.child ?? null
   }
 
@@ -182,5 +184,10 @@ export class LotHomes {
     }
   }
   has(gate: number): boolean { return this.lots.has(gate) }
+  /** A placement is open on the lot in this chunk (its rebuild must wait: detaching ends the placement). */
+  placingIn(key: string): boolean {
+    const [cx, cy] = key.split(',').map(Number), gate = lotAt(cx!, cy!)
+    return gate !== null && !!this.lots.get(gate)?.child.arranging.placement
+  }
   home(gate: number): HomeView | null { return this.lots.get(gate)?.child.here() ?? null }
 }

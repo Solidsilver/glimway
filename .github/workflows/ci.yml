@@ -3,11 +3,43 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+    inputs:
+      full:
+        description: Run the whole E2E suite, even on an exp/* branch
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 jobs:
+  # Whether this push changes anything but docs (scripts/ci-changes.sh says
+  # what counts and why). A push touching only docs/** or Markdown files skips
+  # both E2E jobs (verify still runs). A skipped job leaves the run green,
+  # which is all tag-release.yml reads (main and dev have no required checks).
+  changes:
+    name: changes
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          lfs: false
+          sparse-checkout: |
+            .github
+            scripts
+      - name: Does this push change more than docs?
+        id: diff
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          SHA: ${{ github.sha }}
+        run: |
+          out=$(sh scripts/ci-changes.sh "$EVENT" "$BEFORE" "$SHA")
+          printf '%s\n' "$out"
+          printf '%s\n' "$out" | tail -n 1 >> "$GITHUB_OUTPUT"
+
   verify:
     runs-on: ubuntu-latest
     env:
@@ -75,6 +107,8 @@ jobs:
   # (software WebGL, so only the handful of critical-path tests).
   e2e-smoke:
     name: e2e smoke
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -113,6 +147,8 @@ jobs:
         run: npx playwright test --grep @smoke
       - name: Prepare bounded E2E evidence
         if: always()
+        env:
+          E2E_SUMMARY_TITLE: e2e smoke
         run: node scripts/e2e-artifacts.mjs
       - name: Upload E2E report, summary and capped traces
         if: always()
@@ -130,7 +166,9 @@ jobs:
   # dispatch, by the repository owner: never for pull requests, never for forks.
   e2e-full:
     name: e2e full (self-hosted GPU)
+    needs: changes
     if: >-
+      needs.changes.outputs.code == 'true' &&
       github.repository == 'Solidsilver/glimway' &&
       github.actor == github.repository_owner &&
       (github.event_name == 'workflow_dispatch' ||
@@ -139,7 +177,8 @@ jobs:
          github.ref == 'refs/heads/dev' ||
          startsWith(github.ref, 'refs/heads/exp/'))))
     runs-on: [self-hosted, linux, x64, glimway-e2e]
-    timeout-minutes: 45
+    # Dev full runs take 25 min, with outliers near 41 (review T5, 2026-10-18).
+    timeout-minutes: 60
     concurrency:
       group: e2e-full-${{ github.ref }}
       # Never on main: tag-release.yml tags the commit whose CI passed, so a
@@ -184,6 +223,13 @@ jobs:
       # variable E2E_RUNNER_WORKERS changes it without a commit.
       E2E_WORKERS: ${{ vars.E2E_RUNNER_WORKERS || '4' }}
       SCREENS: ''
+      # Traces, by repository variable: the first retry's by default;
+      # E2E_TRACE=retain-on-first-failure keeps each failing attempt's instead
+      # (every test is traced then, which slows the run). E2E_TRACE_FILES and
+      # E2E_TRACE_MB cap what is uploaded (scripts/e2e-artifacts.mjs: 3, 50 MiB).
+      E2E_TRACE: ${{ vars.E2E_TRACE || '' }}
+      E2E_TRACE_FILES: ${{ vars.E2E_TRACE_FILES || '' }}
+      E2E_TRACE_MB: ${{ vars.E2E_TRACE_MB || '' }}
     steps:
       - name: Install Git, Git LFS and sqlite3
         run: |
@@ -197,6 +243,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           lfs: true
+          # exp/* branches diff against origin/dev to pick their specs.
+          fetch-depth: 0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '24'
@@ -217,10 +265,22 @@ jobs:
           done
       - name: Check the WebGL renderer
         run: npx playwright install chromium && node scripts/webgl-renderer.ts
-      - name: Run the full suite
-        run: nice -n 10 npx playwright test
+      # Lane branches (exp/*) run only the specs their changes touch
+      # (scripts/e2e-changed.ts, e2e/changed-map.json), so lanes don't queue
+      # behind each other's full runs. dev and main run the full suite, and so
+      # does a manual run with `full` (gh workflow run ci.yml --ref <branch> -f full=true).
+      - name: Run the E2E suite
+        env:
+          FULL: ${{ inputs.full && 'full' || '' }}
+        run: |
+          case "$FULL:$GITHUB_REF" in
+            :refs/heads/exp/*) E2E_BASE=origin/dev nice -n 10 node scripts/e2e-changed.ts ;;
+            *) nice -n 10 npx playwright test ;;
+          esac
       - name: Prepare bounded E2E evidence
         if: always()
+        env:
+          E2E_SUMMARY_TITLE: e2e full
         run: node scripts/e2e-artifacts.mjs
       - name: Upload E2E report, summary and capped traces
         if: always()

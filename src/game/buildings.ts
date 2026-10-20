@@ -7,6 +7,7 @@
  */
 import type Phaser from 'phaser'
 import { PACKED_MANIFEST_KEY, BUILDINGS, type BuildingFrame, type PackedManifest } from './atlas-plan.ts'
+import { packedSource, releasePacked } from './art-pass.ts'
 import { artDensity, resampleFor, setDensity } from './density.ts'
 
 /** The packed buildings as loaded (staging: released once the textures are made). */
@@ -18,8 +19,8 @@ export const buildingKey = (name: BuildingFrame) => `p1:${name}`
 /** Make the building textures, once. False when the pack didn't load (the tile houses and plank bridge stay). */
 export function createBuildings(scene: Phaser.Scene): boolean {
   const packed = (scene.cache.json.get(PACKED_MANIFEST_KEY) as PackedManifest | undefined)?.buildings
-  if (!packed || !scene.textures.exists(BUILDINGS_PACKED_KEY)) return BUILDINGS.every((b) => scene.textures.exists(buildingKey(b)))
-  const atlas = scene.textures.get(BUILDINGS_PACKED_KEY).getSourceImage() as CanvasImageSource
+  const atlas = packedSource(scene, BUILDINGS_PACKED_KEY)
+  if (!packed || !atlas) return BUILDINGS.every((b) => scene.textures.exists(buildingKey(b)))
   const k = Math.min(artDensity(scene), packed.density)
   for (const name of BUILDINGS) {
     const r = packed.frames[name]
@@ -34,7 +35,7 @@ export function createBuildings(scene: Phaser.Scene): boolean {
     out.refresh()
     setDensity(out, k)
   }
-  // The pack was staging: release its GPU copy.
-  scene.textures.remove(BUILDINGS_PACKED_KEY)
+  // The pack was staging: release it.
+  releasePacked(scene, BUILDINGS_PACKED_KEY)
   return true
 }

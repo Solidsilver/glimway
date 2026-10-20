@@ -125,10 +125,10 @@ const RESIDENTS: Record<ResidentId, ResidentDef> = {
       notice:
         'Dark of {wick}-wick tomorrow: the outer Wilds turn. I’ve posted it. Clear your cairns tonight. Charts start fresh after.',
       mark: {
-        Mudrise: '{wick}-wick, Mudrise. Paths sink and come up somewhere new. On the flood, we’d say. The outer Wilds turn at the dark of it.',
-        Carting: '{wick}-wick, the Green Hush. The drift slows almost to slack water; my tables are bored. The Turning still comes at the dark.',
-        Amberfall: '{wick}-wick, Amberfall. The Wilds are shedding what they’re done with. I recalibrate daily, and still lose a stone a week.',
-        Quiet: '{wick}-wick. The White Quiet: cold is stillness, and even the outer Wilds hold their breath. A good season for sums.',
+        Mudrise: '{wick}-wick, Mudrise. Meltwater everywhere, and the Turning brings the paths up sodden. On the flood, we’d say.',
+        Carting: '{wick}-wick, the Green Hush. Slack water, we’d say: the Turnings bring up gentle country. My tables are bored.',
+        Amberfall: '{wick}-wick, Amberfall. The Wilds are shedding what they’re done with. I recalibrate every wick, and still lose a stone a Turning.',
+        Quiet: '{wick}-wick. The Quiet: cold is stillness, and even the outer Wilds come up hushed. A good season for sums.',
       },
       home: {
         unclaimed: 'Silas has plots chalked along the lane. Take one. A house on skids rides the drift instead of fighting it. Very Saltings.',
@@ -195,7 +195,7 @@ const RESIDENTS: Record<ResidentId, ResidentDef> = {
         Mudrise: 'Mudrise. The Wend is high and the wheel groans. Forty-one, forty-one, forty… it’s fine. It’s holding.',
         Carting: 'The Green Hush. Low water, slow wheel, long light. Best season for flour. Worst for counting: nothing changes.',
         Amberfall: 'Amberfall. First frost is coming. I clean the grate before it, every year. Dad’s rule.',
-        Quiet: 'The White Quiet. The Wend goes slow under the ice, and so does the wheel. I can hear myself think. Not sure I like it.',
+        Quiet: 'The Quiet. The Wend goes slow under the ice, and so does the wheel. I can hear myself think. Not sure I like it.',
       },
       projects: {
         'mill-wheel': {
@@ -266,7 +266,7 @@ const RESIDENTS: Record<ResidentId, ResidentDef> = {
         Mudrise: 'Mudrise. Mud to the knees, and every child in Hearthwick tracking it through my shop. Mostly mine.',
         Carting: 'Long light and the Green Hush. Bread rises fast in Carting. So do tempers, in the queue.',
         Amberfall: 'Amberfall, and honey’s cheap. Sallow Ford oil hasn’t come up the road in thirty years, so it’s butter. The twists sit heavy.',
-        Quiet: 'The White Quiet. The oven is the warmest place in Hearthwick. Pip does their copybook on the flour sacks.',
+        Quiet: 'The Quiet. The oven is the warmest place in Hearthwick. Pip does their copybook on the flour sacks.',
       },
       projects: {
         'well-canopy': {

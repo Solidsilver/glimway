@@ -1,9 +1,13 @@
 import type { LibrarySection } from '../content/library'
 import type { HomePlantView } from '../lib/api/types'
+import type { WaysHomeBinding } from '../lib/gen/glimway/v1/lamps_pb.js'
+import type { WayHome } from '../lib/ways-home.ts'
 import type { BeltKind } from '../lib/belt'
 import type { HabiticaProfile } from '../lib/habitica/types'
 import type { PurseView } from '../lib/purse'
 import type { RumourParts } from '../lib/wilds/rumour'
+import type { LampNamingAsk } from '../lib/lamp-naming'
+import type { LandChip } from '../lib/wilds/land-chip.ts'
 import type { PresenceStatus } from '../lib/presence-client.ts'
 import type { HeldPayload } from './held'
 import type { ArrangeView, NamePrompt, PlacementCommand, PlacementView } from './homestead'
@@ -12,6 +16,9 @@ import type { PaperFoundPayload, PapersSyncPayload } from './papers'
 import type { ResidentsMetPayload } from './residents'
 import type { SoundCue } from './sound-bank'
 import type { VillagePanel } from './village'
+
+/** Boot's report to the loading screen: the stage it is in, how far (0–1), a fact, or a failure. */
+export type LoadStagePayload = { stage?: 'fetch' | 'decode' | 'build' | 'arrive' | 'paint'; progress?: number; note?: [string, string]; failed?: boolean }
 
 /**
  * Event names and payloads for the bus (src/game/events.ts): the one registry.
@@ -95,6 +102,10 @@ export const EV = {
   wilds: 'ui:wilds',
   /** Every fixed footprint's chunks have arrived (src/game/wilds/fixed.ts). */
   fixedReady: 'game:fixed-ready',
+  /** Booting the world (BootScene, WorldScene): a stage, its progress, or a fact for the load timings (src/ui/loading.svelte.ts). */
+  loadStage: 'game:load-stage',
+  /** A world build's dark start lifted: the world is drawn (WorldScene). */
+  worldShown: 'game:world-shown',
   /** The dev/playtest clock moved (the calendar and the outer Wilds follow). */
   clock: 'game:clock',
   /** The outer Wilds turned under the player (an ended epoch): { reason }. */
@@ -103,6 +114,22 @@ export const EV = {
   planted: 'game:planted',
   /** Write the hero's spot into the save now (before a mutation that measures reach). */
   notePosition: 'game:note-position',
+  /** Set a way-lamp, set a piece out or plant at the camp you stand in (UI -> game; src/game/wilds/camps.ts). */
+  campDo: 'game:camp-do',
+  /** Set a carried way-lamp beside you as a communal post (UI -> game; src/game/wilds/communal-lamps.ts). */
+  communalPost: 'game:communal-post',
+  /** Look at a Lantern Road lamp stone: dark to relight, or lit to tend (sites -> src/game/wilds/communal-lamps.ts). */
+  lampStoneLook: 'game:lamp-stone-look',
+  /** Ask the player to name a lamp from parts (game -> UI): LampNamingAsk; answered on `lampNamed`. */
+  lampNamingOpen: 'ui:lamp-naming-open',
+  /** The parts picked for a lamp's naming (null: not yet). */
+  lampNamed: 'game:lamp-named',
+  /** Use a homing turncap or lamp-ash pouch: hold still, then travel (UI -> game; src/game/ways-home.ts). */
+  waysHome: 'game:ways-home',
+  /** Bind your lamp-ash pouch to the lamp beside you (UI -> game; src/game/ways-home.ts). */
+  waysHomeBind: 'game:ways-home-bind',
+  /** Your pouch was bound (game -> UI): the binding as it stands. */
+  waysHomeBound: 'ui:ways-home-bound',
   // ui -> game (and dialogue panel -> scene)
   action: 'game:action',
   cast: 'game:cast',
@@ -124,6 +151,8 @@ export const EV = {
   clearUnmoored: 'game:clear-unmoored',
   /** The hero became unmoored or steady again: { active } (src/game/entities/unmoored.ts). */
   unmoored: 'ui:unmoored',
+  /** The land underfoot changed in the HUD's words: { chip } (null: no chip here; src/game/wilds/land-here.ts). */
+  landHere: 'ui:land-here',
 
   // items (src/game/items.ts)
   /** The carried items changed: { what? }. */
@@ -487,10 +516,20 @@ export interface EventMap {
   [EV.fallSettled]: { lantern: string }
   [EV.wilds]: WildsPayload
   [EV.fixedReady]: void
+  [EV.loadStage]: LoadStagePayload
+  [EV.worldShown]: void
   [EV.clock]: void
   [EV.turning]: { reason: 'epoch-ended' }
   [EV.planted]: { plant: HomePlantView; gate: number; worldId: string }
   [EV.notePosition]: void
+  [EV.campDo]: { action: 'set' | 'place' | 'plant'; itemId?: string; itemDef?: string }
+  [EV.communalPost]: { itemId: string }
+  [EV.lampStoneLook]: { site: string }
+  [EV.lampNamingOpen]: LampNamingAsk
+  [EV.lampNamed]: { lamp: string; kind: LampNamingAsk['kind']; parts: string[] | null }
+  [EV.waysHome]: { way: WayHome }
+  [EV.waysHomeBind]: void
+  [EV.waysHomeBound]: { binding: WaysHomeBinding | null }
   [EV.action]: void
   [EV.cast]: void
   [EV.castMove]: void
@@ -500,6 +539,7 @@ export interface EventMap {
   [EV.dialogueClosed]: DialogueClosedPayload
   [EV.clearUnmoored]: { instant: boolean }
   [EV.unmoored]: { active: boolean }
+  [EV.landHere]: { chip: LandChip | null }
   [EV.itemsChanged]: { what?: string } | undefined
   [EV.villageChanged]: { what?: string } | undefined
   [EV.villageOpen]: VillageOpenPayload

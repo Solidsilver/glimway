@@ -1,4 +1,12 @@
-import { lotAtPixel } from '../../lib/lots'
+import { lanternStake, lotAtPixel, lotOrigin } from '../../lib/lots'
+import { lanternHasRoom, lanternLines } from '../../lib/lot-lantern'
+import { collectedLine, crateLines } from '../../lib/camps'
+import { CRATE_WORDS, LAMP_OIL } from '../../content/camps'
+import { homeErrorText, itemErrorText } from '../../content/errors'
+import { dugUpLine, plantOffer } from '../../lib/trowel'
+import { itemName } from '../../lib/items'
+import { heldNow } from '../held'
+import type { RecoveryEntry } from '../../lib/gen/glimway/v1/camps_pb.js'
 /**
  * Homesteads, talked to: everything you can use on the Commons, at Silas's
  * Yard, on a homestead's land and in a cottage (each point with its own
@@ -40,12 +48,17 @@ import { PELL, PELL_DEED } from '../../content/pell'
 import { MANAGE_DEED, SEE_THE_YARD, isYardRoom, pellTalk, silasTalk } from '../yard-talk'
 import { standsAtTable } from '../deed-table'
 import { pinned, setPinned } from '../guide-pin'
+import { invalidateLand } from '../wilds/store'
 
 /** Story marks (src/game/heard.ts): you've met Pell, and heard Pell's pitch for a first deed. */
 const PELL_MET = 'met'
 const PELL_PITCH = 'pitch'
 /** Silas pointed you at Pell and pinned the claim guide (once). */
 const SILAS_PINNED_PELL = 'pinned-pell'
+/** Pell's choice to take what waits in his crates. */
+const CRATE = 'home:crate'
+/** Pell's choice to pick what to take, in the crate panel. */
+const CRATE_PICK = 'home:crate-pick'
 
 export class HomesteadTalk {
   private readonly scene: Phaser.Scene
@@ -244,6 +257,24 @@ export class HomesteadTalk {
               : panel('woodpile')()
         })
       }
+      // Your plants (on the lot or in its lit backland): only the trowel in hand digs one up (../../lib/trowel.ts).
+      for (const p of home.plants ?? []) {
+        if (!home.member || !this.home.homes.connected) break
+        const offer = () => plantOffer(itemName(p.itemDef), heldNow().kind, true, false)
+        out.push({
+          id: `home:plant:${p.id}`,
+          // At the plant's tile, within the server's two-tile reach (api/plants.go uprootHomePlant).
+          x: (L.gridOrigin?.x ?? 0) + tileMid(p.x),
+          y: (L.gridOrigin?.y ?? 0) + tileMid(p.y),
+          reach: 28,
+          clickReach: 28,
+          label: () => offer()?.label ?? null,
+          verb: () => offer()?.verb ?? null,
+          markerOffset: 16,
+          available: () => offer() !== null,
+          activate: () => void this.uproot(p.id, p.itemDef)
+        })
+      }
       out.push(...stablePoints(this.home, (speaker, lines) => this.say({ speaker, lines })))
       out.push(...this.seatPoints(home, 'outdoor'))
       return out
@@ -271,11 +302,14 @@ export class HomesteadTalk {
       label: 'Look into the well',
       verb: 'Look',
       markerOffset: 44,
-      activate: say('The Carters’ Well', ['The old staging well. Every cart filled its casks here before the lantern road. The rope is new; the bucket isn’t.'])
+      activate: say('The Carters’ Well', ['The old staging well. Every cart filled its casks here before the Lantern Road. The rope is new; the bucket isn’t.'])
     })
     out.push({ id: 'home:toolbox', ...at(f.toolbox), label: 'Look in Silas’s toolbox', verb: 'Look', markerOffset: 16, activate: () => this.openToolbox() })
     out.push({ id: 'home:firebox', ...at(f.firebox, 2), label: 'Look at the firebox', verb: 'Look', markerOffset: 16, activate: () => this.lookInFirebox() })
     for (const slot of this.home.commons.gates) {
+      // The lot's lantern on its back line (roadmap 0.12): anyone may look and top it up.
+      const o = lotOrigin(slot.gate), stake = lanternStake(slot.gate, HOMESTEAD_DATA.lotLantern.stakeY)
+      out.push({ id: `home:lantern:${slot.gate}`, ...at({ tx: o.tx + stake.x, ty: o.ty + stake.y }, 2), label: 'Look at the lantern', verb: 'Look', markerOffset: 24, activate: () => this.readLantern(slot.gate) })
       out.push({ id: `home:sign:${slot.gate}`, ...at(slot.sign, 2), label: `Read the sign · ${lotName(slot.gate)}`, verb: 'Read', markerOffset: 16, activate: () => this.readSign(slot.gate) })
       const info = this.home.homes.gateInfo(slot.gate)
       if (info?.shelf) {
@@ -323,7 +357,7 @@ export class HomesteadTalk {
     const post = this.home.here()?.items.find((i) => i.id === itemId)
     this.say({
       speaker: post?.name ? `“${post.name}”` : 'A lantern post',
-      lines: [post?.name ? `A lantern post, its name cut into the crossbar: ${post.name}. The ground stays put as far as its light reaches.` : 'A lantern post. Nobody has named it, and the dark doesn’t care about it.']
+      lines: [post?.name ? `A lantern post, its name cut into the crossbar: ${post.name}. Its light widens the yard you can build in.` : 'A lantern post. Its sign is blank.']
     })
   }
 
@@ -347,6 +381,37 @@ export class HomesteadTalk {
       return this.say({ speaker: 'Silas’s Firebox', lines: ['A wedge of pine offcut waits in the kindling box, charcoal all over it. Silas hasn’t burned this one. You take a careful look.'] })
     }
     this.say({ speaker: 'Silas’s Firebox', lines: ['The firebox ticks as it cools. A box of pine offcuts waits for kindling, every one of them drawn on.'] })
+  }
+
+  /** The lot lantern: how much oil it has, and a flask to pour in. */
+  private readLantern(gate: number): void {
+    const home = this.home.homes.homes.get(gate) ?? null
+    const rules = HOMESTEAD_DATA.lotLantern
+    if (!home) return this.say({ speaker: 'Lot Lantern', lines: [`An empty lantern hangs on the stake. Whoever holds the deed to ${lotName(gate)} can light it.`] })
+    const choices: DialogueChoice[] = []
+    // A member lights it; once lit, anyone may keep it burning.
+    if ((home.lantern.lit || home.member) && lanternHasRoom(home.lantern, rules.maxWicks, rules.wicksPerOil)) {
+      const oil = itemsFor(this.deps.session).view?.stacks.filter((x) => x.itemDef === rules.oil).reduce((n, x) => n + x.qty, 0) ?? 0
+      choices.push({ text: home.lantern.lit ? LAMP_OIL.topUp : LAMP_OIL.fill, action: `home:lantern:${gate}`, disabled: oil < 1, ...(oil < 1 ? { note: LAMP_OIL.needOil } : {}) })
+    }
+    choices.push({ text: 'Leave it' })
+    this.say({ speaker: 'Lot Lantern', lines: lanternLines(home.lantern, rules.maxWicks, lotName(gate)), choices })
+  }
+
+  private async fillLantern(gate: number): Promise<void> {
+    const r = await this.home.homes.act({ op: 'lantern', gate })
+    if (!r.ok) {
+      // Gone meanwhile (a door, a world move): the refusal is still told, the stake stays behind.
+      if (this.home.gone) return void bus.emit(EV.toast, { text: r.text, icon: 'lantern', kind: 'error' })
+      return this.say({ speaker: 'Lot Lantern', lines: [r.text] })
+    }
+    // Its backland holds again (or longer): the land chip asks again.
+    invalidateLand()
+    void itemsFor(this.deps.session).load()
+    const home = await this.home.homes.fetchHome(gate)
+    if (this.home.gone) return
+    sfx('settle')
+    this.say({ speaker: 'Lot Lantern', lines: lanternLines(home?.lantern, HOMESTEAD_DATA.lotLantern.maxWicks, lotName(gate)) })
   }
 
   private readSign(gate: number): void {
@@ -395,6 +460,9 @@ export class HomesteadTalk {
   }
 
   private say(d: Dialogue): void {
+    // A late answer's talk belongs to the layer it was asked in: once that has
+    // gone, it would open over the next scene (or a restart of this one).
+    if (this.home.gone) return
     openDialogue({ id: 'home', speaker: d.speaker, lines: d.lines, choices: d.choices })
   }
 
@@ -437,7 +505,8 @@ export class HomesteadTalk {
     if (this.home.homes.connected && this.home.homes.status === 'ready') {
       // The world holds still while they read (the scene's end lets go, never this late answer).
       this.silasHold.take()
-      void this.home.homes.load().finally(() => {
+      // Pell reads his crates too: what a lapsed camp left for you (lamps.md 2.7).
+      void Promise.all([this.home.homes.load(), who === 'pell' ? this.readCrate() : null]).finally(() => {
         if (this.home.gone) return
         this.silasHold.settle()
         now()
@@ -495,6 +564,11 @@ export class HomesteadTalk {
       pitchHeard: heardStory(s.state.flags, 'pell', PELL_PITCH),
       atTable: standsAtTable(s.state.area, this.deps.hero())
     })
+    // A crate waiting comes first: what's in it, and taking it.
+    if (this.crate.length > 0 && talk.choices) {
+      talk.lines = [...talk.lines.slice(0, 1), ...crateLines(this.crate)]
+      talk.choices = [{ text: CRATE_WORDS.takeYours, action: CRATE }, { text: CRATE_WORDS.choose, note: CRATE_WORDS.chooseNote, action: CRATE_PICK }, ...talk.choices]
+    }
     if (talk.met) markStory(s, 'pell', PELL_MET)
     // The pitch (or the first meeting, which says the same) plays once.
     if (homes.status === 'ready' && !homes.claimed) markStory(s, 'pell', PELL_PITCH)
@@ -542,6 +616,12 @@ export class HomesteadTalk {
       bus.emit(EV.villageOpen, { panel: 'shelf', gate })
       return
     }
+    if (action.startsWith('home:lantern:')) return this.fillLantern(Number(action.slice('home:lantern:'.length)))
+    if (action === CRATE) return this.collectCrate()
+    if (action === CRATE_PICK) {
+      bus.emit(EV.villageOpen, { panel: 'crate' })
+      return
+    }
     if (action.startsWith('home:place-shelf:')) return this.placeGateShelf(action.slice('home:place-shelf:'.length))
     if (action.startsWith('home:claim:')) return this.claim(Number(action.slice('home:claim:'.length)))
     if (action.startsWith('home:sign:')) return this.signDeed(action.slice('home:sign:'.length))
@@ -562,6 +642,7 @@ export class HomesteadTalk {
     }
     bus.emit(EV.notePosition)
     const r = await this.home.homes.act({ op: 'place', itemId, scene: 'gate', x: 0, y: 0, rotation: 0 })
+    if (this.home.gone) return
     if (r.ok) {
       sfx('pop')
       this.deps.rebuild()
@@ -571,12 +652,55 @@ export class HomesteadTalk {
     }
   }
 
+  /** The trowel at a plant of yours: up it comes whole, into your pack to plant again. */
+  private async uproot(plantId: string, itemDef: string): Promise<void> {
+    const gate = this.home.gate
+    if (gate === null) return
+    bus.emit(EV.notePosition)
+    const r = await itemsFor(this.deps.session).uproot(plantId)
+    if (r.ok) {
+      sfx('pop')
+      bus.emit(EV.toast, { text: dugUpLine(itemName(itemDef), r.value?.wear), icon: 'glim' })
+      void this.home.homes.fetchHome(gate)
+    } else {
+      sfx('fizzle')
+      bus.emit(EV.toast, { text: itemErrorText(r.code), icon: 'glim', kind: 'error' })
+    }
+  }
+
+  /** What waits in Pell's crates for you (none offline). */
+  private crate: RecoveryEntry[] = []
+
+  private async readCrate(): Promise<void> {
+    const r = await this.deps.session.link?.recoveryRead()
+    this.crate = r?.ok ? r.value.entries : []
+  }
+
+  /** Everything in Pell's crates, into the pack (lamps.md 2.7). */
+  private async collectCrate(): Promise<void> {
+    const link = this.deps.session.link
+    if (!link) return
+    bus.emit(EV.notePosition)
+    const r = await link.recoveryCollect()
+    if (this.home.gone || !this.scene.sys.isActive()) return
+    if (!r.ok) {
+      sfx('fizzle')
+      this.say({ speaker: PELL.name, lines: [homeErrorText(r.code)] })
+      return
+    }
+    this.crate = []
+    sfx('settle')
+    void itemsFor(this.deps.session).load()
+    void this.home.homes.load()
+    this.say({ speaker: PELL.name, lines: [collectedLine(r.result.collected)] })
+  }
+
   /** Pell enters your name: a new deed, or an old one taken back. */
   private async claim(gate: number): Promise<void> {
     const back = this.home.homes.gateInfo(gate)?.reclaim ?? false
     const price = this.home.homes.gateInfo(gate)?.price ?? HOMESTEAD_DATA.deeds.glims
     const r = await this.home.homes.claim(gate)
-    if (!this.scene.sys.isActive()) return
+    if (this.home.gone || !this.scene.sys.isActive()) return
     if (!r.ok) {
       this.say({ speaker: PELL.name, lines: [r.code === 'insufficient-glims' ? PELL_DEED.notEnoughGlims : r.text] })
       return
@@ -597,7 +721,7 @@ export class HomesteadTalk {
     const me = this.home.homes.myId
     if (!me) return
     const r = await this.home.homes.sign(homeId, me)
-    if (!this.scene.sys.isActive()) return
+    if (this.home.gone || !this.scene.sys.isActive()) return
     if (!r.ok) {
       this.say({ speaker: PELL.name, lines: [r.text] })
       return

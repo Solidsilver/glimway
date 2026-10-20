@@ -118,6 +118,14 @@ func itemsViewProto(v itemsView) *contract.ItemsView {
 	for _, t := range v.Thanks {
 		out.Thanks = append(out.Thanks, &contract.Thanks{FromName: t.FromName, ItemDef: t.ItemDef, At: float64(t.At)})
 	}
+	out.Carried = make([]*contract.HomeInstance, 0, len(v.Carried))
+	for _, i := range v.Carried {
+		out.Carried = append(out.Carried, homeInstanceProto(i))
+	}
+	out.Plants = make([]*contract.CarriedPlant, 0, len(v.Plants))
+	for _, p := range v.Plants {
+		out.Plants = append(out.Plants, &contract.CarriedPlant{Id: p.ID, ItemDef: p.ItemDef, PlantedAt: float64(p.PlantedAt)})
+	}
 	return out
 }
 
@@ -218,6 +226,7 @@ func homeViewProto(h homeView) *contract.HomeView {
 	for _, v := range h.Stalls {
 		out.Stalls = append(out.Stalls, stallProto(v))
 	}
+	out.Lantern = lotLanternProto(h.Lantern)
 	out.YardPets = make([]*contract.YardPet, 0, len(h.YardPets))
 	for _, v := range h.YardPets {
 		out.YardPets = append(out.YardPets, yardPetProto(v))

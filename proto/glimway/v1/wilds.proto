@@ -137,7 +137,9 @@ message WildsEntityState {
 // All time fields are Unix seconds.
 message WildsPersonalClaim { string entity_id = 1; double at = 2; }
 // All time fields are Unix seconds.
-message WildsDiscovery { string entity_id = 1; string poi_id = 2; string discoverer_id = 3; string display_name = 4; double at = 5; }
+// epoch: the epoch the place was found in (this wick's, or a held chunk's
+// pinned one: place ids repeat across wicks).
+message WildsDiscovery { string entity_id = 1; string poi_id = 2; string discoverer_id = 3; string display_name = 4; double at = 5; string epoch = 6; }
 // All time fields are Unix seconds.
 message WildsLantern { string id = 1; string owner_id = 2; string display_name = 3; double x = 4; double y = 5; google.protobuf.StringValue lit_by = 6; double at = 7; google.protobuf.DoubleValue lit_at = 8; }
 message EchoAssignment { string site = 1; string member = 2; bool settled = 3; }
@@ -151,9 +153,11 @@ message WildsRegionResult {
   repeated WildsDiscovery discoveries = 4; repeated WildsLantern lanterns = 5;
   map<string,double> materials = 6; repeated EchoAssignment echoes = 7;
 }
-// The frontier the server enforces (open-map.md 2.6): in 0.8 a rectangle
-// (contract 8); 0.9's lamps add held chunks beside it.
-message WildsFrontier { WildsChunkRect rect = 1; }
+// The frontier the server enforces (open-map.md 2.6; lamps.md 2.2): the
+// content's reach around the footprints, and every chunk within the
+// content's held_slack of a held chunk (held: the world's held keys, by cy
+// then cx), no further south than south_limit. rect bounds the union.
+message WildsFrontier { WildsChunkRect rect = 1; repeated WildsChunkKey held = 2; }
 
 // One player-made change to one tile (section 3). tx and ty are local to
 // the chunk the changes are stored under. change is "cleared", "stone" or
@@ -217,9 +221,16 @@ message WildsNearResult {
   // Ways with a tile in the window.
   repeated WildsWay ways = 14;
   // Every chunk of the window on the grid (location.OnGrid), row-major:
-  // its source ("fixed" or "generated") and the epoch its body is read
-  // under (a fixed chunk's pseudo-epoch). Only generated chunks carry state.
+  // its source ("fixed", "generated" or "held") and the epoch its body is
+  // read under (a fixed chunk's pseudo-epoch, a held chunk's pinned wick
+  // epoch). Only generated and held chunks carry state.
   repeated NearChunk chunks = 15;
+  // The wick epochs the window's held chunks are pinned to, other than this
+  // wick (roadmap 0.12 holds): their entity states, claims and ground
+  // changes ride under them.
+  repeated WildsEpoch held = 16;
+  // Status of the occupied chunk only: neighbouring reads are not exploration.
+  WildsMapStatus land = 17;
 }
 message NearChunk { WildsChunkKey chunk = 1; string source = 2; string epoch = 3; }
 
@@ -239,3 +250,49 @@ message WildsLoot { repeated WildsMaterial materials = 1; google.protobuf.String
 // Row-major LAND vocabulary: grass, tree, stump, boulder, water, ford, slope, edge, path.
 // D owns generation; generator_version versions this geometry.
 message HomesteadLand { uint32 width = 1; uint32 height = 2; repeated string cells = 3; uint32 generator_version = 4; }
+
+// Read-only map status. Exploration is device-local, as for map terrain:
+// callers submit only explored keys, in batches of at most 256. This read
+// neither generates terrain nor credits presence. No capabilities ride here.
+message WildsMapRequest { repeated WildsChunkKey explored = 1; }
+message WildsMapStatus {
+  string wick = 1;
+  repeated ChunkLandStatus chunks = 2;
+  // Explored lamps and the reader's own lot lantern (its known fixed stake).
+  repeated MapLamp lamps = 3;
+}
+message ChunkLandStatus {
+  WildsChunkKey chunk = 1;
+  // wild, common, built; permanent and still are outside oil upkeep.
+  string tier = 2;
+  bool visited = 3;
+  string claim_id = 4;
+  bool dimming = 5;
+  uint32 reserve = 6; // charged wicks, excluding the warning wick
+  uint32 cost = 7; // wicks charged each turning
+  // held, dimming, turns, released, carries, paths-turn, lamps-carry,
+  // lamps-turn (a chunk whose only Common work is communal lamps),
+  // detail-turns, permanent
+  string next_turning = 8;
+  // Built terrain stays pinned even when its mark is far outside the near window.
+  WildsEpoch epoch = 9;
+  // Known Common paths, so a map read outside the near window keeps their line.
+  GroundChanges ground = 10;
+  // A Built claim's keeper, as the reader sees it (the in-world chip):
+  // keeper is a camp's setter's display name (empty for a lot lantern);
+  // yours: the reader set this camp, or lives on this lantern's lot.
+  string keeper = 11;
+  bool yours = 12;
+}
+message MapLamp {
+  string id = 1;
+  // lot-lantern, way-lamp, common-lamp (a communal light: a relit road stone
+  // or a communal post, id its stable lamp id; name, naming and namer stay
+  // empty until a Keeper names it).
+  string kind = 2;
+  sint32 x = 3; sint32 y = 4; // world tiles; never reveal adjacent terrain
+  double at = 5;
+  string name = 6; string naming = 7; string namer = 8;
+  ChunkLandStatus land = 9;
+  bool mage_lit = 10;
+}

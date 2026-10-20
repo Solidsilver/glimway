@@ -30,10 +30,10 @@ export const OUTBOX_LIFETIME_MS = 6 * 24 * 60 * 60 * 1000;
 /** Operations the outbox carries. `mutation` is a keyed domain route (items, homesteads, mail…). */
 export type OutboxKind = 'quest-step' | 'mark' | 'take-paper' | 'settle-echo' | 'fall' | 'spend' | 'wilds-claim' | 'wilds-lantern' | 'mutation'
   | 'companions' | 'stall' | 'mount-out' | 'mount-home' | 'stable-extend' | 'fish-cast' | 'fish-settle' | 'fish-cancel'
-  | 'wardrobe' | 'wilds-clear' | 'wilds-lay' | 'wilds-lift' | 'wilds-discover';
+  | 'wardrobe' | 'wilds-clear' | 'wilds-lay' | 'wilds-lift' | 'wilds-discover' | 'camp' | 'recovery-collect' | 'communal-lamp' | 'ways-home';
 const KINDS: readonly OutboxKind[] = ['quest-step', 'mark', 'take-paper', 'settle-echo', 'fall', 'spend', 'wilds-claim', 'wilds-lantern', 'mutation',
   'companions', 'stall', 'mount-out', 'mount-home', 'stable-extend', 'fish-cast', 'fish-settle', 'fish-cancel',
-  'wardrobe', 'wilds-clear', 'wilds-lay', 'wilds-lift', 'wilds-discover'];
+  'wardrobe', 'wilds-clear', 'wilds-lay', 'wilds-lift', 'wilds-discover', 'camp', 'recovery-collect', 'communal-lamp', 'ways-home'];
 
 export interface OutboxEntry {
   /** Order within the record (allocated by the sender under the lock). */
@@ -125,6 +125,7 @@ function normalizeReports(raw: unknown): StoredReports | null {
     seq: raw.seq,
     next: { place, hp: num(n.hp), mana: num(n.mana), casts: Math.floor(num(n.casts)), abilityCasts: tally(n.abilityCasts), basis: num(n.basis), boundary: whole(n.boundary) ? n.boundary : null, changed: n.changed === true },
     captured,
+    moved: num(raw.moved),
   };
 }
 
@@ -417,7 +418,12 @@ export interface HeldLock {
  * device holds it. Without Web Locks every tab is its own sender (2.4).
  */
 export async function holdLock(locks: LockLike | null, name: string, steal = false): Promise<HeldLock | null> {
-  if (!locks) return { lost: new Promise(() => undefined), release: () => undefined };
+  if (!locks) {
+    // No Web Locks: nothing to wait for, so letting go is at once.
+    let release!: () => void;
+    const lost = new Promise<void>((r) => (release = r));
+    return { lost, release };
+  }
   let release!: () => void;
   const held = new Promise<void>((r) => (release = r));
   let granted!: (ok: boolean) => void;

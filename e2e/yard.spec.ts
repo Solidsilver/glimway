@@ -87,7 +87,7 @@ test('the Yard panel: Build first while the cottage is to raise, a buy on Furnis
   // A piece waiting on the cottage says so.
   await expect(yard.locator('[data-buy="reading-chair"]')).toHaveText('Needs the cottage')
   await yard.locator('[data-buy="wooden-stool"]').click()
-  await expect(yard.locator('.msg.ok')).toContainText('Wooden Stool is yours')
+  await expect(yard.locator('.msg.ok')).toContainText('Wooden stool is yours')
   await expect.poll(async () => (await myHome(page)).items.map((i) => i.itemDef)).toContain('wooden-stool')
   await shot(page, 'yard-furnish-desktop')
 

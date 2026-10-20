@@ -1,5 +1,6 @@
 <script lang="ts">
   import { expose } from '../game/dev-hooks'
+  import { DEV_TOOLS } from '../lib/dev-tools'
   import type { Session } from '../game/session'
   import { bus, EV } from '../game/events'
   import { loadMap, type MapLoad } from '../game/wilds/map-data'
@@ -28,10 +29,16 @@
   } from '../lib/wilds/map-view'
   import { MapRenderer, backingSize, canvasImage } from './map-renderer'
   import { foundByText, placeName } from '../lib/wilds/paths'
+  import { MAP_LAMPS } from '../content/map-lamps'
+  import { lampLedger, landDimming, landLabel, turningLabel, distanceFromTown, mapLampMark, MAP_LAMP_ICON } from '../lib/wilds/map-lamps'
   import { MAP_LABELS } from '../content/open-map'
+  import { cutStoneDue, cutStoneMark } from '../lib/communal-lamps'
+  import { chunkTerrain } from '../game/wilds/store'
+  import { chunkOrigin } from '../game/wilds/terrain'
   import { focusTrap } from './focus'
   import { ui } from './store.svelte'
   import Icon from './Icon.svelte'
+  import ArtIcon from './ArtIcon.svelte'
 
   /**
    * The world map (docs/design/world-map.md): the Wilds you've walked this
@@ -58,6 +65,7 @@
   let vp = $state({ w: 0, h: 0 })
   let dpr = $state(typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1)
   let detailsOpen = $state(false)
+  let lampsOn = $state(true)
   let status = $state('')
   let viewportEl = $state<HTMLDivElement | null>(null)
   let canvas = $state<HTMLCanvasElement | null>(null)
@@ -240,6 +248,7 @@
     const v = view
     const size = vp
     const ratio = dpr
+    const tierLayer = lampsOn
     void inputVersion
     const c = canvas
     if (!v || !c || size.w <= 0) return
@@ -251,7 +260,7 @@
       if (c.height !== b.h) c.height = b.h
       const ctx = c.getContext('2d')
       if (!ctx) return
-      renderer.draw(ctx, v, size, ratio)
+      renderer.draw(ctx, v, size, ratio, tierLayer)
       draws++
     })
   })
@@ -421,6 +430,51 @@
   const input = $derived(result?.input ?? null)
   const places = $derived((input?.places ?? []).filter((p) => p.seen || p.foundBy))
   const ways = $derived(input?.ways ?? [])
+  const ledger = $derived(lampLedger(input?.lamps ?? []))
+  const commonSections = $derived((input?.land ?? []).filter((s) => s.tier === 'common' && s.chunk))
+  const tierChips = $derived.by(() => {
+    if (!lampsOn || !view || !input) return []
+    const known = new Set(input.chunks.map((c) => c.cx + ',' + c.cy))
+    return (input.land ?? []).filter((s) => s.chunk && known.has(s.chunk.cx + ',' + s.chunk.cy) && (s.tier === 'common' || landDimming(s))).map((s) => {
+      const k = s.chunk!
+      return { land: s, ...toScreen(view!,vp,(k.cx+0.5)*CHUNK_TILES,(k.cy+0.5)*CHUNK_TILES) }
+    }).filter((p) => p.x >= 0 && p.x <= vp.w && p.y >= 0 && p.y <= vp.h && view!.scale * CHUNK_TILES >= 100)
+  })
+  /** The Lamps layer: each lamp's mark where it stands, while the layer is on. */
+  const lampMarks = $derived.by(() => {
+    if (!lampsOn || !view || !input) return []
+    return (input.lamps ?? []).map((l) => ({ id: l.id, ...mapLampMark(l), ...toScreen(view!,vp,l.x+0.5,l.y+0.5) }))
+      .filter((p) => p.x >= 0 && p.x <= vp.w && p.y >= 0 && p.y <= vp.h)
+  })
+  /** The Keeper's-hand stone (the communal-lamps read's cut_stone), read once an opening while its cut waits to be copied. */
+  let cutStone = $state('')
+  $effect(() => {
+    const link = session.link
+    if (!link || !cutStoneDue(session.quests)) return
+    void link.communalLampsRead().then((r) => {
+      if (alive && r.ok) cutStone = r.value.cutStone
+    })
+  })
+  /** The stone's tile when its land is loaded (near the hero), else its chunk's middle. */
+  function stoneTile(cx: number, cy: number): { tx: number; ty: number } | null {
+    const t = chunkTerrain(cx, cy)
+    const s = t?.sites.find((x) => x.id === cutStone && x.kind === 'lamp-stone')
+    if (!t || !s) return null
+    const o = chunkOrigin(t)
+    return { tx: o.tx + s.tx, ty: o.ty + s.ty }
+  }
+  /** The quest's mark on the stone, while the step waits on it (the panel blocks play, so it can't finish while open). */
+  const cutMark = $derived.by(() => {
+    if (!view || !cutStone) return null
+    const at = cutStoneMark(session.quests, cutStone, CHUNK_TILES, stoneTile)
+    if (!at) return null
+    const p = toScreen(view, vp, at.tx + 0.5, at.ty + 0.5)
+    return p.x >= 0 && p.x <= vp.w && p.y >= 0 && p.y <= vp.h ? p : null
+  })
+  function centreLamp(x: number, y: number, name: string): void {
+    if (view && frame) view = centreOn(x+0.5,y+0.5,view.scale,vp,frame)
+    status = name
+  }
   /** A place by name for the list ("the camp glade", "the Tangle"). */
   const nameOf = (id: string) => placeName(id, input?.places.find((p) => p.id === id)?.kind ?? null)
   const notes = $derived.by(() => {
@@ -441,7 +495,7 @@
 
   // Playtests (src/game/dev-hooks.ts): the view, you, and how often it loaded and drew.
   $effect(() => {
-    if (!import.meta.env.DEV) return
+    if (!DEV_TOOLS) return
     return expose('__fsWorldMap', () => ({ view: view ? { ...view } : null, vp: { ...vp }, frame, hero, outside, loads, draws, cached: renderer.cached, stats: { ...renderer.stats }, result: result ? { scope: result.scope, missing: result.missing, offline: result.offline, partial: result.partial, ended: result.ended, endsAt: result.endsAt } : null, online, notes: [...notes], chunks: result?.input?.chunks.length ?? 0 }))
   })
 </script>
@@ -478,6 +532,15 @@
           {l.text}{#if l.sub}<small>{foundByText(l.sub)}</small>{/if}
         </span>
       {/each}
+      {#each tierChips as p}
+        <span class:amber={landDimming(p.land)} class="tier-chip" style={`left:${p.x}px;top:${p.y}px`}>{landDimming(p.land) ? '⚠ ' + turningLabel(p.land) : landLabel(p.land)}</span>
+      {/each}
+      {#each lampMarks as m (m.id)}
+        <span class="lamp-mark" class:dimming={m.dimming} style={`left:${m.x}px;top:${m.y}px`} data-lamp-mark={m.id}><ArtIcon art={m.art} name="lantern" size={16} /></span>
+      {/each}
+      {#if cutMark}
+        <span class="quest-mark" style={`left:${cutMark.x}px;top:${cutMark.y}px`} title={MAP_LABELS.cutStone} aria-label={MAP_LABELS.cutStone} role="img" data-testid="map-cut-stone">!</span>
+      {/if}
       {#if youAt}
         <span class="dot" style={`left:${youAt.x}px;top:${youAt.y}px`} data-testid="map-you"></span>
       {/if}
@@ -502,7 +565,7 @@
     {/if}
   </div>
 
-  <div class="tools" role="group" aria-label="Map controls">
+  <div class="tools" role="group" aria-label={MAP_LABELS.controls}>
     <button type="button" onclick={() => zoom(1)} aria-label={MAP_LABELS.zoomIn} title={MAP_LABELS.zoomIn} data-testid="map-zoom-in">+</button>
     <span class="pct" aria-hidden="true">{view ? zoomPercent(view.scale, openScale) : 100}%</span>
     <button type="button" onclick={() => zoom(-1)} aria-label={MAP_LABELS.zoomOut} title={MAP_LABELS.zoomOut} data-testid="map-zoom-out">−</button>
@@ -522,6 +585,51 @@
       <!-- Phones: the gate's button lives here, out of the toolbar row. -->
       <button type="button" class="gate-inline" onclick={toGate}>{MAP_LABELS.gate}</button>
       <p class="fine">{MAP_LABELS.wick}</p>
+      <h3>{MAP_LAMPS.heading}</h3>
+      <label class="layer-toggle"><input type="checkbox" bind:checked={lampsOn} data-testid="map-lamps-layer" /> <ArtIcon art={MAP_LAMP_ICON.lit} name="lantern" size={16} /> {MAP_LAMPS.layer}</label>
+      {#if ledger.length}
+        <ul class="lamp-ledger" data-testid="map-lamps">
+          {#each ledger as row (row.lamp.id)}
+            <li>
+              <button type="button" class="lamp-row" onclick={() => centreLamp(row.lamp.x,row.lamp.y,row.name)} data-lamp={row.lamp.id}>
+                <strong>◇ {row.name}</strong>
+                {#if row.lamp.naming}<span>{row.lamp.naming}</span>{/if}
+                {#if row.lamp.namer}<span class="fine">{MAP_LAMPS.namer(row.lamp.namer)}</span>{/if}
+                <span class="fine">{MAP_LAMPS.distance(row.distance)}{row.lamp.mageLit ? ' · ' + MAP_LAMPS.mageLit : ''}</span>
+                {#if row.lamp.land}
+                  <span>{landLabel(row.lamp.land)}{row.lamp.land.tier === 'built' ? ' · ' + MAP_LAMPS.reserve(row.lamp.land.reserve) : ''}</span>
+                  <span class:amber={landDimming(row.lamp.land)}>{turningLabel(row.lamp.land)}</span>
+                {/if}
+              </button>
+            </li>
+          {/each}
+        </ul>
+      {:else}
+        <p class="fine" data-testid="map-lamps-empty">{MAP_LAMPS.empty}</p>
+      {/if}
+      {#if commonSections.length}
+        <h3>{MAP_LAMPS.commonHeading}</h3>
+        <ul data-testid="map-common-paths">
+          {#each commonSections as section}
+            {@const k = section.chunk!}
+            <li>
+              <button type="button" class="lamp-row" onclick={() => centreLamp((k.cx+0.5)*CHUNK_TILES-0.5,(k.cy+0.5)*CHUNK_TILES-0.5,MAP_LAMPS.commonHeading)}>
+                <strong>┄ {landLabel(section)}</strong>
+                <span class="fine">{MAP_LAMPS.distance(distanceFromTown((k.cx+0.5)*CHUNK_TILES,(k.cy+0.5)*CHUNK_TILES))}</span>
+                <span>{turningLabel(section)}</span>
+              </button>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+      <ul class="tier-key">
+        <li>▣ {MAP_LAMPS.held}</li>
+        <li class="amber">▨ {MAP_LAMPS.dimmingKey}</li>
+        <li>┄ {MAP_LAMPS.commonKey}</li>
+        <li>{MAP_LAMPS.wild}</li>
+        <li>{MAP_LAMPS.permanent}</li>
+        <li>{MAP_LAMPS.still}</li>
+      </ul>
       <h3>{MAP_LABELS.ways}</h3>
       {#if ways.length}
         <ul data-testid="map-ways">
@@ -839,6 +947,17 @@
   .swatch.dash {
     background: repeating-linear-gradient(90deg, #8a7b9c 0 3px, transparent 3px 6px);
   }
+  .layer-toggle { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: 13px; }
+  .lamp-row { width: 100%; min-height: 44px; text-align: left; display: grid; gap: 4px; padding: 8px; font-size: 12px; overflow-wrap: anywhere; }
+  .lamp-ledger li { width: 100%; }
+  .details .tier-key { margin-top: 10px; font-size: 12px; }
+  .amber { color: #704210; background: #ffe4a1; border-radius: 4px; }
+  .tier-chip { position: absolute; transform: translate(-50%,-50%); font-size: 11px; padding: 3px 5px; border: 1px dashed #84734e; border-radius: 4px; background: #fff5dc; max-width: 150px; text-align: center; }
+  /* A lamp on the Lamps layer: its icon on a small light disc, so it reads on any ground; dimming, paler. */
+  .lamp-mark { position: absolute; transform: translate(-50%,-50%); display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: rgba(255, 245, 220, 0.85); box-shadow: 0 0 0 1px #84734e; }
+  .quest-mark { position: absolute; transform: translate(-50%,-50%); display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: #ffd66b; color: #4a3220; font-weight: 700; font-size: 13px; box-shadow: 0 0 0 2px #4a3220, 0 0 8px 2px rgba(255, 214, 107, 0.8); }
+  .lamp-mark.dimming { opacity: 0.6; filter: saturate(0.4); box-shadow: 0 0 0 1px #c08a2a; }
+  .tier-chip.amber { background: #ffe4a1; border-style: solid; }
   .sr {
     position: absolute;
     width: 1px;

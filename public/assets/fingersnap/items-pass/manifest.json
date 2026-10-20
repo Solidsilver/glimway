@@ -97,6 +97,30 @@
       "file": "../crafts-pass/frames/recipe-card-millers-fry.png",
       "width": 64,
       "height": 64
+    },
+    {
+      "key": "items-way-lamp-icon",
+      "file": "way-lamp-icon-generated.png",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "key": "items-lamp-icons",
+      "file": "lamp-icons-generated.png",
+      "width": 2172,
+      "height": 724
+    },
+    {
+      "key": "items-sap-trowel-icons",
+      "file": "wick-sap-bench-trowel-generated.png",
+      "width": 2172,
+      "height": 724
+    },
+    {
+      "key": "items-carried-plant-icon",
+      "file": "carried-plant-art-only-source-v2.png",
+      "width": 1254,
+      "height": 1254
     }
   ],
   "frames": [
@@ -5341,11 +5365,11 @@
         "h": 64
       },
       "itemId": "willow-rod",
+      "category": "Tools",
+      "priority": "P1",
       "name": "Willow rod",
       "state": null,
       "look": "A plain willow rod with a cork grip and a wound line",
-      "category": "Tools",
-      "priority": "P1",
       "destinationRect": {
         "x": 0,
         "y": 0,
@@ -5372,11 +5396,11 @@
         "h": 64
       },
       "itemId": "mill-roach",
+      "category": "Supplies",
+      "priority": "P1",
       "name": "Mill roach",
       "state": null,
       "look": "Silver with red fins",
-      "category": "Supplies",
-      "priority": "P1",
       "destinationRect": {
         "x": 0,
         "y": 0,
@@ -5403,11 +5427,11 @@
         "h": 64
       },
       "itemId": "millers-fry",
+      "category": "Supplies",
+      "priority": "P1",
       "name": "Miller's fry",
       "state": null,
       "look": "Two small floured fish in a pan, a sprig on top",
-      "category": "Supplies",
-      "priority": "P1",
       "destinationRect": {
         "x": 0,
         "y": 0,
@@ -5434,11 +5458,258 @@
         "h": 64
       },
       "itemId": "recipe-card-millers-fry",
+      "category": "Papers",
+      "priority": "P1",
       "name": "Recipe card: Miller's fry",
       "state": null,
       "look": "Hazel's card",
-      "category": "Papers",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-way-lamp",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-way-lamp-icon",
+      "sheet": "way-lamp-icon",
+      "sourceRect": {
+        "x": 281,
+        "y": 65,
+        "w": 618,
+        "h": 1135
+      },
+      "itemId": "way-lamp",
+      "category": "Home goods",
       "priority": "P1",
+      "name": "Way-lamp",
+      "state": null,
+      "look": "Hooded wayside lamp on a stone footing, steadily lit",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-lamp-ash",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-lamp-icons",
+      "sheet": "lamp-icons",
+      "sourceRect": {
+        "x": 88,
+        "y": 317,
+        "w": 554,
+        "h": 307
+      },
+      "itemId": "lamp-ash",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Lamp ash",
+      "state": null,
+      "look": "A pinch of grey ash with one warm fleck still glowing",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-lamp-ash-pouch",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-lamp-icons",
+      "sheet": "lamp-icons",
+      "sourceRect": {
+        "x": 813,
+        "y": 94,
+        "w": 550,
+        "h": 552
+      },
+      "itemId": "lamp-ash-pouch",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Lamp ash pouch",
+      "state": null,
+      "look": "A small drawstring pouch in ash-grey cloth, with a little ash at the neck",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-homing-turncap",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-lamp-icons",
+      "sheet": "lamp-icons",
+      "sourceRect": {
+        "x": 1540,
+        "y": 105,
+        "w": 543,
+        "h": 503
+      },
+      "itemId": "homing-turncap",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Homing turncap",
+      "state": null,
+      "look": "A turncap set in a bead of amber, its stem leaning to one side",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-wick-sap",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-sap-trowel-icons",
+      "sheet": "sap-trowel-icons",
+      "sourceRect": {
+        "x": 183,
+        "y": 179,
+        "w": 395,
+        "h": 442
+      },
+      "itemId": "wick-sap",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Wick Tree sap",
+      "state": null,
+      "look": "A squat stoppered jar of pale gold Wick Tree sap",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-bench-trowel-whole",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-sap-trowel-icons",
+      "sheet": "sap-trowel-icons",
+      "sourceRect": {
+        "x": 868,
+        "y": 105,
+        "w": 459,
+        "h": 538
+      },
+      "itemId": "bench-trowel",
+      "category": "Tools",
+      "priority": "P1",
+      "name": "Bench trowel",
+      "state": "whole",
+      "look": "A small hand trowel with an iron-oak handle and grey iron blade",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-bench-trowel-worn",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "items-sap-trowel-icons",
+      "sheet": "sap-trowel-icons",
+      "sourceRect": {
+        "x": 1594,
+        "y": 105,
+        "w": 458,
+        "h": 538
+      },
+      "itemId": "bench-trowel",
+      "category": "Tools",
+      "priority": "P1",
+      "name": "Bench trowel",
+      "state": "worn",
+      "look": "The same trowel with a chipped, dulled blade and scuffed handle",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-carried-plant",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "inventory-icon",
+      "source": "items-carried-plant-icon",
+      "sheet": "carried-plant-icon",
+      "sourceRect": {
+        "x": 49,
+        "y": 60,
+        "w": 1169,
+        "h": 1160
+      },
+      "itemId": "carried-plant",
+      "category": "Supplies",
+      "priority": "P1",
+      "name": "Plant, lifted whole",
+      "state": null,
+      "look": "A whole lifted plant with its root ball, ready to plant again",
       "destinationRect": {
         "x": 0,
         "y": 0,
@@ -5740,6 +6011,14 @@
         "world-ledger-soup-pot-coldempty-pot"
       ],
       "selection": "select by gameplay state; never auto-loop"
+    },
+    {
+      "key": "bench-trowel-states",
+      "frames": [
+        "item-bench-trowel-whole",
+        "item-bench-trowel-worn"
+      ],
+      "selection": "select by gameplay state; never auto-loop"
     }
   ],
   "aliases": {
@@ -5852,6 +6131,17 @@
     "mill-wheel-mended": "mill-wheel-mended-0",
     "mill-froth": "mill-froth-0",
     "mill-hopper": "mill-hopper",
+    "willow-rod": "item-willow-rod",
+    "mill-roach": "item-mill-roach",
+    "millers-fry": "item-millers-fry",
+    "recipe-card-millers-fry": "item-recipe-card-millers-fry",
+    "way-lamp": "item-way-lamp",
+    "lamp-ash": "item-lamp-ash",
+    "lamp-ash-pouch": "item-lamp-ash-pouch",
+    "homing-turncap": "item-homing-turncap",
+    "wick-sap": "item-wick-sap",
+    "bench-trowel": "item-bench-trowel-whole",
+    "carried-plant": "item-carried-plant",
     "timber": "commons:icon-timber",
     "woodpile": "commons:woodpile",
     "candle-hulls": "commons:candle-hull-0",
@@ -5860,11 +6150,7 @@
     "river-glass-bead": "commons:icon-river-glass-bead",
     "tin-whistle": "commons:icon-tin-whistle",
     "beeswax-candle": "commons:icon-beeswax-candle",
-    "spare-bootlace": "commons:icon-spare-bootlace",
-    "willow-rod": "item-willow-rod",
-    "mill-roach": "item-mill-roach",
-    "millers-fry": "item-millers-fry",
-    "recipe-card-millers-fry": "item-recipe-card-millers-fry"
+    "spare-bootlace": "commons:icon-spare-bootlace"
   },
   "notes": [
     "All source rectangles are measured; no fixed source cell dimensions are assumed.",

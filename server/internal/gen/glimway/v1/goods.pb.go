@@ -698,13 +698,19 @@ func (x *Thanks) GetAt() float64 {
 
 // What the caller carries (GET /api/items and every item mutation).
 type ItemsView struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Stacks        []*Stack               `protobuf:"bytes,1,rep,name=stacks,proto3" json:"stacks,omitempty"`
-	Instances     []*Instance            `protobuf:"bytes,2,rep,name=instances,proto3" json:"instances,omitempty"`
-	Pockets       []*Slot                `protobuf:"bytes,3,rep,name=pockets,proto3" json:"pockets,omitempty"`
-	OffHand       *OffHand               `protobuf:"bytes,4,opt,name=off_hand,json=offHand,proto3" json:"off_hand,omitempty"`
-	PickedUp      []string               `protobuf:"bytes,5,rep,name=picked_up,json=pickedUp,proto3" json:"picked_up,omitempty"`
-	Thanks        []*Thanks              `protobuf:"bytes,6,rep,name=thanks,proto3" json:"thanks,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Stacks    []*Stack               `protobuf:"bytes,1,rep,name=stacks,proto3" json:"stacks,omitempty"`
+	Instances []*Instance            `protobuf:"bytes,2,rep,name=instances,proto3" json:"instances,omitempty"`
+	Pockets   []*Slot                `protobuf:"bytes,3,rep,name=pockets,proto3" json:"pockets,omitempty"`
+	OffHand   *OffHand               `protobuf:"bytes,4,opt,name=off_hand,json=offHand,proto3" json:"off_hand,omitempty"`
+	PickedUp  []string               `protobuf:"bytes,5,rep,name=picked_up,json=pickedUp,proto3" json:"picked_up,omitempty"`
+	Thanks    []*Thanks              `protobuf:"bytes,6,rep,name=thanks,proto3" json:"thanks,omitempty"`
+	// The home pieces in the pack (a way-lamp, a stool), deed or no deed:
+	// what can be set as a camp, a communal post or a piece at a camp.
+	Carried []*HomeInstance `protobuf:"bytes,7,rep,name=carried,proto3" json:"carried,omitempty"`
+	// Plants in the pack, lifted whole (from Pell's crate or with the trowel),
+	// their planting kept: each can be planted again wherever its seed could be.
+	Plants        []*CarriedPlant `protobuf:"bytes,8,rep,name=plants,proto3" json:"plants,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -781,6 +787,82 @@ func (x *ItemsView) GetThanks() []*Thanks {
 	return nil
 }
 
+func (x *ItemsView) GetCarried() []*HomeInstance {
+	if x != nil {
+		return x.Carried
+	}
+	return nil
+}
+
+func (x *ItemsView) GetPlants() []*CarriedPlant {
+	if x != nil {
+		return x.Plants
+	}
+	return nil
+}
+
+// A carried plant (lamps.md 2.7): its id (kept from its planting), its seed
+// and when it was first planted (its growth).
+type CarriedPlant struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ItemDef       string                 `protobuf:"bytes,2,opt,name=item_def,json=itemDef,proto3" json:"item_def,omitempty"`
+	PlantedAt     float64                `protobuf:"fixed64,3,opt,name=planted_at,json=plantedAt,proto3" json:"planted_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CarriedPlant) Reset() {
+	*x = CarriedPlant{}
+	mi := &file_glimway_v1_goods_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CarriedPlant) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CarriedPlant) ProtoMessage() {}
+
+func (x *CarriedPlant) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_goods_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CarriedPlant.ProtoReflect.Descriptor instead.
+func (*CarriedPlant) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_goods_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *CarriedPlant) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *CarriedPlant) GetItemDef() string {
+	if x != nil {
+		return x.ItemDef
+	}
+	return ""
+}
+
+func (x *CarriedPlant) GetPlantedAt() float64 {
+	if x != nil {
+		return x.PlantedAt
+	}
+	return 0
+}
+
 // A homestead member (everyone on a deed is equal).
 type HomeMember struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -792,7 +874,7 @@ type HomeMember struct {
 
 func (x *HomeMember) Reset() {
 	*x = HomeMember{}
-	mi := &file_glimway_v1_goods_proto_msgTypes[10]
+	mi := &file_glimway_v1_goods_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -804,7 +886,7 @@ func (x *HomeMember) String() string {
 func (*HomeMember) ProtoMessage() {}
 
 func (x *HomeMember) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_goods_proto_msgTypes[10]
+	mi := &file_glimway_v1_goods_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -817,7 +899,7 @@ func (x *HomeMember) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HomeMember.ProtoReflect.Descriptor instead.
 func (*HomeMember) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_goods_proto_rawDescGZIP(), []int{10}
+	return file_glimway_v1_goods_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *HomeMember) GetId() string {
@@ -845,7 +927,7 @@ type Coord struct {
 
 func (x *Coord) Reset() {
 	*x = Coord{}
-	mi := &file_glimway_v1_goods_proto_msgTypes[11]
+	mi := &file_glimway_v1_goods_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -857,7 +939,7 @@ func (x *Coord) String() string {
 func (*Coord) ProtoMessage() {}
 
 func (x *Coord) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_goods_proto_msgTypes[11]
+	mi := &file_glimway_v1_goods_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -870,7 +952,7 @@ func (x *Coord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Coord.ProtoReflect.Descriptor instead.
 func (*Coord) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_goods_proto_rawDescGZIP(), []int{11}
+	return file_glimway_v1_goods_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *Coord) GetX() int32 {
@@ -898,7 +980,7 @@ type HomeGrid struct {
 
 func (x *HomeGrid) Reset() {
 	*x = HomeGrid{}
-	mi := &file_glimway_v1_goods_proto_msgTypes[12]
+	mi := &file_glimway_v1_goods_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -910,7 +992,7 @@ func (x *HomeGrid) String() string {
 func (*HomeGrid) ProtoMessage() {}
 
 func (x *HomeGrid) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_goods_proto_msgTypes[12]
+	mi := &file_glimway_v1_goods_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -923,7 +1005,7 @@ func (x *HomeGrid) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HomeGrid.ProtoReflect.Descriptor instead.
 func (*HomeGrid) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_goods_proto_rawDescGZIP(), []int{12}
+	return file_glimway_v1_goods_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *HomeGrid) GetWidth() int32 {
@@ -959,7 +1041,7 @@ type HomeInstance struct {
 
 func (x *HomeInstance) Reset() {
 	*x = HomeInstance{}
-	mi := &file_glimway_v1_goods_proto_msgTypes[13]
+	mi := &file_glimway_v1_goods_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -971,7 +1053,7 @@ func (x *HomeInstance) String() string {
 func (*HomeInstance) ProtoMessage() {}
 
 func (x *HomeInstance) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_goods_proto_msgTypes[13]
+	mi := &file_glimway_v1_goods_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -984,7 +1066,7 @@ func (x *HomeInstance) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HomeInstance.ProtoReflect.Descriptor instead.
 func (*HomeInstance) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_goods_proto_rawDescGZIP(), []int{13}
+	return file_glimway_v1_goods_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *HomeInstance) GetId() string {
@@ -1060,7 +1142,7 @@ type HomePlant struct {
 
 func (x *HomePlant) Reset() {
 	*x = HomePlant{}
-	mi := &file_glimway_v1_goods_proto_msgTypes[14]
+	mi := &file_glimway_v1_goods_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1072,7 +1154,7 @@ func (x *HomePlant) String() string {
 func (*HomePlant) ProtoMessage() {}
 
 func (x *HomePlant) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_goods_proto_msgTypes[14]
+	mi := &file_glimway_v1_goods_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1085,7 +1167,7 @@ func (x *HomePlant) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HomePlant.ProtoReflect.Descriptor instead.
 func (*HomePlant) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_goods_proto_rawDescGZIP(), []int{14}
+	return file_glimway_v1_goods_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *HomePlant) GetId() string {
@@ -1152,7 +1234,7 @@ type Stall struct {
 
 func (x *Stall) Reset() {
 	*x = Stall{}
-	mi := &file_glimway_v1_goods_proto_msgTypes[15]
+	mi := &file_glimway_v1_goods_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1164,7 +1246,7 @@ func (x *Stall) String() string {
 func (*Stall) ProtoMessage() {}
 
 func (x *Stall) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_goods_proto_msgTypes[15]
+	mi := &file_glimway_v1_goods_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1177,7 +1259,7 @@ func (x *Stall) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Stall.ProtoReflect.Descriptor instead.
 func (*Stall) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_goods_proto_rawDescGZIP(), []int{15}
+	return file_glimway_v1_goods_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *Stall) GetStall() int32 {
@@ -1228,7 +1310,7 @@ type YardPet struct {
 
 func (x *YardPet) Reset() {
 	*x = YardPet{}
-	mi := &file_glimway_v1_goods_proto_msgTypes[16]
+	mi := &file_glimway_v1_goods_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1240,7 +1322,7 @@ func (x *YardPet) String() string {
 func (*YardPet) ProtoMessage() {}
 
 func (x *YardPet) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_goods_proto_msgTypes[16]
+	mi := &file_glimway_v1_goods_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1253,7 +1335,7 @@ func (x *YardPet) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use YardPet.ProtoReflect.Descriptor instead.
 func (*YardPet) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_goods_proto_rawDescGZIP(), []int{16}
+	return file_glimway_v1_goods_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *YardPet) GetOwnerId() string {
@@ -1301,13 +1383,14 @@ type HomeView struct {
 	Items         []*HomeInstance         `protobuf:"bytes,17,rep,name=items,proto3" json:"items,omitempty"`
 	Stalls        []*Stall                `protobuf:"bytes,18,rep,name=stalls,proto3" json:"stalls,omitempty"`
 	YardPets      []*YardPet              `protobuf:"bytes,19,rep,name=yard_pets,json=yardPets,proto3" json:"yard_pets,omitempty"`
+	Lantern       *LotLanternView         `protobuf:"bytes,20,opt,name=lantern,proto3" json:"lantern,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *HomeView) Reset() {
 	*x = HomeView{}
-	mi := &file_glimway_v1_goods_proto_msgTypes[17]
+	mi := &file_glimway_v1_goods_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1319,7 +1402,7 @@ func (x *HomeView) String() string {
 func (*HomeView) ProtoMessage() {}
 
 func (x *HomeView) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_goods_proto_msgTypes[17]
+	mi := &file_glimway_v1_goods_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1332,7 +1415,7 @@ func (x *HomeView) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HomeView.ProtoReflect.Descriptor instead.
 func (*HomeView) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_goods_proto_rawDescGZIP(), []int{17}
+	return file_glimway_v1_goods_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *HomeView) GetId() string {
@@ -1468,6 +1551,76 @@ func (x *HomeView) GetYardPets() []*YardPet {
 	return nil
 }
 
+func (x *HomeView) GetLantern() *LotLanternView {
+	if x != nil {
+		return x.Lantern
+	}
+	return nil
+}
+
+// A lot's lantern (roadmap 0.12): lit while it holds the backland chunk
+// behind the lot; oil is the wicks left in its store; dimming, out of oil
+// with one wick of warning before it goes dark at the next turning.
+type LotLanternView struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Lit           bool                   `protobuf:"varint,1,opt,name=lit,proto3" json:"lit,omitempty"`
+	Oil           int32                  `protobuf:"varint,2,opt,name=oil,proto3" json:"oil,omitempty"`
+	Dimming       bool                   `protobuf:"varint,3,opt,name=dimming,proto3" json:"dimming,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LotLanternView) Reset() {
+	*x = LotLanternView{}
+	mi := &file_glimway_v1_goods_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LotLanternView) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LotLanternView) ProtoMessage() {}
+
+func (x *LotLanternView) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_goods_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LotLanternView.ProtoReflect.Descriptor instead.
+func (*LotLanternView) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_goods_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *LotLanternView) GetLit() bool {
+	if x != nil {
+		return x.Lit
+	}
+	return false
+}
+
+func (x *LotLanternView) GetOil() int32 {
+	if x != nil {
+		return x.Oil
+	}
+	return 0
+}
+
+func (x *LotLanternView) GetDimming() bool {
+	if x != nil {
+		return x.Dimming
+	}
+	return false
+}
+
 var File_glimway_v1_goods_proto protoreflect.FileDescriptor
 
 const file_glimway_v1_goods_proto_rawDesc = "" +
@@ -1536,14 +1689,21 @@ const file_glimway_v1_goods_proto_rawDesc = "" +
 	"\x06Thanks\x12\x1b\n" +
 	"\tfrom_name\x18\x01 \x01(\tR\bfromName\x12\x19\n" +
 	"\bitem_def\x18\x02 \x01(\tR\aitemDef\x12\x0e\n" +
-	"\x02at\x18\x03 \x01(\x01R\x02at\"\x8f\x02\n" +
+	"\x02at\x18\x03 \x01(\x01R\x02at\"\xf5\x02\n" +
 	"\tItemsView\x12)\n" +
 	"\x06stacks\x18\x01 \x03(\v2\x11.glimway.v1.StackR\x06stacks\x122\n" +
 	"\tinstances\x18\x02 \x03(\v2\x14.glimway.v1.InstanceR\tinstances\x12*\n" +
 	"\apockets\x18\x03 \x03(\v2\x10.glimway.v1.SlotR\apockets\x12.\n" +
 	"\boff_hand\x18\x04 \x01(\v2\x13.glimway.v1.OffHandR\aoffHand\x12\x1b\n" +
 	"\tpicked_up\x18\x05 \x03(\tR\bpickedUp\x12*\n" +
-	"\x06thanks\x18\x06 \x03(\v2\x12.glimway.v1.ThanksR\x06thanks\"?\n" +
+	"\x06thanks\x18\x06 \x03(\v2\x12.glimway.v1.ThanksR\x06thanks\x122\n" +
+	"\acarried\x18\a \x03(\v2\x18.glimway.v1.HomeInstanceR\acarried\x120\n" +
+	"\x06plants\x18\b \x03(\v2\x18.glimway.v1.CarriedPlantR\x06plants\"X\n" +
+	"\fCarriedPlant\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
+	"\bitem_def\x18\x02 \x01(\tR\aitemDef\x12\x1d\n" +
+	"\n" +
+	"planted_at\x18\x03 \x01(\x01R\tplantedAt\"?\n" +
 	"\n" +
 	"HomeMember\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
@@ -1583,7 +1743,7 @@ const file_glimway_v1_goods_proto_rawDesc = "" +
 	"\aYardPet\x12\x19\n" +
 	"\bowner_id\x18\x01 \x01(\tR\aownerId\x12\x10\n" +
 	"\x03pet\x18\x02 \x01(\tR\x03pet\x12\x12\n" +
-	"\x04slot\x18\x03 \x01(\x05R\x04slot\"\xb4\x06\n" +
+	"\x04slot\x18\x03 \x01(\x05R\x04slot\"\xea\x06\n" +
 	"\bHomeView\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04gate\x18\x02 \x01(\x05R\x04gate\x12\x19\n" +
@@ -1604,10 +1764,15 @@ const file_glimway_v1_goods_proto_rawDesc = "" +
 	"\x06indoor\x18\x10 \x01(\v2\x14.glimway.v1.HomeGridR\x06indoor\x12.\n" +
 	"\x05items\x18\x11 \x03(\v2\x18.glimway.v1.HomeInstanceR\x05items\x12)\n" +
 	"\x06stalls\x18\x12 \x03(\v2\x11.glimway.v1.StallR\x06stalls\x120\n" +
-	"\tyard_pets\x18\x13 \x03(\v2\x13.glimway.v1.YardPetR\byardPets\x1a;\n" +
+	"\tyard_pets\x18\x13 \x03(\v2\x13.glimway.v1.YardPetR\byardPets\x124\n" +
+	"\alantern\x18\x14 \x01(\v2\x1a.glimway.v1.LotLanternViewR\alantern\x1a;\n" +
 	"\rNextPostEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01B1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
+	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\"N\n" +
+	"\x0eLotLanternView\x12\x10\n" +
+	"\x03lit\x18\x01 \x01(\bR\x03lit\x12\x10\n" +
+	"\x03oil\x18\x02 \x01(\x05R\x03oil\x12\x18\n" +
+	"\adimming\x18\x03 \x01(\bR\adimmingB1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
 
 var (
 	file_glimway_v1_goods_proto_rawDescOnce sync.Once
@@ -1621,7 +1786,7 @@ func file_glimway_v1_goods_proto_rawDescGZIP() []byte {
 	return file_glimway_v1_goods_proto_rawDescData
 }
 
-var file_glimway_v1_goods_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
+var file_glimway_v1_goods_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_glimway_v1_goods_proto_goTypes = []any{
 	(*Maker)(nil),                  // 0: glimway.v1.Maker
 	(*Asset)(nil),                  // 1: glimway.v1.Asset
@@ -1633,66 +1798,71 @@ var file_glimway_v1_goods_proto_goTypes = []any{
 	(*OffHand)(nil),                // 7: glimway.v1.OffHand
 	(*Thanks)(nil),                 // 8: glimway.v1.Thanks
 	(*ItemsView)(nil),              // 9: glimway.v1.ItemsView
-	(*HomeMember)(nil),             // 10: glimway.v1.HomeMember
-	(*Coord)(nil),                  // 11: glimway.v1.Coord
-	(*HomeGrid)(nil),               // 12: glimway.v1.HomeGrid
-	(*HomeInstance)(nil),           // 13: glimway.v1.HomeInstance
-	(*HomePlant)(nil),              // 14: glimway.v1.HomePlant
-	(*Stall)(nil),                  // 15: glimway.v1.Stall
-	(*YardPet)(nil),                // 16: glimway.v1.YardPet
-	(*HomeView)(nil),               // 17: glimway.v1.HomeView
-	nil,                            // 18: glimway.v1.AssetCounts.MaterialsEntry
-	nil,                            // 19: glimway.v1.AssetCounts.ItemsEntry
-	nil,                            // 20: glimway.v1.AssetCounts.DecorationsEntry
-	nil,                            // 21: glimway.v1.HomeView.NextPostEntry
-	(*wrapperspb.StringValue)(nil), // 22: google.protobuf.StringValue
-	(*wrapperspb.DoubleValue)(nil), // 23: google.protobuf.DoubleValue
-	(*wrapperspb.Int32Value)(nil),  // 24: google.protobuf.Int32Value
+	(*CarriedPlant)(nil),           // 10: glimway.v1.CarriedPlant
+	(*HomeMember)(nil),             // 11: glimway.v1.HomeMember
+	(*Coord)(nil),                  // 12: glimway.v1.Coord
+	(*HomeGrid)(nil),               // 13: glimway.v1.HomeGrid
+	(*HomeInstance)(nil),           // 14: glimway.v1.HomeInstance
+	(*HomePlant)(nil),              // 15: glimway.v1.HomePlant
+	(*Stall)(nil),                  // 16: glimway.v1.Stall
+	(*YardPet)(nil),                // 17: glimway.v1.YardPet
+	(*HomeView)(nil),               // 18: glimway.v1.HomeView
+	(*LotLanternView)(nil),         // 19: glimway.v1.LotLanternView
+	nil,                            // 20: glimway.v1.AssetCounts.MaterialsEntry
+	nil,                            // 21: glimway.v1.AssetCounts.ItemsEntry
+	nil,                            // 22: glimway.v1.AssetCounts.DecorationsEntry
+	nil,                            // 23: glimway.v1.HomeView.NextPostEntry
+	(*wrapperspb.StringValue)(nil), // 24: google.protobuf.StringValue
+	(*wrapperspb.DoubleValue)(nil), // 25: google.protobuf.DoubleValue
+	(*wrapperspb.Int32Value)(nil),  // 26: google.protobuf.Int32Value
 }
 var file_glimway_v1_goods_proto_depIdxs = []int32{
-	22, // 0: glimway.v1.Asset.maker:type_name -> google.protobuf.StringValue
+	24, // 0: glimway.v1.Asset.maker:type_name -> google.protobuf.StringValue
 	0,  // 1: glimway.v1.Fitting.maker:type_name -> glimway.v1.Maker
-	23, // 2: glimway.v1.Instance.dullness:type_name -> google.protobuf.DoubleValue
-	23, // 3: glimway.v1.Instance.speed:type_name -> google.protobuf.DoubleValue
+	25, // 2: glimway.v1.Instance.dullness:type_name -> google.protobuf.DoubleValue
+	25, // 3: glimway.v1.Instance.speed:type_name -> google.protobuf.DoubleValue
 	2,  // 4: glimway.v1.Instance.fittings:type_name -> glimway.v1.Fitting
 	0,  // 5: glimway.v1.Instance.maker:type_name -> glimway.v1.Maker
-	18, // 6: glimway.v1.AssetCounts.materials:type_name -> glimway.v1.AssetCounts.MaterialsEntry
-	19, // 7: glimway.v1.AssetCounts.items:type_name -> glimway.v1.AssetCounts.ItemsEntry
-	20, // 8: glimway.v1.AssetCounts.decorations:type_name -> glimway.v1.AssetCounts.DecorationsEntry
+	20, // 6: glimway.v1.AssetCounts.materials:type_name -> glimway.v1.AssetCounts.MaterialsEntry
+	21, // 7: glimway.v1.AssetCounts.items:type_name -> glimway.v1.AssetCounts.ItemsEntry
+	22, // 8: glimway.v1.AssetCounts.decorations:type_name -> glimway.v1.AssetCounts.DecorationsEntry
 	3,  // 9: glimway.v1.AssetCounts.instances:type_name -> glimway.v1.Instance
 	0,  // 10: glimway.v1.Stack.maker:type_name -> glimway.v1.Maker
-	22, // 11: glimway.v1.Slot.item_def:type_name -> google.protobuf.StringValue
-	22, // 12: glimway.v1.Slot.instance:type_name -> google.protobuf.StringValue
-	22, // 13: glimway.v1.OffHand.class:type_name -> google.protobuf.StringValue
-	22, // 14: glimway.v1.OffHand.item_def:type_name -> google.protobuf.StringValue
-	22, // 15: glimway.v1.OffHand.instance:type_name -> google.protobuf.StringValue
+	24, // 11: glimway.v1.Slot.item_def:type_name -> google.protobuf.StringValue
+	24, // 12: glimway.v1.Slot.instance:type_name -> google.protobuf.StringValue
+	24, // 13: glimway.v1.OffHand.class:type_name -> google.protobuf.StringValue
+	24, // 14: glimway.v1.OffHand.item_def:type_name -> google.protobuf.StringValue
+	24, // 15: glimway.v1.OffHand.instance:type_name -> google.protobuf.StringValue
 	5,  // 16: glimway.v1.ItemsView.stacks:type_name -> glimway.v1.Stack
 	3,  // 17: glimway.v1.ItemsView.instances:type_name -> glimway.v1.Instance
 	6,  // 18: glimway.v1.ItemsView.pockets:type_name -> glimway.v1.Slot
 	7,  // 19: glimway.v1.ItemsView.off_hand:type_name -> glimway.v1.OffHand
 	8,  // 20: glimway.v1.ItemsView.thanks:type_name -> glimway.v1.Thanks
-	22, // 21: glimway.v1.HomeInstance.scene:type_name -> google.protobuf.StringValue
-	24, // 22: glimway.v1.HomeInstance.x:type_name -> google.protobuf.Int32Value
-	24, // 23: glimway.v1.HomeInstance.y:type_name -> google.protobuf.Int32Value
-	24, // 24: glimway.v1.HomeInstance.rotation:type_name -> google.protobuf.Int32Value
-	22, // 25: glimway.v1.HomeInstance.name:type_name -> google.protobuf.StringValue
-	24, // 26: glimway.v1.HomeInstance.stalls:type_name -> google.protobuf.Int32Value
-	10, // 27: glimway.v1.HomeView.members:type_name -> glimway.v1.HomeMember
-	23, // 28: glimway.v1.HomeView.vacant_since:type_name -> google.protobuf.DoubleValue
-	11, // 29: glimway.v1.HomeView.cleared:type_name -> glimway.v1.Coord
-	11, // 30: glimway.v1.HomeView.stumps:type_name -> glimway.v1.Coord
-	14, // 31: glimway.v1.HomeView.plants:type_name -> glimway.v1.HomePlant
-	21, // 32: glimway.v1.HomeView.next_post:type_name -> glimway.v1.HomeView.NextPostEntry
-	12, // 33: glimway.v1.HomeView.outdoor:type_name -> glimway.v1.HomeGrid
-	12, // 34: glimway.v1.HomeView.indoor:type_name -> glimway.v1.HomeGrid
-	13, // 35: glimway.v1.HomeView.items:type_name -> glimway.v1.HomeInstance
-	15, // 36: glimway.v1.HomeView.stalls:type_name -> glimway.v1.Stall
-	16, // 37: glimway.v1.HomeView.yard_pets:type_name -> glimway.v1.YardPet
-	38, // [38:38] is the sub-list for method output_type
-	38, // [38:38] is the sub-list for method input_type
-	38, // [38:38] is the sub-list for extension type_name
-	38, // [38:38] is the sub-list for extension extendee
-	0,  // [0:38] is the sub-list for field type_name
+	14, // 21: glimway.v1.ItemsView.carried:type_name -> glimway.v1.HomeInstance
+	10, // 22: glimway.v1.ItemsView.plants:type_name -> glimway.v1.CarriedPlant
+	24, // 23: glimway.v1.HomeInstance.scene:type_name -> google.protobuf.StringValue
+	26, // 24: glimway.v1.HomeInstance.x:type_name -> google.protobuf.Int32Value
+	26, // 25: glimway.v1.HomeInstance.y:type_name -> google.protobuf.Int32Value
+	26, // 26: glimway.v1.HomeInstance.rotation:type_name -> google.protobuf.Int32Value
+	24, // 27: glimway.v1.HomeInstance.name:type_name -> google.protobuf.StringValue
+	26, // 28: glimway.v1.HomeInstance.stalls:type_name -> google.protobuf.Int32Value
+	11, // 29: glimway.v1.HomeView.members:type_name -> glimway.v1.HomeMember
+	25, // 30: glimway.v1.HomeView.vacant_since:type_name -> google.protobuf.DoubleValue
+	12, // 31: glimway.v1.HomeView.cleared:type_name -> glimway.v1.Coord
+	12, // 32: glimway.v1.HomeView.stumps:type_name -> glimway.v1.Coord
+	15, // 33: glimway.v1.HomeView.plants:type_name -> glimway.v1.HomePlant
+	23, // 34: glimway.v1.HomeView.next_post:type_name -> glimway.v1.HomeView.NextPostEntry
+	13, // 35: glimway.v1.HomeView.outdoor:type_name -> glimway.v1.HomeGrid
+	13, // 36: glimway.v1.HomeView.indoor:type_name -> glimway.v1.HomeGrid
+	14, // 37: glimway.v1.HomeView.items:type_name -> glimway.v1.HomeInstance
+	16, // 38: glimway.v1.HomeView.stalls:type_name -> glimway.v1.Stall
+	17, // 39: glimway.v1.HomeView.yard_pets:type_name -> glimway.v1.YardPet
+	19, // 40: glimway.v1.HomeView.lantern:type_name -> glimway.v1.LotLanternView
+	41, // [41:41] is the sub-list for method output_type
+	41, // [41:41] is the sub-list for method input_type
+	41, // [41:41] is the sub-list for extension type_name
+	41, // [41:41] is the sub-list for extension extendee
+	0,  // [0:41] is the sub-list for field type_name
 }
 
 func init() { file_glimway_v1_goods_proto_init() }
@@ -1706,7 +1876,7 @@ func file_glimway_v1_goods_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_glimway_v1_goods_proto_rawDesc), len(file_glimway_v1_goods_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   22,
+			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -95,6 +95,16 @@
       }
     },
     {
+      "id": "the-form-of-a-naming",
+      "collection": "Voices of the Drift: Found Texts of Hearthwick and the Lantern Road",
+      "source": "quest",
+      "section": "histories",
+      "rule": {
+        "kind": "quest",
+        "stage": "keepers-hand:check-ledger"
+      }
+    },
+    {
       "id": "keepers-twists-recipe-card",
       "collection": "Voices of the Drift: Found Texts, Vol. II",
       "source": "gift",
