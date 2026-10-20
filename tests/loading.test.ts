@@ -196,6 +196,25 @@ test('where the art came from, by transfer size', () => {
     ]),
     '3 files: 1 from cache, 1 checked with the server (304), 1 downloaded; 2.5 MB over the wire'
   );
+  // iPhone Safari's 304: headers over the wire and no body named (it said "27 downloaded").
+  assert.equal(
+    artCacheSummary([
+      { name: 'a', startTime: 0, transferSize: 412, encodedBodySize: 0 },
+      { name: 'b', startTime: 0, transferSize: 388, encodedBodySize: 0 },
+    ]),
+    '2 files: 0 from cache, 2 checked with the server (304), 0 downloaded; 0.0 MB over the wire'
+  );
+  // Chrome's 304 of a file smaller than its headers (it said "1 downloaded"), with and without the status.
+  assert.equal(
+    artCacheSummary([
+      { name: 'a', startTime: 0, transferSize: 300, encodedBodySize: 180 },
+      { name: 'b', startTime: 0, transferSize: 300, encodedBodySize: 180, responseStatus: 304 },
+      { name: 'c', startTime: 0, transferSize: 300, encodedBodySize: 90_000, responseStatus: 304 },
+    ]),
+    '3 files: 0 from cache, 3 checked with the server (304), 0 downloaded; 0.0 MB over the wire'
+  );
+  // A small download the browser names as one stays a download.
+  assert.match(artCacheSummary([{ name: 'a', startTime: 0, transferSize: 480, encodedBodySize: 180, responseStatus: 200 }]), /0 checked with the server \(304\), 1 downloaded/);
 });
 
 test('a device line from the user agent', () => {
