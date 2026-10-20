@@ -10,7 +10,7 @@ const parts = { landmark: 'split-oak', compass: 'nw', ring: 2, pastRiver: true }
 test('the rumour is built from its parts: a landmark, a compass word from the gate, the river, a distance', () => {
   assert.equal(rumourSentence(parts), "Something's tucked under a split oak, north-west of the gate, past the river. A fair walk.");
   assert.equal(rumourSentence({ ...parts, pastRiver: false, ring: 1, compass: 'e', landmark: 'meadow-outcrop' }), "Something's tucked under a stone outcrop, east of the gate. Not far.");
-  assert.equal(rumourSentence({ ...parts, ring: 3, landmark: 'meadow-oak', compass: 'ne' }), "Something's tucked under a lone oak in the grass, north-east of the gate, past the river. Out near the Whitequiet's edge.");
+  assert.equal(rumourSentence({ ...parts, ring: 3, landmark: 'meadow-oak', compass: 'ne' }), "Something's tucked under a lone oak in the grass, north-east of the gate, past the river. Out by the Whitequiet.");
 });
 
 test('every rumour reads without a number, for every landmark, direction, ring and river', () => {
