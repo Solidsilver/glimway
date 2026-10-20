@@ -124,7 +124,8 @@ way-lamps in the Wilds, with the map showing what is held, common and turning.
 
 ### After that
 
-Drop-in outposts (Brackenwood, Ashwatch), more delves, the Habitica mirror (streaks and
+Drop-in outposts (Brackenwood, Ashwatch), more delves, endless Wilds with new biomes, terrain and
+creatures (agreed 2026-10-19, see [ideas.md](ideas.md)), the Habitica mirror (streaks and
 achievements shown in the world), a standalone edition, and the ideas in [ideas.md](ideas.md).
 
 ## Parked or cut (2026-10-17)

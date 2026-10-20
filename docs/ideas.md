@@ -70,10 +70,27 @@ worth thinking about; **(later)** means parked on purpose.
     fishes slowly.
   - **A water can be fished out** for a while, with a small "a fish got in here somehow" chance.
   - It's all deterministic and server-checkable, like gathering.
-- **More variety beyond the Tangle** (maybe, needs a brainstorm): mountains, lakes and rivers, and
-  later caves, plus ways to go past the Whitequiet. Unlock those only once players have a way back
-  (a map, breadcrumbs, or a door or teleport item). This needs a better generation system; hold a
-  brainstorming session when we explore it.
+- **More variety beyond the Tangle, in endless Wilds** (agreed 2026-10-19, no release yet; needs a
+  brainstorm): mountains, lakes and rivers, and later caves, other biomes and other creatures, so the
+  world feels big and full. Pair it with **endless Wilds**: the generator already makes any chunk
+  from the seed, the epoch and (cx, cy) alone, so the limits are rules and costs. What it takes:
+  - the rule: widen or drop the frontier's `reach` and `southLimit` (`content/wilds.json`), and
+    decide what the Whitequiet's closing edge means then (it's how lit camps push it back, canon
+    §2.4);
+  - the open map: `api/open_map.go` and the client walk the whole frontier rect, so both need a
+    window round the player;
+  - storage: chunks are stored the first time they're read, so prune unheld ones or cap them;
+  - content: tiers stop at 3 about six chunks out, and the Wend, the rumours and the Lantern Road
+    (40 chunks past its bend) are laid only near the start, so variety has to keep growing with
+    distance;
+  - ways home matter more on a long walk out.
+  Players still need a way back before it opens (a map, breadcrumbs, or a door or teleport item).
+  The owner's picture of the height (2026-10-19): the world is mostly flat and solid. You can't dig
+  down just anywhere, and caves aren't everywhere. In a few places a tunnel from the surface opens
+  into a large space below ground (maybe somewhere players build a base). Mountains have trails up
+  them, and sometimes a way across a whole range, but they aren't everywhere either. Some caves may
+  run under mountains. This fits the cut of "a sprawling underground", which meant digging anywhere
+  and caves everywhere, not a few large places below ground. Work it through in the brainstorm.
 
 - **Exploration for every class and playstyle** (maybe): the Wilds and future expansions give each
   Habitica class (warrior, mage, healer, rogue) and each playstyle (fighting, gathering, crafting,
