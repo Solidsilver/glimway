@@ -10,17 +10,22 @@
   const here = inLab()
 
   const choices: { key: keyof LabLook; label: string; options: { value: LabLook[keyof LabLook]; label: string }[] }[] = [
-    { key: 'fog', label: 'Climbing, the land below fades to', options: [{ value: 'fog', label: 'Fog' }, { value: 'sky', label: 'Sky' }, { value: 'none', label: 'Nothing' }] },
+    { key: 'area', label: 'Area', options: [{ value: 'shoulder', label: 'Plateau and shoulder' }, { value: 'mountain', label: 'Mountain and deep cave' }] },
+    { key: 'fog', label: 'Levels above and below fade to', options: [{ value: 'fog', label: 'Fog' }, { value: 'sky', label: 'Sky' }, { value: 'none', label: 'Nothing' }] },
+    { key: 'fogStrength', label: 'Fog per level', options: [{ value: 'light', label: 'Light' }, { value: 'medium', label: 'Medium' }, { value: 'strong', label: 'Strong' }] },
+    { key: 'depth', label: 'Underground, other floors', options: [{ value: 'darken', label: 'Darken' }, { value: 'none', label: 'Stay clear' }] },
     { key: 'zoom', label: 'Climbing, the camera', options: [{ value: true, label: 'Eases out' }, { value: false, label: 'Stays' }] },
     { key: 'haze', label: 'Climbing, haze at the edges', options: [{ value: true, label: 'On' }, { value: false, label: 'Off' }] },
-    { key: 'cave', label: 'In a cave', options: [{ value: 'lantern', label: 'Close light' }, { value: 'wide', label: 'Wide light' }, { value: 'dim', label: 'All dim' }] },
+    { key: 'cave', label: 'In a cave, your own light', options: [{ value: 'lantern', label: 'Close' }, { value: 'wide', label: 'Wide' }, { value: 'dim', label: 'None' }] },
+    { key: 'skyTiles', label: 'Daylight reaches in', options: [{ value: 3, label: '3 tiles' }, { value: 6, label: '6 tiles' }, { value: 10, label: '10 tiles' }] },
+    { key: 'crossfade', label: 'The cave’s view comes in over', options: [{ value: 1, label: '1 tile' }, { value: 3, label: '3 tiles' }] },
     { key: 'grid', label: 'Levels overlay', options: [{ value: false, label: 'Off' }, { value: true, label: 'On' }] }
   ]
 </script>
 
 <section class="lab" data-testid="dev-height-lab">
   <h3 class="section-title"><Icon name="stone" size={14} /> Height lab</h3>
-  <p class="what">A hand-made valley, plateau, mountain shoulder and cave, to try real levels. It doesn’t save or send anything.</p>
+  <p class="what">Hand-made areas with real levels and caves: a valley, plateau and shoulder; a mountain with a saddle and a deep cave. It doesn’t save or send anything.</p>
   {#if here}
     <button type="button" onclick={() => location.assign(labUrl(false))}>Leave the lab</button>
     {#each choices as c (c.key)}

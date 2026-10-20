@@ -3,22 +3,33 @@
  * panel (./LabSection.svelte) while walking the lab. Kept for the tab
  * (sessionStorage), so a reload keeps the choice.
  */
+import type { AreaName } from './area.ts'
 
 export interface LabLook {
-  /** Climbing: lower land fades toward fog, toward sky blue, or not at all. */
+  /** Which area to walk (switching rebuilds the scene). */
+  area: AreaName
+  /** Levels above and below yours fade toward fog, toward sky blue, or not at all. */
   fog: 'fog' | 'sky' | 'none'
+  /** How much a level of difference fades (./scene.ts FOG_PER_LEVEL). */
+  fogStrength: 'light' | 'medium' | 'strong'
+  /** Underground, cave floors above and below yours darken with the difference, or stay as they are. */
+  depth: 'darken' | 'none'
   /** Climbing: the camera eases out a little with height. */
   zoom: boolean
   /** Climbing: a soft haze at the screen's edges, stronger the higher you are. */
   haze: boolean
-  /** In a cave: a light round the hero (close or wide), or everything dimmed alike. */
+  /** In a cave: the hero's own light, close or wide, or none (the cave's own light only). */
   cave: 'lantern' | 'wide' | 'dim'
+  /** Walked tiles from a mouth to where daylight is gone (switching rebuilds the light). */
+  skyTiles: number
+  /** Walked tiles from the arch over which the surface's view crossfades to the cave's. */
+  crossfade: number
   /** Shade the tiles by level, show edges and layers (for reading the data). */
   grid: boolean
 }
 
 const KEY = 'glimway:height-lab-look'
-const DEFAULT: LabLook = { fog: 'fog', zoom: true, haze: true, cave: 'lantern', grid: false }
+const DEFAULT: LabLook = { area: 'shoulder', fog: 'fog', fogStrength: 'medium', depth: 'darken', zoom: true, haze: true, cave: 'lantern', skyTiles: 6, crossfade: 1, grid: false }
 
 function read(): LabLook {
   try {
@@ -65,4 +76,17 @@ export function labUrl(on: boolean): string {
   if (on) u.searchParams.set('lab', LAB_PARAM)
   else u.searchParams.delete('lab')
   return u.toString()
+}
+
+/** Fog a level of difference adds (past the first third of a level), and the most it hides. */
+export const FOG_PER_LEVEL: Record<LabLook['fogStrength'], { k: number; max: number }> = {
+  light: { k: 0.25, max: 0.55 },
+  medium: { k: 0.42, max: 0.72 },
+  strong: { k: 0.6, max: 0.85 }
+}
+
+/** How faded something `dz` levels above or below you is (0 clear): the same either way. */
+export function fogFor(dz: number, strength: LabLook['fogStrength']): number {
+  const f = FOG_PER_LEVEL[strength]
+  return Math.max(0, Math.min(f.max, (Math.abs(dz) - 0.3) * f.k))
 }
