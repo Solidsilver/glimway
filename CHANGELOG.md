@@ -13,6 +13,8 @@ the game can show the first part as "What's new":
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-10-20
+
 ### For players
 
 - Glimway's home-screen icon and favicon now show the glowing Wick Tree.
@@ -912,7 +914,9 @@ The first public release.
   under its own licence; contributions under the DCO.
 - Unit tests, Go tests and Playwright playtests.
 
-[Unreleased]: https://github.com/Solidsilver/glimway/compare/v0.11.1...HEAD
+[Unreleased]: https://github.com/Solidsilver/glimway/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/Solidsilver/glimway/compare/v0.11.2...v0.13.0
+[0.11.2]: https://github.com/Solidsilver/glimway/compare/v0.11.1...v0.11.2
 [0.11.1]: https://github.com/Solidsilver/glimway/compare/v0.11.0...v0.11.1
 [0.11.0]: https://github.com/Solidsilver/glimway/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/Solidsilver/glimway/compare/v0.9.1...v0.10.0
