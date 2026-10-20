@@ -28,8 +28,9 @@ func TestMigrateDryRunCommand(t *testing.T) {
 	if err := os.WriteFile(broken, []byte("not a database"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	// A copy whose newest migration fails to apply: here, one marked unapplied
-	// though its tables stand.
+	// A copy whose last migrations fail to apply: here, the newest two marked
+	// unapplied though their tables stand (the newest alone may be idempotent,
+	// as 039 is: a re-run of it succeeds, so the one before is the one that fails).
 	failing := filepath.Join(dir, "failing.sqlite")
 	if err := run([]string{"-db", path, "backup", failing}); err != nil {
 		t.Fatal(err)
@@ -38,7 +39,7 @@ func TestMigrateDryRunCommand(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = s.DB.Exec("DELETE FROM schema_migrations WHERE name=(SELECT MAX(name) FROM schema_migrations)"); err != nil {
+	if _, err = s.DB.Exec("DELETE FROM schema_migrations WHERE name>=(SELECT name FROM schema_migrations ORDER BY name DESC LIMIT 1 OFFSET 1)"); err != nil {
 		t.Fatal(err)
 	}
 	s.Close()
