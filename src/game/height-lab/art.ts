@@ -15,7 +15,7 @@ import { wildsLook } from '../wilds/wilds-looks.ts'
 import { fnv1a32 } from '../../lib/hash.ts'
 import { CAVE, GROUNDS, SURFACE, type LabArea } from './area.ts'
 import { DX, DY, KIND, TILE_PX, type Layer } from './levels.ts'
-import { HERO_OUTER, caveLevels, heroLight } from './light.ts'
+import { caveLevels } from './light.ts'
 
 type RGB = [number, number, number]
 
@@ -414,30 +414,11 @@ export function paintCave(scene: Phaser.Scene, area: LabArea): LevelImage[] {
   return out
 }
 
-/** The cave's still dark (./light.ts darkMap) as an image: one texel a LIGHT_RES px, smoothed when drawn bigger. */
-export const DARK_KEY = 'hl-darkmap'
-
-export function drawDarkMap(scene: Phaser.Scene, area: LabArea): void {
-  const m = area.dark
-  const px = new Uint8ClampedArray(m.w * m.h * 4)
-  for (let i = 0; i < m.w * m.h; i++) {
-    px[i * 4] = 7
-    px[i * 4 + 1] = 6
-    px[i * 4 + 2] = 11
-    px[i * 4 + 3] = Math.round(m.a[i]! * 255)
-  }
-  addPixels(scene, DARK_KEY, m.w, m.h, px, true)
-}
-
 // ---------------------------------------------------------------- overlays
 
-/** The hero's light brush: erased from the dark round them (./light.ts heroLight; LANTERN_SIZE px across, scaled for the wide light). */
-export const LANTERN_KEY = 'hl-lantern'
-export const LANTERN_SIZE = 2 * HERO_OUTER + 4
-
-/** The overlays, sprites and glows: drawn once. */
+/** The overlays and sprites (the haze, the crystal, …): drawn once. */
 export function drawOverlays(scene: Phaser.Scene): void {
-  if (scene.textures.exists(LANTERN_KEY)) return
+  if (scene.textures.exists('hl-haze')) return
   const radial = (key: string, size: number, alphaAt: (r: number) => number, rgb: RGB) => {
     const px = new Uint8ClampedArray(size * size * 4)
     for (let y = 0; y < size; y++)
@@ -452,9 +433,7 @@ export function drawOverlays(scene: Phaser.Scene): void {
     addPixels(scene, key, size, size, px, true)
   }
   const smooth = (t: number) => t * t * (3 - 2 * t)
-  radial(LANTERN_KEY, LANTERN_SIZE, (r) => heroLight('lantern', r), [255, 255, 255])
   radial('hl-haze', 256, (r) => smooth(Math.max(0, Math.min(1, (r - 55) / 90))), [255, 255, 255])
-  radial('hl-glow', 64, (r) => Math.pow(Math.max(0, 1 - r / 32), 2), [255, 255, 255])
   // A crystal: a little pale shard cluster.
   const cw = 9
   const chh = 11
