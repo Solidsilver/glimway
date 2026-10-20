@@ -13,6 +13,14 @@ the game can show the first part as "What's new":
 
 ## [Unreleased]
 
+### For players
+
+- The Wilds are quieter: far fewer camps, about a third as many as before, so you're no longer walking into a fight every few seconds. Camp glades still hold their camp and its chest.
+
+### Technical
+
+- Camps: `entityKinds` `camp` in `content/wilds.json` asks for 0–1 a chunk (was 1–2). On fixed seeds that is 55 camps per 100 generated chunks round home and at the frontier's far corner (was 155), 4–5 of them in camp glades, which are unchanged. `TestCampDensity` (`server/internal/wilds`) holds open camps under 70 per 100. The v3 golden and the client chunk fixtures are regenerated for this change alone. `fights-shared.spec.ts` pins `e2e-shared-fights-99` (its old seed's camp:0:-1:0 is gone) and `seam.spec.ts`'s Tangle-wisp check pins `e2e-seam-32`, asserting its gate camp is there, since an unpinned gate chunk often has none.
+
 ## [0.13.0] - 2026-10-20
 
 ### For players
