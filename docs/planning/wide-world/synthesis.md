@@ -77,3 +77,18 @@ both answering [brief.md](brief.md). The height spike (`exp/height-spike`) is st
 4. **Near home.** Keep the land round the Tangle as it is (recommended; playtesters know it), or
    let biomes reach it too.
 5. **Height model** waits for the spike walk.
+
+## Owner's answers (2026-10-20)
+
+1. **The Whitequiet becomes its own biome**: pale, silent land with its own rules (trinkets and
+   Echoes surface there), not an edge. The far world border is a separate thing. Canon §2.4
+   needs rewriting to match; the words are the owner's.
+2. **Border: ±4,096 chunks**, kept in content so it can only widen.
+3. **Danger and creatures get their own brainstorm.** The owner likes evil getting worse further
+   from people, but also danger varying by biome, or by a "meta-biome" above biomes. Today there
+   are too many camps and creatures. Each biome should have its own creatures, good and bad, and
+   spawning needs a new algorithm. Until then tiers stay at 3. Brief:
+   [life-brief.md](life-brief.md).
+4. **Let biomes reach home.** The land round Hearthwick and the Tangle may change once when 0.14
+   lands (fixed places and held land stay).
+5. Height model: waits for the spike.
