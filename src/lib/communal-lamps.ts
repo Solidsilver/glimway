@@ -14,6 +14,7 @@ import type { CommunalLampView } from './gen/glimway/v1/lamps_pb.js'
 import { HOMESTEAD_DATA } from './homestead.ts'
 import { giftPhrase } from './items.ts'
 import { MAP_LAMPS } from '../content/map-lamps.ts'
+import { nextStep, questById, type QuestRecord } from './quests.ts'
 
 /** What a lamp is called before anyone names it: the map ledger's word, so the world and the map agree. */
 export const COMMUNAL_LAMP_LABEL: string = MAP_LAMPS.names['common-lamp'] ?? 'Common lamp'
@@ -47,6 +48,26 @@ export function roadStoneArt(site: string, cutStone: string, lit: boolean): Road
   const route = site !== '' && site === cutStone
   const base = route ? 'route-stone' : 'lamp-stone'
   return lit ? { frame: `${base}-relit-0`, loop: `${base}-relit`, route } : { frame: `${base}-dark`, loop: null, route }
+}
+
+/** Is the Keeper's-hand quest at copying the cut (its next step copy-cut)? Only then does the map mark the stone. */
+export function cutStoneDue(quests: QuestRecord): boolean {
+  const q = questById('keepers-hand')
+  return !!q && nextStep(q, quests)?.id === 'copy-cut'
+}
+
+/**
+ * Where the open map marks the quest stone (world tiles), while the quest
+ * waits on its cut: the stone's tile when its chunk's land is known
+ * (`tileOf`), else the middle of its chunk, which its site id names
+ * (lamp-stone:<cx>:<cy>). Null once the cut is copied, or for no stone.
+ */
+export function cutStoneMark(quests: QuestRecord, cutStone: string, chunkSize: number, tileOf: (cx: number, cy: number) => { tx: number; ty: number } | null = () => null): { tx: number; ty: number } | null {
+  const m = /^lamp-stone:(-?\d+):(-?\d+)$/.exec(cutStone)
+  if (!m || !cutStoneDue(quests)) return null
+  const cx = Number(m[1])
+  const cy = Number(m[2])
+  return tileOf(cx, cy) ?? { tx: cx * chunkSize + Math.floor(chunkSize / 2), ty: cy * chunkSize + Math.floor(chunkSize / 2) }
 }
 
 /** Where the lamp stands across a route stone's 2×1 canvas: the stone fills its left half, the cut panel its right. */

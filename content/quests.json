@@ -828,7 +828,7 @@
           "glims": 0,
           "witness": "",
           "goal": "Copy the cut past the Whitequiet",
-          "objective": "Follow the Lantern Road north out of the Whitequiet. The first lamp stone beside it has words cut in its side. Copy them out.",
+          "objective": "Follow the Lantern Road north. Just past the Whitequiet, before the road turns east, the first lamp stone beside it has words cut in its side. Copy them out.",
           "do": {
             "flag": "keeper:cut"
           },

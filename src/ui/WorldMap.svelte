@@ -32,6 +32,9 @@
   import { MAP_LAMPS } from '../content/map-lamps'
   import { lampLedger, landDimming, landLabel, turningLabel, distanceFromTown, mapLampMark, MAP_LAMP_ICON } from '../lib/wilds/map-lamps'
   import { MAP_LABELS } from '../content/open-map'
+  import { cutStoneDue, cutStoneMark } from '../lib/communal-lamps'
+  import { chunkTerrain } from '../game/wilds/store'
+  import { chunkOrigin } from '../game/wilds/terrain'
   import { focusTrap } from './focus'
   import { ui } from './store.svelte'
   import Icon from './Icon.svelte'
@@ -443,6 +446,31 @@
     return (input.lamps ?? []).map((l) => ({ id: l.id, ...mapLampMark(l), ...toScreen(view!,vp,l.x+0.5,l.y+0.5) }))
       .filter((p) => p.x >= 0 && p.x <= vp.w && p.y >= 0 && p.y <= vp.h)
   })
+  /** The Keeper's-hand stone (the communal-lamps read's cut_stone), read once an opening while its cut waits to be copied. */
+  let cutStone = $state('')
+  $effect(() => {
+    const link = session.link
+    if (!link || !cutStoneDue(session.quests)) return
+    void link.communalLampsRead().then((r) => {
+      if (alive && r.ok) cutStone = r.value.cutStone
+    })
+  })
+  /** The stone's tile when its land is loaded (near the hero), else its chunk's middle. */
+  function stoneTile(cx: number, cy: number): { tx: number; ty: number } | null {
+    const t = chunkTerrain(cx, cy)
+    const s = t?.sites.find((x) => x.id === cutStone && x.kind === 'lamp-stone')
+    if (!t || !s) return null
+    const o = chunkOrigin(t)
+    return { tx: o.tx + s.tx, ty: o.ty + s.ty }
+  }
+  /** The quest's mark on the stone, while the step waits on it (the panel blocks play, so it can't finish while open). */
+  const cutMark = $derived.by(() => {
+    if (!view || !cutStone) return null
+    const at = cutStoneMark(session.quests, cutStone, CHUNK_TILES, stoneTile)
+    if (!at) return null
+    const p = toScreen(view, vp, at.tx + 0.5, at.ty + 0.5)
+    return p.x >= 0 && p.x <= vp.w && p.y >= 0 && p.y <= vp.h ? p : null
+  })
   function centreLamp(x: number, y: number, name: string): void {
     if (view && frame) view = centreOn(x+0.5,y+0.5,view.scale,vp,frame)
     status = name
@@ -510,6 +538,9 @@
       {#each lampMarks as m (m.id)}
         <span class="lamp-mark" class:dimming={m.dimming} style={`left:${m.x}px;top:${m.y}px`} data-lamp-mark={m.id}><ArtIcon art={m.art} name="lantern" size={16} /></span>
       {/each}
+      {#if cutMark}
+        <span class="quest-mark" style={`left:${cutMark.x}px;top:${cutMark.y}px`} title={MAP_LABELS.cutStone} aria-label={MAP_LABELS.cutStone} role="img" data-testid="map-cut-stone">!</span>
+      {/if}
       {#if youAt}
         <span class="dot" style={`left:${youAt.x}px;top:${youAt.y}px`} data-testid="map-you"></span>
       {/if}
@@ -924,6 +955,7 @@
   .tier-chip { position: absolute; transform: translate(-50%,-50%); font-size: 11px; padding: 3px 5px; border: 1px dashed #84734e; border-radius: 4px; background: #fff5dc; max-width: 150px; text-align: center; }
   /* A lamp on the Lamps layer: its icon on a small light disc, so it reads on any ground; dimming, paler. */
   .lamp-mark { position: absolute; transform: translate(-50%,-50%); display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: rgba(255, 245, 220, 0.85); box-shadow: 0 0 0 1px #84734e; }
+  .quest-mark { position: absolute; transform: translate(-50%,-50%); display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: #ffd66b; color: #4a3220; font-weight: 700; font-size: 13px; box-shadow: 0 0 0 2px #4a3220, 0 0 8px 2px rgba(255, 214, 107, 0.8); }
   .lamp-mark.dimming { opacity: 0.6; filter: saturate(0.4); box-shadow: 0 0 0 1px #c08a2a; }
   .tier-chip.amber { background: #ffe4a1; border-style: solid; }
   .sr {
