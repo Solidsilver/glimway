@@ -70,7 +70,8 @@ worth thinking about; **(later)** means parked on purpose.
     fishes slowly.
   - **A water can be fished out** for a while, with a small "a fish got in here somehow" chance.
   - It's all deterministic and server-checkable, like gathering.
-- **More variety beyond the Tangle, in endless Wilds** (agreed 2026-10-19, no release yet; needs a
+- **More variety beyond the Tangle, in endless Wilds** (agreed 2026-10-19; moved to 0.14 on 2026-10-20,
+  see [roadmap.md](roadmap.md) and [planning/wide-world/](planning/wide-world/brief.md); needs a
   brainstorm): mountains, lakes and rivers, and later caves, other biomes and other creatures, so the
   world feels big and full. Pair it with **endless Wilds**: the generator already makes any chunk
   from the seed, the epoch and (cx, cy) alone, so the limits are rules and costs. What it takes:

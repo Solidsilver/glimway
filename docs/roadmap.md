@@ -1,6 +1,7 @@
 # Roadmap
 
-*Settled 2026-10-17, at dev `fe0aab12` (0.11.2).* This is the one place the release order lives.
+*Settled 2026-10-17, at dev `fe0aab12` (0.11.2); reordered 2026-10-20 after 0.13.0 (the wide world
+comes first, everything after it moves down one).* This is the one place the release order lives.
 `CHANGELOG.md` records what shipped; the design docs under `design/` hold the details each
 release builds from. When this doc and a design doc disagree about order or scope, this doc wins.
 
@@ -24,7 +25,8 @@ Land-keeping (holds, lamps, oil) is the engine that makes marks persist. It isn'
 ## Rules every release keeps
 
 1. **One player-facing promise per release**, with a short owner playtest as the acceptance.
-2. **Backbone before content.** 0.12–0.14 build the engine; story and new places follow.
+2. **Backbone before content.** 0.12–0.15 build the engine (0.14 the shape of the world); story and
+   new places follow.
 3. **World impermanence, never item loss.** Land can return to the Wilds; nothing a player placed
    or made is ever destroyed. Lapsed claims pack into a recovery crate at Pell's office.
 4. **Upkeep is judged once a week, at the turning.** No ticking clock, calendar or active-time.
@@ -32,8 +34,8 @@ Land-keeping (holds, lamps, oil) is the engine that makes marks persist. It isn'
    always free. Habitica paces the big spends and is reflected modestly, never graded.
 6. **Habitica stays behind its seam.** Review rule from now on: no new Habitica call outside the
    `habitica` packages. A standalone edition (one world, two editions: economy, hero and art
-   swapped) waits until the 0.14–0.16 loops are proven.
-7. **Clean breaks end at the 0.14 contract freeze.** Until then migrations stay cheap. After it,
+   swapped) waits until the 0.14–0.17 loops are proven.
+7. **Clean breaks end at the 0.15 contract freeze.** Until then migrations stay cheap. After it,
    persistent world schemas, chunk keys and the generator version are frozen: a player's
    creations and the shape of the land survive upgrades.
 8. **Felt debt rides inside feature releases.** Backups, flaky tests and performance hitches ship
@@ -82,7 +84,29 @@ way-lamps in the Wilds, with the map showing what is held, common and turning.
 - The Keeper's hand and naming from parts (`design/lamps.md`, rewritten).
 - The map shows the three tiers (`design/world-map.md`).
 
-### 0.14 Hearths, station chains and market stalls (backbone complete, contract freeze)
+### 0.14 The wide world: endless Wilds, mountains and caves (agreed 2026-10-20)
+
+**Promise:** walk as far as you like in any direction, climb mountains and go down into caves,
+all without a loading door.
+
+Owner's calls (2026-10-20), made so the shape of the world is settled before the freeze:
+
+- **Endless in every direction.** The Whitequiet's closing edge goes; a far world border (as in
+  Minecraft) sits before the maths breaks down. What that means for canon §2.4 is part of the
+  brainstorm.
+- **Mountains to climb and caves to explore, seamless.** Real surface levels appeal; the must-have
+  is climbing a mountain and walking into a cave or a large opening below ground with no
+  transition. Looks to try: a cave fades everything around you to black; a mountain fades the land
+  below to fog or sky. The height stays sparse (see [ideas.md](ideas.md)).
+- **New biomes**, iterated on and refined over several rounds. An emptier world is fine for now:
+  later content releases add points of interest and hand-made places.
+- The owner wants to iterate on world generation itself, so a fast way to see what the generator
+  makes is part of the work.
+
+Scope and slicing come from a brainstorm and a height-and-caves spike
+([planning/wide-world/](planning/wide-world/brief.md)).
+
+### 0.15 Hearths, station chains and market stalls (backbone complete, contract freeze)
 
 **Promise:** furnish and build your own cottage and garden from pieces you made, and sell them.
 
@@ -99,7 +123,7 @@ way-lamps in the Wilds, with the map showing what is held, common and turning.
 - Rides along: per-chunk gathering cost.
 - **Contract freeze.** Clean breaks end here.
 
-### 0.15 Chapter 2: Dorrit's span and the first expedition
+### 0.16 Chapter 2: Dorrit's span and the first expedition
 
 **Promise:** rebuild the span together, follow the story, and beat the first shared boss.
 
@@ -113,9 +137,12 @@ way-lamps in the Wilds, with the map showing what is held, common and turning.
   Dorrit's: it steps with the hill. The stakes are Orrin's, Ada's and Mara's.
 - The owner's lore pass is done ([`lore/canon.md`](lore/canon.md), 2026-10-19).
 
-### 0.16 Lake country: kilns, reeds and wild waters
+### 0.17 Lake country: kilns, reeds and wild waters
 
 **Promise:** a complete new place: shores to fish, clay to fire, and shallow caves to explore.
+
+*2026-10-20:* lake generation and the first caves may arrive with 0.14's biomes and caves; what
+stays here (fishing, the kiln, delves) is settled after the 0.14 brainstorm.
 
 - Lake country generation on the lasting landform; wild fishing (`design/fishing.md`); Aldo's kiln
   with pottery and building tiles (`design/world.md`).
@@ -124,14 +151,15 @@ way-lamps in the Wilds, with the map showing what is held, common and turning.
 
 ### After that
 
-Drop-in outposts (Brackenwood, Ashwatch), more delves, endless Wilds with new biomes, terrain and
-creatures (agreed 2026-10-19, see [ideas.md](ideas.md)), the Habitica mirror (streaks and
+Drop-in outposts (Brackenwood, Ashwatch), more delves, more biomes, terrain and creatures on the
+wide world (0.14), points of interest and hand-made places out in it, the Habitica mirror (streaks and
 achievements shown in the world), a standalone edition, and the ideas in [ideas.md](ideas.md).
 
 ## Parked or cut (2026-10-17)
 
 - **Cut:** building tier 3 (painting terrain, excavation); layers above ground (`layers.md`
-  direction C); a sprawling underground; hearth H3 (moving a deed into the Wilds).
+  direction C); a sprawling underground (digging anywhere, caves everywhere; a few large places
+  below ground reached by tunnels are in 0.14); hearth H3 (moving a deed into the Wilds).
 - **Parked:** the Old ways (the level-30 capstone) and class-locked magic; Habitica party goals; the
   weekly wick report; baking (it returns later as a tactile craft, not a button); native clients
   (wrap the web client in Tauri and Capacitor when a standalone edition ships).
