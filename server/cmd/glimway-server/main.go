@@ -60,6 +60,9 @@ func defaultDB() string {
 }
 
 func run(args []string) error {
+	if ok, err := devCommand(args); ok {
+		return err
+	}
 	f := flag.NewFlagSet("glimway-server", flag.ContinueOnError)
 	startClock := devClock(f)
 	configPath := f.String("config", env("CONFIG", ""), "Settings file (TOML; deploy/glimway.example.toml). Flags and GLIMWAY_* variables win over it")

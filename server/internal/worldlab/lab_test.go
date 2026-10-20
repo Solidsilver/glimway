@@ -18,6 +18,10 @@ import (
 
 // The test binary is its own worker, as the server binary is the lab's.
 func TestMain(m *testing.M) {
+	if len(os.Args) > 1 && os.Args[1] == "_nice" {
+		niceWorker()
+		os.Exit(0)
+	}
 	if len(os.Args) > 1 && os.Args[1] == "_worker" {
 		if err := RunWorker(os.Stdin, os.Stdout); err != nil {
 			_, _ = io.WriteString(os.Stderr, err.Error())

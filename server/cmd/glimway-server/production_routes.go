@@ -17,3 +17,6 @@ func devCallerFor(*api.Server, devAccess) devCaller { return nil }
 func devRoutes(*api.Server, devCaller) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler { return h }
 }
+
+// A release build has no hidden commands.
+func devCommand([]string) (bool, error) { return false, nil }

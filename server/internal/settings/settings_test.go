@@ -129,7 +129,7 @@ func TestToolsFollowEnableAndTheAccounts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := s.ToolsFor("anyone"); got != (Tools{Grant: true, Hooks: true, FightFall: true}) {
+	if got := s.ToolsFor("anyone"); got != (Tools{Grant: true, Hooks: true, FightFall: true, WorldLab: true}) {
 		t.Fatal(got)
 	}
 	off := false
@@ -196,7 +196,7 @@ func TestEnvNames(t *testing.T) {
 	for _, f := range Fields() {
 		names = append(names, f.EnvName())
 	}
-	want := []string{"DEV_ENABLE", "DEV_ACCOUNTS", "SERVER_LOGIN_CONCURRENCY", "SERVER_LOGIN_RATE", "SERVER_LOGIN_GLOBAL_RATE", "SERVER_DEV_GRANT", "SERVER_DEV_CLOCK", "SERVER_DEV_FIGHT_FALL", "WEB_DEV_HOOKS"}
+	want := []string{"DEV_ENABLE", "DEV_ACCOUNTS", "SERVER_LOGIN_CONCURRENCY", "SERVER_LOGIN_RATE", "SERVER_LOGIN_GLOBAL_RATE", "SERVER_DEV_GRANT", "SERVER_DEV_CLOCK", "SERVER_DEV_FIGHT_FALL", "SERVER_DEV_WORLD_LAB", "WEB_DEV_HOOKS"}
 	if !reflect.DeepEqual(names, want) {
 		t.Fatal(names)
 	}
