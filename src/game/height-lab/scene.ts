@@ -110,7 +110,7 @@ export class HeightLabScene extends Phaser.Scene {
    * dark over the cave's shape).
    */
   private caveLightView!: LightView
-  private crossfade!: Phaser.GameObjects.RenderTexture
+  private crossfade: Phaser.GameObjects.RenderTexture | null = null
   private friend!: Mover
   private heroLight: LabLook['cave'] = 'lantern'
   private haze!: Phaser.GameObjects.Image
@@ -355,7 +355,7 @@ export class HeightLabScene extends Phaser.Scene {
     this.lightView = new LightView(this, BAND.dark)
     // The cave's own light alone, never shown: multiplied into the crossfade's image (drawLight).
     this.caveLightView = new LightView(this, BAND.dark, 'hl-light-cave')
-    this.crossfade = this.add.renderTexture(0, 0, 8, 8).setOrigin(0).setDepth(BAND.dark + 1).setVisible(false)
+    this.crossfade = null
     this.haze = this.add.image(0, 0, 'hl-haze').setDepth(BAND.haze).setAlpha(0)
     this.irisShape = this.make.graphics({}, false)
     this.irisMask = this.irisShape.createGeometryMask()
@@ -631,7 +631,7 @@ export class HeightLabScene extends Phaser.Scene {
     for (const [id, m] of [['hero', this.hero], ['friend', this.friend]] as const) this.lighting.move(id, m.walker.x, m.walker.y - 10, m.walker.layer, m.thing.z)
     const archInView = this.area.mouths.some((m) => (m.x1 + 1) * T > wv.x && m.x0 * T < wv.right && (m.arch[1] + 1) * T > wv.y && m.arch[0] * T < wv.bottom)
     this.lastIris = iris
-    if (!fade) this.crossfade.setVisible(false)
+    if (!fade) this.crossfade?.setVisible(false)
     if (view <= 0.001 && !archInView) {
       this.lightView.hide()
       this.lighting.stats.uncapped = 0
@@ -669,8 +669,14 @@ export class HeightLabScene extends Phaser.Scene {
     const ry = Math.floor(wv.y)
     const w = Math.ceil(wv.width) + 2
     const h = Math.ceil(wv.height) + 2
+    // Made at the size it needs (resizing one kept its first texture, stretched).
+    if (!this.crossfade || this.crossfade.width < w || this.crossfade.height < h) {
+      const bw = Math.max(w, this.crossfade?.width ?? 0)
+      const bh = Math.max(h, this.crossfade?.height ?? 0)
+      this.crossfade?.destroy()
+      this.crossfade = this.add.renderTexture(0, 0, bw, bh).setOrigin(0).setDepth(BAND.dark + 1)
+    }
     const rt = this.crossfade
-    if (rt.width < w || rt.height < h) rt.resize(Math.max(w, rt.width), Math.max(h, rt.height))
     rt.clear()
     const img = this.caveImage!
     const a = img.alpha
@@ -729,7 +735,7 @@ export class HeightLabScene extends Phaser.Scene {
   } {
     const v = this.view()
     const avg = this.lightMs.reduce((a, b) => a + b, 0) / Math.max(1, this.lightMs.length)
-    return { area: this.built.area, look: this.look, built: this.built, ...v, light: this.lightAtHero(), lightMs: avg, corners: this.corners(), uncapped: this.lighting.stats.uncapped, iris: this.lastIris?.r ?? 0, crossfade: this.crossfade.visible }
+    return { area: this.built.area, look: this.look, built: this.built, ...v, light: this.lightAtHero(), lightMs: avg, corners: this.corners(), uncapped: this.lighting.stats.uncapped, iris: this.lastIris?.r ?? 0, crossfade: !!this.crossfade?.visible }
   }
 
   private updateHud(): void {
