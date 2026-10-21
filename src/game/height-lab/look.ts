@@ -12,8 +12,10 @@ export interface LabLook {
   fog: 'fog' | 'sky' | 'none'
   /** How much a level of difference fades (./scene.ts FOG_PER_LEVEL). */
   fogStrength: 'light' | 'medium' | 'strong'
-  /** Underground, cave floors above and below yours darken with the difference, or stay as they are. */
-  depth: 'darken' | 'none'
+  /** Underground, how much darker levels above and below yours get at most (two levels off and more): 0–0.9, 0 off. */
+  darkness: number
+  /** The cave's floors: as each place is (cut stone in the way in, rough rock deeper), or all cut, or all rough (switching repaints). */
+  caveStyle: 'mixed' | 'built' | 'rough'
   /** Climbing: the camera eases out a little with height. */
   zoom: boolean
   /** Climbing: a soft haze at the screen's edges, stronger the higher you are. */
@@ -29,7 +31,7 @@ export interface LabLook {
 }
 
 const KEY = 'glimway:height-lab-look'
-const DEFAULT: LabLook = { area: 'shoulder', fog: 'fog', fogStrength: 'medium', depth: 'darken', zoom: true, haze: true, cave: 'lantern', skyTiles: 6, crossfade: 3, grid: false }
+const DEFAULT: LabLook = { area: 'shoulder', fog: 'fog', fogStrength: 'medium', darkness: 0.6, caveStyle: 'mixed', zoom: true, haze: true, cave: 'lantern', skyTiles: 6, crossfade: 3, grid: false }
 
 function read(): LabLook {
   try {

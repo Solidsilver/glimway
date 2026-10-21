@@ -16,7 +16,14 @@
  *    a straight line to it stays over clear tiles (the end tile may be the
  *    wall itself, so a wall facing a light is lit). Visibility is per tile,
  *    sampled bilinearly between tile middles: a soft half-tile penumbra.
- *    A level of height difference counts as two tiles of distance.
+ *    A level of height difference counts as two tiles of distance; levels
+ *    are smooth (a ramp's change evenly), and the penalty is worked out
+ *    from the source's height as it is, so a light moving down a ramp
+ *    changes evenly without its shadows being worked out again.
+ *  - Depth: a layer's light can darken with the level difference from the
+ *    viewer's (levels above and below darker, never tinted; fill's depth).
+ *  - A portal mask: tiles (a cave mouth's arch) that always show one
+ *    layer's light, whatever the views' mix (fill's portal).
  */
 
 export interface LightSource {
@@ -48,9 +55,9 @@ export interface TexelRect {
 }
 
 interface Live extends LightSource {
-  /** Per-tile visibility and level penalty (px) over the box, worked out at `atTile`. */
+  /** Per-tile visibility and floor level over the box, worked out at `atTile`. */
   vis: Float32Array
-  pen: Float32Array
+  lev: Float32Array | null
   bx: number
   by: number
   bw: number
@@ -71,6 +78,23 @@ export function falloff(r: number, inner: number, radius: number): number {
 /** Px of distance a level of height difference adds (two tiles). */
 const LEVEL_PX = (tile: number) => 2 * tile
 
+/**
+ * How much darker something `dz` levels above or below the viewer is, 0
+ * (own level) to `cap` (two levels and more): smooth, the same either way.
+ */
+export function depthDark(dz: number, cap: number): number {
+  const d = Math.min(1, Math.abs(dz) / 2)
+  return cap * d * d * (3 - 2 * d)
+}
+
+/** fill's options: darken a layer by level difference from the viewer's; show one layer's light on a portal's tiles. */
+export interface FillOptions {
+  /** The layer that darkens, the viewer's level, the most it darkens (0–1), and how much of it applies (the view's weight). */
+  depth?: { layer: number; z: number; cap: number; weight: number }
+  /** Tiles (1) that show this layer's light at full weight; moving lights of every layer count on them. */
+  portal?: { layer: number; mask: Uint8Array }
+}
+
 export class Lighting {
   readonly w: number
   readonly h: number
@@ -81,7 +105,12 @@ export class Lighting {
   readonly th: number
   private ambient: Float32Array[] = []
   private stops: (Uint8Array | null)[] = []
-  private levels: (Int8Array | null)[] = []
+  private levels: (Float32Array | null)[] = []
+  /** Per layer, texels: the level (bilinear between tile middles) and how much depth darkens there (0–1). */
+  private levelTex: ({ lev: Float32Array; mat: Float32Array } | null)[] = []
+  private material: (Uint8Array | null)[] = []
+  private wBase: Float32Array[] = []
+  private wSrc: Float32Array[] = []
   private baked: (Float32Array | null)[] = []
   private sources = new Map<string, Live>()
   private acc = new Float32Array(0)
@@ -97,6 +126,8 @@ export class Lighting {
       this.ambient.push(new Float32Array(o.w * o.h * 3).fill(1))
       this.stops.push(null)
       this.levels.push(null)
+      this.levelTex.push(null)
+      this.material.push(null)
       this.baked.push(null)
     }
   }
@@ -115,9 +146,15 @@ export class Lighting {
     this.rebuild(layer)
   }
 
-  /** Each tile's floor level, so a light on another floor reaches it weaker. */
-  setLevels(layer: number, levels: Int8Array): void {
+  /**
+   * Each tile's floor level (smooth), so a light on another floor reaches it
+   * weaker and depth can darken it; `material`: where depth darkens (1),
+   * e.g. not the open air seen out of a mouth. Everywhere if not given.
+   */
+  setLevels(layer: number, levels: Float32Array, material?: Uint8Array): void {
     this.levels[layer] = levels
+    this.material[layer] = material ?? null
+    this.levelTex[layer] = null
     this.rebuild(layer)
   }
 
@@ -125,12 +162,12 @@ export class Lighting {
 
   add(src: LightSource): void {
     this.remove(src.id)
-    const live = this.visibility({ ...src, vis: new Float32Array(0), pen: new Float32Array(0), bx: 0, by: 0, bw: 0, bh: 0, atTile: -1 })
+    const live = this.visibility({ ...src, vis: new Float32Array(0), lev: null, bx: 0, by: 0, bw: 0, bh: 0, atTile: -1 })
     this.sources.set(src.id, live)
     if (!live.moving && this.baked[live.layer]) this.stamp(this.baked[live.layer]!, null, live, 1)
   }
 
-  /** A moving source's new place (its shadows are worked out again when it crosses a tile). */
+  /** A source's new place (its shadows are worked out again when it crosses a tile; a new height only changes its reach). */
   move(id: string, x: number, y: number, layer?: number, z?: number): void {
     const s = this.sources.get(id)
     if (!s) return
@@ -142,10 +179,7 @@ export class Lighting {
       s.layer = layer
       s.atTile = -1
     }
-    if (z !== undefined && z !== s.z) {
-      s.z = z
-      s.atTile = -1
-    }
+    if (z !== undefined) s.z = z
     this.visibility(s)
     if (still && this.baked[s.layer]) this.stamp(this.baked[s.layer]!, null, s, 1)
   }
@@ -204,30 +238,72 @@ export class Lighting {
   /**
    * The frame's light over a box of texels into RGBA bytes (alpha 255):
    * each view's layer, weighted (the cave's view coming in over the
-   * surface's is two views whose weights add to 1).
+   * surface's is two views whose weights add to 1), a layer darkened by
+   * depth, a portal's tiles in their layer's light (FillOptions).
    */
-  fill(rect: TexelRect, out: Uint8ClampedArray, views: readonly { layer: number; weight: number }[]): void {
-    const n = rect.w * rect.h * 3
+  fill(rect: TexelRect, out: Uint8ClampedArray, views: readonly { layer: number; weight: number }[], opts: FillOptions = {}): void {
+    const nt = rect.w * rect.h
+    const n = nt * 3
     if (this.acc.length < n) this.acc = new Float32Array(n)
     const acc = this.acc
     acc.fill(0, 0, n)
-    for (const v of views) {
-      if (v.weight <= 0) continue
+    const { depth, portal } = opts
+    const per = this.tile / this.res
+    views.forEach((v, vi) => {
+      // Each texel's weight for this view's ambient and still lights, and for its moving lights.
+      if (!this.wBase[vi] || this.wBase[vi]!.length < nt) {
+        this.wBase[vi] = new Float32Array(nt)
+        this.wSrc[vi] = new Float32Array(nt)
+      }
+      const wb = this.wBase[vi]!
+      const ws = this.wSrc[vi]!
+      wb.fill(v.weight, 0, nt)
+      ws.fill(v.weight, 0, nt)
+      if (portal) {
+        // Tile by tile over the box: a masked tile's texels.
+        const tx0 = Math.max(0, Math.floor(rect.x0 / per))
+        const ty0 = Math.max(0, Math.floor(rect.y0 / per))
+        const tx1 = Math.min(this.w - 1, Math.floor((rect.x0 + rect.w - 1) / per))
+        const ty1 = Math.min(this.h - 1, Math.floor((rect.y0 + rect.h - 1) / per))
+        for (let ty = ty0; ty <= ty1; ty++)
+          for (let tx = tx0; tx <= tx1; tx++) {
+            if (!portal.mask[ty * this.w + tx]) continue
+            for (let y = Math.max(0, ty * per - rect.y0); y < Math.min(rect.h, (ty + 1) * per - rect.y0); y++)
+              for (let x = Math.max(0, tx * per - rect.x0); x < Math.min(rect.w, (tx + 1) * per - rect.x0); x++) {
+                wb[y * rect.w + x] = v.layer === portal.layer ? 1 : 0
+                ws[y * rect.w + x] = 1
+              }
+          }
+      }
+      if (depth && depth.layer === v.layer && depth.weight > 0 && depth.cap > 0 && this.levels[v.layer]) {
+        const { lev, mat } = this.levelMap(v.layer)
+        for (let y = 0; y < rect.h; y++) {
+          const ty = Math.min(this.th - 1, Math.max(0, rect.y0 + y))
+          for (let x = 0; x < rect.w; x++) {
+            const t = ty * this.tw + Math.min(this.tw - 1, Math.max(0, rect.x0 + x))
+            const k = 1 - depth.weight * mat[t]! * depthDark(lev[t]! - depth.z, depth.cap)
+            wb[y * rect.w + x] *= k
+            ws[y * rect.w + x] *= k
+          }
+        }
+      }
       const map = this.bake(v.layer)
       for (let y = 0; y < rect.h; y++) {
         const ty = Math.min(this.th - 1, Math.max(0, rect.y0 + y))
         for (let x = 0; x < rect.w; x++) {
+          const k = wb[y * rect.w + x]!
+          if (k <= 0) continue
           const tx = Math.min(this.tw - 1, Math.max(0, rect.x0 + x))
           const s = (ty * this.tw + tx) * 3
           const d = (y * rect.w + x) * 3
-          acc[d] += map[s]! * v.weight
-          acc[d + 1] += map[s + 1]! * v.weight
-          acc[d + 2] += map[s + 2]! * v.weight
+          acc[d] += map[s]! * k
+          acc[d + 1] += map[s + 1]! * k
+          acc[d + 2] += map[s + 2]! * k
         }
       }
-      for (const s of this.sources.values()) if (s.moving && s.layer === v.layer) this.stamp(acc, rect, s, v.weight)
-    }
-    for (let i = 0, j = 0; i < rect.w * rect.h; i++, j += 3) {
+      for (const s of this.sources.values()) if (s.moving && s.layer === v.layer) this.stamp(acc, rect, s, 1, ws)
+    })
+    for (let i = 0, j = 0; i < nt; i++, j += 3) {
       out[i * 4] = Math.round(clamp01(acc[j]!) * 255)
       out[i * 4 + 1] = Math.round(clamp01(acc[j + 1]!) * 255)
       out[i * 4 + 2] = Math.round(clamp01(acc[j + 2]!) * 255)
@@ -271,6 +347,32 @@ export class Lighting {
     return map
   }
 
+  /** A layer's level and where depth darkens it, as texels (bilinear between tile middles; worked out once). */
+  private levelMap(layer: number): { lev: Float32Array; mat: Float32Array } {
+    const have = this.levelTex[layer]
+    if (have) return have
+    const levels = this.levels[layer]!
+    const material = this.material[layer]
+    const lev = new Float32Array(this.tw * this.th)
+    const mat = new Float32Array(this.tw * this.th)
+    const per = this.tile / this.res
+    const at = (f: ArrayLike<number>, tx: number, ty: number) => f[Math.min(this.h - 1, Math.max(0, ty)) * this.w + Math.min(this.w - 1, Math.max(0, tx))]!
+    for (let y = 0; y < this.th; y++)
+      for (let x = 0; x < this.tw; x++) {
+        const gx = (x + 0.5) / per - 0.5
+        const gy = (y + 0.5) / per - 0.5
+        const x0 = Math.floor(gx)
+        const y0 = Math.floor(gy)
+        const fx = gx - x0
+        const fy = gy - y0
+        const bil = (f: ArrayLike<number>) => (at(f, x0, y0) * (1 - fx) + at(f, x0 + 1, y0) * fx) * (1 - fy) + (at(f, x0, y0 + 1) * (1 - fx) + at(f, x0 + 1, y0 + 1) * fx) * fy
+        lev[y * this.tw + x] = bil(levels)
+        mat[y * this.tw + x] = material ? bil(material) : 1
+      }
+    this.levelTex[layer] = { lev, mat }
+    return this.levelTex[layer]!
+  }
+
   /** How much of a source reaches a world point: falloff by distance (plus levels), times visibility. */
   private reach(s: Live, x: number, y: number): number {
     const r = Math.hypot(x - s.x, y - s.y)
@@ -286,11 +388,19 @@ export class Lighting {
     const bil = (f: Float32Array) => (f[i(x0, y0)]! * (1 - fx) + f[i(x0 + 1, y0)]! * fx) * (1 - fy) + (f[i(x0, y0 + 1)]! * (1 - fx) + f[i(x0 + 1, y0 + 1)]! * fx) * fy
     const vis = bil(s.vis)
     if (vis <= 0) return 0
-    return s.intensity * vis * falloff(r + bil(s.pen), s.inner, s.radius)
+    let pen = 0
+    if (s.lev) {
+      // The level penalty from the source's height now (it moves smoothly on a ramp).
+      const lev = s.lev
+      const z = s.z
+      const p = (j: number) => Math.abs(lev[j]! - z)
+      pen = ((p(i(x0, y0)) * (1 - fx) + p(i(x0 + 1, y0)) * fx) * (1 - fy) + (p(i(x0, y0 + 1)) * (1 - fx) + p(i(x0 + 1, y0 + 1)) * fx) * fy) * LEVEL_PX(this.tile)
+    }
+    return s.intensity * vis * falloff(r + pen, s.inner, s.radius)
   }
 
-  /** Add (sign 1) or take away (-1) a source's light over its box, into a texel map (whole, or a rect of it). */
-  private stamp(map: Float32Array, rect: TexelRect | null, s: Live, sign: number): void {
+  /** Add (sign 1) or take away (-1) a source's light over its box, into a texel map (whole, or a rect of it, each texel weighted by `wts`). */
+  private stamp(map: Float32Array, rect: TexelRect | null, s: Live, sign: number, wts?: Float32Array): void {
     const R = this.res
     const ox = rect ? rect.x0 : 0
     const oy = rect ? rect.y0 : 0
@@ -305,9 +415,12 @@ export class Lighting {
     const cb = ((s.color & 255) / 255) * sign
     for (let ty = y0; ty <= y1; ty++)
       for (let tx = x0; tx <= x1; tx++) {
-        const k = this.reach(s, (tx + 0.5) * R, (ty + 0.5) * R)
+        const t = (ty - oy) * mw + (tx - ox)
+        const wt = wts ? wts[t]! : 1
+        if (wt <= 0) continue
+        const k = this.reach(s, (tx + 0.5) * R, (ty + 0.5) * R) * wt
         if (k <= 0) continue
-        const d = ((ty - oy) * mw + (tx - ox)) * 3
+        const d = t * 3
         map[d] += k * cr
         map[d + 1] += k * cg
         map[d + 2] += k * cb
@@ -327,16 +440,16 @@ export class Lighting {
     s.by = sty - reach
     s.bw = s.bh = reach * 2 + 1
     s.vis = new Float32Array(s.bw * s.bh)
-    s.pen = new Float32Array(s.bw * s.bh)
     const stops = this.stops[s.layer]
     const levels = this.levels[s.layer]
+    s.lev = levels ? new Float32Array(s.bw * s.bh).fill(s.z) : null
     for (let by = 0; by < s.bh; by++)
       for (let bx = 0; bx < s.bw; bx++) {
         const tx = s.bx + bx
         const ty = s.by + by
         const j = by * s.bw + bx
         if (tx < 0 || ty < 0 || tx >= this.w || ty >= this.h) continue
-        if (levels) s.pen[j] = Math.abs(levels[ty * this.w + tx]! - s.z) * LEVEL_PX(T)
+        if (s.lev) s.lev[j] = levels![ty * this.w + tx]!
         s.vis[j] = !stops || sightLine(stops, this.w, stx, sty, tx, ty) ? 1 : 0
       }
     return s

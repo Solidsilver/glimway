@@ -50,7 +50,7 @@ import {
   type Node,
   type Stack
 } from './levels.ts'
-import { DAYLIGHT, LIGHT_RES, caveAmbient, caveLevels, caveStops, crystalLight, daylight, openAir, type Glow } from './light.ts'
+import { DAYLIGHT, LIGHT_RES, caveAmbient, caveLevels, caveStops, crystalLight, daylight, openAir, sunnyFaceRock, type Glow } from './light.ts'
 import { Lighting } from './lighting.ts'
 
 export { CAVE, SURFACE }
@@ -58,8 +58,8 @@ export { CAVE, SURFACE }
 export const LAB_W = 72
 export const LAB_H = 72
 
-/** Ground palette: indexes into this are a layer's `ground`. Content ground ids, plus the cave's own. */
-export const GROUNDS = ['meadow', 'moss', 'trodden', 'path', 'water', 'bank', 'woods', 'cave-floor', 'cave-rock'] as const
+/** Ground palette: indexes into this are a layer's `ground`. Content ground ids, plus the cave's own (its floor cut stone or rough rock: ./art.ts paintCave). */
+export const GROUNDS = ['meadow', 'moss', 'trodden', 'path', 'water', 'bank', 'woods', 'cave-floor', 'cave-rock', 'cave-rough'] as const
 export type GroundId = (typeof GROUNDS)[number]
 export const G = Object.fromEntries(GROUNDS.map((g, i) => [g, i])) as Record<GroundId, number>
 
@@ -110,18 +110,31 @@ export interface LabArea {
   /** Open air per tile, 0–1: the land seen out of the mouths (./light.ts openAir). */
   air: Float32Array
   stops: Uint8Array
-  levels: Int8Array
+  /** The cave's floor level per tile, smooth along ramps (./light.ts caveLevels). */
+  levels: Float32Array
+  /** The mouths' arch tiles (1): where the cave's floor shows from outside, in the cave's light. */
+  arches: Uint8Array
 }
 
 /** An area as authored: everything but what's worked out from it (light). */
-export type AreaPlan = Omit<LabArea, 'walk' | 'ambient' | 'air' | 'stops' | 'levels'>
+export type AreaPlan = Omit<LabArea, 'walk' | 'ambient' | 'air' | 'stops' | 'levels' | 'arches'>
 
 /** Work out an authored area's light: daylight from its mouths, open air, what stops light. */
 export function lightArea(plan: AreaPlan, opts: AreaOptions): LabArea {
   const walk = daylight(plan.stack, opts.skyTiles)
   const cave = plan.stack.layers[CAVE]!
   const air = openAir(plan.stack, plan.top)
-  return { ...plan, walk, ambient: caveAmbient(plan.stack, air), air, stops: caveStops(cave), levels: caveLevels(cave) }
+  const arches = new Uint8Array(plan.stack.w * plan.stack.h)
+  for (const m of plan.mouths) for (let tx = m.x0; tx <= m.x1; tx++) for (const ty of m.arch) arches[ty * plan.stack.w + tx] = 1
+  return { ...plan, walk, ambient: caveAmbient(plan.stack, air), air, stops: caveStops(cave), levels: caveLevels(cave), arches }
+}
+
+/** Where depth darkens the cave (1): its own floor, drops, water and rock, not the open air or the sunny face round an arch. */
+export function caveMaterial(area: LabArea): Uint8Array {
+  const cave = area.stack.layers[CAVE]!
+  const out = new Uint8Array(area.stack.w * area.stack.h)
+  for (let i = 0; i < out.length; i++) out[i] = cave.kind[i] !== KIND.none && !sunnyFaceRock(area.stack, area.air, i) ? 1 : 0
+  return out
 }
 
 /** The area's lighting (./lighting.ts): daylight on the surface; the cave's ambient, rock and crystals below. */
@@ -133,7 +146,7 @@ export function areaLighting(area: LabArea): Lighting {
   lights.setAmbient(SURFACE, day)
   lights.setAmbient(CAVE, area.ambient)
   lights.setOccluders(CAVE, area.stops)
-  lights.setLevels(CAVE, area.levels)
+  lights.setLevels(CAVE, area.levels, caveMaterial(area))
   area.glows.forEach((g, i) => lights.add(crystalLight(g, i, TILE_PX)))
   return lights
 }
@@ -326,14 +339,15 @@ export function buildLabArea(opts: AreaOptions = DEFAULT_AREA_OPTIONS): LabArea 
   // The cave layer: the first tunnel (level 0 at the arch, down to -1),
   // the chamber, the second tunnel climbing east under the shoulder to the
   // second mouth (level 1).
-  const floor = (z: number) => (tx: number, ty: number) => {
+  const floor = (z: number, ground: number = G['cave-floor']) => (tx: number, ty: number) => {
     setFlat(cave, tx, ty, z)
-    cave.ground[idx(cave, tx, ty)] = G['cave-floor']
+    cave.ground[idx(cave, tx, ty)] = ground
   }
   rect(floor(0), 30, 38, 31, 39)
   ramp(cave, 30, 33, 31, 37, S, -1, 0, G['cave-floor'])
   rect(floor(-1), 30, 29, 31, 32)
-  ellipse(floor(-1), 32, 24, 10, 7)
+  // The chamber is natural rock; the tunnels are cut.
+  ellipse(floor(-1, G['cave-rough']), 32, 24, 10, 7)
   // Pillars and a still pool in the chamber.
   for (const [tx, ty] of [[27, 22], [28, 22], [27, 23], [36, 26], [37, 26], [36, 27], [33, 19]] as const) {
     setClosed(cave, tx, ty, KIND.rock)

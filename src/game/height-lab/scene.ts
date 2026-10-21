@@ -8,9 +8,11 @@
  *
  * Drawing, back to front, in depth bands:
  *   - the surface's ground, one image a level;
- *   - the cave's ground, one image a floor level: just above the surface's
- *     when you're outside (and hidden), above all the surface's things when
- *     you're inside;
+ *   - the cave's ground, one opaque image: just above the surface's when
+ *     you're outside (and hidden), above all the surface's things when
+ *     you're inside, fading in over the first steps in; under it, the
+ *     floor under each mouth's arch, always shown (from outside you see
+ *     into the mouth, in the cave's light);
  *   - things (faces, props, people), y-sorted within their layer's band.
  *     The layer you're on draws above the other one, so someone just
  *     inside a mouth shows in the arch but behind its lintel;
@@ -19,11 +21,13 @@
  *     shadowed by rock (LightView, below); then the crystals themselves
  *     (lights, so not darkened), then the climbing haze.
  *
- * Fog is by level difference, both ways: the level you stand on is clear,
- * levels above and below fade toward the fog (on the surface) or the dark
- * (underground) with their distance from yours. Ground images fade by
- * alpha toward the camera's background (the fog colour); each thing has a
- * fog twin, the same image filled with the fog colour on top of it.
+ * On the surface, fog is by level difference, both ways: the level you
+ * stand on is clear, levels above and below fade toward the fog with their
+ * distance from yours. Ground images fade by alpha toward the camera's
+ * background (the fog colour); each thing has a fog twin, the same image
+ * filled with the fog colour on top of it. Underground, levels above and
+ * below are darker, never tinted and never see-through: the light does it
+ * (./lighting.ts fill's depth), so people on other levels darken too.
  */
 import Phaser from 'phaser'
 import { bus, EV } from '../events'
@@ -38,7 +42,7 @@ import { buildArea } from './areas'
 import { FACES_KEY, FACE_TINT, drawFaces, drawGrid, drawOverlays, facePart, paintCave, paintSurface } from './art'
 import { KIND, TILE_PX, findPath, move, sample, standTile, zAt, type Node, type Walker } from './levels'
 import { FRIEND_LIGHT, HERO_LIGHT, LIGHT_RES, caveView } from './light'
-import type { Lighting } from './lighting'
+import type { FillOptions, Lighting } from './lighting'
 import { fogFor, labLook, onLabLook, setLabLook, type LabLook } from './look'
 
 const T = TILE_PX
@@ -81,11 +85,15 @@ interface Mover {
 export class HeightLabScene extends Phaser.Scene {
   private area!: LabArea
   private look: LabLook = labLook()
+  /** What this scene was built with (the switches that rebuild it), for the screenshot spec. */
+  private built: Pick<LabLook, 'area' | 'skyTiles' | 'caveStyle'> = { area: 'shoulder', skyTiles: 6, caveStyle: 'mixed' }
   private things: Thing[] = []
   private movers: Mover[] = []
   private hero!: Mover
   private levelImages: { img: Phaser.GameObjects.Image; level: number }[] = []
-  private caveImages: { img: Phaser.GameObjects.Image; level: number }[] = []
+  private caveImage: Phaser.GameObjects.Image | null = null
+  /** The floor under each mouth's arch: always shown, so you see into a mouth from outside. */
+  private mouthImages: Phaser.GameObjects.Image[] = []
   private grids: Phaser.GameObjects.Graphics[] = []
   /** The area's light, and the image that shows it over the view. */
   private lighting!: Lighting
@@ -116,12 +124,14 @@ export class HeightLabScene extends Phaser.Scene {
     this.things = []
     this.movers = []
     this.levelImages = []
-    this.caveImages = []
+    this.caveImage = null
+    this.mouthImages = []
     this.grids = []
     this.stillKey = ''
     this.updateMs = []
     this.lightMs = []
     this.look = labLook()
+    this.built = { area: this.look.area, skyTiles: this.look.skyTiles, caveStyle: this.look.caveStyle }
     const endBuild = perfSpan('lab:build')
     this.area = buildArea(this.look.area, { skyTiles: this.look.skyTiles })
     drawFaces(this)
@@ -151,7 +161,7 @@ export class HeightLabScene extends Phaser.Scene {
 
     let restarting = false
     const stopLook = onLabLook((l) => {
-      const rebuild = l.area !== this.look.area || l.skyTiles !== this.look.skyTiles
+      const rebuild = l.area !== this.look.area || l.skyTiles !== this.look.skyTiles || l.caveStyle !== this.look.caveStyle
       this.look = l
       this.stillKey = ''
       if (rebuild && !restarting) {
@@ -240,7 +250,9 @@ export class HeightLabScene extends Phaser.Scene {
 
   private buildCave(): void {
     const end = perfSpan('lab:paint-cave')
-    for (const ci of paintCave(this, this.area)) this.caveImages.push({ img: this.add.image(ci.x, ci.y, ci.key).setOrigin(0).setAlpha(0), level: ci.level })
+    const ci = paintCave(this, this.area, this.look.caveStyle)
+    this.caveImage = this.add.image(ci.cave.x, ci.cave.y, ci.cave.key).setOrigin(0).setAlpha(0)
+    for (const m of ci.mouths) this.mouthImages.push(this.add.image(m.x, m.y, m.key).setOrigin(0))
     end()
     for (const g of this.area.glows) {
       const x = g.tx * T + 8
@@ -457,10 +469,6 @@ export class HeightLabScene extends Phaser.Scene {
     return this.look.fog === 'none' ? 0 : fogFor(z - viewZ, this.look.fogStrength)
   }
 
-  private depthOf(viewZ: number, z: number): number {
-    return this.look.depth === 'none' ? 0 : fogFor(z - viewZ, this.look.fogStrength)
-  }
-
   private applyLook(dt: number): void {
     const v = this.view()
     const look = this.look
@@ -470,18 +478,22 @@ export class HeightLabScene extends Phaser.Scene {
     // The background is what faded land fades to: fog outside, dark below.
     const bg = Phaser.Display.Color.Interpolate.ColorWithColor(Phaser.Display.Color.ValueToColor(fogColor), Phaser.Display.Color.ValueToColor(CAVE_DARK), 100, Math.round(v.cave * 100))
     cam.setBackgroundColor(Phaser.Display.Color.GetColor(bg.r, bg.g, bg.b))
-    // The surface fades as daylight goes (the crossfade the owner liked);
-    // the cave's floors come in over the first steps inside.
-    // The surface stays drawn: in the cave's view the light decides what
-    // of it shows (open air lit, the hill over you dark).
+    // The cave's floors come in over the first steps inside (the
+    // crossfade the owner liked). The surface stays drawn: in the cave's
+    // view the light decides what of it shows (open air lit, the hill over
+    // you dark). The floor under each arch is always there, under the
+    // cave's image and under the surface's things (someone standing in
+    // front of a mouth stays in front of it), so it doesn't change as you
+    // cross.
     for (const li of this.levelImages) li.img.setAlpha(inCave ? 1 : 1 - this.fogOf(v.z, li.level))
-    for (const ci of this.caveImages)
-      ci.img.setDepth((inCave ? BAND.caveGroundIn : BAND.caveGroundOut) + ci.level).setAlpha(inCave ? v.cave * (1 - this.depthOf(v.z, ci.level)) : 0)
+    const caveBand = inCave ? BAND.caveGroundIn : BAND.caveGroundOut
+    this.caveImage!.setDepth(caveBand).setAlpha(inCave ? v.cave : 0).setVisible(inCave && v.cave > 0.001)
+    for (const m of this.mouthImages) m.setDepth(BAND.caveGroundOut - 1)
     this.grids[0]!.setVisible(look.grid).setDepth(BAND.gridOut)
     this.grids[1]!.setVisible(look.grid && inCave).setDepth(BAND.gridIn)
 
     // Things: moving ones every frame, still ones when the view has moved.
-    const key = `${v.layer}:${v.sky.toFixed(2)}:${v.cave.toFixed(2)}:${v.z.toFixed(2)}:${look.fog}:${look.fogStrength}:${look.depth}`
+    const key = `${v.layer}:${v.sky.toFixed(2)}:${v.cave.toFixed(2)}:${v.z.toFixed(2)}:${look.fog}:${look.fogStrength}`
     const still = key !== this.stillKey
     this.stillKey = key
     const moving = new Set(this.movers.map((m) => m.thing))
@@ -493,8 +505,8 @@ export class HeightLabScene extends Phaser.Scene {
       for (const p of t.parts) p.o.setDepth(band + t.y + p.dz).setAlpha(vis * p.a).setVisible(vis * p.a > 0.01)
       if (t.twin) {
         // Surface things fade toward the fog seen from the surface; cave
-        // things toward the dark seen from the cave; across layers, not at all.
-        const fog = !onCave && !inCave ? this.fogOf(v.z, t.z) : onCave && inCave ? this.depthOf(v.z, t.z) : 0
+        // things darken with the light (not here); across layers, not at all.
+        const fog = !onCave && !inCave ? this.fogOf(v.z, t.z) : 0
         t.twin
           .setDepth(band + t.y + t.parts[0]!.dz + 0.5)
           .setTintFill(onCave ? CAVE_DARK : fogColor)
@@ -504,7 +516,7 @@ export class HeightLabScene extends Phaser.Scene {
     }
     const hx = this.hero.walker.x
     const wv = cam.worldView
-    this.drawLight(v.cave, wv)
+    this.drawLight(v.cave, v.z, wv)
 
     // Climbing: haze at the screen's edges, and the camera eases out.
     const high = inCave ? 0 : Math.max(0, Math.min(1, v.z / 2))
@@ -527,23 +539,31 @@ export class HeightLabScene extends Phaser.Scene {
   /**
    * The light over the view: the moving lights moved, then the cave's
    * light (weight: how far into the cave's view the hero is) over the
-   * surface's. On the surface in daylight there's nothing to draw.
+   * surface's, darkened by depth from the hero's level, and on the arches
+   * the cave's light whatever the view (what you see into a mouth). On the
+   * surface in daylight, with no mouth on screen, there's nothing to draw.
    */
-  private drawLight(view: number, wv: Phaser.Geom.Rectangle): void {
+  private drawLight(view: number, z: number, wv: Phaser.Geom.Rectangle): void {
     const t0 = performance.now()
     if (this.look.cave !== this.heroLight) {
       this.heroLight = this.look.cave
       this.lighting.set('hero', HERO_LIGHT[this.look.cave])
     }
-    for (const [id, m] of [['hero', this.hero], ['friend', this.friend]] as const) this.lighting.move(id, m.walker.x, m.walker.y - 10, m.walker.layer, Math.round(m.thing.z))
-    if (view <= 0.001) {
+    for (const [id, m] of [['hero', this.hero], ['friend', this.friend]] as const) this.lighting.move(id, m.walker.x, m.walker.y - 10, m.walker.layer, m.thing.z)
+    const archInView = this.area.mouths.some((m) => (m.x1 + 1) * T > wv.x && m.x0 * T < wv.right && (m.arch[1] + 1) * T > wv.y && m.arch[0] * T < wv.bottom)
+    if (view <= 0.001 && !archInView) {
       this.lightView.hide()
       return
     }
-    this.lightView.draw(this.lighting, wv, [
-      { layer: CAVE, weight: view },
-      { layer: SURFACE, weight: 1 - view }
-    ])
+    this.lightView.draw(
+      this.lighting,
+      wv,
+      [
+        { layer: CAVE, weight: view },
+        { layer: SURFACE, weight: 1 - view }
+      ],
+      { depth: { layer: CAVE, z, cap: this.look.darkness, weight: view }, portal: { layer: CAVE, mask: this.area.arches } }
+    )
     this.lightMs.push(performance.now() - t0)
     if (this.lightMs.length > 120) this.lightMs.shift()
   }
@@ -567,10 +587,10 @@ export class HeightLabScene extends Phaser.Scene {
   }
 
   /** The lab's state, for the screenshot spec. */
-  state(): { area: string; look: LabLook; layer: number; z: number; sky: number; cave: number; light: number; lightMs: number } {
+  state(): { area: string; look: LabLook; built: Pick<LabLook, 'area' | 'skyTiles' | 'caveStyle'>; layer: number; z: number; sky: number; cave: number; light: number; lightMs: number } {
     const v = this.view()
     const avg = this.lightMs.reduce((a, b) => a + b, 0) / Math.max(1, this.lightMs.length)
-    return { area: this.look.area, look: this.look, ...v, light: this.lightAtHero(), lightMs: avg }
+    return { area: this.built.area, look: this.look, built: this.built, ...v, light: this.lightAtHero(), lightMs: avg }
   }
 
   private updateHud(): void {
@@ -582,7 +602,7 @@ export class HeightLabScene extends Phaser.Scene {
     const here = this.lightAtHero()
     const where =
       v.layer === CAVE
-        ? `In the cave · floor ${Math.round(v.z)} · daylight ${Math.round(v.sky * 100)}% · light here ${Math.round(here * 100)}%`
+        ? `In the cave · level ${v.z.toFixed(2)} · daylight ${Math.round(v.sky * 100)}% · light here ${Math.round(here * 100)}%`
         : `Surface · level ${v.z.toFixed(2)}`
     const dark = this.lightMs.length ? ` (light ${avg(this.lightMs).toFixed(2)})` : ''
     this.hud.textContent = `Height lab, ${this.area.name} — ${where}\nlab update ${avg(this.updateMs).toFixed(2)} ms${dark} · ${this.children.length} objects · built in ${Math.round(this.buildMs)} ms (ground ${Math.round(this.paintMs)})`
@@ -609,7 +629,7 @@ class LightView {
     this.img = scene.add.image(0, 0, '__WHITE').setOrigin(0).setDepth(depth).setBlendMode(Phaser.BlendModes.MULTIPLY).setVisible(false)
   }
 
-  draw(lights: Lighting, wv: Phaser.Geom.Rectangle, views: { layer: number; weight: number }[]): void {
+  draw(lights: Lighting, wv: Phaser.Geom.Rectangle, views: { layer: number; weight: number }[], opts: FillOptions): void {
     const R = LIGHT_RES
     const x0 = Math.floor(wv.x / R) - 1
     const y0 = Math.floor(wv.y / R) - 1
@@ -617,7 +637,7 @@ class LightView {
     const h = Math.ceil(wv.height / R) + 3
     if (!this.tex || this.tex.width < w || this.tex.height < h) this.make(Math.max(w, this.tex?.width ?? 0), Math.max(h, this.tex?.height ?? 0))
     const tex = this.tex!
-    lights.fill({ x0, y0, w: tex.width, h: tex.height }, this.data!.data, views)
+    lights.fill({ x0, y0, w: tex.width, h: tex.height }, this.data!.data, views, opts)
     tex.context.putImageData(this.data!, 0, 0)
     tex.refresh()
     // An upload resets the filter to the game's (pixel art: nearest).

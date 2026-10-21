@@ -13,9 +13,9 @@ import { paintGround } from '../wilds/ground-paint.ts'
 import { groundTable } from '../wilds/ground-table.ts'
 import { wildsLook } from '../wilds/wilds-looks.ts'
 import { fnv1a32 } from '../../lib/hash.ts'
-import { CAVE, GROUNDS, SURFACE, type LabArea } from './area.ts'
-import { DX, DY, KIND, TILE_PX, type Layer } from './levels.ts'
-import { caveLevels, sunnyFaceRock } from './light.ts'
+import { CAVE, G, GROUNDS, SURFACE, type LabArea } from './area.ts'
+import { DX, DY, KIND, TILE_PX, step, type Dir, type Layer } from './levels.ts'
+import { sunnyFaceRock } from './light.ts'
 
 type RGB = [number, number, number]
 
@@ -294,18 +294,60 @@ export const FACE_TINT: Record<number, number> = { 1: 0xf0dcc0, 2: 0xc4c8d2, 3: 
 
 // ---------------------------------------------------------------- the cave
 
-/**
- * The cave layer's ground: a stone floor (a little cooler on deeper
- * floors), rock round it with a face where it stands over the floor, drops
- * between floors, still black water. Cut into one image a floor level, like
- * the surface, so a level can fade with its depth. Painted as it looks in
- * full light: the light (./lighting.ts) darkens it. Rock that lies over a
- * sunny cliff face (round an arch) isn't painted: you see the face.
- */
+/** The cave's floor styles: cut stone (stairs on its ramps) and rough rock (ribs and scree), or as each place is authored. */
+export type CaveStyle = 'mixed' | 'built' | 'rough'
+
+/** The cave's ground: one image of all of it, and the floor under each mouth's arch on its own (shown from outside). */
+export interface CaveImages {
+  cave: LevelImage
+  mouths: LevelImage[]
+}
+
 /** The cave's colours in full light (they were painted dark for the old dimmer). */
 const ALBEDO = 1.45
 
-export function paintCave(scene: Phaser.Scene, area: LabArea): LevelImage[] {
+/** Worley cells for rough rock: the nearest two feature points' distances (px), and the nearest's cell. */
+function worley(wx: number, wy: number, size: number, salt: number): { f1: number; f2: number; cell: number } {
+  const cx = Math.floor(wx / size)
+  const cy = Math.floor(wy / size)
+  let f1 = Infinity
+  let f2 = Infinity
+  let cell = 0
+  for (let y = cy - 1; y <= cy + 1; y++)
+    for (let x = cx - 1; x <= cx + 1; x++) {
+      const px = (x + hash(x, y, salt)) * size
+      const py = (y + hash(x, y, salt + 1)) * size
+      const d = Math.hypot(wx + 0.5 - px, wy + 0.5 - py)
+      if (d < f1) {
+        f2 = f1
+        f1 = d
+        cell = x * 7919 + y
+      } else if (d < f2) f2 = d
+    }
+  return { f1, f2, cell }
+}
+
+/** Smooth 1D value noise, 0–1, period ~`size` px. */
+function noise1(v: number, size: number, salt: number): number {
+  const g = v / size
+  const i = Math.floor(g)
+  const f = g - i
+  const s = f * f * (3 - 2 * f)
+  return mix(hash(i, 0, salt), hash(i + 1, 0, salt), s)
+}
+
+/**
+ * The cave layer's ground, painted as it looks in full light (the light,
+ * ./lighting.ts, darkens it, and darkens other levels than yours): stone
+ * floor, cut (flagstones, stairs on ramps) or rough (fractured rock, ribs
+ * and scree on ramps); a pale lip where a ramp leaves a floor and a soft
+ * crease at its toe; rock round it with a face where it stands over the
+ * floor, its strata following the floor's level; drops between floors,
+ * with a rim where a floor drops away north, east or west; still black
+ * water. All opaque: nothing of the surface shows through. Rock that lies
+ * over a sunny cliff face (round an arch) isn't painted: you see the face.
+ */
+export function paintCave(scene: Phaser.Scene, area: LabArea, style: CaveStyle): CaveImages {
   const l = area.stack.layers[CAVE]!
   let x0 = l.w
   let y0 = l.h
@@ -323,38 +365,83 @@ export function paintCave(scene: Phaser.Scene, area: LabArea): LevelImage[] {
   const w = (x1 - x0 + 1) * T
   const h = (y1 - y0 + 1) * T
   const px = new Uint8ClampedArray(w * h * 4)
-  const lvl = caveLevels(l)
+  const lvl = area.levels
   const kindAt = (tx: number, ty: number) => (tx < 0 || ty < 0 || tx >= l.w || ty >= l.h ? KIND.none : l.kind[ty * l.w + tx]!)
   const floorish = (k: number) => k === KIND.flat || k === KIND.slope
-  // Rock's distance from the floor (tiles), for its fade at the edge of what's drawn.
+  const rough = (i: number) => (style === 'mixed' ? l.ground[i] === G['cave-rough'] : style === 'rough')
+  // Rock's distance from the floor (tiles), to darken it toward the edge of what's drawn.
   const reach = (tx: number, ty: number) => {
     for (let r = 1; r <= 3; r++)
       for (let y = ty - r; y <= ty + r; y++) for (let x = tx - r; x <= tx + r; x++) if (floorish(kindAt(x, y)) || kindAt(x, y) === KIND.water || kindAt(x, y) === KIND.face) return r
     return 4
   }
+  const drawn = (i: number) => l.kind[i] !== KIND.none && !sunnyFaceRock(area.stack, area.air, i)
   for (let ty = y0; ty <= y1; ty++)
     for (let tx = x0; tx <= x1; tx++) {
       const i = ty * l.w + tx
       const k = l.kind[i]
-      if (k === KIND.none || sunnyFaceRock(area.stack, area.air, i)) continue
+      if (!drawn(i)) continue
       const faceBelow = k === KIND.rock && floorish(kindAt(tx, ty + 1))
-      const fade = k === KIND.rock ? [255, 255, 255, 150, 0][reach(tx, ty)]! : 255
-      // Deeper floors are a little darker and cooler.
-      const deep = Math.max(0, -lvl[i]! - 1) * 0.07
+      const rim = k === KIND.rock ? [1, 1, 1, 0.75, 0.55][reach(tx, ty)]! : 1
+      const climb = k === KIND.slope ? slopeAxis(l, i) : null
       for (let y = 0; y < T; y++)
         for (let x = 0; x < T; x++) {
           const wx = tx * T + x
           const wy = ty * T + y
           let rgb: RGB
           if (floorish(k)) {
-            // Flagged stone: cells of 5 px with dark joints, faint noise.
-            const cx = Math.floor((wx + (Math.floor(wy / 5) % 2) * 2) / 5)
-            const cy = Math.floor(wy / 5)
-            const joint = (wx + (Math.floor(wy / 5) % 2) * 2) % 5 === 0 || wy % 5 === 0
-            const base = 66 + hash(cx, cy, 11) * 20 + (hash(wx, wy, 12) - 0.5) * 8
-            const c = joint ? base * 0.7 : base
-            rgb = [c * 0.92, c * 0.9, c * 1.05]
-            if (k === KIND.slope && wy % 4 === 0) rgb = rgb.map((ch) => ch * 0.85) as RGB
+            // Where cut stone meets rough rock the edge is ragged, not a tile's.
+            let isRough = rough(i)
+            for (let d = 0; d < 4; d++) {
+              const j = (ty + DY[d]) * l.w + tx + DX[d]
+              if (!floorish(kindAt(tx + DX[d], ty + DY[d])) || rough(j) === isRough) continue
+              const off = d === 0 ? y : d === 1 ? T - 1 - x : d === 2 ? T - 1 - y : x
+              if (off < 5 && hash(wx >> 1, wy >> 1, 48) < (5 - off) / 10) isRough = !isRough
+            }
+            // Along the climb (px, rising uphill) and across it.
+            const a = climb ? (climb.up === 0 ? -wy : climb.up === 2 ? wy : climb.up === 1 ? wx : -wx) : 0
+            const across = climb ? (climb.up === 0 || climb.up === 2 ? wx : wy) : 0
+            if (isRough) {
+              // Fractured rock: stones of a few px, dark cracks between, grit.
+              const wc = worley(wx, wy, 7, 41)
+              const crack = wc.f2 - wc.f1 < 0.95
+              let c = 58 + hash(wc.cell, 0, 42) * 22 + (hash(wx, wy, 43) - 0.5) * 9 + noise1(wx + wy * 0.7, 23, 44) * 8
+              if (crack) c *= climb ? 0.82 : 0.62
+              if (climb) {
+                // Ribs across the climb, wobbling: a pale crest, shadow below it.
+                const ph = (((a + Math.round((noise1(across, 6, 45) - 0.5) * 6)) % 7) + 7) % 7
+                if (ph === 6) c *= 1.32
+                else if (ph === 5) c *= 1.12
+                else if (ph === 4) c *= 0.6
+                else if (ph === 3) c *= 0.8
+                // Scree: loose pebbles with a shadow under each.
+                if (hash(wx, wy, 46) < 0.03) c = Math.max(c, 82) * 1.2
+                else if (hash(wx, wy - 1, 46) < 0.03) c *= 0.7
+              }
+              rgb = [c * 0.99, c * 0.94, c * 0.9]
+            } else if (climb) {
+              // Cut stairs: a step every 8 px of the climb (two a tile); a crease at its foot, a pale nosing at its top, blocks along each.
+              const P = 8
+              const step = Math.floor(a / P)
+              const ph = ((a % P) + P) % P
+              const block = Math.floor((across + (step % 2) * 4) / 8)
+              const joint = (across + (step % 2) * 4) % 8 === 0
+              let c = 68 + hash(block, step, 11) * 16 + (hash(wx, wy, 12) - 0.5) * 7
+              if (ph === 0) c *= 0.55
+              else if (ph === 1) c *= 0.78
+              else if (ph === P - 1) c *= 1.25
+              else if (ph === P - 2) c *= 1.08
+              else if (joint) c *= 0.72
+              rgb = [c * 0.92, c * 0.9, c * 1.05]
+            } else {
+              // Flagged stone: cells of 5 px with dark joints, faint noise.
+              const cx = Math.floor((wx + (Math.floor(wy / 5) % 2) * 2) / 5)
+              const cy = Math.floor(wy / 5)
+              const joint = (wx + (Math.floor(wy / 5) % 2) * 2) % 5 === 0 || wy % 5 === 0
+              const base = 66 + hash(cx, cy, 11) * 20 + (hash(wx, wy, 12) - 0.5) * 8
+              const c = joint ? base * 0.7 : base
+              rgb = [c * 0.92, c * 0.9, c * 1.05]
+            }
             // Shadow at the foot of a rock wall or a drop above.
             const n = kindAt(tx, ty - 1)
             if ((n === KIND.rock || n === KIND.face) && y < 5) rgb = rgb.map((ch) => ch * (0.55 + y * 0.09)) as RGB
@@ -370,51 +457,96 @@ export function paintCave(scene: Phaser.Scene, area: LabArea): LevelImage[] {
             const c = 74 - down * 30 + (hash(wx, wy, 17) - 0.5) * 12 - ((gy + (x > 8 ? 1 : 0)) % 6 === 0 ? 16 : 0)
             rgb = [c * 0.96, c * 0.9, c * 1.06]
           } else if (faceBelow) {
-            // The rock's face over the floor: strata, lighter toward the foot.
-            const c = 40 + y * 2.2 + (hash(wx, wy, 14) - 0.5) * 12 - ((wy + (x > 8 ? 1 : 0)) % 5 === 0 ? 14 : 0)
+            // The rock's face over the floor: strata (rising and falling with the floor's level), lighter toward the foot.
+            const sy = wy - Math.round(lvl[i]! * 8)
+            const c = 40 + y * 2.2 + (hash(wx, wy, 14) - 0.5) * 12 - ((sy + (x > 8 ? 1 : 0)) % 5 === 0 ? 14 : 0)
             rgb = [c * 0.95, c * 0.9, c * 1.08]
           } else {
-            const c = 26 + hash(wx >> 2, wy >> 2, 15) * 10 + (hash(wx, wy, 16) - 0.5) * 6
+            const c = (26 + hash(wx >> 2, wy >> 2, 15) * 10 + (hash(wx, wy, 16) - 0.5) * 6) * rim
             rgb = [c, c * 0.92, c * 1.1]
           }
           if (k !== KIND.water) rgb = rgb.map((ch) => ch * ALBEDO) as RGB
-          if (deep) rgb = [rgb[0] * (1 - deep), rgb[1] * (1 - deep * 0.8), rgb[2] * (1 - deep * 0.4)]
           const o = (((ty - y0) * T + y) * w + (tx - x0) * T + x) * 4
           px[o] = rgb[0]
           px[o + 1] = rgb[1]
           px[o + 2] = rgb[2]
-          px[o + 3] = fade
+          px[o + 3] = 255
         }
     }
-  // Cut by level, each to its bounding box.
-  const boxes = new Map<number, { x0: number; y0: number; x1: number; y1: number }>()
+  // Where floors meet: lips and toes at a ramp's ends, rims where a floor drops away north, east or west.
+  const shadeAt = (tx: number, ty: number, d: number, depth: number, k: number) => {
+    if (tx < x0 || ty < y0 || tx > x1 || ty > y1 || !drawn(ty * l.w + tx)) return
+    for (let s = 0; s < T; s++) {
+      const x = d === 1 ? T - 1 - depth : d === 3 ? depth : s
+      const y = d === 0 ? depth : d === 2 ? T - 1 - depth : s
+      const o = (((ty - y0) * T + y) * w + (tx - x0) * T + x) * 4
+      px[o] = px[o]! * k
+      px[o + 1] = px[o + 1]! * k
+      px[o + 2] = px[o + 2]! * k
+    }
+  }
   for (let ty = y0; ty <= y1; ty++)
     for (let tx = x0; tx <= x1; tx++) {
       const i = ty * l.w + tx
-      if (l.kind[i] === KIND.none) continue
-      const z = lvl[i]!
-      const b = boxes.get(z) ?? { x0: tx, y0: ty, x1: tx, y1: ty }
-      boxes.set(z, { x0: Math.min(b.x0, tx), y0: Math.min(b.y0, ty), x1: Math.max(b.x1, tx), y1: Math.max(b.y1, ty) })
+      if (!floorish(l.kind[i]!)) continue
+      for (let d = 0; d < 4; d++) {
+        const nx = tx + DX[d]
+        const ny = ty + DY[d]
+        const nk = kindAt(nx, ny)
+        if (!floorish(nk)) continue
+        const j = ny * l.w + nx
+        const back = (d + 2) & 3
+        if (step(area.stack, CAVE, tx, ty, d as Dir) === CAVE) {
+          // A floor meeting a ramp: does the ramp fall away (its top) or rise (its toe)?
+          if (l.kind[i] !== KIND.flat || nk !== KIND.slope) continue
+          const far = l.edge[j * 4 + d]!
+          const here = l.edge[i * 4 + d]!
+          if (Number.isNaN(far)) continue
+          if (far < here - 0.01) {
+            shadeAt(tx, ty, d, 0, 1.16)
+            shadeAt(nx, ny, back, 0, 0.78)
+            shadeAt(nx, ny, back, 1, 0.9)
+          } else if (far > here + 0.01) {
+            shadeAt(tx, ty, d, 0, 0.82)
+            shadeAt(tx, ty, d, 1, 0.92)
+            shadeAt(nx, ny, back, 0, 0.9)
+          }
+          continue
+        }
+        // Shut, and lower beyond (not south: a drop south has its face): a dark rim on this side, a shadow on the low side.
+        if (d === 2 || !(lvl[j]! < lvl[i]! - 0.25)) continue
+        shadeAt(tx, ty, d, 0, 0.45)
+        shadeAt(tx, ty, d, 1, d === 0 ? 1.15 : 0.8)
+        for (let k = 0; k < 3; k++) shadeAt(nx, ny, back, k, 0.68 + k * 0.1)
+      }
     }
-  const out: LevelImage[] = []
-  for (const [z, b] of [...boxes].sort((a, c) => a[0] - c[0])) {
-    const cw = (b.x1 - b.x0 + 1) * T
-    const ch = (b.y1 - b.y0 + 1) * T
-    const cut = new Uint8ClampedArray(cw * ch * 4)
-    for (let ty = b.y0; ty <= b.y1; ty++)
-      for (let tx = b.x0; tx <= b.x1; tx++) {
-        const i = ty * l.w + tx
-        if (l.kind[i] === KIND.none || lvl[i] !== z) continue
+  const cut = (key: string, keep: (i: number) => boolean, bx0: number, by0: number, bx1: number, by1: number): LevelImage => {
+    const cw = (bx1 - bx0 + 1) * T
+    const ch = (by1 - by0 + 1) * T
+    const out = new Uint8ClampedArray(cw * ch * 4)
+    for (let ty = by0; ty <= by1; ty++)
+      for (let tx = bx0; tx <= bx1; tx++) {
+        if (!keep(ty * l.w + tx)) continue
         for (let y = 0; y < T; y++) {
           const from = (((ty - y0) * T + y) * w + (tx - x0) * T) * 4
-          cut.set(px.subarray(from, from + T * 4), (((ty - b.y0) * T + y) * cw + (tx - b.x0) * T) * 4)
+          out.set(px.subarray(from, from + T * 4), (((ty - by0) * T + y) * cw + (tx - bx0) * T) * 4)
         }
       }
-    const key = `hl-cave-${z}`
-    addPixels(scene, key, cw, ch, cut)
-    out.push({ key, x: b.x0 * T, y: b.y0 * T, level: z })
+    addPixels(scene, key, cw, ch, out)
+    return { key, x: bx0 * T, y: by0 * T, level: 0 }
   }
-  return out
+  return {
+    cave: cut('hl-cave', drawn, x0, y0, x1, y1),
+    mouths: area.mouths.map((m, n) => cut(`hl-cave-mouth-${n}`, (i) => area.arches[i] === 1 && drawn(i), m.x0, m.arch[0], m.x1, m.arch[1]))
+  }
+}
+
+/** A ramp tile's climb: which way is up (n, e, s, w), or null on a tile that doesn't climb straight. */
+function slopeAxis(l: Layer, i: number): { up: Dir } | null {
+  const e = (d: number) => l.edge[i * 4 + d]!
+  if (!Number.isNaN(e(0)) && !Number.isNaN(e(2)) && Math.abs(e(0) - e(2)) > 1e-3) return { up: e(0) > e(2) ? 0 : 2 }
+  if (!Number.isNaN(e(1)) && !Number.isNaN(e(3)) && Math.abs(e(1) - e(3)) > 1e-3) return { up: e(1) > e(3) ? 1 : 3 }
+  return null
 }
 
 // ---------------------------------------------------------------- overlays
@@ -465,7 +597,7 @@ export function drawOverlays(scene: Phaser.Scene): void {
 export function drawGrid(g: Phaser.GameObjects.Graphics, l: Layer, area: LabArea): void {
   const colors = [0x3050ff, 0xffb030, 0xff4060, 0x40e0ff, 0xffffff]
   const caveColors = [0xd0a0ff, 0xa060ff, 0x7040e0, 0x4020b0, 0x200880]
-  const lvl = l.name === 'cave' ? caveLevels(l) : null
+  const lvl = l.name === 'cave' ? area.levels : null
   for (let ty = 0; ty < l.h; ty++)
     for (let tx = 0; tx < l.w; tx++) {
       const i = ty * l.w + tx
@@ -473,7 +605,7 @@ export function drawGrid(g: Phaser.GameObjects.Graphics, l: Layer, area: LabArea
       if (k === KIND.none) continue
       let c = 0
       let a = 0.18
-      if (lvl) c = k === KIND.rock ? 0x301040 : k === KIND.face ? 0xff2020 : caveColors[Math.min(4, Math.max(0, -lvl[i]!))]!
+      if (lvl) c = k === KIND.rock ? 0x301040 : k === KIND.face ? 0xff2020 : caveColors[Math.min(4, Math.max(0, Math.round(-lvl[i]!)))]!
       else if (k === KIND.slope) c = 0x40ff60
       else if (k === KIND.face || k === KIND.mouth) c = 0xff2020
       else {
