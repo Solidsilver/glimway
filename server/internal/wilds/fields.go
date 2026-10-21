@@ -108,7 +108,7 @@ func rawStructuralUpland(worldSeed string, tx, ty int) int {
 	return stretchPermille(combined, 175)
 }
 
-// homeFlatTileDist is the Chebyshev distance in world tiles from (tx, ty) to
+// homeFlatTileDist is the Euclidean distance in world tiles from (tx, ty) to
 // the nearest protected flat home footprint (authored fixed places and the
 // Tangle). Inside Town, lots, or the Tangle it is 0.
 func homeFlatTileDist(tx, ty int) int {
@@ -119,7 +119,7 @@ func homeFlatTileDist(tx, ty int) int {
 		x1, y1 := (cx1+1)*S-1, (cy1+1)*S-1
 		dx := max(x0-tx, tx-x1, 0)
 		dy := max(y0-ty, ty-y1, 0)
-		d := max(dx, dy)
+		d := isqrt(dx*dx + dy*dy)
 		if best < 0 || d < best {
 			best = d
 		}
@@ -143,36 +143,51 @@ func homeFlatTileDist(tx, ty int) int {
 //   - Town (fixed places) and the Tangle stay flat (0), with a flat apron of
 //     about one chunk (24 tiles) outside their edges;
 //   - Low shoulders rise 3–6 chunks out (72..144 tiles);
-//   - Full mountain upland is unconstrained from ~7 chunks out onward.
+//   - The cap lifts over 6–9 chunks; full mountain upland from 9 chunks out.
 func UplandAt(worldSeed string, tx, ty int) int {
 	S := chunkSize()
 	u := rawStructuralUpland(worldSeed, tx, ty)
 	d := homeFlatTileDist(tx, ty)
-	apron := S          // 1 chunk flat apron (24 tiles)
+	apron := S // 1 chunk flat apron (24 tiles)
+	if d <= apron {
+		return 0
+	}
+	// Beyond the strict 1-chunk flat apron, add a subtle organic rim warp so
+	// the home basin edge curves naturally instead of forming a geometric ring.
+	rimWarp := (sampleFieldOctave(landformV2Hash(worldSeed, "field:upland:rim"), tx, ty, 6*S) - noiseOne/2) * (2 * S) / noiseOne
+	effD := max(apron+1, d+rimWarp*(min(d-apron, 3*S))/(3*S))
+
 	shoulderStart := 3 * S // 3 chunks (72 tiles)
 	shoulderEnd := 6 * S   // 6 chunks (144 tiles)
-	fullStart := 8 * S     // 8 chunks (192 tiles)
+	fullStart := 9 * S     // 9 chunks (216 tiles)
+
+	// The envelope is continuous in the (rim-warped) distance so height read
+	// from Upland never steps at a ring: a cap rising from 0 at the apron to
+	// 480 at 3 chunks, 580 at 6 and no cap at 9; and a low-shoulder floor that
+	// fades in over 1–3 chunks and back out over 6–9.
+	var capU, floorW int
 	switch {
-	case d <= apron:
-		return 0
-	case d < shoulderStart:
-		// Smooth ramp from 0 at 1 chunk out to shoulder height at 3 chunks out.
-		t := (d - apron) * 1000 / (shoulderStart - apron)
-		capU := 480 * t / 1000
-		return min(u*t/1000, capU)
-	case d <= shoulderEnd:
-		// 3–6 chunks out: guarantee gentle low shoulders where ridge noise is
-		// positive, while capping below full high-mountain summits.
-		shoulderWave := sampleFieldOctave(landformV2Hash(worldSeed, "field:upland:shoulder"), tx, ty, 5*S)
-		floorU := 180 + shoulderWave*260/noiseOne
-		return clamp(max(u, floorU), 0, 580)
-	case d < fullStart:
-		t := (d - shoulderEnd) * 1000 / (fullStart - shoulderEnd)
-		shoulderCap := 580 + (1000-580)*t/1000
-		return min(u, shoulderCap)
+	case effD < shoulderStart:
+		s := smoothPermille(effD-apron, shoulderStart-apron)
+		capU, floorW = 480*s/1000, s
+	case effD < shoulderEnd:
+		capU, floorW = 480+100*smoothPermille(effD-shoulderStart, shoulderEnd-shoulderStart)/1000, 1000
+	case effD < fullStart:
+		s := smoothPermille(effD-shoulderEnd, fullStart-shoulderEnd)
+		capU, floorW = 580+420*s/1000, 1000-s
 	default:
 		return u
 	}
+	shoulderWave := sampleFieldOctave(landformV2Hash(worldSeed, "field:upland:shoulder"), tx, ty, 5*S)
+	floorU := (180 + shoulderWave*260/noiseOne) * floorW / 1000
+	return min(max(u, floorU), capU)
+}
+
+// smoothPermille is the Hermite smoothstep of n/d in permille, clamped to
+// [0, 1000].
+func smoothPermille(n, d int) int {
+	t := clamp(n*1000/max(1, d), 0, 1000)
+	return t * t / 1000 * (3000 - 2*t) / 1000
 }
 
 // ReliefAt returns the lasting Relief (roughness / dissection) field at world
@@ -191,8 +206,8 @@ func reliefWithUpland(worldSeed string, tx, ty, upland int) int {
 	local := sampleFieldOctave(landformV2Hash(worldSeed, "field:relief:local"), tx, ty, 8*S)
 	raw := stretchPermille((meso*65+local*35)/100, 160)
 	r := clamp((raw*75+upland*25)/100, 0, FieldScale)
-	if d < 3*S {
-		r = r * (d - S) / (2 * S)
+	if d < 5*S {
+		r = r * smoothPermille(d-S, 4*S) / 1000
 	}
 	return r
 }
