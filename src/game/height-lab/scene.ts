@@ -827,7 +827,8 @@ export class HeightLabScene extends Phaser.Scene {
     this.haze
       .setVisible(look.haze && high > 0.01)
       .setTint(hazeColor)
-      .setAlpha(high * 0.6)
+      // Near home, levels 2–3 are ordinary upland, not a summit: a lighter haze, or the Tops are all grey.
+      .setAlpha(high * (this.area.generated ? 0.2 : 0.6))
       .setPosition(wv.centerX, wv.centerY)
       .setDisplaySize(wv.width * 1.25, wv.height * 1.25)
     const target = this.baseZoom * (look.zoom ? 1 - 0.07 * Math.min(3, Math.max(0, v.z)) * (1 - v.cave) : 1)
