@@ -37,6 +37,7 @@ func NewTerrainSpike(f TerrainFields, strategy string) (*TerrainPlan, error) {
 	p.Strategy = strategy
 	switch strategy {
 	case "region":
+		p.longApproach()
 		// Realize the principal pass before repairing optional shelves. Global
 		// connectivity alone would allow every walk to go around a range end.
 		p.saddleRamps()
@@ -67,6 +68,41 @@ func NewTerrainSpike(f TerrainFields, strategy string) (*TerrainPlan, error) {
 		}
 	}
 	return p, nil
+}
+
+// Exercise a long, multi-level approach in the generated region itself, not
+// just the codec fixture. Legacy zero-height landings beside high structural
+// ground are useful candidates; all protection and third-component guards apply.
+func (p *TerrainPlan) longApproach() {
+	labels := p.Certificate().Labels
+	for _, levels := range []int{3, 2} {
+		for y := 0; y < p.H; y++ {
+			for x := 0; x < p.W; x++ {
+				a := p.Tiles[p.index(x, y)]
+				if a.Kind != TerrainFlat {
+					continue
+				}
+				for _, d := range []int{1, 2} {
+					for n := levels * 4; n <= 24; n++ {
+						ex, ey := x+terrainDX[d]*(n+1), y+terrainDY[d]*(n+1)
+						if ex >= p.W || ey >= p.H {
+							break
+						}
+						b := p.Tiles[p.index(ex, ey)]
+						if b.Kind != TerrainFlat || abs(int(a.Edges[d]-b.Edges[(d+2)%4])) != levels*256 {
+							continue
+						}
+						s := terrainRampSpec{x, y, d, n, a.Edges[d], b.Edges[(d+2)%4]}
+						if p.rampFits(s, 0, 0, p.W-1, p.H-1, labels) {
+							p.carveRamp(s)
+							p.Ramps++
+							return
+						}
+					}
+				}
+			}
+		}
+	}
 }
 
 func (p *TerrainPlan) saddleRamps() {

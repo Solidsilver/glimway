@@ -48,6 +48,9 @@ func TestTerrainSpikeCertificateAndCodec(t *testing.T) {
 		if strategy == "chunk" && c.StrandedTiles == 0 {
 			t.Fatal("corner-bowl counterexample disappeared")
 		}
+		if strategy == "region" {
+			assertTerrainMultiLevelRamp(t, p)
+		}
 		for cy := 0; cy < 8; cy++ {
 			for cx := 0; cx < 20; cx++ {
 				tiles, _ := p.Chunk(cx, cy)
@@ -64,6 +67,41 @@ func TestTerrainSpikeCertificateAndCodec(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+func assertTerrainMultiLevelRamp(t *testing.T, p *TerrainPlan) {
+	t.Helper()
+	seen := make([]bool, len(p.Tiles))
+	multi := false
+	for i, tile := range p.Tiles {
+		if tile.Kind != TerrainRamp || seen[i] {
+			continue
+		}
+		queue := []int{i}
+		seen[i] = true
+		lo, hi := int16(768), int16(0)
+		for head := 0; head < len(queue); head++ {
+			j := queue[head]
+			for d, q := range p.Tiles[j].Edges {
+				if q < 0 {
+					continue
+				}
+				lo = min(lo, q)
+				hi = max(hi, q)
+				next := p.Step(j, d)
+				if next >= 0 && !seen[next] && p.Tiles[next].Kind == TerrainRamp {
+					seen[next] = true
+					queue = append(queue, next)
+				}
+			}
+		}
+		if hi-lo >= 512 {
+			multi = true
+		}
+	}
+	if !multi {
+		t.Fatal("generated region has no multi-level ramp")
 	}
 }
 
