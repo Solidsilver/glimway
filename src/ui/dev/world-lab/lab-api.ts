@@ -24,6 +24,7 @@ export interface LabState {
 }
 
 export interface Stats {
+  terrain?: { strategies: Record<string, { certificate: { strandedTiles: number; strandedComponents: number }; ramps: number; geometrySHA256: string }> }
   content: string
   contentSHA256: string
   view: string

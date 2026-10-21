@@ -54,6 +54,9 @@ func run(args []string, stdout io.Writer) error {
 	o := options{View: command}
 	rect, at, seedB, contentB, view, addr := "-20,-30,20,0", "0,0", "", "", "region", "127.0.0.1:8099"
 	fs.StringVar(&o.Seed, "seed", "map", "world seed")
+	fs.StringVar(&o.Terrain, "terrain", "", "lab-only ridge access strategy: region or chunk (region view)")
+	fs.IntVar(&o.TerrainSamples, "terrain-samples", 1, "cold plan samples per strategy (1..20)")
+	fs.Uint64Var(&o.TerrainOrder, "terrain-order", 0, "chunk shuffle seed for independent generation and seam checks")
 	fs.StringVar(&o.Epoch, "epoch", defaultEpoch, "wick epoch t:<start>:<end>; still footprints use their own epoch")
 	fs.StringVar(&rect, "rect", rect, "inclusive chunk rectangle x0,y0,x1,y1")
 	fs.StringVar(&at, "at", at, "chunk coordinates cx,cy")
