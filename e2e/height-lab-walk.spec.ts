@@ -48,18 +48,27 @@ async function openLab(page: Page): Promise<void> {
 /** Switch, and wait for a scene built with it (the generated area: built and ready). */
 async function setLook(page: Page, look: Look): Promise<void> {
   await page.evaluate((l) => (window as unknown as { __fsLab: Lab }).__fsLab.look(l), look)
-  await expect
-    .poll(
-      async () => {
-        const st = await page.evaluate(() => (window as unknown as { __fsLab?: Lab }).__fsLab?.state())
-        if (!st) return 'none'
-        if (st.generated?.error) return `error: ${st.generated.error}`
-        const built = (Object.keys(look) as (keyof Look)[]).every((k) => st.built[k] === look[k])
-        return built && (st.built.area !== 'walk' || st.generated?.ready) ? 'ready' : 'waiting'
-      },
-      { timeout: 120_000 }
-    )
-    .toBe('ready')
+  // The switches that rebuild the scene are on what it was built with; the rest (the levels overlay) on the look.
+  const rebuilds: (keyof Look)[] = ['area', 'strategy', 'walkOverlay']
+  try {
+    await expect
+      .poll(
+        async () => {
+          const st = await page.evaluate(() => (window as unknown as { __fsLab?: Lab }).__fsLab?.state())
+          if (!st) return 'none'
+          if (st.generated?.error) return `error: ${st.generated.error}`
+          const done = (Object.keys(look) as (keyof Look)[]).every((k) => (rebuilds.includes(k) ? st.built[k] : st.look[k]) === look[k])
+          return done && (st.built.area !== 'walk' || st.generated?.ready) ? 'ready' : 'waiting'
+        },
+        { timeout: 120_000 }
+      )
+      .toBe('ready')
+  } catch (e) {
+    mkdirSync(OUT, { recursive: true })
+    await page.screenshot({ path: `${OUT}/failed-wait.png` })
+    writeFileSync(`${OUT}/failed-wait.json`, JSON.stringify(await labState(page).catch(() => null), null, 1))
+    throw e
+  }
 }
 
 const states: Record<string, LabState> = {}
