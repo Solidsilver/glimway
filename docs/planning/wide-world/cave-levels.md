@@ -64,3 +64,18 @@ changes level. Argon's build order is the base; Sol's cautions are folded in.*
 - **Bug:** hugging the cave wall beside the mouth and stepping out, the screen flicks to black for
   a step just as the fade is nearly done, then clears. It happens with every way in, and only
   right against the wall.
+
+## Paused (owner, 2026-10-21)
+
+The owner is very happy with the cave interaction after round 4c, and the caves and height
+experiment is **paused** until real terrain generation exists. Then it opens again, with the
+"Later, for iteration 2" list above as its start.
+
+- **What the game should copy:** Even (round 4) as the way in; the cave's view over 3 tiles;
+  opaque caves darkened by depth (no tint); the mouth floor seen from outside, lit live; built
+  and rough slopes; the corner-distance fix from round 4c. Rounds 4 to 4c are written up in
+  [height-lab-4-notes.md](height-lab-4-notes.md).
+- **Kept in the lab's dev panel on purpose,** for when it opens again: the four ways in, the 1 to
+  4 tile fade slider, own light None/Close/Wide (these become the light the hero carries),
+  daylight reach, the darkness slider, slope styles and the levels overlay. Don't strip them in
+  cleanup lanes.
