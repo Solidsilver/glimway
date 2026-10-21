@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { covers, jsonBreak, jsonProblem, plan, rectChunks, tileAt, viewOf, visibleChunks, zoomAround, ZOOM_MAX, type Limits } from '../src/ui/dev/world-lab/lab-view.ts';
-import { labRender, renderBody } from '../src/ui/dev/world-lab/lab-api.ts';
+import { labHover, labRender, renderBody } from '../src/ui/dev/world-lab/lab-api.ts';
 
 /** The world lab's camera and requests (src/ui/dev/world-lab; server/internal/worldlab). */
 
@@ -75,6 +75,8 @@ test('a JSON problem says where', () => {
 test('a render asks for both versions, and the server’s word comes back', async () => {
   const body = renderBody({ view: 'region', rect: [0, 1, 2, 3], scale: 2 }, 't:1:2', ['reach'], { seed: 'a', rules: '' }, { seed: 'b', rules: '{"x":1}' });
   assert.deepEqual(body, { view: 'region', seed: 'a', epoch: 't:1:2', rect: [0, 1, 2, 3], scale: 2, overlays: 'reach', b: { seed: 'b', rules: '{"x":1}' } });
+  const fieldBody = renderBody({ view: 'atlas', rect: [-10, -10, 9, 9], scale: 1 }, 't:1:2', ['regions', 'biomes'], { seed: 'a', rules: '' }, null, 'upland');
+  assert.deepEqual(fieldBody, { view: 'atlas', seed: 'a', epoch: 't:1:2', rect: [-10, -10, 9, 9], scale: 1, overlays: 'regions,biomes', field: 'upland' });
   let sent: RequestInit | undefined;
   const fetcher = (async (_url: string, init: RequestInit) => {
     sent = init;
@@ -83,6 +85,12 @@ test('a render asks for both versions, and the server’s word comes back', asyn
   assert.deepEqual(await labRender(body, undefined, fetcher), { ok: false, status: 400, text: 'render too large' });
   assert.equal(sent?.method, 'POST');
   assert.equal((sent?.headers as Record<string, string>)['Content-Type'], 'application/json');
+  const hoverFetcher = (async (_url: string, init: RequestInit) => {
+    sent = init;
+    return new Response(JSON.stringify({ tile: [-10, -20], chunk: [-1, -1], region: 'r:-1:-1', regionCoord: [-1, -1], biome: 'whitequiet@1', regionBiome: 'whitequiet@1', borderDistTiles: 88, inBlendBand: false, fields: { upland: 300, relief: 250, wetness: 500, warmth: 200, quiet: 780 } }), { status: 200 });
+  }) as unknown as typeof fetch;
+  const hv = await labHover('a', -10, -20, undefined, hoverFetcher);
+  assert.ok(hv.ok && hv.value.region === 'r:-1:-1' && hv.value.biome === 'whitequiet@1' && hv.value.fields.quiet === 780);
   const none = (async () => new Response('', { status: 404 })) as unknown as typeof fetch;
   const a = await labRender(body, undefined, none);
   assert.ok(!a.ok && a.status === 404);

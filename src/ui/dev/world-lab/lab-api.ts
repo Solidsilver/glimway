@@ -14,6 +14,7 @@ export interface LabState {
   epoch: string
   defaultEpoch: string
   overlays: string[]
+  fields?: string[]
   chunkSize: number
   limits: Limits
   /** The server's embedded content/wilds.json, as text. */
@@ -21,6 +22,40 @@ export interface LabState {
   rulesSHA256: string
   /** The caller's own world: its seed and the wick season now (null: unknown). */
   here: { seed: string; epoch: string } | null
+}
+
+export interface FieldValues {
+  upland: number
+  relief: number
+  wetness: number
+  warmth: number
+  quiet: number
+}
+
+export interface FieldStats {
+  field: string
+  min: number
+  max: number
+  mean: number
+}
+
+export interface RegionPin {
+  region: string
+  rx: number
+  ry: number
+  biomeRef: string
+  pinned: boolean
+  triggerChunk?: [number, number]
+  currentRef?: string
+  superseded?: boolean
+}
+
+export interface PinManifestReport {
+  worldSeed: string
+  totalRegions: number
+  pinnedCount: number
+  supersededCount: number
+  pins: RegionPin[]
 }
 
 export interface Stats {
@@ -34,6 +69,12 @@ export interface Stats {
   chunks: number
   generatedChunks: number
   fixedChunks: number
+  biomeShare?: Record<string, number>
+  firstBiomeChunkDistFromHome?: Record<string, number>
+  regionCount?: number
+  blendBandShare?: number
+  field?: FieldStats
+  pinManifest?: PinManifestReport
   landShareByChunkCentre: Record<string, number>
   groundShare?: Record<string, number>
   solidShare?: number
@@ -75,6 +116,18 @@ export interface TileInfo {
   tile: [number, number]
   chunk: [number, number]
   local: [number, number]
+  region?: string
+  regionCoord?: [number, number]
+  biome?: string
+  regionBiome?: string
+  secondaryRegion?: string
+  secondaryBiome?: string
+  borderDistTiles?: number
+  inBlendBand?: boolean
+  tripleJunction?: boolean
+  blended?: boolean
+  pin?: RegionPin
+  fields?: FieldValues
   land: string
   chunkLand: string
   ground: string
@@ -88,6 +141,22 @@ export interface TileInfo {
   stand?: [number, number]
   /** The caller's world lets a hero stand in this chunk (unknown: absent). */
   onGrid?: boolean
+}
+
+export interface TileHover {
+  tile: [number, number]
+  chunk: [number, number]
+  region: string
+  regionCoord: [number, number]
+  biome: string
+  regionBiome: string
+  secondaryRegion?: string
+  secondaryBiome?: string
+  borderDistTiles: number
+  inBlendBand: boolean
+  tripleJunction?: boolean
+  blended?: boolean
+  fields: FieldValues
 }
 
 /** One version of the world: a seed and its rules (empty: the server's own). */
@@ -131,8 +200,9 @@ export function labState(fetcher?: typeof fetch): Promise<Answer<LabState>> {
 }
 
 /** The request for a render of version a (and b beside it, for a diff). */
-export function renderBody(p: Plan, epoch: string, overlays: string[], a: Version, b: Version | null): Record<string, unknown> {
+export function renderBody(p: Plan, epoch: string, overlays: string[], a: Version, b: Version | null, field = ''): Record<string, unknown> {
   const body: Record<string, unknown> = { view: p.view, seed: a.seed, epoch, rect: p.rect, scale: p.scale, overlays: overlays.join(',') }
+  if (field) body.field = field
   if (a.rules) body.rules = a.rules
   if (b) body.b = { seed: b.seed, ...(b.rules ? { rules: b.rules } : {}) }
   return body
@@ -144,6 +214,10 @@ export function labRender(body: Record<string, unknown>, signal?: AbortSignal, f
 
 export function labTile(v: Version, epoch: string, tx: number, ty: number, signal?: AbortSignal, fetcher?: typeof fetch): Promise<Answer<TileInfo>> {
   return ask<TileInfo>('tile', { seed: v.seed, epoch, at: [tx, ty], ...(v.rules ? { rules: v.rules } : {}) }, signal, fetcher)
+}
+
+export function labHover(seed: string, tx: number, ty: number, signal?: AbortSignal, fetcher?: typeof fetch): Promise<Answer<TileHover>> {
+  return ask<TileHover>('hover', { seed, at: [tx, ty] }, signal, fetcher)
 }
 
 export function labCheck(rules: string, signal?: AbortSignal, fetcher?: typeof fetch): Promise<Answer<{ ok: true }>> {

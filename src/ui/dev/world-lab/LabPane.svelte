@@ -15,6 +15,7 @@
 </script>
 
 <script lang="ts">
+  import { labHover, type TileHover } from './lab-api'
   import { placement, tileAt, zoomAround, type Camera } from './lab-view'
 
   // One map pane of the world lab (WorldLab.svelte): draws the renders it
@@ -23,6 +24,7 @@
   let {
     drawn,
     panel,
+    seed,
     camera,
     chunkSize,
     hero,
@@ -35,6 +37,7 @@
     drawn: Drawn[]
     /** Which panel of a diff this pane shows (0 for a plain render). */
     panel: 0 | 1 | 2
+    seed: string
     camera: Camera
     chunkSize: number
     hero: { tx: number; ty: number } | null
@@ -49,6 +52,29 @@
   let w = $state(0)
   let h = $state(0)
   let hover = $state<{ tx: number; ty: number } | null>(null)
+  let hoverInfo = $state<TileHover | null>(null)
+
+  $effect(() => {
+    const hv = hover
+    const s = seed
+    if (!hv || !s || pointers.size > 0) {
+      if (!hv) hoverInfo = null
+      return
+    }
+    const ctl = new AbortController()
+    const timer = setTimeout(async () => {
+      try {
+        const res = await labHover(s, hv.tx, hv.ty, ctl.signal)
+        if (!ctl.signal.aborted && res.ok) hoverInfo = res.value
+      } catch {
+        // Ignore aborted hover calls.
+      }
+    }, 30)
+    return () => {
+      clearTimeout(timer)
+      ctl.abort()
+    }
+  })
 
   const order = { atlas: 0, region: 1, chunk: 2 } as const
 
@@ -227,7 +253,14 @@
   ></canvas>
   <span class="tag">{label}</span>
   {#if busy}<span class="busy" role="status">{busy}</span>{/if}
-  {#if hover}<span class="where">tile {hover.tx}, {hover.ty} · chunk {Math.floor(hover.tx / chunkSize)}, {Math.floor(hover.ty / chunkSize)}</span>{/if}
+  {#if hover}
+    <span class="where" data-testid="lab-hover">
+      tile {hover.tx}, {hover.ty} · chunk {Math.floor(hover.tx / chunkSize)}, {Math.floor(hover.ty / chunkSize)}
+      {#if hoverInfo && hoverInfo.tile[0] === hover.tx && hoverInfo.tile[1] === hover.ty}
+        · {hoverInfo.region} · {hoverInfo.biome}{hoverInfo.inBlendBand ? ` (blend ${hoverInfo.borderDistTiles}t ↔ ${hoverInfo.secondaryBiome})` : ''} · U:{hoverInfo.fields.upland} R:{hoverInfo.fields.relief} W:{hoverInfo.fields.wetness} T:{hoverInfo.fields.warmth} Q:{hoverInfo.fields.quiet}
+      {/if}
+    </span>
+  {/if}
 </div>
 
 <style>
@@ -283,6 +316,8 @@
   .where {
     bottom: 6px;
     left: 6px;
+    right: 6px;
+    max-width: calc(100% - 12px);
     font-variant-numeric: tabular-nums;
   }
 </style>
