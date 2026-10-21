@@ -357,7 +357,7 @@ export function caveCover(stack: Stack, air: Float32Array, tile: number, res: nu
   const per = tile / res
   const tw = cave.w * per
   const th = cave.h * per
-  const dist = new Float32Array(tw * th).fill(1e9)
+  let dist = new Float32Array(tw * th).fill(1e9)
   const tileOf = (x: number, y: number) => Math.floor(y / per) * cave.w + Math.floor(x / per)
   for (let y = 0; y < th; y++)
     for (let x = 0; x < tw; x++) {
@@ -373,29 +373,40 @@ export function caveCover(stack: Stack, air: Float32Array, tile: number, res: nu
     const v = dist[ny * tw + nx]! + c
     if (v < dist[y * tw + x]!) dist[y * tw + x] = v
   }
+  const distancePass = () => {
+    for (let y = 0; y < th; y++)
+      for (let x = 0; x < tw; x++) {
+        relax(x, y, -1, 0, 1)
+        relax(x, y, 0, -1, 1)
+        relax(x, y, -1, -1, D)
+        relax(x, y, 1, -1, D)
+      }
+    for (let y = th - 1; y >= 0; y--)
+      for (let x = tw - 1; x >= 0; x--) {
+        relax(x, y, 1, 0, 1)
+        relax(x, y, 0, 1, 1)
+        relax(x, y, 1, 1, D)
+        relax(x, y, -1, 1, D)
+      }
+  }
+  distancePass()
+  const floorDist = dist
+  dist = new Float32Array(tw * th).fill(1e9)
   for (let y = 0; y < th; y++)
-    for (let x = 0; x < tw; x++) {
-      relax(x, y, -1, 0, 1)
-      relax(x, y, 0, -1, 1)
-      relax(x, y, -1, -1, D)
-      relax(x, y, 1, -1, D)
-    }
-  for (let y = th - 1; y >= 0; y--)
-    for (let x = tw - 1; x >= 0; x--) {
-      relax(x, y, 1, 0, 1)
-      relax(x, y, 0, 1, 1)
-      relax(x, y, 1, 1, D)
-      relax(x, y, -1, 1, D)
-    }
+    for (let x = 0; x < tw; x++)
+      if (cave.kind[tileOf(x, y)] === KIND.none || sunnyFaceRock(stack, air, tileOf(x, y))) dist[y * tw + x] = 0
+  distancePass()
   const out = new Float32Array(tw * th)
   for (let y = 0; y < th; y++)
     for (let x = 0; x < tw; x++) {
       const i = tileOf(x, y)
       if (cave.kind[i] === KIND.none || sunnyFaceRock(stack, air, i)) continue
       // Distance from a texel's middle to the floor's edge, in tiles.
-      const d = Math.max(0, dist[y * tw + x]! - 0.5) / per
+      const d = Math.max(0, floorDist[y * tw + x]! - 0.5) / per
       const f = Math.max(0, Math.min(1, (d - COVER_FADE.from) / (COVER_FADE.to - COVER_FADE.from)))
-      out[y * tw + x] = 1 - f * f * (3 - 2 * f)
+      // Fade toward every unpainted edge, including the sunny face at a cliff lip.
+      const lip = smooth(Math.max(0, dist[y * tw + x]! - 0.5) / per / (COVER_FADE.to - COVER_FADE.from))
+      out[y * tw + x] = Math.min(1 - f * f * (3 - 2 * f), cave.kind[i] === KIND.rock ? lip : 1)
     }
   return out
 }
