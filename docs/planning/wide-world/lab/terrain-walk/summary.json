@@ -1,0 +1,59 @@
+{
+ "arrivedMs": 3069,
+ "summary": {
+  "region": {
+   "ramps": 8,
+   "strandedTiles": 0,
+   "strandedComponents": 0,
+   "anchors": "6/6",
+   "heldExits": "288/288",
+   "solveMs": 278.601
+  },
+  "chunk": {
+   "ramps": 64,
+   "strandedTiles": 2012,
+   "strandedComponents": 1,
+   "anchors": "3/6",
+   "heldExits": "0/288",
+   "solveMs": 209.269
+  }
+ },
+ "spots": [
+  {
+   "name": "home",
+   "x": 84,
+   "y": 246,
+   "note": "spawn: Town's north edge, below the Tangle"
+  },
+  {
+   "name": "ramp",
+   "x": 295,
+   "y": 107,
+   "note": "the foot of a region-plan ramp up a shoulder, nearest the Tops"
+  },
+  {
+   "name": "ramp-top",
+   "x": 295,
+   "y": 112,
+   "note": "the top of that ramp"
+  },
+  {
+   "name": "whitequiet",
+   "x": 84,
+   "y": 167,
+   "note": "the Whitequiet's southern edge, north of the Tangle"
+  },
+  {
+   "name": "chunk-ramp",
+   "x": 177,
+   "y": 198,
+   "note": "a per-chunk repair ramp nearest home that the region plan doesn't cut"
+  },
+  {
+   "name": "stranded",
+   "x": 215,
+   "y": 179,
+   "note": "per-chunk repair strands 2012 tiles here"
+  }
+ ]
+}
