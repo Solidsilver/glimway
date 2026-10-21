@@ -136,7 +136,7 @@ far into the cave's view, daylight, light at the hero and the light's ms for eac
 
 ## Round 4b: the way in
 
-*Added by Argon (`86ad6168`, CI run `39546306274`), with correctness/cover follow-up by Sol ([height-lab-4b-review-argon.md](responses/height-lab-4b-review-argon.md)).*
+*Added by Argon (`86ad6168`, `4eaf86b9`, CI run `39546306274`; review in [height-lab-4b-review-argon.md](responses/height-lab-4b-review-argon.md)), with the correctness and tests follow-up by Sol (`66e253b3`, CI run `39548644087`): soft rock cover at the cliff lip, cave movers lit by their own light during the fade, the CPU crossfade bounded to the cave's spans (about 21% less CPU), and textures released when the lab ends.*
 
 ### What was happening in the owner's two screenshots
 
