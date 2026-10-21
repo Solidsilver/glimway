@@ -303,3 +303,110 @@ export function caveLevels(l: Layer): Float32Array {
   return out
 }
 
+
+/**
+ * The ways into a cave's view, switched in the dev panel (./look.ts):
+ *  - blend: round 4's, even over the crossfade's tiles;
+ *  - eased: over two tiles more, eased in and out;
+ *  - stages: the light first (the hill over you goes dark, the cave's own
+ *    light comes up), then the cave's floors come in under it;
+ *  - iris: the cave's view opens from the mouth outward, a circle.
+ */
+export type WayIn = 'blend' | 'eased' | 'stages' | 'iris'
+
+const smooth = (t: number) => {
+  const c = Math.max(0, Math.min(1, t))
+  return c * c * (3 - 2 * c)
+}
+
+/**
+ * How far into the cave's view, from the walked tiles since the arch: the
+ * light (the cave's over the surface's) and the cave's floors (their
+ * alpha). For the iris, how far the circle has opened (0–1), both the same.
+ */
+export function wayIn(walked: number, tiles: number, way: WayIn): { light: number; alpha: number } {
+  const t = Math.max(0.01, tiles)
+  if (way === 'eased') {
+    const s = smooth(walked / (t + 2))
+    return { light: s, alpha: s }
+  }
+  if (way === 'stages') {
+    const p = walked / (t + 1)
+    return { light: smooth(p / 0.55), alpha: smooth((p - 0.4) / 0.6) }
+  }
+  if (way === 'iris') {
+    const s = smooth(walked / t)
+    return { light: s, alpha: s }
+  }
+  const b = caveView(walked, tiles)
+  return { light: b, alpha: b }
+}
+
+/**
+ * How much the cave's image covers, per texel (`res` px a side), 0–1: its
+ * floors, drops and water fully, the rock round them fully near them and
+ * fading out smoothly with distance (not tile by tile) to nothing at the
+ * edge of what's drawn. The image's alpha, and where the light's cap
+ * (./lighting.ts) applies: the two agree, so the cave's edge is soft as
+ * it comes in over the hill (it was hard, tile-aligned slabs of rock).
+ */
+export const COVER_FADE = { from: 1.5, to: 2.75 } as const
+
+export function caveCover(stack: Stack, air: Float32Array, tile: number, res: number): Float32Array {
+  const cave = stack.layers[CAVE]!
+  const per = tile / res
+  const tw = cave.w * per
+  const th = cave.h * per
+  let dist = new Float32Array(tw * th).fill(1e9)
+  const tileOf = (x: number, y: number) => Math.floor(y / per) * cave.w + Math.floor(x / per)
+  for (let y = 0; y < th; y++)
+    for (let x = 0; x < tw; x++) {
+      const k = cave.kind[tileOf(x, y)]
+      if (k === KIND.flat || k === KIND.slope || k === KIND.water || k === KIND.face) dist[y * tw + x] = 0
+    }
+  // Chamfer distance (texels), two passes.
+  const D = Math.SQRT2
+  const relax = (x: number, y: number, dx: number, dy: number, c: number) => {
+    const nx = x + dx
+    const ny = y + dy
+    if (nx < 0 || ny < 0 || nx >= tw || ny >= th) return
+    const v = dist[ny * tw + nx]! + c
+    if (v < dist[y * tw + x]!) dist[y * tw + x] = v
+  }
+  const distancePass = () => {
+    for (let y = 0; y < th; y++)
+      for (let x = 0; x < tw; x++) {
+        relax(x, y, -1, 0, 1)
+        relax(x, y, 0, -1, 1)
+        relax(x, y, -1, -1, D)
+        relax(x, y, 1, -1, D)
+      }
+    for (let y = th - 1; y >= 0; y--)
+      for (let x = tw - 1; x >= 0; x--) {
+        relax(x, y, 1, 0, 1)
+        relax(x, y, 0, 1, 1)
+        relax(x, y, 1, 1, D)
+        relax(x, y, -1, 1, D)
+      }
+  }
+  distancePass()
+  const floorDist = dist
+  dist = new Float32Array(tw * th).fill(1e9)
+  for (let y = 0; y < th; y++)
+    for (let x = 0; x < tw; x++)
+      if (cave.kind[tileOf(x, y)] === KIND.none || sunnyFaceRock(stack, air, tileOf(x, y))) dist[y * tw + x] = 0
+  distancePass()
+  const out = new Float32Array(tw * th)
+  for (let y = 0; y < th; y++)
+    for (let x = 0; x < tw; x++) {
+      const i = tileOf(x, y)
+      if (cave.kind[i] === KIND.none || sunnyFaceRock(stack, air, i)) continue
+      // Distance from a texel's middle to the floor's edge, in tiles.
+      const d = Math.max(0, floorDist[y * tw + x]! - 0.5) / per
+      const f = Math.max(0, Math.min(1, (d - COVER_FADE.from) / (COVER_FADE.to - COVER_FADE.from)))
+      // Fade toward every unpainted edge, including the sunny face at a cliff lip.
+      const lip = smooth(Math.max(0, dist[y * tw + x]! - 0.5) / per / (COVER_FADE.to - COVER_FADE.from))
+      out[y * tw + x] = Math.min(1 - f * f * (3 - 2 * f), cave.kind[i] === KIND.rock ? lip : 1)
+    }
+  return out
+}

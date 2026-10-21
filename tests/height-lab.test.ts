@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CAVE, DEFAULT_AREA_OPTIONS, SURFACE, areaLighting, buildLabArea, routeLegs, LAB_W } from '../src/game/height-lab/area.ts';
 import { DEEP, MOUNTAIN_W, asciiLayer, buildMountain } from '../src/game/height-lab/mountain.ts';
-import { HERO_LIGHT, caveLevels, caveView, sunnyFaceRock, type HeroLight } from '../src/game/height-lab/light.ts';
-import { Lighting, depthDark, sightLine } from '../src/game/height-lab/lighting.ts';
+import { HERO_LIGHT, caveLevels, caveView, sunnyFaceRock, wayIn, type HeroLight } from '../src/game/height-lab/light.ts';
+import { Lighting, caveTint, clearLitScratch, depthDark, litPixels, pixelSpans, sightLine } from '../src/game/height-lab/lighting.ts';
 import { fogFor } from '../src/game/height-lab/look.ts';
 import { E, KIND, N, S, TILE_PX, findPath, move, step, zAt, sample, type Layer, type Walker } from '../src/game/height-lab/levels.ts';
 
@@ -459,4 +459,215 @@ test('the rock south of a tunnel that runs behind a cliff\'s top is the tunnel\'
       const i = m.arch[0] * a.stack.w + m.x0 - 1;
       if (a.stack.layers[CAVE]!.kind[i] === KIND.rock) assert.ok(sunnyFaceRock(a.stack, a.air, i), `${a.name}: beside the arch at ${m.x0}`);
     }
+});
+
+test('the way in: the cave never shows brighter mid-way than once in (the corners lit, then dark)', () => {
+  const l = areaLighting(mtn);
+  // A dark stretch of tunnel a few tiles in from the east mouth, past daylight's reach.
+  const rect = { x0: (54 * TILE_PX) / l.res, y0: (60 * TILE_PX) / l.res, w: 24, h: 24 };
+  const out = new Uint8ClampedArray(rect.w * rect.h * 4);
+  const own = new Uint8ClampedArray(rect.w * rect.h * 4);
+  l.fill(rect, own, [{ layer: CAVE, weight: 1 }]);
+  // Round 4's blend, uncapped: the material at alpha a under a light a of the cave's and 1 − a of daylight.
+  const a = 0.5;
+  l.fill(rect, out, [{ layer: CAVE, weight: a }, { layer: SURFACE, weight: 1 - a }]);
+  let worst = 0;
+  for (let i = 0; i < rect.w * rect.h; i++) worst = Math.max(worst, (a * out[i * 4]! - own[i * 4]!) / 255);
+  assert.ok(worst > 0.2, `round 4 lit the dark mid-way (${worst})`);
+  // Capped: the material (alpha a, times how much the image covers) never more than its own light; on the
+  // rock's fading rim (cover under a half) at most an eighth of what round 4 showed past it.
+  const uncapped = out.slice();
+  l.fill(rect, out, [{ layer: CAVE, weight: a }, { layer: SURFACE, weight: 1 - a }], { cap: { layer: CAVE, alpha: a } });
+  const tw = l.tw;
+  for (let y = 0; y < rect.h; y++)
+    for (let x = 0; x < rect.w; x++) {
+      const i = y * rect.w + x;
+      const cover = mtn.cover[(rect.y0 + y) * tw + rect.x0 + x]!;
+      for (let c = 0; c < 3; c++) {
+        const past = cover * (a * out[i * 4 + c]! - own[i * 4 + c]!);
+        const before = cover * Math.max(0, a * uncapped[i * 4 + c]! - own[i * 4 + c]!);
+        assert.ok(past <= (cover >= 0.5 ? 1 : before / 8 + 1), `texel ${x},${y} (cover ${cover}): ${past} past its own`);
+      }
+    }
+  assert.ok(l.stats.uncapped > 0.2, 'the cap saw what it stopped');
+});
+
+test('the ways in start outside, end in the cave, and only go one way', () => {
+  for (const way of ['blend', 'eased', 'stages', 'iris'] as const)
+    for (const tiles of [1, 3]) {
+      let last = { light: 0, alpha: 0 };
+      assert.deepEqual(wayIn(0, tiles, way), { light: 0, alpha: 0 }, `${way}: outside at the arch`);
+      for (let w = 0; w <= 8; w += 0.1) {
+        const s = wayIn(w, tiles, way);
+        assert.ok(s.light >= last.light - 1e-9 && s.alpha >= last.alpha - 1e-9, `${way} ${tiles} at ${w}`);
+        if (way === 'stages') assert.ok(s.alpha <= s.light + 1e-9, 'stages: the floors never ahead of the light');
+        last = s;
+      }
+      assert.deepEqual(wayIn(8, tiles, way), { light: 1, alpha: 1 }, `${way}: in`);
+    }
+});
+
+test('the iris: the cave\'s light inside its circle, daylight well outside', () => {
+  const l = areaLighting(mtn);
+  const rect = { x0: (50 * TILE_PX) / l.res, y0: (60 * TILE_PX) / l.res, w: 48, h: 40 };
+  const out = new Uint8ClampedArray(rect.w * rect.h * 4);
+  const own = new Uint8ClampedArray(rect.w * rect.h * 4);
+  l.fill(rect, own, [{ layer: CAVE, weight: 1 }]);
+  const iris = { layer: CAVE, x: 57 * TILE_PX, y: 70 * TILE_PX, r: 4 * TILE_PX, soft: 2 * TILE_PX };
+  l.fill(rect, out, [{ layer: CAVE, weight: 0.3 }, { layer: SURFACE, weight: 0.7 }], { iris });
+  for (let y = 0; y < rect.h; y++)
+    for (let x = 0; x < rect.w; x++) {
+      const d = Math.hypot((rect.x0 + x + 0.5) * l.res - iris.x, (rect.y0 + y + 0.5) * l.res - iris.y);
+      const i = (y * rect.w + x) * 4;
+      if (d <= iris.r) assert.equal(out[i], own[i], 'inside: the cave\'s own');
+      if (d >= iris.r + iris.soft) assert.equal(out[i], 255, 'outside: daylight');
+    }
+});
+
+test('the cave\'s edge is soft: whole on its floors, fading through the rock, no tile-sized steps', () => {
+  for (const a of [area, mtn]) {
+    const c = a.stack.layers[CAVE]!;
+    const per = TILE_PX / 4;
+    const tw = c.w * per;
+    let worst = 0;
+    const solidFloor = (kind: number) => kind === KIND.flat || kind === KIND.slope || kind === KIND.water || kind === KIND.face;
+    for (let y = 0; y < c.h * per; y++)
+      for (let x = 0; x < tw; x++) {
+        const k = c.kind[Math.floor(y / per) * c.w + Math.floor(x / per)];
+        if (k === KIND.flat || k === KIND.slope) assert.equal(a.cover[y * tw + x], 1, `${a.name}: floor covered`);
+        // Check rock boundaries in both directions, including zero. Walkable floors
+        // and the portal keep their opaque material edge; their silhouettes are intentional.
+        for (const j of [x + 1 < tw ? y * tw + x + 1 : -1, y + 1 < c.h * per ? (y + 1) * tw + x : -1])
+          if (j >= 0 && !solidFloor(k!) && !solidFloor(c.kind[Math.floor(j / tw / per) * c.w + Math.floor((j % tw) / per)]!)) worst = Math.max(worst, Math.abs(a.cover[y * tw + x]! - a.cover[j]!));
+      }
+    assert.ok(worst < 0.3, `${a.name}: steepest step between texels ${worst}`);
+  }
+});
+
+test('the crossfade lights the floors as the light image would: each pixel times the bilinear light', () => {
+  // A 3×3-texel light (4 px a texel) over an 8×8 grey image at world 4,4.
+  const light = new Uint8ClampedArray(3 * 3 * 4);
+  for (let i = 0; i < 9; i++) light.set([i * 25, 255, 0, 255], i * 4);
+  const src = new Uint8ClampedArray(8 * 8 * 4).fill(200);
+  const out = new Uint8ClampedArray(12 * 12 * 4);
+  litPixels(src, 8, 4, 4, light, 3, 3, 0, 0, 4, 0, 0, 12, 12, out);
+  assert.equal(out[(0 * 12 + 0) * 4 + 3], 0, 'nothing outside the image');
+  // At a texel's middle (world 6, 6: texel 1, 1), exactly that texel.
+  const at = (wx: number, wy: number) => (wy * 12 + wx) * 4;
+  assert.ok(Math.abs(out[at(5, 5) + 0]! - (200 * 4 * 25) / 255) <= 1 + (200 * 25) / 255, 'red near texel 1,1');
+  assert.ok(Math.abs(out[at(6, 6) + 1]! - 200) <= 1, 'green: full light');
+  assert.equal(out[at(6, 6) + 2], 0, 'blue: none');
+  // Red rises smoothly left to right across the image.
+  for (let x = 5; x < 11; x++) assert.ok(out[at(x + 1, 6)]! >= out[at(x, 6)]!, `smooth at ${x}`);
+  // With an iris, alpha stays whole inside r, feathers across soft, and is 0 outside r + soft.
+  litPixels(src, 8, 4, 4, light, 3, 3, 0, 0, 4, 0, 0, 12, 12, out, { x: 6.5, y: 6.5, r: 1, soft: 3 });
+  assert.equal(out[at(6, 6) + 3], 200, 'inside the iris: full alpha');
+  assert.ok(out[at(8, 6) + 3]! > 0 && out[at(8, 6) + 3]! < 200, 'in the feather ring: partial alpha');
+  assert.equal(out[at(11, 6) + 3], 0, 'past the feather ring: transparent');
+});
+
+test('the crossfade light pass: no double-darkening over the cave and no halo around a surface light', () => {
+  const l = areaLighting(mtn);
+  const rect = { x0: (56 * TILE_PX) / l.res, y0: (63 * TILE_PX) / l.res, w: 8, h: 8 };
+  const out = new Uint8ClampedArray(rect.w * rect.h * 4);
+  const h = 0.5;
+  const a = 0.5;
+  l.fill(rect, out, [{ layer: CAVE, weight: h }, { layer: SURFACE, weight: 1 - h }], { over: { layer: CAVE, alpha: a } });
+  // Over fully covered cave floor (cover = 1), the crossfade already dims the surface by (1 - a);
+  // the light pass underneath supplies (1 - h) / (1 - a) = 1 so the product is (1 - h), not (1 - h)^2.
+  assert.equal(out[0], 255, 'surface underneath is not darkened twice where cover is 1 and alpha equals h');
+  // In stages phase 1 (h > 0, alpha = 0), the surface over the cave dims to (1 - h) with no underground light on the grass.
+  l.add({ id: 'crystal-test', x: 57 * TILE_PX, y: 64 * TILE_PX, layer: CAVE, z: -1, color: 0xffffff, radius: 64, inner: 16, intensity: 1, moving: true });
+  l.fill(rect, out, [{ layer: CAVE, weight: 0.6 }, { layer: SURFACE, weight: 0.4 }], { over: { layer: CAVE, alpha: 0 } });
+  assert.equal(out[0], Math.round(0.4 * 255), 'stages phase 1: surface dims evenly to 1 - h with no cave light on the grass');
+  l.remove('crystal-test');
+  // A moving light on the sunny surface clamps at 1 on its own layer before weighting, so it never forms a bright halo as the surface dims.
+  l.add({ id: 'friend-test', x: 57 * TILE_PX, y: 64 * TILE_PX, layer: SURFACE, z: 2, color: 0xffffff, radius: 64, inner: 16, intensity: 0.9, moving: true });
+  l.fill(rect, out, [{ layer: CAVE, weight: 0.5 }, { layer: SURFACE, weight: 0.5 }], { over: { layer: CAVE, alpha: 0 } });
+  assert.equal(out[0], Math.round(0.5 * 255), 'surface moving light does not exceed daylight on its layer');
+  l.remove('friend-test');
+});
+
+
+test('every way in preserves surface weight and bounds cave light at every step and coverage', () => {
+  const l = new Lighting({ w: 4, h: 4, tile: 16, res: 4, layers: 2 });
+  const cover = new Float32Array(16 * 16);
+  for (let i = 0; i < cover.length; i++) cover[i] = [0, 0.25, 0.75, 1][i % 4]!;
+  l.setCover(CAVE, cover);
+  l.setAmbient(CAVE, new Float32Array(4 * 4 * 3).fill(0.08));
+  const out = new Uint8ClampedArray(16 * 16 * 4);
+  const rect = { x0: 0, y0: 0, w: 16, h: 16 };
+  const own = new Uint8ClampedArray(out.length);
+  l.fill(rect, own, [{ layer: CAVE, weight: 1 }]);
+  const material = new Uint8ClampedArray(16 * 16 * 4).fill(255);
+  const pixels = new Uint8ClampedArray(material.length);
+  for (const way of ['blend', 'eased', 'stages', 'iris'] as const)
+    for (const tiles of [1, 3])
+      for (let step = 0; step <= 100; step++) {
+        const v = wayIn(step * (tiles + 2) / 100, tiles, way);
+        const iris = way === 'iris' && v.light > 0.001 && v.light < 0.999
+          ? { layer: CAVE, x: 32, y: 32, r: v.light * 64, soft: 16 } : undefined;
+        litPixels(material, 16, 0, 0, own, 16, 16, 0, 0, 4, 0, 0, 16, 16, pixels, iris);
+        for (let i = 0; i < pixels.length; i += 4)
+          for (let c = 0; c < 3; c++)
+            assert.ok(pixels[i + c]! * pixels[i + 3]! / 255 * (iris ? 1 : v.alpha) <= own[c]! + 1, way + ': rendered cave pixels never brighter than inside');
+        l.fill(rect, out, [{ layer: CAVE, weight: v.light }, { layer: SURFACE, weight: 1 - v.light }], { over: { layer: CAVE, alpha: v.alpha }, iris });
+        for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+          const cov = cover[y * 16 + x]!;
+          const h = iris ? Math.max(0, Math.min(1, (iris.r + iris.soft - Math.hypot((x + 0.5) * 4 - iris.x, (y + 0.5) * 4 - iris.y)) / iris.soft)) : v.light;
+          const a = iris ? h : v.alpha;
+          const rem = 1 - a * cov;
+          const surface = 1 - h;
+          const caveUnder = h * (1 - cov) * 0.08;
+          const expected = surface + caveUnder;
+          assert.ok(Math.abs(rem * out[(y * 16 + x) * 4]! / 255 - expected) < 0.005, way + ': surface is not darkened twice');
+          const caveContribution = caveUnder + a * cov * 0.08;
+          assert.ok(caveContribution <= 0.08 + 1e-8, way + ': cave material never brighter than inside');
+          if (v.alpha === 0 && cov === 1) assert.ok(Math.abs(out[(y * 16 + x) * 4]! / 255 - surface) < 0.005, 'no cave light on hidden floors');
+          if (v.light === 0) assert.equal(out[(y * 16 + x) * 4], 255, 'no threshold iris ring');
+        }
+      }
+});
+
+test('over remains precise near full opacity and at the fully occluded endpoint', () => {
+  const l = new Lighting({ w: 1, h: 1, tile: 16, res: 4, layers: 2 });
+  l.setCover(CAVE, new Float32Array(16).fill(1));
+  const out = new Uint8ClampedArray(4);
+  for (const h of [0, 0.5, 0.99995, 1]) {
+    l.fill({ x0: 0, y0: 0, w: 1, h: 1 }, out, [{ layer: CAVE, weight: h }, { layer: SURFACE, weight: 1 - h }], { over: { layer: CAVE, alpha: h } });
+    assert.equal(out[0], h === 1 ? 0 : 255);
+  }
+});
+
+test('portal weighting preserves moving light from the surface when its ambient weight is zero', () => {
+  const l = new Lighting({ w: 2, h: 2, tile: 16, res: 4, layers: 2 });
+  l.setAmbient(CAVE, new Float32Array(12).fill(0.05));
+  l.add({ id: 'surface', layer: SURFACE, x: 8, y: 8, z: 0, color: 0xffffff, radius: 64, inner: 32, intensity: 0.4, moving: true });
+  const out = new Uint8ClampedArray(4);
+  l.fill({ x0: 3, y0: 3, w: 1, h: 1 }, out, [{ layer: CAVE, weight: 0 }, { layer: SURFACE, weight: 1 }], { portal: { layer: CAVE, mask: new Uint8Array(4).fill(1) } });
+  assert.ok(Math.abs(out[0]! / 255 - 0.45) < 0.005, 'b=0, m=1 keeps the cross-layer moving light');
+});
+
+test('cave mover tint keeps its own light, base tint and full depth darkness', () => {
+  assert.equal(caveTint([0.1, 0.2, 0.4], 0xffffff, 0, 0.6), 0x1a3366);
+  assert.equal(caveTint([1, 1, 1], 0x804020, 2, 0.5), 0x402010);
+  assert.equal(caveTint([0, 0, 0], 0xffffff, 0, 0.6), 0);
+});
+
+test('bounded crossfade matches the full image after viewport changes and scratch release', () => {
+  const src = new Uint8ClampedArray(20 * 20 * 4);
+  for (let y = 3; y < 18; y++) for (let x = y % 5; x < 11; x++) src.set([120, 180, 220, 200], (y * 20 + x) * 4);
+  const light = new Uint8ClampedArray(8 * 8 * 4).fill(150);
+  const spans = pixelSpans(src, 20);
+  const full = new Uint8ClampedArray(32 * 32 * 4);
+  const bounded = new Uint8ClampedArray(full.length).fill(255);
+  for (const [rx, ry, w, h] of [[-4, -4, 32, 32], [8, 10, 9, 8], [200, 200, 5, 6], [0, 0, 28, 28]]) {
+    clearLitScratch();
+    litPixels(src, 20, 4, 4, light, 8, 8, 0, 0, 4, rx!, ry!, 32, 32, full);
+    litPixels(src, 20, 4, 4, light, 8, 8, 0, 0, 4, rx!, ry!, 32, 32, bounded, null, { w: w!, h: h!, spans });
+    for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) for (let c = 0; c < 4; c++) {
+      const i = (y * 32 + x) * 4 + c;
+      assert.equal(bounded[i], x < w! && y < h! ? full[i] : 0, 'no stale pixels after shrinking or moving');
+    }
+  }
 });

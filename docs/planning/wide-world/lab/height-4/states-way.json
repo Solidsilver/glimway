@@ -1,0 +1,6206 @@
+{
+ "w-blend-m-east-00": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "blend",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 1.3450000166893006,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.05687500070780516,
+    0,
+    1,
+    0.26533564925193787
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-blend-m-east-01": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "blend",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 1.0208333313465119,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.05687500070780516,
+    0,
+    1,
+    0.37962961196899414
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-blend-m-east-02": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "blend",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.7158333202203114,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.05687500070780516,
+    0,
+    1,
+    0.5
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-blend-m-east-03": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "blend",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.7158333281675975,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.05687500070780516,
+    0,
+    1,
+    0.6177662014961243
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-blend-m-east-04": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "blend",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.8008333365122478,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.05687500070780516,
+    0,
+    1,
+    0.7346643209457397
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-blend-m-east-05": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "blend",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.9374999925494194,
+  "walked": 0.375,
+  "cave": 0.125,
+  "alpha": 0.125,
+  "light": 1,
+  "lightMs": 1.7991666734218597,
+  "corners": {
+   "shown": [
+    0.8862745098039215,
+    0.8745098039215686,
+    1,
+    0.9803921568627451
+   ],
+   "own": [
+    0.05687500070780516,
+    0,
+    1,
+    0.828125
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-blend-m-east-06": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "blend",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.8541666492819786,
+  "walked": 0.875,
+  "cave": 0.2916666666666667,
+  "alpha": 0.2916666666666667,
+  "light": 1,
+  "lightMs": 2.528333334128062,
+  "corners": {
+   "shown": [
+    0.7333333333333333,
+    0.7098039215686275,
+    1,
+    0.9764705882352941
+   ],
+   "own": [
+    0.05687500070780516,
+    0,
+    1,
+    0.9137731194496155
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-blend-m-east-07": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "blend",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.7708333283662796,
+  "walked": 1.375,
+  "cave": 0.4583333333333333,
+  "alpha": 0.4583333333333333,
+  "light": 1,
+  "lightMs": 2.304999993244807,
+  "corners": {
+   "shown": [
+    0.5764705882352941,
+    0.5411764705882353,
+    1,
+    0.9803921568627451
+   ],
+   "own": [
+    0.05687500070780516,
+    0,
+    1,
+    0.9594907164573669
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-blend-m-east-08": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "blend",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.6875000149011612,
+  "walked": 1.875,
+  "cave": 0.625,
+  "alpha": 0.625,
+  "light": 1,
+  "lightMs": 2.455833339691162,
+  "corners": {
+   "shown": [
+    0.4196078431372549,
+    0.3764705882352941,
+    1,
+    0.996078431372549
+   ],
+   "own": [
+    0.05687500070780516,
+    0,
+    1,
+    0.9918981194496155
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-blend-m-east-09": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "blend",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.604166679084301,
+  "walked": 2.375,
+  "cave": 0.7916666666666666,
+  "alpha": 0.7916666666666666,
+  "light": 1,
+  "lightMs": 2.585000006357829,
+  "corners": {
+   "shown": [
+    0.25882352941176473,
+    0.21568627450980393,
+    1,
+    1
+   ],
+   "own": [
+    0.05687500070780516,
+    0.006562500027939677,
+    1,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-blend-m-east-10": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "blend",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.5208333358168602,
+  "walked": 2.875,
+  "cave": 0.9583333333333334,
+  "alpha": 0.9583333333333334,
+  "light": 1,
+  "lightMs": 2.6941666583220165,
+  "corners": {
+   "shown": [
+    0.09411764705882353,
+    0.07450980392156863,
+    1,
+    1
+   ],
+   "own": [
+    0.05687500070780516,
+    0.039374999701976776,
+    1,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-eased-m-east-00": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "eased",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 1.873333324988683,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.05687500070780516,
+    0,
+    1,
+    0.26533564925193787
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-eased-m-east-01": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "eased",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.8499999900658926,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.05687500070780516,
+    0,
+    1,
+    0.37962961196899414
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-eased-m-east-02": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "eased",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.7816666603088379,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.05687500070780516,
+    0,
+    1,
+    0.5
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-eased-m-east-03": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "eased",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.7624999980131785,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.05687500070780516,
+    0,
+    1,
+    0.6177662014961243
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-eased-m-east-04": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "eased",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.760833340883255,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.05687500070780516,
+    0,
+    1,
+    0.7346643209457397
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-eased-m-east-05": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "eased",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.9374999925494194,
+  "walked": 0.375,
+  "cave": 0.01603125,
+  "alpha": 0.01603125,
+  "light": 1,
+  "lightMs": 1.5416666825612386,
+  "corners": {
+   "shown": [
+    0.984313725490196,
+    0.984313725490196,
+    1,
+    0.996078431372549
+   ],
+   "own": [
+    0.05687500070780516,
+    0,
+    1,
+    0.828125
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-eased-m-east-06": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "eased",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.8541666492819786,
+  "walked": 0.875,
+  "cave": 0.08115624999999999,
+  "alpha": 0.08115624999999999,
+  "light": 1,
+  "lightMs": 2.369166664282481,
+  "corners": {
+   "shown": [
+    0.9254901960784314,
+    0.9176470588235294,
+    1,
+    0.9921568627450981
+   ],
+   "own": [
+    0.05687500070780516,
+    0,
+    1,
+    0.9137731194496155
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-eased-m-east-07": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "eased",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.7708333283662796,
+  "walked": 1.375,
+  "cave": 0.18528125000000004,
+  "alpha": 0.18528125000000004,
+  "light": 1,
+  "lightMs": 2.4924999952316282,
+  "corners": {
+   "shown": [
+    0.8313725490196079,
+    0.8156862745098039,
+    1,
+    0.9921568627450981
+   ],
+   "own": [
+    0.05687500070780516,
+    0,
+    1,
+    0.9594907164573669
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-eased-m-east-08": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "eased",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.6875000149011612,
+  "walked": 1.875,
+  "cave": 0.31640625,
+  "alpha": 0.31640625,
+  "light": 1,
+  "lightMs": 2.532500014702479,
+  "corners": {
+   "shown": [
+    0.7098039215686275,
+    0.6823529411764706,
+    1,
+    0.996078431372549
+   ],
+   "own": [
+    0.05687500070780516,
+    0,
+    1,
+    0.9918981194496155
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-eased-m-east-09": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "eased",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.604166679084301,
+  "walked": 2.375,
+  "cave": 0.46253124999999995,
+  "alpha": 0.46253124999999995,
+  "light": 1,
+  "lightMs": 2.512500011920929,
+  "corners": {
+   "shown": [
+    0.5725490196078431,
+    0.5411764705882353,
+    1,
+    1
+   ],
+   "own": [
+    0.05687500070780516,
+    0.006562500027939677,
+    1,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-eased-m-east-10": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "eased",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.5208333358168602,
+  "walked": 2.875,
+  "cave": 0.6116562499999999,
+  "alpha": 0.6116562499999999,
+  "light": 1,
+  "lightMs": 2.6216666718324024,
+  "corners": {
+   "shown": [
+    0.43137254901960786,
+    0.4117647058823529,
+    1,
+    1
+   ],
+   "own": [
+    0.05687500070780516,
+    0.039374999701976776,
+    1,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-stages-m-east-00": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "stages",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 1.7883333285649619,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.05687500070780516,
+    0,
+    1,
+    0.26533564925193787
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-stages-m-east-01": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "stages",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.8383333285649618,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.05687500070780516,
+    0,
+    1,
+    0.37962961196899414
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-stages-m-east-02": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "stages",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.7716666698455811,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.05687500070780516,
+    0,
+    1,
+    0.5
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-stages-m-east-03": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "stages",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.7324999908606211,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.05687500070780516,
+    0,
+    1,
+    0.6177662014961243
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-stages-m-east-04": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "stages",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.7724999884764353,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.05687500070780516,
+    0,
+    1,
+    0.7346643209457397
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-stages-m-east-05": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "stages",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.9374999925494194,
+  "walked": 0.375,
+  "cave": 0.07725922708489856,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.8899999956289927,
+  "corners": {
+   "shown": [
+    0.9254901960784314,
+    0.9215686274509803,
+    1,
+    0.9882352941176471
+   ],
+   "own": [
+    0.05687500070780516,
+    0,
+    1,
+    0.828125
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-stages-m-east-06": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "stages",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.8541666492819786,
+  "walked": 0.875,
+  "cave": 0.34873039537941397,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 1.026666651169459,
+  "corners": {
+   "shown": [
+    0.6705882352941176,
+    0.6509803921568628,
+    1,
+    0.9686274509803922
+   ],
+   "own": [
+    0.05687500070780516,
+    0,
+    1,
+    0.9137731194496155
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-stages-m-east-07": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "stages",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.7708333283662796,
+  "walked": 1.375,
+  "cave": 0.68359375,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 1.050833316644033,
+  "corners": {
+   "shown": [
+    0.3568627450980392,
+    0.3176470588235294,
+    1,
+    0.9725490196078431
+   ],
+   "own": [
+    0.05687500070780516,
+    0,
+    1,
+    0.9594907164573669
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-stages-m-east-08": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "stages",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.6875000149011612,
+  "walked": 1.875,
+  "cave": 0.9409777657776107,
+  "alpha": 0.036379213686342574,
+  "light": 1,
+  "lightMs": 1.853333346048991,
+  "corners": {
+   "shown": [
+    0.11372549019607843,
+    0.058823529411764705,
+    1,
+    0.9921568627450981
+   ],
+   "own": [
+    0.05687500070780516,
+    0,
+    1,
+    0.9918981194496155
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-stages-m-east-09": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "stages",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.604166679084301,
+  "walked": 2.375,
+  "cave": 1,
+  "alpha": 0.24548113787615738,
+  "light": 1,
+  "lightMs": 2.687500015894572,
+  "corners": {
+   "shown": [
+    0.054901960784313725,
+    0.00784313725490196,
+    1,
+    1
+   ],
+   "own": [
+    0.05687500070780516,
+    0.006562500027939677,
+    1,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-stages-m-east-10": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "stages",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.5208333358168602,
+  "walked": 2.875,
+  "cave": 1,
+  "alpha": 0.54681396484375,
+  "light": 1,
+  "lightMs": 2.6075000087420146,
+  "corners": {
+   "shown": [
+    0.054901960784313725,
+    0.03529411764705882,
+    1,
+    1
+   ],
+   "own": [
+    0.05687500070780516,
+    0.039374999701976776,
+    1,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-iris-m-east-00": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "iris",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 1.8558333337306976,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.05687500070780516,
+    0,
+    1,
+    0.26533564925193787
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-iris-m-east-01": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "iris",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.935833317041397,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.05687500070780516,
+    0,
+    1,
+    0.37962961196899414
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-iris-m-east-02": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "iris",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.8758333166440327,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.05687500070780516,
+    0,
+    1,
+    0.5
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-iris-m-east-03": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "iris",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.8124999940395355,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.05687500070780516,
+    0,
+    1,
+    0.6177662014961243
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-iris-m-east-04": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "iris",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.8316666622956593,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.05687500070780516,
+    0,
+    1,
+    0.7346643209457397
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-iris-m-east-05": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "iris",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.9374999925494194,
+  "walked": 0.375,
+  "cave": 0.04296875,
+  "alpha": 0.04296875,
+  "light": 1,
+  "lightMs": 1.768333331743876,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.05687500070780516,
+    0,
+    1,
+    0.828125
+   ]
+  },
+  "uncapped": 0,
+  "iris": 35.261956336860365,
+  "crossfade": true
+ },
+ "w-iris-m-east-06": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "iris",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.8541666492819786,
+  "walked": 0.875,
+  "cave": 0.20558449074074078,
+  "alpha": 0.20558449074074078,
+  "light": 1,
+  "lightMs": 2.698333328962326,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.05687500070780516,
+    0,
+    1,
+    0.9137731194496155
+   ]
+  },
+  "uncapped": 0,
+  "iris": 78.78776971893502,
+  "crossfade": true
+ },
+ "w-iris-m-east-07": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "iris",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.7708333283662796,
+  "walked": 1.375,
+  "cave": 0.43764467592592593,
+  "alpha": 0.43764467592592593,
+  "light": 1,
+  "lightMs": 2.844999994834264,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.05687500070780516,
+    0,
+    1,
+    0.9594907164573669
+   ]
+  },
+  "uncapped": 0,
+  "iris": 142.6316561471436,
+  "crossfade": true
+ },
+ "w-iris-m-east-08": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "iris",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.6875000149011612,
+  "walked": 1.875,
+  "cave": 0.68359375,
+  "alpha": 0.68359375,
+  "light": 1,
+  "lightMs": 3.2725000023841857,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    0.9921568627450981
+   ],
+   "own": [
+    0.05687500070780516,
+    0,
+    1,
+    0.9918981194496155
+   ]
+  },
+  "uncapped": 0,
+  "iris": 212.53536046011763,
+  "crossfade": true
+ },
+ "w-iris-m-east-09": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "iris",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.604166679084301,
+  "walked": 2.375,
+  "cave": 0.8878761574074073,
+  "alpha": 0.8878761574074073,
+  "light": 1,
+  "lightMs": 3.263333338499069,
+  "corners": {
+   "shown": [
+    0.054901960784313725,
+    0.00784313725490196,
+    1,
+    1
+   ],
+   "own": [
+    0.05687500070780516,
+    0.006562500027939677,
+    1,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 273.21334142076955,
+  "crossfade": true
+ },
+ "w-iris-m-east-10": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "iris",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.5208333358168602,
+  "walked": 2.875,
+  "cave": 0.9949363425925927,
+  "alpha": 0.9949363425925927,
+  "light": 1,
+  "lightMs": 3.2125,
+  "corners": {
+   "shown": [
+    0.054901960784313725,
+    0.03529411764705882,
+    1,
+    1
+   ],
+   "own": [
+    0.05687500070780516,
+    0.039374999701976776,
+    1,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 308.26712432731733,
+  "crossfade": true
+ },
+ "w-blend-m-west-00": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "blend",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 2.1775000055631,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    0.2799479141831398,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-blend-m-west-01": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "blend",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.8766666809717815,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    0.3946759104728699,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-blend-m-west-02": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "blend",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.8258333444595337,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    0.5150462985038757,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-blend-m-west-03": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "blend",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.8583333412806193,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    0.6315104067325592,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-blend-m-west-04": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "blend",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.9050000011920929,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    0.7466724216938019,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-blend-m-west-05": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "blend",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.9374999925494194,
+  "walked": 0.375,
+  "cave": 0.125,
+  "alpha": 0.125,
+  "light": 1,
+  "lightMs": 1.755000001192093,
+  "corners": {
+   "shown": [
+    0.8745098039215686,
+    0.8862745098039215,
+    0.9803921568627451,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    0.8370949029922485,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-blend-m-west-06": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "blend",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.8541666492819786,
+  "walked": 0.875,
+  "cave": 0.2916666666666667,
+  "alpha": 0.2916666666666667,
+  "light": 1,
+  "lightMs": 2.427500007549922,
+  "corners": {
+   "shown": [
+    0.7098039215686275,
+    0.7294117647058823,
+    0.9764705882352941,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    0.9192708134651184,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-blend-m-west-07": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "blend",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.7708333283662796,
+  "walked": 1.375,
+  "cave": 0.4583333333333333,
+  "alpha": 0.4583333333333333,
+  "light": 1,
+  "lightMs": 2.3933333377043406,
+  "corners": {
+   "shown": [
+    0.5411764705882353,
+    0.5764705882352941,
+    0.9803921568627451,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    0.9623842388391495,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-blend-m-west-08": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "blend",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.6875000149011612,
+  "walked": 1.875,
+  "cave": 0.625,
+  "alpha": 0.625,
+  "light": 1,
+  "lightMs": 2.654166666666667,
+  "corners": {
+   "shown": [
+    0.3764705882352941,
+    0.41568627450980394,
+    0.996078431372549,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    0.9924768358469009,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-blend-m-west-09": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "blend",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.604166679084301,
+  "walked": 2.375,
+  "cave": 0.7916666666666666,
+  "alpha": 0.7916666666666666,
+  "light": 1,
+  "lightMs": 2.750833334525426,
+  "corners": {
+   "shown": [
+    0.20784313725490197,
+    0.2549019607843137,
+    1,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    1,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-blend-m-west-10": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "blend",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.5208333358168602,
+  "walked": 2.875,
+  "cave": 0.9583333333333334,
+  "alpha": 0.9583333333333334,
+  "light": 1,
+  "lightMs": 2.6500000019868213,
+  "corners": {
+   "shown": [
+    0.043137254901960784,
+    0.09019607843137255,
+    1,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    1,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-eased-m-west-00": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "eased",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 1.8091666678587595,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    0.2799479141831398,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-eased-m-west-01": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "eased",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.8466666638851166,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    0.3946759104728699,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-eased-m-west-02": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "eased",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.7666666527589162,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    0.5150462985038757,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-eased-m-west-03": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "eased",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.7399999837080637,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    0.6315104067325592,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-eased-m-west-04": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "eased",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.7716666658719381,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    0.7466724216938019,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-eased-m-west-05": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "eased",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.9374999925494194,
+  "walked": 0.375,
+  "cave": 0.01603125,
+  "alpha": 0.01603125,
+  "light": 1,
+  "lightMs": 1.560833344856898,
+  "corners": {
+   "shown": [
+    0.984313725490196,
+    0.984313725490196,
+    0.996078431372549,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    0.8370949029922485,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-eased-m-west-06": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "eased",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.8541666492819786,
+  "walked": 0.875,
+  "cave": 0.08115624999999999,
+  "alpha": 0.08115624999999999,
+  "light": 1,
+  "lightMs": 2.4449999928474426,
+  "corners": {
+   "shown": [
+    0.9176470588235294,
+    0.9254901960784314,
+    0.9921568627450981,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    0.9192708134651184,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-eased-m-west-07": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "eased",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.7708333283662796,
+  "walked": 1.375,
+  "cave": 0.18528125000000004,
+  "alpha": 0.18528125000000004,
+  "light": 1,
+  "lightMs": 2.4483333309491475,
+  "corners": {
+   "shown": [
+    0.8156862745098039,
+    0.8313725490196079,
+    0.9921568627450981,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    0.9623842388391495,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-eased-m-west-08": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "eased",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.6875000149011612,
+  "walked": 1.875,
+  "cave": 0.31640625,
+  "alpha": 0.31640625,
+  "light": 1,
+  "lightMs": 2.4525000234444936,
+  "corners": {
+   "shown": [
+    0.6823529411764706,
+    0.7098039215686275,
+    0.996078431372549,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    0.9924768358469009,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-eased-m-west-09": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "eased",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.604166679084301,
+  "walked": 2.375,
+  "cave": 0.46253124999999995,
+  "alpha": 0.46253124999999995,
+  "light": 1,
+  "lightMs": 3.7350000143051147,
+  "corners": {
+   "shown": [
+    0.5372549019607843,
+    0.5686274509803921,
+    1,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    1,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-eased-m-west-10": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "eased",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.5208333358168602,
+  "walked": 2.875,
+  "cave": 0.6116562499999999,
+  "alpha": 0.6116562499999999,
+  "light": 1,
+  "lightMs": 3.7825000047683717,
+  "corners": {
+   "shown": [
+    0.38823529411764707,
+    0.42745098039215684,
+    1,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    1,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-stages-m-west-00": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "stages",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 1.7908333400885263,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    0.2799479141831398,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-stages-m-west-01": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "stages",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.8308333337306977,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    0.3946759104728699,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-stages-m-west-02": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "stages",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.7399999976158143,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    0.5150462985038757,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-stages-m-west-03": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "stages",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.7458333373069763,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    0.6315104067325592,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-stages-m-west-04": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "stages",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.7708333472410838,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    0.7466724216938019,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-stages-m-west-05": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "stages",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.9374999925494194,
+  "walked": 0.375,
+  "cave": 0.07725922708489856,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.8950000166893005,
+  "corners": {
+   "shown": [
+    0.9215686274509803,
+    0.9254901960784314,
+    0.9882352941176471,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    0.8370949029922485,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-stages-m-west-06": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "stages",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.8541666492819786,
+  "walked": 0.875,
+  "cave": 0.34873039537941397,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.9658333420753479,
+  "corners": {
+   "shown": [
+    0.6509803921568628,
+    0.6705882352941176,
+    0.9686274509803922,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    0.9192708134651184,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-stages-m-west-07": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "stages",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.7708333283662796,
+  "walked": 1.375,
+  "cave": 0.68359375,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.9333333373069763,
+  "corners": {
+   "shown": [
+    0.3176470588235294,
+    0.35294117647058826,
+    0.9725490196078431,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    0.9623842388391495,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-stages-m-west-08": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "stages",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.6875000149011612,
+  "walked": 1.875,
+  "cave": 0.9409777657776107,
+  "alpha": 0.036379213686342574,
+  "light": 1,
+  "lightMs": 1.5083333293596903,
+  "corners": {
+   "shown": [
+    0.058823529411764705,
+    0.10980392156862745,
+    0.9921568627450981,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    0.9924768358469009,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-stages-m-west-09": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "stages",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.604166679084301,
+  "walked": 2.375,
+  "cave": 1,
+  "alpha": 0.24548113787615738,
+  "light": 1,
+  "lightMs": 2.16916665037473,
+  "corners": {
+   "shown": [
+    0,
+    0.050980392156862744,
+    1,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    1,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-stages-m-west-10": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "stages",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.5208333358168602,
+  "walked": 2.875,
+  "cave": 1,
+  "alpha": 0.54681396484375,
+  "light": 1,
+  "lightMs": 2.1983333190282184,
+  "corners": {
+   "shown": [
+    0,
+    0.047058823529411764,
+    1,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    1,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-iris-m-west-00": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "iris",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 1.5241666475931803,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    0.2799479141831398,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-iris-m-west-01": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "iris",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.7808333198229472,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    0.3946759104728699,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-iris-m-west-02": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "iris",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.7341666758060456,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    0.5150462985038757,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-iris-m-west-03": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "iris",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.751666667064031,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    0.6315104067325592,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-iris-m-west-04": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "iris",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.8,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    0.7466724216938019,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-iris-m-west-05": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "iris",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.9374999925494194,
+  "walked": 0.375,
+  "cave": 0.04296875,
+  "alpha": 0.04296875,
+  "light": 1,
+  "lightMs": 1.4433333337306977,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    0.8370949029922485,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 35.261956336860365,
+  "crossfade": true
+ },
+ "w-iris-m-west-06": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "iris",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.8541666492819786,
+  "walked": 0.875,
+  "cave": 0.20558449074074078,
+  "alpha": 0.20558449074074078,
+  "light": 1,
+  "lightMs": 2.2599999864896136,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    0.9192708134651184,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 78.78776971893502,
+  "crossfade": true
+ },
+ "w-iris-m-west-07": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "iris",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.7708333283662796,
+  "walked": 1.375,
+  "cave": 0.43764467592592593,
+  "alpha": 0.43764467592592593,
+  "light": 1,
+  "lightMs": 2.609166661898295,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    0.9623842388391495,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 142.6316561471436,
+  "crossfade": true
+ },
+ "w-iris-m-west-08": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "iris",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.6875000149011612,
+  "walked": 1.875,
+  "cave": 0.68359375,
+  "alpha": 0.68359375,
+  "light": 1,
+  "lightMs": 2.9016666611035666,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    0.9921568627450981,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    0.9924768358469009,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 212.53536046011763,
+  "crossfade": true
+ },
+ "w-iris-m-west-09": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "iris",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.604166679084301,
+  "walked": 2.375,
+  "cave": 0.8878761574074073,
+  "alpha": 0.8878761574074073,
+  "light": 1,
+  "lightMs": 3.019166656335195,
+  "corners": {
+   "shown": [
+    0,
+    0.050980392156862744,
+    1,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    1,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 273.21334142076955,
+  "crossfade": true
+ },
+ "w-iris-m-west-10": {
+  "area": "mountain",
+  "look": {
+   "area": "mountain",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "iris",
+   "grid": false
+  },
+  "built": {
+   "area": "mountain",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 0,
+  "sky": 0.5208333358168602,
+  "walked": 2.875,
+  "cave": 0.9949363425925927,
+  "alpha": 0.9949363425925927,
+  "light": 1,
+  "lightMs": 3.0566666622956595,
+  "corners": {
+   "shown": [
+    0,
+    0.050980392156862744,
+    1,
+    1
+   ],
+   "own": [
+    0,
+    0.061250001192092896,
+    1,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 308.26712432731733,
+  "crossfade": true
+ },
+ "w-blend-s-second-00": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "blend",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 1,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.8946428639548165,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.07000000029802322,
+    0.2799479141831398,
+    0.03460648260079324,
+    0.043547452660277486
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-blend-s-second-01": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "blend",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 1,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.8591666738192241,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.07000000029802322,
+    0.15726272761821747,
+    0.05597222317010164,
+    0.07523148134350777
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-blend-s-second-02": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "blend",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 1,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.8041666785875956,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.07000000029802322,
+    0.08072916604578495,
+    0.07000000029802322,
+    0.14525462687015533
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-blend-s-second-03": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "blend",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 1,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.8083333452542623,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.07000000029802322,
+    0.036747684702277184,
+    0.07000000029802322,
+    0.241319440305233
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-blend-s-second-04": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "blend",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 1,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.8633333384990692,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.07000000029802322,
+    0.007523148087784648,
+    0.07000000029802322,
+    0.34953702986240387
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-blend-s-second-05": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "blend",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 1,
+  "sky": 0.9374999925494194,
+  "walked": 0.375,
+  "cave": 0.125,
+  "alpha": 0.125,
+  "light": 1,
+  "lightMs": 1.8641666650772095,
+  "corners": {
+   "shown": [
+    0.8823529411764706,
+    0.8745098039215686,
+    0.9490196078431372,
+    0.9372549019607843
+   ],
+   "own": [
+    0.07000000029802322,
+    0.006944444612599909,
+    0.07000000029802322,
+    0.5300925970077515
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-blend-s-second-06": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "blend",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 1,
+  "sky": 0.8541666492819786,
+  "walked": 0.875,
+  "cave": 0.2916666666666667,
+  "alpha": 0.2916666666666667,
+  "light": 1,
+  "lightMs": 2.9850000123182934,
+  "corners": {
+   "shown": [
+    0.7254901960784313,
+    0.7098039215686275,
+    0.984313725490196,
+    0.9058823529411765
+   ],
+   "own": [
+    0.06562500074505806,
+    0.0020254630071576685,
+    0.07000000029802322,
+    0.7000144459307194
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-blend-s-second-07": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "blend",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 1,
+  "sky": 0.7708333283662796,
+  "walked": 1.375,
+  "cave": 0.4583333333333333,
+  "alpha": 0.4583333333333333,
+  "light": 1,
+  "lightMs": 3.0175000190734864,
+  "corners": {
+   "shown": [
+    0.5568627450980392,
+    0.5411764705882353,
+    1,
+    0.9411764705882353
+   ],
+   "own": [
+    0.04374999925494194,
+    0,
+    0.07000000029802322,
+    0.8608940541744232
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-blend-s-second-08": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "blend",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 1,
+  "sky": 0.6875000149011612,
+  "walked": 1.875,
+  "cave": 0.625,
+  "alpha": 0.625,
+  "light": 1,
+  "lightMs": 2.9016666809717813,
+  "corners": {
+   "shown": [
+    0.3803921568627451,
+    0.3764705882352941,
+    1,
+    0.9568627450980393
+   ],
+   "own": [
+    0.013125000288709998,
+    0,
+    0.07000000029802322,
+    0.949652761220932
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-blend-s-second-09": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "blend",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 1,
+  "sky": 0.604166679084301,
+  "walked": 2.375,
+  "cave": 0.7916666666666666,
+  "alpha": 0.7916666666666666,
+  "light": 1,
+  "lightMs": 2.892500013113022,
+  "corners": {
+   "shown": [
+    0.20784313725490197,
+    0.20784313725490197,
+    1,
+    0.9921568627450981
+   ],
+   "own": [
+    0,
+    0,
+    0.07000000029802322,
+    0.9947916641831398
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-blend-s-second-10": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "blend",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 1,
+  "sky": 0.5208333358168602,
+  "walked": 2.875,
+  "cave": 0.9583333333333334,
+  "alpha": 0.9583333333333334,
+  "light": 1,
+  "lightMs": 2.8958333313465117,
+  "corners": {
+   "shown": [
+    0.043137254901960784,
+    0.043137254901960784,
+    1,
+    1
+   ],
+   "own": [
+    0,
+    0,
+    0.07000000029802322,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-eased-s-second-00": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "eased",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 1,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 1.8758333305517831,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.07000000029802322,
+    0.26772279758006334,
+    0.03460648260079324,
+    0.043547452660277486
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-eased-s-second-01": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "eased",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 1,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.8141666690508524,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.07000000029802322,
+    0.15726272761821747,
+    0.05597222317010164,
+    0.07523148134350777
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-eased-s-second-02": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "eased",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 1,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.8166666587193807,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.07000000029802322,
+    0.08072916604578495,
+    0.07000000029802322,
+    0.14525462687015533
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-eased-s-second-03": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "eased",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 1,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.8616666615009307,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.07000000029802322,
+    0.036747684702277184,
+    0.07000000029802322,
+    0.241319440305233
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-eased-s-second-04": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "eased",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 1,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.9183333317438761,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.07000000029802322,
+    0.007523148087784648,
+    0.07000000029802322,
+    0.34953702986240387
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-eased-s-second-05": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "eased",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 1,
+  "sky": 0.9374999925494194,
+  "walked": 0.375,
+  "cave": 0.01603125,
+  "alpha": 0.01603125,
+  "light": 1,
+  "lightMs": 1.8058333237965902,
+  "corners": {
+   "shown": [
+    0.984313725490196,
+    0.984313725490196,
+    0.996078431372549,
+    0.9921568627450981
+   ],
+   "own": [
+    0.07000000029802322,
+    0.004340277853771113,
+    0.07000000029802322,
+    0.5
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-eased-s-second-06": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "eased",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 1,
+  "sky": 0.8541666492819786,
+  "walked": 0.875,
+  "cave": 0.08115624999999999,
+  "alpha": 0.08115624999999999,
+  "light": 1,
+  "lightMs": 2.8383333325386046,
+  "corners": {
+   "shown": [
+    0.9254901960784314,
+    0.9176470588235294,
+    1,
+    0.9686274509803922
+   ],
+   "own": [
+    0.061250001192092896,
+    0,
+    0.07000000029802322,
+    0.6310763731598854
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-eased-s-second-07": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "eased",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 1,
+  "sky": 0.7708333283662796,
+  "walked": 1.375,
+  "cave": 0.18528125000000004,
+  "alpha": 0.18528125000000004,
+  "light": 1,
+  "lightMs": 2.7700000007947287,
+  "corners": {
+   "shown": [
+    0.8196078431372549,
+    0.8156862745098039,
+    1,
+    0.9607843137254902
+   ],
+   "own": [
+    0.030625000596046448,
+    0,
+    0.07000000029802322,
+    0.7706886231899261
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-eased-s-second-08": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "eased",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 1,
+  "sky": 0.6875000149011612,
+  "walked": 1.875,
+  "cave": 0.31640625,
+  "alpha": 0.31640625,
+  "light": 1,
+  "lightMs": 2.7008333086967466,
+  "corners": {
+   "shown": [
+    0.6862745098039216,
+    0.6823529411764706,
+    1,
+    0.9568627450980393
+   ],
+   "own": [
+    0.0043750000186264515,
+    0,
+    0.07000000029802322,
+    0.8981481194496155
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-eased-s-second-09": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "eased",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 1,
+  "sky": 0.604166679084301,
+  "walked": 2.375,
+  "cave": 0.46253124999999995,
+  "alpha": 0.46253124999999995,
+  "light": 1,
+  "lightMs": 2.63083332379659,
+  "corners": {
+   "shown": [
+    0.5372549019607843,
+    0.5372549019607843,
+    1,
+    0.9882352941176471
+   ],
+   "own": [
+    0,
+    0,
+    0.07000000029802322,
+    0.9712094664573669
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-eased-s-second-10": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "eased",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 1,
+  "sky": 0.5208333358168602,
+  "walked": 2.875,
+  "cave": 0.6116562499999999,
+  "alpha": 0.6116562499999999,
+  "light": 1,
+  "lightMs": 2.5233333388964336,
+  "corners": {
+   "shown": [
+    0.38823529411764707,
+    0.38823529411764707,
+    1,
+    0.9921568627450981
+   ],
+   "own": [
+    0,
+    0,
+    0.07000000029802322,
+    0.9942129626870155
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-stages-s-second-00": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "stages",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 1,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 1.6449999948342642,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.07000000029802322,
+    0.26772279758006334,
+    0.03460648260079324,
+    0.043547452660277486
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-stages-s-second-01": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "stages",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 1,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.6358333269755045,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.07000000029802322,
+    0.15726272761821747,
+    0.05597222317010164,
+    0.07523148134350777
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-stages-s-second-02": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "stages",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 1,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.6141666611035664,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.07000000029802322,
+    0.08072916604578495,
+    0.07000000029802322,
+    0.14525462687015533
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-stages-s-second-03": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "stages",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 1,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.6133333325386048,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.07000000029802322,
+    0.036747684702277184,
+    0.07000000029802322,
+    0.241319440305233
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-stages-s-second-04": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "stages",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 1,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.6683333297570546,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.07000000029802322,
+    0.007523148087784648,
+    0.07000000029802322,
+    0.34953702986240387
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-stages-s-second-05": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "stages",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 1,
+  "sky": 0.9374999925494194,
+  "walked": 0.375,
+  "cave": 0.07725922708489856,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.8349999884764353,
+  "corners": {
+   "shown": [
+    0.9294117647058824,
+    0.9215686274509803,
+    0.9254901960784314,
+    0.9607843137254902
+   ],
+   "own": [
+    0.07000000029802322,
+    0.006944444612599909,
+    0.07000000029802322,
+    0.5150462985038757
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-stages-s-second-06": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "stages",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 1,
+  "sky": 0.8541666492819786,
+  "walked": 0.875,
+  "cave": 0.34873039537941397,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.9541666726271312,
+  "corners": {
+   "shown": [
+    0.6705882352941176,
+    0.6509803921568628,
+    0.6509803921568628,
+    0.8862745098039215
+   ],
+   "own": [
+    0.06562500074505806,
+    0.00231481489026919,
+    0.07000000029802322,
+    0.7268518358469009
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-stages-s-second-07": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "stages",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 1,
+  "sky": 0.7708333283662796,
+  "walked": 1.375,
+  "cave": 0.68359375,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.9650000234444936,
+  "corners": {
+   "shown": [
+    0.34509803921568627,
+    0.3176470588235294,
+    0.3176470588235294,
+    0.9411764705882353
+   ],
+   "own": [
+    0.05250000022351742,
+    0,
+    0.07000000029802322,
+    0.9089988172054291
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-stages-s-second-08": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "stages",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 1,
+  "sky": 0.6875000149011612,
+  "walked": 1.875,
+  "cave": 0.9409777657776107,
+  "alpha": 0.036379213686342574,
+  "light": 1,
+  "lightMs": 1.6916666746139526,
+  "corners": {
+   "shown": [
+    0.0784313725490196,
+    0.06274509803921569,
+    0.06274509803921569,
+    0.9921568627450981
+   ],
+   "own": [
+    0.022968750447034836,
+    0.0026041666860692203,
+    0.07000000029802322,
+    0.9888599365949631
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-stages-s-second-09": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "stages",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 1,
+  "sky": 0.604166679084301,
+  "walked": 2.375,
+  "cave": 1,
+  "alpha": 0.24548113787615738,
+  "light": 1,
+  "lightMs": 2.490833342075348,
+  "corners": {
+   "shown": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "own": [
+    0.0017773437721189111,
+    0.00028935185400769114,
+    0.07000000029802322,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-stages-s-second-10": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "stages",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 1,
+  "sky": 0.5208333358168602,
+  "walked": 2.875,
+  "cave": 1,
+  "alpha": 0.54681396484375,
+  "light": 1,
+  "lightMs": 2.5091666996479036,
+  "corners": {
+   "shown": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "own": [
+    0,
+    0,
+    0.07000000029802322,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": true
+ },
+ "w-iris-s-second-00": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "iris",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 1,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 1.785833344856898,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.07000000029802322,
+    0.2799479141831398,
+    0.03460648260079324,
+    0.043547452660277486
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-iris-s-second-01": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "iris",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 1,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.8041666507720947,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.07000000029802322,
+    0.15726272761821747,
+    0.05597222317010164,
+    0.07523148134350777
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-iris-s-second-02": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "iris",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 1,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.7441666622956594,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.07000000029802322,
+    0.08072916604578495,
+    0.07000000029802322,
+    0.14525462687015533
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-iris-s-second-03": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "iris",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 0,
+  "z": 1,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.7499999920527141,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.07000000029802322,
+    0.036747684702277184,
+    0.07000000029802322,
+    0.241319440305233
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-iris-s-second-04": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "iris",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 1,
+  "sky": 1,
+  "walked": 0,
+  "cave": 0,
+  "alpha": 0,
+  "light": 1,
+  "lightMs": 0.7649999737739563,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.07000000029802322,
+    0.007523148087784648,
+    0.07000000029802322,
+    0.34953702986240387
+   ]
+  },
+  "uncapped": 0,
+  "iris": 0,
+  "crossfade": false
+ },
+ "w-iris-s-second-05": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "iris",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 1,
+  "sky": 0.9374999925494194,
+  "walked": 0.375,
+  "cave": 0.04296875,
+  "alpha": 0.04296875,
+  "light": 1,
+  "lightMs": 1.5324999789396923,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.07000000029802322,
+    0.004340277853771113,
+    0.07000000029802322,
+    0.5
+   ]
+  },
+  "uncapped": 0,
+  "iris": 36.036461958286374,
+  "crossfade": true
+ },
+ "w-iris-s-second-06": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "iris",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 1,
+  "sky": 0.8541666492819786,
+  "walked": 0.875,
+  "cave": 0.20558449074074078,
+  "alpha": 0.20558449074074078,
+  "light": 1,
+  "lightMs": 2.69833332101504,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.06343750096857548,
+    0.0008680555620230734,
+    0.07000000029802322,
+    0.672743022441864
+   ]
+  },
+  "uncapped": 0,
+  "iris": 81.75267220386895,
+  "crossfade": true
+ },
+ "w-iris-s-second-07": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "iris",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 1,
+  "sky": 0.7708333283662796,
+  "walked": 1.375,
+  "cave": 0.43764467592592593,
+  "alpha": 0.43764467592592593,
+  "light": 1,
+  "lightMs": 3.166666664679845,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "own": [
+    0.039374999701976776,
+    0,
+    0.07000000029802322,
+    0.8498625233769417
+   ]
+  },
+  "uncapped": 0,
+  "iris": 147.36307799145618,
+  "crossfade": true
+ },
+ "w-iris-s-second-08": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "iris",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 1,
+  "sky": 0.6875000149011612,
+  "walked": 1.875,
+  "cave": 0.68359375,
+  "alpha": 0.68359375,
+  "light": 1,
+  "lightMs": 3.420833337306976,
+  "corners": {
+   "shown": [
+    1,
+    1,
+    1,
+    0.9647058823529412
+   ],
+   "own": [
+    0.017500000540167093,
+    0,
+    0.07000000029802322,
+    0.9564525336027145
+   ]
+  },
+  "uncapped": 0,
+  "iris": 216.5000499702967,
+  "crossfade": true
+ },
+ "w-iris-s-second-09": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "iris",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 1,
+  "sky": 0.604166679084301,
+  "walked": 2.375,
+  "cave": 0.8878761574074073,
+  "alpha": 0.8878761574074073,
+  "light": 1,
+  "lightMs": 3.4641666730244953,
+  "corners": {
+   "shown": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "own": [
+    0,
+    0,
+    0.07000000029802322,
+    0.998408567160368
+   ]
+  },
+  "uncapped": 0,
+  "iris": 274.4604538254822,
+  "crossfade": true
+ },
+ "w-iris-s-second-10": {
+  "area": "shoulder",
+  "look": {
+   "area": "shoulder",
+   "fog": "fog",
+   "fogStrength": "medium",
+   "darkness": 0.6,
+   "caveStyle": "mixed",
+   "zoom": true,
+   "haze": true,
+   "cave": "lantern",
+   "skyTiles": 6,
+   "crossfade": 3,
+   "way": "iris",
+   "grid": false
+  },
+  "built": {
+   "area": "shoulder",
+   "skyTiles": 6,
+   "caveStyle": "mixed"
+  },
+  "layer": 1,
+  "z": 1,
+  "sky": 0.5208333358168602,
+  "walked": 2.875,
+  "cave": 0.9949363425925927,
+  "alpha": 0.9949363425925927,
+  "light": 1,
+  "lightMs": 3.400000007947286,
+  "corners": {
+   "shown": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "own": [
+    0,
+    0,
+    0.07000000029802322,
+    1
+   ]
+  },
+  "uncapped": 0,
+  "iris": 308.26712432731733,
+  "crossfade": true
+ }
+}

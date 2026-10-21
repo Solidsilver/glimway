@@ -4,6 +4,7 @@
  * (sessionStorage), so a reload keeps the choice.
  */
 import type { AreaName } from './area.ts'
+import type { WayIn } from './light.ts'
 
 export interface LabLook {
   /** Which area to walk (switching rebuilds the scene). */
@@ -26,12 +27,14 @@ export interface LabLook {
   skyTiles: number
   /** Walked tiles from the arch over which the surface's view crossfades to the cave's. */
   crossfade: number
+  /** How the cave's view comes in (./light.ts WayIn). */
+  way: WayIn
   /** Shade the tiles by level, show edges and layers (for reading the data). */
   grid: boolean
 }
 
 const KEY = 'glimway:height-lab-look'
-const DEFAULT: LabLook = { area: 'shoulder', fog: 'fog', fogStrength: 'medium', darkness: 0.6, caveStyle: 'mixed', zoom: true, haze: true, cave: 'lantern', skyTiles: 6, crossfade: 3, grid: false }
+const DEFAULT: LabLook = { area: 'shoulder', fog: 'fog', fogStrength: 'medium', darkness: 0.6, caveStyle: 'mixed', zoom: true, haze: true, cave: 'lantern', skyTiles: 6, crossfade: 3, way: 'blend', grid: false }
 
 function read(): LabLook {
   try {

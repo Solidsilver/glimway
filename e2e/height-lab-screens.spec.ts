@@ -18,8 +18,24 @@ const OUT = '.e2e-artifacts/height-lab'
 const CAVE = 1
 const SURFACE = 0
 
-type Look = { area?: 'shoulder' | 'mountain'; cave?: 'lantern' | 'wide' | 'dim'; skyTiles?: number; caveStyle?: 'mixed' | 'built' | 'rough'; darkness?: number }
-type LabState = { area: string; look: Look; built: Look; layer: number; z: number; sky: number; cave: number; light: number; lightMs: number }
+type Look = { area?: 'shoulder' | 'mountain'; cave?: 'lantern' | 'wide' | 'dim'; skyTiles?: number; caveStyle?: 'mixed' | 'built' | 'rough'; darkness?: number; way?: 'blend' | 'eased' | 'stages' | 'iris'; crossfade?: number }
+type LabState = {
+  area: string
+  look: Look
+  built: Look
+  layer: number
+  z: number
+  sky: number
+  walked?: number
+  cave: number
+  alpha?: number
+  light: number
+  lightMs: number
+  corners?: { shown: number[]; own: number[] }
+  uncapped?: number
+  iris?: number
+  crossfade?: boolean
+}
 type Lab = { put: (layer: number, tx: number, ty: number) => void; look: (l: Look) => void; state: () => LabState }
 
 const labState = (page: Page) => page.evaluate(() => (window as unknown as { __fsLab: Lab }).__fsLab.state())
@@ -172,6 +188,33 @@ test.describe('desktop', () => {
         }
     writeFileSync(`${OUT}/states-r4-mouths.json`, JSON.stringify(mouthStates, null, 1))
   })
+
+  test('height lab round 4b: the way in, each way, in half-tile steps at three mouths', async ({ page }) => {
+    test.setTimeout(900_000)
+    mkdirSync(OUT, { recursive: true })
+    await openLab(page)
+    const mouths = [
+      { area: 'mountain', name: 'm-east', x: 56, arch: 73 },
+      { area: 'mountain', name: 'm-west', x: 40, arch: 73 },
+      { area: 'shoulder', name: 's-second', x: 52, arch: 24 }
+    ] as const
+    const ways: Record<string, LabState> = {}
+    for (const m of mouths)
+      for (const way of ['blend', 'eased', 'stages', 'iris'] as const) {
+        await setLook(page, { area: m.area, way, crossfade: 3, skyTiles: 6, cave: 'lantern', caveStyle: 'mixed', darkness: 0.6 })
+        // From two tiles out to three in: a foot a tile past the arch's foot row is outside.
+        for (let k = 0; k <= 10; k++) {
+          const ty = m.arch + 2 - k * 0.5
+          const layer = Math.floor(ty + 10 / 16) > m.arch ? SURFACE : CAVE
+          const name = `w-${way}-${m.name}-${String(k).padStart(2, '0')}`
+          await shot(page, name, layer, m.x + 0.5, ty)
+          ways[name] = states[name]!
+        }
+      }
+    writeFileSync(`${OUT}/states-way.json`, JSON.stringify(ways, null, 1))
+    // The cave's floors never show brighter mid-way than once in: the cap held (what it stopped is in `uncapped`).
+    expect(Object.values(ways).every((st) => st.layer === SURFACE || st.cave > 0 || st.alpha === 0)).toBe(true)
+  })
 })
 
 test.describe('phone', () => {
@@ -187,5 +230,23 @@ test.describe('phone', () => {
       phone[name] = states[name]!
     }
     writeFileSync(`${OUT}/states-phone.json`, JSON.stringify(phone, null, 1))
+  })
+
+  test('height lab round 4b: the way in on a phone, each way, the mountain\'s east mouth', async ({ page }) => {
+    test.setTimeout(600_000)
+    mkdirSync(OUT, { recursive: true })
+    await openLab(page)
+    const phone: Record<string, LabState> = {}
+    for (const way of ['blend', 'eased', 'stages', 'iris'] as const) {
+      await setLook(page, { area: 'mountain', way, crossfade: 3, skyTiles: 6, cave: 'lantern', caveStyle: 'mixed', darkness: 0.6 })
+      for (let k = 0; k <= 10; k++) {
+        const ty = 73 + 2 - k * 0.5
+        const layer = Math.floor(ty + 10 / 16) > 73 ? SURFACE : CAVE
+        const name = `pw-${way}-m-east-${String(k).padStart(2, '0')}`
+        await shot(page, name, layer, 56.5, ty)
+        phone[name] = states[name]!
+      }
+    }
+    writeFileSync(`${OUT}/states-way-phone.json`, JSON.stringify(phone, null, 1))
   })
 })

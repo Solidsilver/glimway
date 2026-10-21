@@ -18,6 +18,7 @@
     { key: 'haze', label: 'Climbing, haze at the edges', options: [{ value: true, label: 'On' }, { value: false, label: 'Off' }] },
     { key: 'cave', label: 'In a cave, your own light', options: [{ value: 'lantern', label: 'Close' }, { value: 'wide', label: 'Wide' }, { value: 'dim', label: 'None' }] },
     { key: 'skyTiles', label: 'Daylight reaches in', options: [{ value: 3, label: '3 tiles' }, { value: 6, label: '6 tiles' }, { value: 10, label: '10 tiles' }] },
+    { key: 'way', label: 'Into a cave, the way in', options: [{ value: 'blend', label: 'Even (round 4)' }, { value: 'eased', label: 'Longer, eased' }, { value: 'stages', label: 'Dark first, then the cave' }, { value: 'iris', label: 'Iris from the mouth' }] },
     { key: 'crossfade', label: 'The cave’s view comes in over', options: [{ value: 1, label: '1 tile' }, { value: 3, label: '3 tiles' }] },
     { key: 'grid', label: 'Levels overlay', options: [{ value: false, label: 'Off' }, { value: true, label: 'On' }] }
   ]
