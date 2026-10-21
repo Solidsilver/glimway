@@ -114,7 +114,7 @@
 {/snippet}
 
 {#snippet body()}
-  <p class="lede">Glimway’s own things for this account, the server’s clock and the labs. Nothing here exists in a real build. Key: <span class="kbd">`</span></p>
+  <p class="lede">Glimway’s own things for this account, the server’s clock and the labs. Nothing here exists in a real build. Key: <span class="kbd tick">`</span></p>
   {#if lab}{@render heightLab()}{/if}
   {#if tools?.grant}
     <DevSection id="quick" icon="glim" title="Quick" open={open.quick} onToggle={(o) => fold('quick', o)}>
@@ -162,7 +162,7 @@
             <span class="thumb" aria-hidden="true"><ArtIcon art={g.art} name={g.icon} size={28} /></span>
             <span class="txt">
               <span class="name">{g.name}</span>
-              <span class="what">{g.group} · <code>{g.id}</code> · up to {g.max.toLocaleString()}</span>
+              <span class="what">{g.group} · <code>{g.id}</code></span>
             </span>
             <span class="go">
               <input
@@ -171,6 +171,7 @@
                 max={g.max}
                 inputmode="numeric"
                 aria-label={`How many ${g.name}`}
+                title={`Up to ${g.max.toLocaleString()}`}
                 value={countOf(g)}
                 oninput={(e) => (counts = { ...counts, [g.id]: Number((e.currentTarget as HTMLInputElement).value) })}
                 onkeydown={(e) => e.key === 'Enter' && giveOne(g)}
@@ -259,10 +260,11 @@
     user-select: text;
     -webkit-user-select: text;
   }
+  /* One row: the title, the banner (it gives way first) and the ✕; the message under them. */
   .dock-head {
     flex: none;
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
     gap: 6px 10px;
     padding: 10px 12px 8px 16px;
@@ -274,10 +276,16 @@
     font-size: 20px;
   }
   .dock-head .banner {
+    justify-self: start;
+    max-width: 100%;
     margin: 0;
+    padding: 2px 8px;
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .close {
-    margin-left: auto;
     width: 36px;
     height: 36px;
     padding: 0;
@@ -285,8 +293,13 @@
     place-items: center;
   }
   .dock-head .msg {
-    flex: 1 1 100%;
+    grid-column: 1 / -1;
     margin: 0;
+  }
+  /* The backquote is a hairline in the display font. */
+  .tick {
+    font-family: ui-monospace, monospace;
+    font-size: 0.9em;
   }
   .dock-body {
     flex: 1 1 auto;
@@ -414,7 +427,7 @@
     min-height: 40px;
   }
   input[type='number'] {
-    width: 5em;
+    width: 4.2em;
     min-height: 36px;
     padding: 6px 8px;
   }
@@ -451,7 +464,7 @@
     color: var(--wood);
   }
   .txt {
-    flex: 1 1 120px;
+    flex: 1 1 80px;
     min-width: 0;
     display: grid;
   }
