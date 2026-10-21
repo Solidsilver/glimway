@@ -683,8 +683,11 @@ export class HeightLabScene extends Phaser.Scene {
     img.setAlpha(1)
     // One draw: each draw renders into a fresh capture that's then copied in, so the light has to
     // multiply the floors in the same one (drawn apart, it multiplied nothing).
-    rt.camera.setScroll(rx, ry)
-    rt.draw([img, this.caveLightView.img])
+    const li = this.caveLightView.img
+    rt.beginDraw()
+    rt.batchDraw(img, img.x - rx, img.y - ry)
+    rt.batchDraw(li, li.x - rx, li.y - ry)
+    rt.endDraw()
     img.setAlpha(a)
     rt.setPosition(rx, ry).setAlpha(v.alpha).setVisible(true)
   }
