@@ -112,24 +112,53 @@
   import { setSpotQuests } from './game/room-spots'
 
   type Phase = 'loading' | 'title' | 'playing'
-  type Panel = 'journal' | 'map' | 'character' | 'inventory' | 'menu' | 'library' | 'shop' | 'deed' | 'dev' | VillagePanel | null
+  type Panel = 'journal' | 'map' | 'character' | 'inventory' | 'menu' | 'library' | 'shop' | 'deed' | VillagePanel | null
 
   // Dev mode: the panel exists only in builds with dev tools (the Vite dev
   // server, or a staging server's dev-tools build; src/lib/dev-tools.ts). A
   // release build replaces DEV_TOOLS with false, so this import (and the
   // panel's code and words) never reaches its bundle. In a dev-tools build it
   // shows only for a player the server's dev mode gives a panel tool.
+  //
+  // It isn't one of the panels: on a desktop it docks at the right and stays
+  // open beside the game (which keeps playing in the rest of the screen)
+  // until closed, and it opens again after a reload if it was open. On a
+  // phone, or a window too narrow for both, it is the shared sheet over the
+  // game, and holds the world back like any panel.
   let DevPanel = $state<typeof import('./ui/dev/DevPanel.svelte').default | null>(null)
-  if (DEV_TOOLS) void import('./ui/dev/DevPanel.svelte').then((m) => (DevPanel = m.default))
+  let devPrefs: typeof import('./ui/dev/dev-prefs') | null = null
+  /** The dev panel is open (docked or a sheet). */
+  let devOpen = $state(false)
+  /** This screen docks it: a desktop pointer and room for the game beside it. */
+  let devDocks = $state(false)
+  if (DEV_TOOLS) {
+    void import('./ui/dev/DevPanel.svelte').then((m) => (DevPanel = m.default))
+    void import('./ui/dev/dev-prefs').then((m) => {
+      devPrefs = m
+      if (m.loadDevPrefs().open && devDocks) devOpen = true
+    })
+    const wide = window.matchMedia('(min-width: 900px)')
+    const docks = () => (devDocks = wide.matches && !isTouchFirst())
+    docks()
+    wide.addEventListener('change', docks)
+  }
   /** This player's dev tools (null: none, or a release build), from the web settings. */
   let dev = $state<DevTools | null>(devTools())
   const devPanel = $derived(DEV_TOOLS && devPanelOn(dev))
+  const devSheet = $derived(devPanel && devOpen && !devDocks)
+  function setDevOpen(on: boolean): void {
+    if (!DEV_TOOLS || devOpen === on) return
+    devOpen = on
+    devPrefs?.saveDevPrefs({ open: on })
+  }
   // The world lab (src/ui/dev/world-lab), opened from the dev panel: loaded the first time, and never in a release build.
   let WorldLab = $state<typeof import('./ui/dev/world-lab/WorldLab.svelte').default | null>(null)
   let worldLabOpen = $state(false)
   function openWorldLab(): void {
     if (!DEV_TOOLS) return
     panel = null
+    // The lab covers the screen; a docked panel waits under it for its close.
+    if (!devDocks) setDevOpen(false)
     worldLabOpen = true
     if (!WorldLab) void import('./ui/dev/world-lab/WorldLab.svelte').then((m) => (WorldLab = m.default))
   }
@@ -693,7 +722,7 @@
       logout: confirmLogout,
       naming: home.namePrompt !== null || home.lampNaming !== null,
       'leave-deed': home.leaveAsk !== null,
-      panel: panel !== null,
+      panel: panel !== null || devSheet,
       ending: ui.endingOpen,
       dialogue: ui.dialogueOpen,
       cinematic: ui.cinematic,
@@ -726,6 +755,8 @@
     if (session) inventory.syncPack(session.state.inventory)
     const next = panel === p ? null : p
     panel = next
+    // A panel takes the place of the dev sheet (a docked dev panel stays beside it).
+    if (next && devSheet) setDevOpen(false)
   }
 
   /**
@@ -750,10 +781,11 @@
     if (['KeyJ', 'KeyC', 'KeyI', 'KeyM', 'Escape'].includes(e.code)) (e as KeyboardEvent & { fsConsumed?: boolean }).fsConsumed = true
     // A held Escape closes one thing: its repeats don't go on to open the Menu behind it.
     if (e.code === 'Escape' && e.repeat) return
-    // Dev mode: ` opens and closes the dev panel.
+    // Dev mode: ` opens and closes the dev panel (a panel over the world gives way to the sheet).
     if (devPanel && e.code === 'Backquote') {
       ;(e as KeyboardEvent & { fsConsumed?: boolean }).fsConsumed = true
-      toggle('dev')
+      if (!devOpen && !devDocks) panel = null
+      setDevOpen(!devOpen)
       return
     }
     // Emotes: G opens the picker; 1–5 pick while it is open.
@@ -779,6 +811,8 @@
     else if (e.code === 'Escape') {
       if (ui.emoteOpen && !panel) {
         ui.emoteOpen = false
+      } else if (devSheet) {
+        setDevOpen(false)
       } else if (panel === 'character' && characterFromBag) {
         closeCharacter()
       } else if (panel) {
@@ -1042,8 +1076,6 @@
             }
           : undefined}
       />
-    {:else if devPanel && panel === 'dev' && DevPanel}
-      <DevPanel {session} tools={dev} onClose={() => toggle('dev')} onWorldLab={openWorldLab} />
     {:else if panel === 'menu'}
       <MenuPanel
         {session}
@@ -1056,8 +1088,16 @@
           panel = null
           whatsNew.openLatest()
         }}
-        onDev={devPanel ? () => (panel = 'dev') : undefined}
+        onDev={devPanel
+          ? () => {
+              panel = null
+              setDevOpen(true)
+            }
+          : undefined}
       />
+    {/if}
+    {#if DEV_TOOLS && devOpen && devPanel && DevPanel}
+      <DevPanel {session} tools={dev} docked={devDocks} onClose={() => setDevOpen(false)} onWorldLab={openWorldLab} />
     {/if}
     {#if DEV_TOOLS && worldLabOpen && WorldLab && dev?.world_lab}
       <WorldLab {session} onClose={() => (worldLabOpen = false)} />
