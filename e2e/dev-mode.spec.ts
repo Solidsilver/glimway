@@ -126,6 +126,29 @@ test('dev mode docked: beside the game, which keeps playing; gives arrive; the f
   await expect(page.getByRole('dialog', { name: 'Menu' })).toBeHidden()
 })
 
+test('dev mode docked in the height lab: its section comes first, with every control, and switches the look', async ({ page }, testInfo) => {
+  await freshPlayer(page)
+  await page.goto('/?lab=height')
+  await page.getByRole('button', { name: /^Continue/ }).click()
+  await page.waitForFunction(() => !!(window as unknown as { __fsLab?: unknown }).__fsLab, undefined, { timeout: 60_000 })
+  await page.keyboard.press('Backquote')
+  const panel = page.getByRole('complementary', { name: 'Dev' })
+  await expect(panel).toBeVisible()
+  await expect(panel.locator('details[data-section]').first()).toHaveAttribute('data-section', 'height-lab')
+  const lab = devPanel(page).getByTestId('height-lab-controls')
+  await expect(lab.getByRole('button', { name: 'Leave the lab' })).toBeVisible()
+  // Every switch the lab has (src/game/height-lab/LabSection.svelte), and the darkness slider.
+  for (const group of ['Area', 'Levels above and below fade to', 'Fog per level', 'Cave floors', 'Climbing, the camera', 'Climbing, haze at the edges', 'In a cave, your own light', 'Daylight reaches in', 'Into a cave, the way in', 'The cave’s view comes in over', 'Levels overlay'])
+    await expect(lab.getByRole('group', { name: group })).toBeVisible()
+  await expect(lab.getByTestId('height-lab-darkness')).toBeVisible()
+  // A switch still switches.
+  const way = lab.getByRole('group', { name: 'Into a cave, the way in' }).getByRole('button', { name: 'Iris from the mouth' })
+  await way.click()
+  await expect(way).toHaveAttribute('aria-pressed', 'true')
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __fsLab: { state: () => { look: { way?: string } } } }).__fsLab.state().look.way)).toBe('iris')
+  await evidence(page, testInfo, 'desktop-height-lab')
+})
+
 test.describe('on a phone', () => {
   const { viewport, deviceScaleFactor, isMobile, hasTouch, userAgent } = devices['iPhone 13']
   test.use({ viewport, deviceScaleFactor, isMobile, hasTouch, userAgent })
