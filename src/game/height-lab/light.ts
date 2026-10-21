@@ -303,3 +303,41 @@ export function caveLevels(l: Layer): Float32Array {
   return out
 }
 
+
+/**
+ * The ways into a cave's view, switched in the dev panel (./look.ts):
+ *  - blend: round 4's, even over the crossfade's tiles;
+ *  - eased: over two tiles more, eased in and out;
+ *  - stages: the light first (the hill over you goes dark, the cave's own
+ *    light comes up), then the cave's floors come in under it;
+ *  - iris: the cave's view opens from the mouth outward, a circle.
+ */
+export type WayIn = 'blend' | 'eased' | 'stages' | 'iris'
+
+const smooth = (t: number) => {
+  const c = Math.max(0, Math.min(1, t))
+  return c * c * (3 - 2 * c)
+}
+
+/**
+ * How far into the cave's view, from the walked tiles since the arch: the
+ * light (the cave's over the surface's) and the cave's floors (their
+ * alpha). For the iris, how far the circle has opened (0–1), both the same.
+ */
+export function wayIn(walked: number, tiles: number, way: WayIn): { light: number; alpha: number } {
+  const t = Math.max(0.01, tiles)
+  if (way === 'eased') {
+    const s = smooth(walked / (t + 2))
+    return { light: s, alpha: s }
+  }
+  if (way === 'stages') {
+    const p = walked / (t + 1)
+    return { light: smooth(p / 0.55), alpha: smooth((p - 0.4) / 0.6) }
+  }
+  if (way === 'iris') {
+    const s = smooth(walked / t)
+    return { light: s, alpha: s }
+  }
+  const b = caveView(walked, tiles)
+  return { light: b, alpha: b }
+}

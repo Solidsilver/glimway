@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CAVE, DEFAULT_AREA_OPTIONS, SURFACE, areaLighting, buildLabArea, routeLegs, LAB_W } from '../src/game/height-lab/area.ts';
 import { DEEP, MOUNTAIN_W, asciiLayer, buildMountain } from '../src/game/height-lab/mountain.ts';
-import { HERO_LIGHT, caveLevels, caveView, sunnyFaceRock, type HeroLight } from '../src/game/height-lab/light.ts';
+import { HERO_LIGHT, caveLevels, caveView, sunnyFaceRock, wayIn, type HeroLight } from '../src/game/height-lab/light.ts';
 import { Lighting, depthDark, sightLine } from '../src/game/height-lab/lighting.ts';
 import { fogFor } from '../src/game/height-lab/look.ts';
 import { E, KIND, N, S, TILE_PX, findPath, move, step, zAt, sample, type Layer, type Walker } from '../src/game/height-lab/levels.ts';
@@ -458,5 +458,56 @@ test('the rock south of a tunnel that runs behind a cliff\'s top is the tunnel\'
     for (const m of a.mouths) {
       const i = m.arch[0] * a.stack.w + m.x0 - 1;
       if (a.stack.layers[CAVE]!.kind[i] === KIND.rock) assert.ok(sunnyFaceRock(a.stack, a.air, i), `${a.name}: beside the arch at ${m.x0}`);
+    }
+});
+
+test('the way in: the cave never shows brighter mid-way than once in (the corners lit, then dark)', () => {
+  const l = areaLighting(mtn);
+  // A dark stretch of tunnel a few tiles in from the east mouth, past daylight's reach.
+  const rect = { x0: (54 * TILE_PX) / l.res, y0: (60 * TILE_PX) / l.res, w: 24, h: 24 };
+  const out = new Uint8ClampedArray(rect.w * rect.h * 4);
+  const own = new Uint8ClampedArray(rect.w * rect.h * 4);
+  l.fill(rect, own, [{ layer: CAVE, weight: 1 }]);
+  // Round 4's blend, uncapped: the material at alpha a under a light a of the cave's and 1 − a of daylight.
+  const a = 0.5;
+  l.fill(rect, out, [{ layer: CAVE, weight: a }, { layer: SURFACE, weight: 1 - a }]);
+  let worst = 0;
+  for (let i = 0; i < rect.w * rect.h; i++) worst = Math.max(worst, (a * out[i * 4]! - own[i * 4]!) / 255);
+  assert.ok(worst > 0.2, `round 4 lit the dark mid-way (${worst})`);
+  // Capped: never more than its own light.
+  l.fill(rect, out, [{ layer: CAVE, weight: a }, { layer: SURFACE, weight: 1 - a }], { cap: { layer: CAVE, alpha: a } });
+  for (let i = 0; i < rect.w * rect.h; i++) for (let c = 0; c < 3; c++) assert.ok(a * out[i * 4 + c]! <= own[i * 4 + c]! + 1, `texel ${i}: ${a * out[i * 4 + c]!} vs ${own[i * 4 + c]}`);
+  assert.ok(l.stats.uncapped > 0.2, 'the cap saw what it stopped');
+});
+
+test('the ways in start outside, end in the cave, and only go one way', () => {
+  for (const way of ['blend', 'eased', 'stages', 'iris'] as const)
+    for (const tiles of [1, 3]) {
+      let last = { light: 0, alpha: 0 };
+      assert.deepEqual(wayIn(0, tiles, way), { light: 0, alpha: 0 }, `${way}: outside at the arch`);
+      for (let w = 0; w <= 8; w += 0.1) {
+        const s = wayIn(w, tiles, way);
+        assert.ok(s.light >= last.light - 1e-9 && s.alpha >= last.alpha - 1e-9, `${way} ${tiles} at ${w}`);
+        if (way === 'stages') assert.ok(s.alpha <= s.light + 1e-9, 'stages: the floors never ahead of the light');
+        last = s;
+      }
+      assert.deepEqual(wayIn(8, tiles, way), { light: 1, alpha: 1 }, `${way}: in`);
+    }
+});
+
+test('the iris: the cave\'s light inside its circle, daylight well outside', () => {
+  const l = areaLighting(mtn);
+  const rect = { x0: (50 * TILE_PX) / l.res, y0: (60 * TILE_PX) / l.res, w: 48, h: 40 };
+  const out = new Uint8ClampedArray(rect.w * rect.h * 4);
+  const own = new Uint8ClampedArray(rect.w * rect.h * 4);
+  l.fill(rect, own, [{ layer: CAVE, weight: 1 }]);
+  const iris = { layer: CAVE, x: 57 * TILE_PX, y: 70 * TILE_PX, r: 4 * TILE_PX, soft: 2 * TILE_PX };
+  l.fill(rect, out, [{ layer: CAVE, weight: 0.3 }, { layer: SURFACE, weight: 0.7 }], { iris });
+  for (let y = 0; y < rect.h; y++)
+    for (let x = 0; x < rect.w; x++) {
+      const d = Math.hypot((rect.x0 + x + 0.5) * l.res - iris.x, (rect.y0 + y + 0.5) * l.res - iris.y);
+      const i = (y * rect.w + x) * 4;
+      if (d <= iris.r) assert.equal(out[i], own[i], 'inside: the cave\'s own');
+      if (d >= iris.r + iris.soft) assert.equal(out[i], 255, 'outside: daylight');
     }
 });
