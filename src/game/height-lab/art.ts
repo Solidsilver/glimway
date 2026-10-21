@@ -301,6 +301,8 @@ export type CaveStyle = 'mixed' | 'built' | 'rough'
 export interface CaveImages {
   cave: LevelImage
   mouths: LevelImage[]
+  /** The cave's image as pixels (RGBA, `w` px wide, its top left at world px x, y), for the way in's crossfade. */
+  pixels: { px: Uint8ClampedArray; x: number; y: number; w: number }
 }
 
 /** The cave's colours in full light (they were painted dark for the old dimmer). */
@@ -550,7 +552,8 @@ export function paintCave(scene: Phaser.Scene, area: LabArea, style: CaveStyle):
   }
   return {
     cave: cut('hl-cave', drawn, x0, y0, x1, y1),
-    mouths: area.mouths.map((m, n) => cut(`hl-cave-mouth-${n}`, (i) => area.arches[i] === 1 && drawn(i), m.x0, m.arch[0], m.x1, m.arch[1]))
+    mouths: area.mouths.map((m, n) => cut(`hl-cave-mouth-${n}`, (i) => area.arches[i] === 1 && drawn(i), m.x0, m.arch[0], m.x1, m.arch[1])),
+    pixels: { px, x: x0 * T, y: y0 * T, w }
   }
 }
 

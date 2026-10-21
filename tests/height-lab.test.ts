@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { CAVE, DEFAULT_AREA_OPTIONS, SURFACE, areaLighting, buildLabArea, routeLegs, LAB_W } from '../src/game/height-lab/area.ts';
 import { DEEP, MOUNTAIN_W, asciiLayer, buildMountain } from '../src/game/height-lab/mountain.ts';
 import { HERO_LIGHT, caveLevels, caveView, sunnyFaceRock, wayIn, type HeroLight } from '../src/game/height-lab/light.ts';
-import { Lighting, depthDark, sightLine } from '../src/game/height-lab/lighting.ts';
+import { Lighting, depthDark, litPixels, sightLine } from '../src/game/height-lab/lighting.ts';
 import { fogFor } from '../src/game/height-lab/look.ts';
 import { E, KIND, N, S, TILE_PX, findPath, move, step, zAt, sample, type Layer, type Walker } from '../src/game/height-lab/levels.ts';
 
@@ -539,4 +539,21 @@ test('the cave\'s edge is soft: whole on its floors, fading through the rock, no
       }
     assert.ok(worst < 0.3, `${a.name}: steepest step between texels ${worst}`);
   }
+});
+
+test('the crossfade lights the floors as the light image would: each pixel times the bilinear light', () => {
+  // A 3×3-texel light (4 px a texel) over an 8×8 grey image at world 4,4.
+  const light = new Uint8ClampedArray(3 * 3 * 4);
+  for (let i = 0; i < 9; i++) light.set([i * 25, 255, 0, 255], i * 4);
+  const src = new Uint8ClampedArray(8 * 8 * 4).fill(200);
+  const out = new Uint8ClampedArray(12 * 12 * 4);
+  litPixels(src, 8, 4, 4, light, 3, 3, 0, 0, 4, 0, 0, 12, 12, out);
+  assert.equal(out[(0 * 12 + 0) * 4 + 3], 0, 'nothing outside the image');
+  // At a texel's middle (world 6, 6: texel 1, 1), exactly that texel.
+  const at = (wx: number, wy: number) => (wy * 12 + wx) * 4;
+  assert.ok(Math.abs(out[at(5, 5) + 0]! - (200 * 4 * 25) / 255) <= 1 + (200 * 25) / 255, 'red near texel 1,1');
+  assert.ok(Math.abs(out[at(6, 6) + 1]! - 200) <= 1, 'green: full light');
+  assert.equal(out[at(6, 6) + 2], 0, 'blue: none');
+  // Red rises smoothly left to right across the image.
+  for (let x = 5; x < 11; x++) assert.ok(out[at(x + 1, 6)]! >= out[at(x, 6)]!, `smooth at ${x}`);
 });

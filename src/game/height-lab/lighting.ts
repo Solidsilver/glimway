@@ -547,3 +547,66 @@ export function sightLine(stops: Uint8Array, w: number, ax: number, ay: number, 
   }
   return true
 }
+
+/**
+ * An image lit on the CPU: `src` (RGBA, `sw` px wide, its top left at world
+ * px sx, sy) times the light texels in `light` (RGBA, `lw` × `lh`, the
+ * first at texel lx0, ly0; `res` px a texel), bilinear between texel
+ * middles as the light's image is drawn, over the world box rx, ry, w, h
+ * into `out` (RGBA, w × h; transparent where `src` has nothing). The way
+ * in's crossfade (./scene.ts): the cave's floors in the cave's own light,
+ * drawn over the lit surface.
+ */
+export function litPixels(
+  src: Uint8ClampedArray,
+  sw: number,
+  sx: number,
+  sy: number,
+  light: Uint8ClampedArray,
+  lw: number,
+  lh: number,
+  lx0: number,
+  ly0: number,
+  res: number,
+  rx: number,
+  ry: number,
+  w: number,
+  h: number,
+  out: Uint8ClampedArray
+): void {
+  const sh = src.length / 4 / sw
+  const ix = new Int32Array(w)
+  const fxs = new Float32Array(w)
+  for (let x = 0; x < w; x++) {
+    const g = (rx + x + 0.5) / res - 0.5 - lx0
+    const i = Math.floor(g)
+    ix[x] = Math.min(lw - 2, Math.max(0, i))
+    fxs[x] = i < 0 ? 0 : i > lw - 2 ? 1 : g - i
+  }
+  out.fill(0, 0, w * h * 4)
+  for (let y = 0; y < h; y++) {
+    const syy = ry + y - sy
+    if (syy < 0 || syy >= sh) continue
+    const g = (ry + y + 0.5) / res - 0.5 - ly0
+    const iy = Math.min(lh - 2, Math.max(0, Math.floor(g)))
+    const fy = g < 0 ? 0 : Math.floor(g) > lh - 2 ? 1 : g - Math.floor(g)
+    const r0 = iy * lw * 4
+    const r1 = (iy + 1) * lw * 4
+    for (let x = 0; x < w; x++) {
+      const sxx = rx + x - sx
+      if (sxx < 0 || sxx >= sw) continue
+      const s = (syy * sw + sxx) * 4
+      const a = src[s + 3]!
+      if (a === 0) continue
+      const fx = fxs[x]!
+      const c0 = ix[x]! * 4
+      const o = (y * w + x) * 4
+      for (let c = 0; c < 3; c++) {
+        const top = light[r0 + c0 + c]! * (1 - fx) + light[r0 + c0 + 4 + c]! * fx
+        const bot = light[r1 + c0 + c]! * (1 - fx) + light[r1 + c0 + 4 + c]! * fx
+        out[o + c] = (src[s + c]! * (top * (1 - fy) + bot * fy)) / 255
+      }
+      out[o + 3] = a
+    }
+  }
+}
