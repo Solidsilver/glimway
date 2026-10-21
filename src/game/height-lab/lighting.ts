@@ -24,6 +24,9 @@
  *    viewer's (levels above and below darker, never tinted; fill's depth).
  *  - A portal mask: tiles (a cave mouth's arch) that always show one
  *    layer's light, whatever the views' mix (fill's portal).
+ *  - The way in: a cap (a layer fading in over another never shows
+ *    brighter than its own light allows) and an iris (one layer's light
+ *    inside a circle).
  */
 
 export interface LightSource {
@@ -93,6 +96,10 @@ export interface FillOptions {
   depth?: { layer: number; z: number; cap: number; weight: number }
   /** Tiles (1) that show this layer's light at full weight; moving lights of every layer count on them. */
   portal?: { layer: number; mask: Uint8Array }
+  /** This layer's material is drawn at `alpha` over the others: its light never more than its own over alpha there. */
+  cap?: { layer: number; alpha: number }
+  /** This layer's light inside a circle (world px), the others' outside, over a soft ring. */
+  iris?: { layer: number; x: number; y: number; r: number; soft: number }
 }
 
 export class Lighting {
@@ -111,6 +118,11 @@ export class Lighting {
   private material: (Uint8Array | null)[] = []
   private wBase: Float32Array[] = []
   private wSrc: Float32Array[] = []
+  private bufAmb: Float32Array[] = []
+  private bufMov: Float32Array[] = []
+  private kDepth: Float32Array[] = []
+  /** The last fill's cap: how far the layer's material showed past its own light before the cap (uncapped), 0–1. */
+  stats = { uncapped: 0 }
   private baked: (Float32Array | null)[] = []
   private sources = new Map<string, Live>()
   private acc = new Float32Array(0)
@@ -239,51 +251,33 @@ export class Lighting {
    * The frame's light over a box of texels into RGBA bytes (alpha 255):
    * each view's layer, weighted (the cave's view coming in over the
    * surface's is two views whose weights add to 1), a layer darkened by
-   * depth, a portal's tiles in their layer's light (FillOptions).
+   * depth, a portal's tiles in their layer's light, an iris, and a cap on
+   * a layer drawn see-through (FillOptions).
    */
   fill(rect: TexelRect, out: Uint8ClampedArray, views: readonly { layer: number; weight: number }[], opts: FillOptions = {}): void {
     const nt = rect.w * rect.h
     const n = nt * 3
+    const grow = (a: Float32Array[], i: number, len: number) => (a[i] && a[i]!.length >= len ? a[i]! : (a[i] = new Float32Array(len)))
     if (this.acc.length < n) this.acc = new Float32Array(n)
     const acc = this.acc
     acc.fill(0, 0, n)
-    const { depth, portal } = opts
+    const { depth, portal, cap, iris } = opts
     const per = this.tile / this.res
+    // Each view's light at full weight: its ambient and still lights, and its moving lights, apart.
     views.forEach((v, vi) => {
-      // Each texel's weight for this view's ambient and still lights, and for its moving lights.
-      if (!this.wBase[vi] || this.wBase[vi]!.length < nt) {
-        this.wBase[vi] = new Float32Array(nt)
-        this.wSrc[vi] = new Float32Array(nt)
-      }
-      const wb = this.wBase[vi]!
-      const ws = this.wSrc[vi]!
-      wb.fill(v.weight, 0, nt)
-      ws.fill(v.weight, 0, nt)
-      if (portal) {
-        // Tile by tile over the box: a masked tile's texels.
-        const tx0 = Math.max(0, Math.floor(rect.x0 / per))
-        const ty0 = Math.max(0, Math.floor(rect.y0 / per))
-        const tx1 = Math.min(this.w - 1, Math.floor((rect.x0 + rect.w - 1) / per))
-        const ty1 = Math.min(this.h - 1, Math.floor((rect.y0 + rect.h - 1) / per))
-        for (let ty = ty0; ty <= ty1; ty++)
-          for (let tx = tx0; tx <= tx1; tx++) {
-            if (!portal.mask[ty * this.w + tx]) continue
-            for (let y = Math.max(0, ty * per - rect.y0); y < Math.min(rect.h, (ty + 1) * per - rect.y0); y++)
-              for (let x = Math.max(0, tx * per - rect.x0); x < Math.min(rect.w, (tx + 1) * per - rect.x0); x++) {
-                wb[y * rect.w + x] = v.layer === portal.layer ? 1 : 0
-                ws[y * rect.w + x] = 1
-              }
-          }
-      }
+      const amb = grow(this.bufAmb, vi, n)
+      const mov = grow(this.bufMov, vi, n)
+      const k = grow(this.kDepth, vi, nt)
+      amb.fill(0, 0, n)
+      mov.fill(0, 0, n)
+      k.fill(1, 0, nt)
       if (depth && depth.layer === v.layer && depth.weight > 0 && depth.cap > 0 && this.levels[v.layer]) {
         const { lev, mat } = this.levelMap(v.layer)
         for (let y = 0; y < rect.h; y++) {
           const ty = Math.min(this.th - 1, Math.max(0, rect.y0 + y))
           for (let x = 0; x < rect.w; x++) {
             const t = ty * this.tw + Math.min(this.tw - 1, Math.max(0, rect.x0 + x))
-            const k = 1 - depth.weight * mat[t]! * depthDark(lev[t]! - depth.z, depth.cap)
-            wb[y * rect.w + x] *= k
-            ws[y * rect.w + x] *= k
+            k[y * rect.w + x] = 1 - depth.weight * mat[t]! * depthDark(lev[t]! - depth.z, depth.cap)
           }
         }
       }
@@ -291,18 +285,90 @@ export class Lighting {
       for (let y = 0; y < rect.h; y++) {
         const ty = Math.min(this.th - 1, Math.max(0, rect.y0 + y))
         for (let x = 0; x < rect.w; x++) {
-          const k = wb[y * rect.w + x]!
-          if (k <= 0) continue
-          const tx = Math.min(this.tw - 1, Math.max(0, rect.x0 + x))
-          const s = (ty * this.tw + tx) * 3
+          const kk = k[y * rect.w + x]!
+          const s = (ty * this.tw + Math.min(this.tw - 1, Math.max(0, rect.x0 + x))) * 3
           const d = (y * rect.w + x) * 3
-          acc[d] += map[s]! * k
-          acc[d + 1] += map[s + 1]! * k
-          acc[d + 2] += map[s + 2]! * k
+          amb[d] = map[s]! * kk
+          amb[d + 1] = map[s + 1]! * kk
+          amb[d + 2] = map[s + 2]! * kk
         }
       }
-      for (const s of this.sources.values()) if (s.moving && s.layer === v.layer) this.stamp(acc, rect, s, 1, ws)
+      for (const s of this.sources.values()) if (s.moving && s.layer === v.layer) this.stamp(mov, rect, s, 1, k)
     })
+    // Each view's weight per texel: for its ambient and still lights, and for its moving lights.
+    views.forEach((v, vi) => {
+      grow(this.wBase, vi, nt).fill(v.weight, 0, nt)
+      grow(this.wSrc, vi, nt).fill(v.weight, 0, nt)
+    })
+    if (iris)
+      // The iris's layer inside its circle, the others outside, a soft ring between.
+      for (let y = 0; y < rect.h; y++)
+        for (let x = 0; x < rect.w; x++) {
+          const d = Math.hypot((rect.x0 + x + 0.5) * this.res - iris.x, (rect.y0 + y + 0.5) * this.res - iris.y)
+          const wi = clamp01((iris.r + iris.soft - d) / Math.max(1e-6, iris.soft))
+          views.forEach((v, vi) => {
+            const w = v.layer === iris.layer ? wi : 1 - wi
+            this.wBase[vi]![y * rect.w + x] = w
+            this.wSrc[vi]![y * rect.w + x] = w
+          })
+        }
+    if (portal) {
+      // Tile by tile over the box: a masked tile's texels.
+      const tx0 = Math.max(0, Math.floor(rect.x0 / per))
+      const ty0 = Math.max(0, Math.floor(rect.y0 / per))
+      const tx1 = Math.min(this.w - 1, Math.floor((rect.x0 + rect.w - 1) / per))
+      const ty1 = Math.min(this.h - 1, Math.floor((rect.y0 + rect.h - 1) / per))
+      for (let ty = ty0; ty <= ty1; ty++)
+        for (let tx = tx0; tx <= tx1; tx++) {
+          if (!portal.mask[ty * this.w + tx]) continue
+          for (let y = Math.max(0, ty * per - rect.y0); y < Math.min(rect.h, (ty + 1) * per - rect.y0); y++)
+            for (let x = Math.max(0, tx * per - rect.x0); x < Math.min(rect.w, (tx + 1) * per - rect.x0); x++)
+              views.forEach((v, vi) => {
+                this.wBase[vi]![y * rect.w + x] = v.layer === portal.layer ? 1 : 0
+                this.wSrc[vi]![y * rect.w + x] = 1
+              })
+        }
+    }
+    views.forEach((_v, vi) => {
+      const amb = this.bufAmb[vi]!
+      const mov = this.bufMov[vi]!
+      const wb = this.wBase[vi]!
+      const ws = this.wSrc[vi]!
+      for (let t = 0, d = 0; t < nt; t++, d += 3) {
+        const b = wb[t]!
+        const m = ws[t]!
+        acc[d] += amb[d]! * b + mov[d]! * m
+        acc[d + 1] += amb[d + 1]! * b + mov[d + 1]! * m
+        acc[d + 2] += amb[d + 2]! * b + mov[d + 2]! * m
+      }
+    })
+    // The cap: where the layer's material is drawn at \`alpha\` over another, the light there is never more
+    // than its own light over alpha, so that material never shows brighter than it will once fully in.
+    this.stats = { uncapped: 0 }
+    const ci = cap ? views.findIndex((v) => v.layer === cap.layer) : -1
+    if (cap && ci >= 0 && cap.alpha > 0.001) {
+      const amb = this.bufAmb[ci]!
+      const mov = this.bufMov[ci]!
+      const mat = this.levels[cap.layer] ? this.levelMap(cap.layer).mat : null
+      for (let y = 0; y < rect.h; y++) {
+        const ty = Math.min(this.th - 1, Math.max(0, rect.y0 + y))
+        for (let x = 0; x < rect.w; x++) {
+          const t = y * rect.w + x
+          const m = mat ? mat[ty * this.tw + Math.min(this.tw - 1, Math.max(0, rect.x0 + x))]! : 1
+          if (m <= 0) continue
+          const d = t * 3
+          let over = 0
+          for (let c = 0; c < 3; c++) {
+            const own = clamp01(amb[d + c]! + mov[d + c]!)
+            const shown = cap.alpha * clamp01(acc[d + c]!)
+            over = Math.max(over, m * (shown - own))
+            const excess = acc[d + c]! - own / cap.alpha
+            if (excess > 0) acc[d + c] -= m * excess
+          }
+          this.stats.uncapped = Math.max(this.stats.uncapped, over)
+        }
+      }
+    }
     for (let i = 0, j = 0; i < nt; i++, j += 3) {
       out[i * 4] = Math.round(clamp01(acc[j]!) * 255)
       out[i * 4 + 1] = Math.round(clamp01(acc[j + 1]!) * 255)
