@@ -20,3 +20,40 @@ Added to as the owner answers.*
    between updates rather than forever. The design should say what this means for pins, held
    land at a region's edge, seams against held neighbours, the explored map and the generator
    versions.
+
+## The owner's calls on the two designs (2026-10-21)
+
+Both answers are merged: [terrain-argon.md](responses/terrain-argon.md),
+[terrain-sol.md](responses/terrain-sol.md).
+
+5. **The walk home: spike first, then pick.** The first lane builds Sol's region plan for one
+   ridge in the world lab and measures it (cold plan time, storage), alongside Argon's
+   pure-local south-face rule. The lab also shows whether Argon's per-chunk checks would have
+   stranded any ground there. The owner chooses with those numbers.
+6. **The Whitequiet: pale, not snowy, mostly to the north.** Sol's look (ivory grass, grey soil,
+   sparse pale birch and bare snags, hushed), more of it northward, no special rules and no fights.
+   No sanctuary or hearth yet (Argon's idea is parked for its own brief). The existing named place
+   `whitequiet` (`content/wilds.json`) stays. Snow can be a biome of its own later.
+7. **Near home: hills soon, mountains further.** A flat apron of about one chunk at the gates,
+   low shoulders 3–6 chunks out, the first real mountains further off. Town and the Tangle stay
+   flat; the home region isn't forced to woods.
+8. **An update turning can change the shape of unkept land.** After a server update, the next
+   turning may fully regenerate unkept land, height included. Held land, fixed places and the
+   routes into them stay. So a pin or a terrain plan only has to last until the next update
+   turning, and old generator code only lives as long as kept land needs it. This answers Sol's
+   "permanence while water is pending": water arrives at an update turning.
+
+## Technical calls (orchestrator, 2026-10-21; the build lanes may revisit with evidence)
+
+- **Height on the wire: Sol's shape** (2-bit tops and kinds, plus sparse overrides with exact
+  edge heights in 1/256 level). Argon's one-byte codes only fit one-level ramps of 2–3 tiles;
+  the owner wants long multi-level stairs and spirals.
+- **Versions: LandformV2 and GeneratorV4** (Sol). LandformV1 stays frozen for old kept land.
+- **Height is world-wide,** not switched per biome, so region edges never make walls (Sol).
+  Biomes choose ground, cover and the character of relief.
+- **South faces come from a pure local rule,** the same on both sides of a seam (Argon §2.2),
+  whatever the access plan turns out to be.
+- **Fog at levels above and below the hero,** as the lab settled (not mist below only).
+- **Regions use plain nearest-site distance with a warp** (Sol). Round borders for the smaller
+  land cells stay as they are (call 1).
+- **A region pins when a chunk in it is generated** (call 3). Lab previews never pin the real world.
