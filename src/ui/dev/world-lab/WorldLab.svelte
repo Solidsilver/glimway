@@ -420,7 +420,7 @@
                     <dt>Border</dt><dd>{tile.borderDistTiles} tiles{tile.inBlendBand ? ` · blend band ↔ ${tile.secondaryRegion ?? ''} (${tile.secondaryBiome ?? ''})` : ''}{tile.tripleJunction ? ' · triple junction' : ''}</dd>
                   {/if}
                   {#if tile.pin}
-                    <dt>Pin</dt><dd>{tile.pin.pinned && tile.pin.triggerChunk ? `pinned at chunk ${tile.pin.triggerChunk[0]}, ${tile.pin.triggerChunk[1]}` : 'unpinned'}{tile.pin.superseded ? ` (superseded by ${tile.pin.currentRef})` : ''}</dd>
+                    <dt>Pin</dt><dd>{tile.pin.biomeRef} ({tile.pin.support ? 'support' : 'direct'} pin from chunk {tile.pin.triggerChunk[0]}, {tile.pin.triggerChunk[1]})</dd>
                   {/if}
                   {#if tile.fields}
                     <dt>Fields</dt><dd>upland {tile.fields.upland} · relief {tile.fields.relief} · wetness {tile.fields.wetness} · warmth {tile.fields.warmth} · quiet {tile.fields.quiet}</dd>
@@ -464,7 +464,7 @@
       <dt>View</dt><dd>{s.view}, chunks {s.rect[0]},{s.rect[1]} to {s.rect[2]},{s.rect[3]}</dd>
       <dt>Chunks</dt><dd>{s.chunks.toLocaleString()}{s.generatedChunks ? ` (${s.generatedChunks.toLocaleString()} made, ${s.fixedChunks} authored)` : ''}</dd>
       {#if s.regionCount !== undefined}<dt>Regions</dt><dd>{s.regionCount}{s.blendBandShare !== undefined ? ` · blend band ${percent(s.blendBandShare)}` : ''}</dd>{/if}
-      {#if s.pinManifest}<dt>Pins</dt><dd>{s.pinManifest.pinnedCount}/{s.pinManifest.totalRegions} pinned{s.pinManifest.supersededCount ? ` (${s.pinManifest.supersededCount} superseded)` : ''}</dd>{/if}
+      {#if s.pinManifest}<dt>Pins</dt><dd>{s.pinManifest.pins.length} pinned ({s.pinManifest.directPins} direct, {s.pinManifest.supportPins} support)</dd>{/if}
       {#if s.field}<dt>Field ({s.field.field})</dt><dd>min {s.field.min} · mean {s.field.mean.toFixed(0)} · max {s.field.max}</dd>{/if}
       {#if s.firstBiomeChunkDistFromHome}
         <dt>First from home</dt>

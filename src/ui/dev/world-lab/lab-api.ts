@@ -40,21 +40,28 @@ export interface FieldStats {
 }
 
 export interface RegionPin {
-  region: string
+  worldSeed: string
   rx: number
   ry: number
+  regionId: string
+  site: [number, number]
+  biome: string
+  biomeVersion: number
   biomeRef: string
-  pinned: boolean
-  triggerChunk?: [number, number]
-  currentRef?: string
-  superseded?: boolean
+  fieldsVersion: number
+  landformVersion: number
+  recipeDigest: string
+  triggerChunk: [number, number]
+  support: boolean
 }
 
 export interface PinManifestReport {
   worldSeed: string
-  totalRegions: number
-  pinnedCount: number
-  supersededCount: number
+  landformVersion: number
+  fieldsVersion: number
+  generatedChunks: number
+  directPins: number
+  supportPins: number
   pins: RegionPin[]
 }
 
