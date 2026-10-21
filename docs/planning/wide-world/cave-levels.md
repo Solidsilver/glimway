@@ -51,3 +51,16 @@ changes level. Argon's build order is the base; Sol's cautions are folded in.*
   are still welcome where they help, but they aren't a rule.
 - Both responses' iteration 2 lists (bounded plans and halos, roof clearance, float light heights,
   chunk caches, visibility vs light vs access) feed that brief.
+
+## The way in and the light you carry (owner, 2026-10-21, after playtesting round 4b)
+
+- **The way in is Even (round 4)**: the least flashy, it "just works". Iris looked the most
+  striking but would wear thin by the hundredth cave; Longer, eased and Dark first were only ok.
+- **The cave's view comes in over 3 tiles**, which feels smooth. It becomes a notched slider
+  (1 to 4 tiles) for more playtesting.
+- **The three own-light modes all stay**, each tied to what the hero carries: **None** (just a faint
+  glow round the hero) with no light source; **Close** for unshaped light such as a torch or a
+  candle; **Wide** for a lantern, or a candle with a reflector behind it.
+- **Bug:** hugging the cave wall beside the mouth and stepping out, the screen flicks to black for
+  a step just as the fade is nearly done, then clears. It happens with every way in, and only
+  right against the wall.

@@ -132,6 +132,9 @@ marked **⚡ split**.*
 - **Ask friends** what they chose to do, where they stopped and what they wanted next. [S]
 - **Bring back the step-back review** (0.10 and 0.11 were missed). [M]
 - **Cleanup:** delete plan.md's release table, and fix or fold build-status.md and lamps.md. [M]
+- **Backburner (owner, 2026-10-21): the world lab inside the dev panel,** as a diagnostic tool rather
+  than a lab of its own: in dev mode it would stand in for the map. The hard part is fitting it in
+  without crowding the panel. (owner)
 
 ## 9. Cut or parked by at least one planner
 
