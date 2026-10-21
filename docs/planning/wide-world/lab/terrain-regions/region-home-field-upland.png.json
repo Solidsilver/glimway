@@ -1,0 +1,165 @@
+{
+  "content": "content/wilds.json",
+  "contentSHA256": "9b949340120baadc879589d7012741de759df259a635ae308df290238722469b",
+  "view": "region",
+  "seed": "map",
+  "epoch": "t:1795000000:1796209600",
+  "rect": [
+    -16,
+    -16,
+    15,
+    15
+  ],
+  "chunkSize": 24,
+  "chunks": 1024,
+  "generatedChunks": 1004,
+  "fixedChunks": 20,
+  "biomeShare": {
+    "hearthwick-woods@1": 0.4538529908145197,
+    "tops@1": 0.15690017706949977,
+    "whitequiet@1": 0.38924683211598055
+  },
+  "firstBiomeChunkDistFromHome": {
+    "hearthwick-woods@1": 0,
+    "tops@1": 8,
+    "whitequiet@1": 2
+  },
+  "regionCount": 4,
+  "blendBandShare": 0.03208865925188136,
+  "field": {
+    "field": "upland",
+    "min": 0,
+    "max": 999,
+    "mean": 564.5040601482957
+  },
+  "pinManifest": {
+    "worldSeed": "map",
+    "landformVersion": 2,
+    "fieldsVersion": 1,
+    "generatedChunks": 1004,
+    "directPins": 4,
+    "supportPins": 0,
+    "pins": [
+      {
+        "worldSeed": "map",
+        "rx": -1,
+        "ry": -1,
+        "regionId": "r:-1:-1",
+        "site": [
+          -264,
+          -154
+        ],
+        "biome": "whitequiet",
+        "biomeVersion": 1,
+        "biomeRef": "whitequiet@1",
+        "fieldsVersion": 1,
+        "landformVersion": 2,
+        "recipeDigest": "06ccc269aa26fda0",
+        "triggerChunk": [
+          -16,
+          -16
+        ],
+        "support": false
+      },
+      {
+        "worldSeed": "map",
+        "rx": 0,
+        "ry": -1,
+        "regionId": "r:0:-1",
+        "site": [
+          558,
+          -313
+        ],
+        "biome": "tops",
+        "biomeVersion": 1,
+        "biomeRef": "tops@1",
+        "fieldsVersion": 1,
+        "landformVersion": 2,
+        "recipeDigest": "71047f4f4b7f9e0c",
+        "triggerChunk": [
+          5,
+          -16
+        ],
+        "support": false
+      },
+      {
+        "worldSeed": "map",
+        "rx": -1,
+        "ry": 0,
+        "regionId": "r:-1:0",
+        "site": [
+          -300,
+          280
+        ],
+        "biome": "hearthwick-woods",
+        "biomeVersion": 1,
+        "biomeRef": "hearthwick-woods@1",
+        "fieldsVersion": 1,
+        "landformVersion": 2,
+        "recipeDigest": "7ff728be62f45160",
+        "triggerChunk": [
+          -16,
+          -2
+        ],
+        "support": false
+      },
+      {
+        "worldSeed": "map",
+        "rx": 0,
+        "ry": 0,
+        "regionId": "r:0:0",
+        "site": [
+          525,
+          592
+        ],
+        "biome": "hearthwick-woods",
+        "biomeVersion": 1,
+        "biomeRef": "hearthwick-woods@1",
+        "fieldsVersion": 1,
+        "landformVersion": 2,
+        "recipeDigest": "eceb9494b93ebeb8",
+        "triggerChunk": [
+          11,
+          5
+        ],
+        "support": false
+      }
+    ]
+  },
+  "landShareByChunkCentre": {
+    "meadow": 0.3076171875,
+    "woods": 0.6923828125
+  },
+  "groundShare": {
+    "bank": 0.0017534030544488711,
+    "ford": 0.0003164425630810093,
+    "meadow": 0.12638854305002215,
+    "moss": 0.0166988296812749,
+    "path": 0.05942549247454626,
+    "paving": 0.0022635153829127933,
+    "road": 0.009662737937140328,
+    "tops-crag": 0.012033463368747234,
+    "tops-moor": 0.06292192341744135,
+    "tops-path": 0.006470645196989818,
+    "tops-scree": 0.04286499833997344,
+    "tops-turf": 0.018346751881363435,
+    "tops-woods": 0.011855356352368304,
+    "trodden": 0.005682132580787959,
+    "verge": 0.06323490759185481,
+    "water": 0.0033269698981850376,
+    "woods": 0.17440135292164674,
+    "wq-birch": 0.006918506529437804,
+    "wq-ivory": 0.2217553397521027,
+    "wq-path": 0.00796812749003984,
+    "wq-soil": 0.0848999833997344,
+    "wq-stone": 0.060810577135900844
+  },
+  "solidShare": 0.19931558488269147,
+  "campsPer100Chunks": 33.66533864541832,
+  "placesPer100Chunks": 10.657370517928287,
+  "longestAxialLandRunChunks": 23,
+  "unreachableWalkableTiles": 311,
+  "reachDefinition": "4-neighbour walkable components with no tile on the render boundary or beside omitted fixed ground; cropped paths leaving the view are treated as reachable. Cyan walkability-tree paths link boundary samples and markers; orange = isolated.",
+  "generationMs": 2969.044,
+  "note": "Land shares and axial runs sample chunk centres. Rectangles include both endpoints. Fixed authored chunks are grey hatching and excluded from tile/camp/place metrics. Entities white; sites magenta; lamp stones yellow; rumours orange; places red."
+}

@@ -72,7 +72,20 @@ func handler(defaults options) http.Handler {
 			raw = append(append(raw, 0), b...)
 		}
 		sum := sha256.Sum256(raw)
-		writeJSON(w, map[string]any{"revision": hex.EncodeToString(sum[:]), "seed": defaults.Seed, "epoch": defaults.Epoch, "overlays": defaults.Overlays, "content": defaults.Content, "compareSeed": defaults.CompareSeed, "compareContent": defaults.CompareContent})
+		writeJSON(w, map[string]any{"revision": hex.EncodeToString(sum[:]), "seed": defaults.Seed, "epoch": defaults.Epoch, "overlays": defaults.Overlays, "field": defaults.Field, "content": defaults.Content, "compareSeed": defaults.CompareSeed, "compareContent": defaults.CompareContent})
+	})
+	mux.HandleFunc("/api/hover", func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		seed := defaults.Seed
+		if v := q.Get("seed"); v != "" {
+			seed = v
+		}
+		coords, err := coordinates(q.Get("at"), 2)
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+		writeJSON(w, worldlab.InspectHover(seed, coords[0], coords[1]))
 	})
 	renderRequest := func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
@@ -95,6 +108,9 @@ func handler(defaults options) http.Handler {
 		}
 		if q.Has("overlays") {
 			o.Overlays = q.Get("overlays")
+		}
+		if q.Has("field") {
+			o.Field = q.Get("field")
 		}
 		if v := q.Get("rect"); v != "" {
 			coords, err := coordinates(v, 4)

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"glimway/content"
+	"glimway/server/internal/wilds"
 )
 
 // Prefix is the lab's routes in a dev build's server: GET state, POST
@@ -91,7 +92,7 @@ func (l *Lab) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		l.state(w, r)
 		return
 	}
-	if name != "check" && name != "render" && name != "tile" {
+	if name != "check" && name != "render" && name != "tile" && name != "hover" {
 		http.NotFound(w, r)
 		return
 	}
@@ -122,13 +123,15 @@ func (l *Lab) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		l.render(w, r, req)
 	case "tile":
 		l.tile(w, r, req)
+	case "hover":
+		l.hover(w, req)
 	}
 }
 
-// labRequest is a render ({view, seed, epoch, rect, scale, overlays,
-// rules}, and b for a diff: B's seed and rules), a tile ({seed, epoch, at,
-// rules}) or a check ({rules}). Rules: the wilds rules as JSON text; empty
-// is the server's embedded rules.
+// labRequest is a render ({view, seed, epoch, rect, scale, overlays, field,
+// rules}, and b for a diff: B's seed, field and rules), a tile/hover ({seed,
+// epoch, at, rules}) or a check ({rules}). Rules: the wilds rules as JSON text;
+// empty is the server's embedded rules.
 type labRequest struct {
 	Terrain  string  `json:"terrain,omitempty"`
 	View     string  `json:"view"`
@@ -137,10 +140,12 @@ type labRequest struct {
 	Rect     [4]int  `json:"rect"`
 	Scale    int     `json:"scale"`
 	Overlays string  `json:"overlays"`
+	Field    string  `json:"field"`
 	Rules    string  `json:"rules"`
 	At       *[2]int `json:"at"`
 	B        *struct {
 		Seed  string `json:"seed"`
+		Field string `json:"field"`
 		Rules string `json:"rules"`
 	} `json:"b"`
 }
@@ -165,7 +170,7 @@ func checkRules(rules string) error {
 // options is the request's render for the worker; edited rules equal to
 // the embedded ones are the embedded ones.
 func (req labRequest) options(seed, rules string) Options {
-	o := Options{View: req.View, Seed: seed, Epoch: req.Epoch, Rect: req.Rect, Scale: req.Scale, Overlays: req.Overlays, Workers: labWorkers}
+	o := Options{View: req.View, Seed: seed, Epoch: req.Epoch, Rect: req.Rect, Scale: req.Scale, Overlays: req.Overlays, Field: req.Field, Workers: labWorkers}
 	o.Terrain = req.Terrain
 	if rules != "" && rules != string(embeddedRules()) {
 		o.Raw = []byte(rules)
@@ -179,6 +184,8 @@ func (l *Lab) state(w http.ResponseWriter, r *http.Request) {
 	out := map[string]any{
 		"seed": "map", "epoch": DefaultEpoch, "defaultEpoch": DefaultEpoch,
 		"overlays":  OverlayNames,
+		"fields":    wilds.FieldNames,
+		"biomes":    []string{"hearthwick-woods@1", "tops@1", "whitequiet@1"},
 		"chunkSize": content.WildsRules.GetChunkSize(),
 		"limits":    map[string]int{"atlasChunks": MaxAtlasChunks, "tiles": MaxTiles, "pixels": MaxPixels, "scale": 8, "coordinate": MaxCoordinate},
 		"rules":     string(raw), "rulesSHA256": hex.EncodeToString(sum[:]),
@@ -224,6 +231,9 @@ func (l *Lab) render(w http.ResponseWriter, r *http.Request, req labRequest) {
 	var b *Options
 	if req.B != nil {
 		bo := req.options(cmp.Or(req.B.Seed, req.Seed), req.B.Rules)
+		if req.B.Field != "" {
+			bo.Field = req.B.Field
+		}
 		a.Signatures, bo.Signatures = true, true
 		b = &bo
 	}
@@ -308,7 +318,7 @@ func (l *Lab) tile(w http.ResponseWriter, r *http.Request, req labRequest) {
 		labError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	req.View, req.Scale, req.Overlays = "chunk", 1, ""
+	req.View, req.Scale, req.Overlays, req.Field = "chunk", 1, "", ""
 	o := req.options(req.Seed, req.Rules)
 	o.Inspect = req.At
 	o.Rect = [4]int{0, 0, 0, 0}
@@ -342,6 +352,24 @@ func (l *Lab) tile(w http.ResponseWriter, r *http.Request, req labRequest) {
 		}
 	}
 	writeLabBytes(w, body)
+}
+
+func (l *Lab) hover(w http.ResponseWriter, req labRequest) {
+	if req.At == nil {
+		labError(w, http.StatusBadRequest, "at: the tile [x, y] to inspect")
+		return
+	}
+	for _, v := range req.At {
+		if v < -MaxCoordinate*64 || v > MaxCoordinate*64 {
+			labError(w, http.StatusBadRequest, "tile coordinates out of range")
+			return
+		}
+	}
+	if len(req.Seed) == 0 || len(req.Seed) > 200 {
+		labError(w, http.StatusBadRequest, "seed must be 1..200 characters")
+		return
+	}
+	writeLabJSON(w, InspectHover(req.Seed, req.At[0], req.At[1]))
 }
 
 func cacheKey(kind string, a Options, b *Options) string {

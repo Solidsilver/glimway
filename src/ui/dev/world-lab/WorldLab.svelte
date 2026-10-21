@@ -21,7 +21,7 @@
   const VIEW_KEY = 'glimway.worldlab.view'
   const RULES_KEY = 'glimway.worldlab.rules'
 
-  type Saved = { seed?: string; epoch?: string; overlays?: string[]; mode?: LabMode; camera?: Camera; rulesA?: 'server' | 'edited'; compare?: boolean; bSeed?: string; rulesB?: 'server' | 'edited' }
+  type Saved = { seed?: string; epoch?: string; overlays?: string[]; field?: string; mode?: LabMode; camera?: Camera; rulesA?: 'server' | 'edited'; compare?: boolean; bSeed?: string; rulesB?: 'server' | 'edited' }
   const saved: Saved = read(VIEW_KEY) ?? {}
   const savedRules: { text: string; base: string } | null = read(RULES_KEY)
 
@@ -46,6 +46,7 @@
   let seed = $state(saved.seed ?? '')
   let epoch = $state(saved.epoch ?? '')
   let overlays = $state<string[]>(saved.overlays ?? [])
+  let field = $state<string>(saved.field ?? '')
   let mode = $state<LabMode>(saved.mode ?? 'auto')
   let terrain = $state('')
   let camera = $state<Camera>(saved.camera ?? { x: hero?.tx ?? 0, y: hero?.ty ?? 0, zoom: VIEW_ZOOM.atlas })
@@ -112,7 +113,7 @@
 
   // Keep the view and the edits for the next opening.
   $effect(() => {
-    const v: Saved = { seed, epoch, overlays, mode, camera, rulesA, compare, bSeed, rulesB }
+    const v: Saved = { seed, epoch, overlays, field, mode, camera, rulesA, compare, bSeed, rulesB }
     try {
       localStorage.setItem(VIEW_KEY, JSON.stringify(v))
     } catch {
@@ -141,7 +142,7 @@
   const view = $derived(viewOf(mode, camera.zoom))
 
   /** Everything a render depends on but the camera: a change starts again. */
-  const key = $derived(JSON.stringify({ terrain, a: versionA.seed, ra: hash(versionA.rules), b: versionB && [versionB.seed, hash(versionB.rules)], epoch, overlays: [...overlays].sort() }))
+  const key = $derived(JSON.stringify({ terrain, a: versionA.seed, ra: hash(versionA.rules), b: versionB && [versionB.seed, hash(versionB.rules)], epoch, field, overlays: [...overlays].sort() }))
 
   function hash(s: string): number {
     let h = 0x811c9dc5
@@ -174,7 +175,7 @@
     const vis = visibleChunks(camera, pane, st.chunkSize)
     const k = key
     if (drawn.some((d) => d.key === k && covers(d.plan, want, vis))) return
-    const body = renderBody(want, epoch, overlayList(), versionA, versionB)
+    const body = renderBody(want, epoch, overlayList(), versionA, versionB, field)
     if (terrain) body.terrain = terrain
     const text = JSON.stringify(body)
     if (inflight?.body === text) return
@@ -285,6 +286,10 @@
     return p === 2 ? 'Changed' : `${panelName[p]}: ${short(v.seed)}${v.rules ? ' · edited' : ''}`
   }
   const OVERLAY_TEXT: Record<string, string> = {
+    regions: 'Regions & IDs',
+    biomes: 'Biomes',
+    blend: 'Blend band',
+    pins: 'Pins',
     'land-cells': 'Land cells',
     'place-cells': 'Place cells',
     tiers: 'Tiers',
@@ -322,7 +327,7 @@
     <div class="body" class:wide>
       <div class="maps" class:three={compare && wide} bind:clientWidth={mapsW} bind:clientHeight={mapsH}>
         {#each panes as p (p)}
-          <LabPane {drawn} panel={p} {camera} chunkSize={st.chunkSize} hero={hero && versionA.seed === st.here?.seed ? hero : null} picked={picked} label={paneLabel(p)} busy={p === panes[0] ? busy : null} onCamera={(c) => (camera = { ...c, zoom: clampZoom(c.zoom) })} onTap={inspect} />
+          <LabPane {drawn} panel={p} seed={p === 1 && versionB ? versionB.seed : versionA.seed} {camera} chunkSize={st.chunkSize} hero={hero && versionA.seed === st.here?.seed ? hero : null} picked={picked} label={paneLabel(p)} busy={p === panes[0] ? busy : null} onCamera={(c) => (camera = { ...c, zoom: clampZoom(c.zoom) })} onTap={inspect} />
         {/each}
         {#if compare && !wide}
           <div class="which" role="group" aria-label="Diff panel">
@@ -368,6 +373,16 @@
                 <button type="button" class="small" aria-pressed={rulesA === 'edited'} onclick={() => (rulesA = 'edited')} disabled={!isEdited}>Edited</button>
               </div>
               {#if !isEdited}<p class="hint">Edit a copy under Rules to try a variant.</p>{/if}
+            </section>
+            <section>
+              <h3>Field heatmap</h3>
+              <div class="chips" role="group" aria-label="Field heatmap">
+                <button type="button" class="chip" aria-pressed={field === ''} onclick={() => (field = '')}>Terrain / biome</button>
+                {#each st.fields ?? ['upland', 'relief', 'wetness', 'warmth', 'quiet'] as f (f)}
+                  <button type="button" class="chip" aria-pressed={field === f} onclick={() => (field = field === f ? '' : f)}>{f}</button>
+                {/each}
+              </div>
+              <p class="hint">Lasting world fields (0..1000) depend only on the world seed and tile.</p>
             </section>
             <section>
               <h3>Overlays</h3>
@@ -419,6 +434,21 @@
                 <dl>
                   <dt>Version</dt><dd title={tileVersion?.seed}>{short(tileVersion?.seed ?? '')}{tileVersion?.rules ? ', edited rules' : ''}</dd>
                   <dt>Chunk</dt><dd>{tile.chunk[0]}, {tile.chunk[1]} (at {tile.local[0]}, {tile.local[1]})</dd>
+                  {#if tile.region}
+                    <dt>Region</dt><dd>{tile.region}</dd>
+                  {/if}
+                  {#if tile.biome}
+                    <dt>Biome</dt><dd>{tile.biome}{tile.regionBiome && tile.regionBiome !== tile.biome ? ` (region owner: ${tile.regionBiome})` : ''}</dd>
+                  {/if}
+                  {#if tile.borderDistTiles !== undefined}
+                    <dt>Border</dt><dd>{tile.borderDistTiles} tiles{tile.inBlendBand ? ` · blend band ↔ ${tile.secondaryRegion ?? ''} (${tile.secondaryBiome ?? ''})` : ''}{tile.tripleJunction ? ' · triple junction' : ''}</dd>
+                  {/if}
+                  {#if tile.pin}
+                    <dt>Pin</dt><dd>{tile.pin.biomeRef} ({tile.pin.support ? 'support' : 'direct'} pin from chunk {tile.pin.triggerChunk[0]}, {tile.pin.triggerChunk[1]})</dd>
+                  {/if}
+                  {#if tile.fields}
+                    <dt>Fields</dt><dd>upland {tile.fields.upland} · relief {tile.fields.relief} · wetness {tile.fields.wetness} · warmth {tile.fields.warmth} · quiet {tile.fields.quiet}</dd>
+                  {/if}
                   {#if tile.fixed}
                     <dt>Authored</dt><dd>{tile.fixed}: fixed ground, not generated</dd>
                   {:else}
@@ -463,6 +493,13 @@
     <dl>
       <dt>View</dt><dd>{s.view}, chunks {s.rect[0]},{s.rect[1]} to {s.rect[2]},{s.rect[3]}</dd>
       <dt>Chunks</dt><dd>{s.chunks.toLocaleString()}{s.generatedChunks ? ` (${s.generatedChunks.toLocaleString()} made, ${s.fixedChunks} authored)` : ''}</dd>
+      {#if s.regionCount !== undefined}<dt>Regions</dt><dd>{s.regionCount}{s.blendBandShare !== undefined ? ` · blend band ${percent(s.blendBandShare)}` : ''}</dd>{/if}
+      {#if s.pinManifest}<dt>Pins</dt><dd>{s.pinManifest.pins.length} pinned ({s.pinManifest.directPins} direct, {s.pinManifest.supportPins} support)</dd>{/if}
+      {#if s.field}<dt>Field ({s.field.field})</dt><dd>min {s.field.min} · mean {s.field.mean.toFixed(0)} · max {s.field.max}</dd>{/if}
+      {#if s.firstBiomeChunkDistFromHome}
+        <dt>First from home</dt>
+        <dd>{Object.entries(s.firstBiomeChunkDistFromHome).map(([k, d]) => `${k}: ${d}c`).join(' · ')}</dd>
+      {/if}
       <dt>Time</dt><dd>{s.generationMs.toFixed(0)} ms</dd>
       <dt>Longest land run</dt><dd>{s.longestAxialLandRunChunks} chunks</dd>
       {#if s.solidShare !== undefined}<dt>Solid</dt><dd>{percent(s.solidShare)}</dd>{/if}
@@ -470,6 +507,10 @@
       {#if s.placesPer100Chunks !== undefined}<dt>Places / 100 chunks</dt><dd>{s.placesPer100Chunks.toFixed(1)}</dd>{/if}
       {#if s.unreachableWalkableTiles !== undefined}<dt>Unreachable open tiles</dt><dd>{s.unreachableWalkableTiles.toLocaleString()}</dd>{/if}
     </dl>
+    {#if s.biomeShare}
+      <h4>Biome share</h4>
+      {@render bars(ranked(s.biomeShare))}
+    {/if}
     <h4>Land, by chunk centre</h4>
     {@render bars(ranked(s.landShareByChunkCentre))}
     {#if s.groundShare}
