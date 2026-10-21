@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
+
+	"glimway/content"
 )
 
 func TestTerrainLabWorkerAndShuffledOrder(t *testing.T) {
@@ -32,6 +34,22 @@ func TestTerrainLabWorkerAndShuffledOrder(t *testing.T) {
 		second := b.Stats.Terrain.Strategies[strategy]
 		if first.Digest != second.Digest || first.SeamMismatches != 0 || second.SeamMismatches != 0 || first.SeamEdgeMismatches != 0 || second.SeamEdgeMismatches != 0 || second.SeamEdgesCompared != 14016 {
 			t.Fatalf("%s differs by process, crop or shuffle", strategy)
+		}
+	}
+}
+
+func TestTerrainLimitsIgnoreEditedChunkSize(t *testing.T) {
+	// Edited rules can use smaller chunks; the spike remains 24x24. Neither
+	// its tile allocation nor its scaled pixels may inherit the smaller cost.
+	old := content.WildsRules.ChunkSize
+	content.WildsRules.ChunkSize = 16
+	t.Cleanup(func() { content.WildsRules.ChunkSize = old })
+	for _, o := range []Options{
+		{View: "region", Terrain: "region", Seed: "test", Epoch: DefaultEpoch, Workers: 1, Scale: 1, Rect: [4]int{0, 0, 89, 89}},
+		{View: "region", Terrain: "chunk", Seed: "test", Epoch: DefaultEpoch, Workers: 1, Scale: 8, Rect: [4]int{0, 0, 24, 24}},
+	} {
+		if Validate(o) == nil {
+			t.Fatal("terrain render escaped its actual resource limit")
 		}
 	}
 }

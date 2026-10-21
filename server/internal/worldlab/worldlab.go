@@ -147,7 +147,11 @@ func Validate(o Options) error {
 	units := w * h
 	limit := MaxAtlasChunks
 	if o.View != "atlas" {
-		units *= int(content.WildsRules.GetChunkSize()) * int(content.WildsRules.GetChunkSize())
+		size := int(content.WildsRules.GetChunkSize())
+		if o.Terrain != "" {
+			size = wilds.TerrainChunkSize
+		}
+		units *= size * size
 		limit = MaxTiles
 	}
 	if units > limit || units*o.Scale*o.Scale > MaxPixels {
