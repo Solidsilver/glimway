@@ -106,10 +106,14 @@ test.describe('desktop', () => {
             const name = `${way}-${m.name}-${side}-${String(k).padStart(2, '0')}`
             const st = await labState(page)
             frames[name] = st
+            writeFileSync(`${out}/states.json`, JSON.stringify(frames, null, 1))
             await page.screenshot({ path: `${out}/${name}.png` })
             if (previous) {
               expect(st.cave, name).toBeLessThanOrEqual(previous.cave + 0.001)
-              expect(Math.abs(st.cave - previous.cave), name).toBeLessThanOrEqual(0.15)
+              // Stages has the steepest curve: 1.5 / (4 * .55) per tile,
+              // at most .171 per four-pixel step. A corner flash jumps to 1.
+              expect(Math.abs(st.cave - previous.cave), name).toBeLessThanOrEqual(0.18)
+              expect(Math.abs(st.alpha! - previous.alpha!), name).toBeLessThanOrEqual(0.18)
               expect(Math.abs(st.sky - previous.sky), name).toBeLessThanOrEqual(0.1)
             }
             previous = st
