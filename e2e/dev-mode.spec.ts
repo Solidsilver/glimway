@@ -138,8 +138,13 @@ test('dev mode docked in the height lab: its section comes first, with every con
   const lab = devPanel(page).getByTestId('height-lab-controls')
   await expect(lab.getByRole('button', { name: 'Leave the lab' })).toBeVisible()
   // Every switch the lab has (src/game/height-lab/LabSection.svelte), and the darkness slider.
-  for (const group of ['Area', 'Levels above and below fade to', 'Fog per level', 'Cave floors', 'Climbing, the camera', 'Climbing, haze at the edges', 'In a cave, your own light', 'Daylight reaches in', 'Into a cave, the way in', 'The cave’s view comes in over', 'Levels overlay'])
+  for (const group of ['Area', 'Levels above and below fade to', 'Fog per level', 'Cave floors', 'Climbing, the camera', 'Climbing, haze at the edges', 'In a cave, your own light', 'Daylight reaches in', 'Into a cave, the way in', 'Levels overlay'])
     await expect(lab.getByRole('group', { name: group })).toBeVisible()
+  const fade = lab.getByRole('slider', { name: /The cave’s view comes in over/ })
+  await expect(fade).toBeVisible()
+  await expect(fade).toHaveAttribute('min', '1')
+  await expect(fade).toHaveAttribute('max', '4')
+  await expect(fade).toHaveAttribute('step', '1')
   await expect(lab.getByTestId('height-lab-darkness')).toBeVisible()
   // A switch still switches.
   const way = lab.getByRole('group', { name: 'Into a cave, the way in' }).getByRole('button', { name: 'Iris from the mouth' })
