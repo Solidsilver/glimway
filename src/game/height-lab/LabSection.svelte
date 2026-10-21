@@ -4,7 +4,9 @@
 
   // The height lab's corner of the dev panel (src/ui/dev/DevPanel.svelte):
   // open the lab (the page again with ?lab=height), leave it, and switch
-  // its transitions while walking it.
+  // its transitions while walking it. `bare`: the panel's own section
+  // already gives it a title.
+  let { bare = false }: { bare?: boolean } = $props()
   let look = $state<LabLook>(labLook())
   $effect(() => onLabLook((l) => (look = l)))
   const here = inLab()
@@ -24,8 +26,8 @@
   ]
 </script>
 
-<section class="lab" data-testid="dev-height-lab">
-  <h3 class="section-title"><Icon name="stone" size={14} /> Height lab</h3>
+<section class="lab" class:bare data-testid="height-lab-controls">
+  {#if !bare}<h3 class="section-title"><Icon name="stone" size={14} /> Height lab</h3>{/if}
   <p class="what">Hand-made areas with real levels and caves: a valley, plateau and shoulder; a mountain with a saddle and a deep cave. It doesn’t save or send anything.</p>
   {#if here}
     <button type="button" onclick={() => location.assign(labUrl(false))}>Leave the lab</button>
@@ -47,6 +49,9 @@
 </section>
 
 <style>
+  .lab.bare {
+    margin: 0;
+  }
   .lab {
     margin: 4px 0 12px;
   }
