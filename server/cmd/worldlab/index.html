@@ -13,24 +13,26 @@
 <label>Seed <input id="seed" type="text" value="map"></label>
 <label>Epoch <input id="epoch" type="text" value="t:1795000000:1796209600"></label>
 <label>View <select id="view"><option value="atlas">Atlas · chunk glimpses</option><option value="region">Region · tiles</option><option value="chunk">Chunk · reach graph</option></select></label>
+<label>Field <select id="field"><option value="">Terrain / biome</option><option value="upland">upland</option><option value="relief">relief</option><option value="wetness">wetness</option><option value="warmth">warmth</option><option value="quiet">quiet</option></select></label>
 <label>Chunk rect <input id="rect" type="text" value="-40,-60,39,19"></label>
 <label><input type="checkbox" id="compare"> Compare</label><label>Seed B <input id="seedB" type="text" placeholder="same seed"></label><span id="contentB"></span>
 <button>Render</button><button type="button" id="out">Zoom out</button><button type="button" id="in">Zoom in</button>
 </div><div id="overlays"></div>
 </form>
 <div id="status" role="status"></div>
-<div id="legend">Drag to pan · wheel or buttons to zoom across scales · click to inspect a tile · content saves re-render automatically.<br>Land cells magenta; place cells cyan; Wend blue; road gold; world border red. Entities white; sites magenta; lamps yellow; places red. Reach: cyan boundary-connected, orange isolated. Solid view: pink tiles, chunk edge red/green = solid/open share. Fixed ground: grey hatch.</div>
+<div id="hover" style="min-height:20px;color:#d6e4c3;font:12px ui-monospace,monospace">Hover over the map to see region, biome@version and field values.</div>
+<div id="legend">Drag to pan · wheel or buttons to zoom across scales · click to inspect a tile · content saves re-render automatically.<br>Regions &amp; IDs: amber borders + r:rx:ry label; biomes: green hearthwick-woods@1, rust tops@1, ice whitequiet@1; blend: gold 2-way band, magenta 3-way junction; pins: gold diamond (pinned), slate diamond (superseded).</div>
 </header>
 <main><div id="viewport"><canvas id="map" aria-label="Generated world map"></canvas></div><aside><strong>Stats</strong><pre id="stats">Loading…</pre><div id="tile"><strong>Tile inspector</strong><pre id="detail">Click the map.</pre></div></aside></main>
 <script>
 const $=id=>document.getElementById(id),canvas=$('map'),ctx=canvas.getContext('2d'),vp=$('viewport');
-const names=['land-cells','place-cells','tiers','wend','road','rumours','border','solid','reach'];
+const names=['regions','biomes','blend','pins','land-cells','place-cells','tiers','wend','road','rumours','border','solid','reach'];
 for(const name of names){const label=document.createElement('label'),input=document.createElement('input');input.type='checkbox';input.value=name;input.name='overlay';label.append(input,document.createTextNode(name));$('overlays').append(label)}
-let rendered=null,revision='',zoom=1,offset=[0,0],drag=null,pending=null,sequence=0,ready=false;
+let rendered=null,revision='',zoom=1,offset=[0,0],drag=null,pending=null,sequence=0,ready=false,hoverTimer=null;
 const selected=()=>[...document.querySelectorAll('[name=overlay]:checked')].map(e=>e.value).join(',');
 const rect=()=>{const a=$('rect').value.split(',').map(Number);if(a.length!==4||a.some(x=>!Number.isInteger(x)))throw Error('Rect needs four integer chunk coordinates');return a};
 function transform(){canvas.style.transform=`translate(${offset[0]}px,${offset[1]}px) scale(${zoom})`}
-function params(){return new URLSearchParams({view:$('view').value,seed:$('seed').value,epoch:$('epoch').value,rect:rect().join(','),scale:$('view').value==='atlas'?'2':$('view').value==='chunk'?'4':'1',overlays:selected(),compare:$('compare').checked?'1':'0','seed-b':$('seedB').value})}
+function params(){return new URLSearchParams({view:$('view').value,field:$('field').value,seed:$('seed').value,epoch:$('epoch').value,rect:rect().join(','),scale:$('view').value==='atlas'?'2':$('view').value==='chunk'?'4':'1',overlays:selected(),compare:$('compare').checked?'1':'0','seed-b':$('seedB').value})}
 async function render(fit=true){
  const seq=++sequence;if(pending)pending.abort();pending=new AbortController();$('status').textContent='Rendering…';
  try{
@@ -54,8 +56,21 @@ function resizeView(direction,point){
 $('form').onsubmit=e=>{e.preventDefault();render()};$('in').onclick=()=>resizeView(1);$('out').onclick=()=>resizeView(-1);
 $('view').onchange=()=>{const r=rect(),x=Math.floor((r[0]+r[2])/2),y=Math.floor((r[1]+r[3])/2),n=$('view').value==='atlas'?40:$('view').value==='region'?4:0;$('rect').value=[x-n,y-n,x+n,y+n].join(',');render()};
 $('overlays').onchange=()=>render(false);
+$('field').onchange=()=>render(false);
 canvas.onpointerdown=e=>{canvas.setPointerCapture(e.pointerId);drag={x:e.clientX,y:e.clientY,offset:[...offset],moved:false}};
-canvas.onpointermove=e=>{if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(Math.abs(dx)+Math.abs(dy)>4)drag.moved=true;offset=[drag.offset[0]+dx,drag.offset[1]+dy];transform()};
+canvas.onpointermove=e=>{
+ if(drag){const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(Math.abs(dx)+Math.abs(dy)>4)drag.moved=true;offset=[drag.offset[0]+dx,drag.offset[1]+dy];transform();return}
+ const p=mapPoint(e.clientX,e.clientY);if(!p||!rendered)return;
+ clearTimeout(hoverTimer);hoverTimer=setTimeout(async()=>{
+  try{
+   const s=rendered.stats.chunkSize,at=rendered.stats.view==='atlas'?[Math.floor(p.cx)*s+Math.floor(s/2),Math.floor(p.cy)*s+Math.floor(s/2)]:[Math.floor(p.cx*s),Math.floor(p.cy*s)];
+   const seed=p.panel==='b'&&$('seedB').value?$('seedB').value:$('seed').value;
+   const r=await fetch('/api/hover?seed='+encodeURIComponent(seed)+'&at='+at.join(','));if(!r.ok)return;
+   const h=await r.json(),f=h.fields;
+   $('hover').textContent=`tile (${h.tile[0]},${h.tile[1]}) · chunk (${h.chunk[0]},${h.chunk[1]}) · ${h.region} · ${h.biome}${h.inBlendBand?` [blend ${h.borderDistTiles.toFixed(1)}t ↔ ${h.secondaryRegion}/${h.secondaryBiome}]`:''} · upland=${f.upland} relief=${f.relief} wetness=${f.wetness} warmth=${f.warmth} quiet=${f.quiet}`;
+  }catch(_){}
+ },35);
+};
 canvas.onpointerup=async e=>{
  if(!drag)return;const d=drag;drag=null;
  if(d.moved){if(!rendered)return;const unit=rendered.stats.view==='atlas'?1:rendered.stats.chunkSize;const dx=Math.round((d.offset[0]-offset[0])/zoom/rendered.scale/unit),dy=Math.round((d.offset[1]-offset[1])/zoom/rendered.scale/unit);if(dx||dy){const r=rendered.rect;$('rect').value=[r[0]+dx,r[1]+dy,r[2]+dx,r[3]+dy].join(',');render()}return}

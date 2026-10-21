@@ -41,7 +41,7 @@ const (
 )
 
 // OverlayNames are the overlays, in the order the CLI lists them.
-var OverlayNames = []string{"land-cells", "place-cells", "tiers", "wend", "road", "rumours", "border", "solid", "reach"}
+var OverlayNames = []string{"land-cells", "place-cells", "tiers", "wend", "road", "rumours", "border", "solid", "reach", "regions", "biomes", "blend", "pins"}
 
 // Options is one render or inspection. Raw, when set, is the wilds rules a
 // worker installs before it starts; Content names where they came from.
@@ -56,6 +56,7 @@ type Options struct {
 	Scale          int     `json:"scale"`
 	Workers        int     `json:"workers"`
 	Overlays       string  `json:"overlays"`
+	Field          string  `json:"field,omitempty"`
 	Content        string  `json:"content,omitempty"`
 	Raw            []byte  `json:"raw,omitempty"`
 	Signatures     bool    `json:"signatures,omitempty"`
@@ -145,17 +146,14 @@ func Validate(o Options) error {
 	if len(o.Seed) == 0 || len(o.Seed) > 200 {
 		return errors.New("seed must be 1..200 characters")
 	}
+	if err := validateFieldOption(o); err != nil {
+		return err
+	}
 	for _, s := range strings.Split(o.Overlays, ",") {
 		if s == "" {
 			continue
 		}
-		known := false
-		for _, n := range OverlayNames {
-			if n == s {
-				known = true
-			}
-		}
-		if !known {
+		if !isKnownOverlay(s) {
 			return fmt.Errorf("unknown overlay %q", s)
 		}
 	}
@@ -182,20 +180,32 @@ func ValidateEpoch(epoch string) error {
 // TileInfo is what one tile holds, and the nearest open tile in its chunk
 // to stand on (Stand; nil when the chunk has none or is authored ground).
 type TileInfo struct {
-	Tile          [2]int            `json:"tile"`
-	Chunk         [2]int            `json:"chunk"`
-	Local         [2]int            `json:"local"`
-	Epoch         wilds.Epoch       `json:"epoch"`
-	Land          string            `json:"land"`
-	ChunkLand     string            `json:"chunkLand"`
-	Ground        string            `json:"ground"`
-	Solid         bool              `json:"solid"`
-	Entities      []wilds.Entity    `json:"entitiesOnTile"`
-	ChunkEntities []wilds.Entity    `json:"chunkEntities"`
-	Sites         []wilds.Site      `json:"sitesOnTile"`
-	Places        []wilds.PlaceMark `json:"placesOnTile"`
-	Fixed         string            `json:"fixed,omitempty"`
-	Stand         *[2]int           `json:"stand,omitempty"`
+	Tile            [2]int            `json:"tile"`
+	Chunk           [2]int            `json:"chunk"`
+	Local           [2]int            `json:"local"`
+	Epoch           wilds.Epoch       `json:"epoch"`
+	Region          string            `json:"region,omitempty"`
+	RegionCoord     [2]int            `json:"regionCoord,omitempty"`
+	Biome           string            `json:"biome,omitempty"`
+	RegionBiome     string            `json:"regionBiome,omitempty"`
+	SecondaryRegion string            `json:"secondaryRegion,omitempty"`
+	SecondaryBiome  string            `json:"secondaryBiome,omitempty"`
+	BorderDistTiles int               `json:"borderDistTiles"`
+	InBlendBand     bool              `json:"inBlendBand,omitempty"`
+	TripleJunction  bool              `json:"tripleJunction,omitempty"`
+	Blended         bool              `json:"blended,omitempty"`
+	Pin             *wilds.RegionPin  `json:"pin,omitempty"`
+	Fields          *wilds.Fields     `json:"fields,omitempty"`
+	Land            string            `json:"land"`
+	ChunkLand       string            `json:"chunkLand"`
+	Ground          string            `json:"ground"`
+	Solid           bool              `json:"solid"`
+	Entities        []wilds.Entity    `json:"entitiesOnTile"`
+	ChunkEntities   []wilds.Entity    `json:"chunkEntities"`
+	Sites           []wilds.Site      `json:"sitesOnTile"`
+	Places          []wilds.PlaceMark `json:"placesOnTile"`
+	Fixed           string            `json:"fixed,omitempty"`
+	Stand           *[2]int           `json:"stand,omitempty"`
 	// OnGrid: the caller's world lets a hero stand in this chunk (the lab
 	// sets it from the world border (location.OnGrid); a worker never does).
 	OnGrid *bool `json:"onGrid,omitempty"`
@@ -209,6 +219,7 @@ func Inspect(o Options) (Result, error) {
 	info := &TileInfo{Tile: *o.Inspect, Chunk: [2]int{cx, cy}, Local: [2]int{lx, ly}, Epoch: epoch(o, cx, cy), Entities: []wilds.Entity{}, Sites: []wilds.Site{}, Places: []wilds.PlaceMark{}}
 	if p := wilds.FixedFootprintAt(cx, cy); p != nil {
 		info.Fixed = p.GetId()
+		enrichTileInfo(o.Seed, info)
 		return Result{Tile: info}, nil
 	}
 	c, err := wilds.GenerateV3(info.Epoch, cx, cy, nil)
@@ -217,8 +228,13 @@ func Inspect(o Options) (Result, error) {
 	}
 	info.Land = wilds.LandAt(wilds.WickEpoch(o.Seed, o.Epoch), tx, ty)
 	info.ChunkLand = c.Land
-	info.Ground = content.WildsRules.Grounds[int(c.Ground[ly*c.Size+lx])].GetId()
-	info.Solid = c.Solid[ly*c.Size+lx]
+	baseGround := content.WildsRules.Grounds[int(c.Ground[ly*c.Size+lx])].GetId()
+	surface := content.WildsRules.Grounds[int(c.Ground[ly*c.Size+lx])].GetSurface()
+	thicket := landThicketPermille(info.Land)
+	enrichTileInfo(o.Seed, info)
+	groundID, _, solid, _ := wilds.BiomeTileLook(o.Seed, tx, ty, baseGround, c.Solid[ly*c.Size+lx], surface, thicket, nil)
+	info.Ground = groundID
+	info.Solid = solid
 	info.ChunkEntities = c.Entities
 	for _, e := range c.Entities {
 		if e.TX == lx && e.TY == ly {

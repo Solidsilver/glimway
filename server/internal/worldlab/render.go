@@ -19,26 +19,32 @@ import (
 )
 
 type Stats struct {
-	Content         string             `json:"content"`
-	ContentSHA256   string             `json:"contentSHA256"`
-	View            string             `json:"view"`
-	Seed            string             `json:"seed"`
-	Epoch           string             `json:"epoch"`
-	Rect            [4]int             `json:"rect"`
-	ChunkSize       int                `json:"chunkSize"`
-	Chunks          int                `json:"chunks"`
-	Generated       int                `json:"generatedChunks"`
-	Fixed           int                `json:"fixedChunks"`
-	LandShare       map[string]float64 `json:"landShareByChunkCentre"`
-	GroundShare     map[string]float64 `json:"groundShare,omitempty"`
-	SolidShare      *float64           `json:"solidShare,omitempty"`
-	CampsPer100     *float64           `json:"campsPer100Chunks,omitempty"`
-	PlacesPer100    *float64           `json:"placesPer100Chunks,omitempty"`
-	LongestLandRun  int                `json:"longestAxialLandRunChunks"`
-	Unreachable     *int               `json:"unreachableWalkableTiles,omitempty"`
-	ReachDefinition string             `json:"reachDefinition,omitempty"`
-	Milliseconds    float64            `json:"generationMs"`
-	Note            string             `json:"note"`
+	Content             string                   `json:"content"`
+	ContentSHA256       string                   `json:"contentSHA256"`
+	View                string                   `json:"view"`
+	Seed                string                   `json:"seed"`
+	Epoch               string                   `json:"epoch"`
+	Rect                [4]int                   `json:"rect"`
+	ChunkSize           int                      `json:"chunkSize"`
+	Chunks              int                      `json:"chunks"`
+	Generated           int                      `json:"generatedChunks"`
+	Fixed               int                      `json:"fixedChunks"`
+	BiomeShare          map[string]float64       `json:"biomeShare,omitempty"`
+	FirstBiomeChunkDist map[string]int           `json:"firstBiomeChunkDistFromHome,omitempty"`
+	RegionCount         int                      `json:"regionCount,omitempty"`
+	BlendBandShare      *float64                 `json:"blendBandShare,omitempty"`
+	Field               *FieldStats              `json:"field,omitempty"`
+	PinManifest         *wilds.PinManifestReport `json:"pinManifest,omitempty"`
+	LandShare           map[string]float64       `json:"landShareByChunkCentre"`
+	GroundShare         map[string]float64       `json:"groundShare,omitempty"`
+	SolidShare          *float64                 `json:"solidShare,omitempty"`
+	CampsPer100         *float64                 `json:"campsPer100Chunks,omitempty"`
+	PlacesPer100        *float64                 `json:"placesPer100Chunks,omitempty"`
+	LongestLandRun      int                      `json:"longestAxialLandRunChunks"`
+	Unreachable         *int                     `json:"unreachableWalkableTiles,omitempty"`
+	ReachDefinition     string                   `json:"reachDefinition,omitempty"`
+	Milliseconds        float64                  `json:"generationMs"`
+	Note                string                   `json:"note"`
 }
 
 type marker struct {
@@ -109,20 +115,18 @@ func Render(ctx context.Context, o Options) (Result, error) {
 	if o.Signatures {
 		res.Signatures = make([]uint64, width*height)
 	}
+	rt := newRegionTracker(o, width, height, unit)
 	var road []bool
 	if enabled(o, "road") {
 		road = wilds.RoadCrossings(wilds.WickEpoch(o.Seed, o.Epoch), coords)
 	}
 	if o.View == "atlas" {
 		for i, g := range glimpses {
-			c := landColour(g.Land)
-			if g.River {
-				c = blend(c, wilds.GroundColour("water"))
-			}
+			c := rt.atlasPixelColour(o, i, g, S)
 			c = overlayColour(o, c, g.CX, g.CY, 0, 0, unit, g.River, road != nil && road[i], 0)
 			block(img, (i%cw)*o.Scale, (i/cw)*o.Scale, o.Scale, c)
 			if o.Signatures {
-				res.Signatures[i] = uint64(wilds.Hash("glimpse", g.Land, boolInt(g.River)))
+				res.Signatures[i] = uint64(wilds.Hash("glimpse", g.Land, rt.samples[i].EffectiveRef, boolInt(g.River)))
 			}
 		}
 		st.Note += " Atlas never generates chunks; tile, camp, solid and reach metrics are unavailable. Blue tint marks chunks crossed by the Wend."
@@ -193,34 +197,35 @@ func Render(ctx context.Context, o Options) (Result, error) {
 			}
 			c := m.chunk
 			st.Generated++
+			rt.pins.PinChunk(c.CX, c.CY)
 			places += len(c.Places)
 			ox, oy := (m.index%cw)*S, (m.index/cw)*S
 			density := solidPermille(c)
+			thicket := landThicketPermille(c.Land)
 			for i, g := range c.Ground {
-				id := content.WildsRules.Grounds[int(g)].GetId()
-				groundCounts[id]++
+				baseID := content.WildsRules.Grounds[int(g)].GetId()
+				surface := content.WildsRules.Grounds[int(g)].GetSurface()
 				tiles++
 				x, y := i%S, i/S
 				global := (oy+y)*width + ox + x
+				id, col, tileSolid := rt.tilePixelLook(o, global, c.CX, c.CY, x, y, S, baseID, surface, c.Solid[i], thicket)
+				groundCounts[id]++
 				valid[global] = true
-				walk[global] = !c.Solid[i]
-				col := wilds.GroundColour(id)
-				if c.Solid[i] {
+				walk[global] = !tileSolid
+				if tileSolid {
 					solid++
-					col = shade(col, 6)
 				}
 				if enabled(o, "solid") {
-					if c.Solid[i] {
+					if tileSolid {
 						col = color.RGBA{224, 56, 85, 255}
 					} else {
 						col = shade(col, 4)
 					}
 				}
-				surface := content.WildsRules.Grounds[int(g)].GetSurface()
 				col = overlayColour(o, col, c.CX, c.CY, x, y, S, surface == "water" || surface == "ford", surface == "road", density)
 				block(img, (ox+x)*o.Scale, (oy+y)*o.Scale, o.Scale, col)
 				if o.Signatures {
-					res.Signatures[global] = uint64(wilds.Hash("tile", id, boolInt(c.Solid[i])))
+					res.Signatures[global] = uint64(wilds.Hash("tile", id, boolInt(tileSolid)))
 				}
 			}
 			mark := func(x, y int, col color.RGBA) {
@@ -239,6 +244,9 @@ func Render(ctx context.Context, o Options) (Result, error) {
 			}
 			for _, e := range c.Entities {
 				if e.Kind == "camp" {
+					if rt.samples[(oy+e.TY)*width+ox+e.TX].EffectiveBiome == wilds.BiomeWhitequiet {
+						continue
+					}
 					camps++
 				}
 				mark(e.TX, e.TY, color.RGBA{240, 240, 240, 255})
@@ -284,6 +292,8 @@ func Render(ctx context.Context, o Options) (Result, error) {
 		st.ReachDefinition = "4-neighbour walkable components with no tile on the render boundary or beside omitted fixed ground; cropped paths leaving the view are treated as reachable. Cyan walkability-tree paths link boundary samples and markers; orange = isolated."
 		st.Note += " Fixed authored chunks are grey hatching and excluded from tile/camp/place metrics. Entities white; sites magenta; lamp stones yellow; rumours orange; places red."
 	}
+	rt.finalizeStats(o, &st, S)
+	rt.drawRegionOverlays(o, img, S)
 	if enabled(o, "rumours") {
 		if r, ok := wilds.Rumour(wilds.WickEpoch(o.Seed, o.Epoch)); ok {
 			cx, cy := r.Place.CX, r.Place.CY
