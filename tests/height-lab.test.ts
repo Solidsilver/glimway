@@ -474,9 +474,21 @@ test('the way in: the cave never shows brighter mid-way than once in (the corner
   let worst = 0;
   for (let i = 0; i < rect.w * rect.h; i++) worst = Math.max(worst, (a * out[i * 4]! - own[i * 4]!) / 255);
   assert.ok(worst > 0.2, `round 4 lit the dark mid-way (${worst})`);
-  // Capped: never more than its own light.
+  // Capped: the material (alpha a, times how much the image covers) never more than its own light; on the
+  // rock's fading rim (cover under a half) at most an eighth of what round 4 showed past it.
+  const uncapped = out.slice();
   l.fill(rect, out, [{ layer: CAVE, weight: a }, { layer: SURFACE, weight: 1 - a }], { cap: { layer: CAVE, alpha: a } });
-  for (let i = 0; i < rect.w * rect.h; i++) for (let c = 0; c < 3; c++) assert.ok(a * out[i * 4 + c]! <= own[i * 4 + c]! + 1, `texel ${i}: ${a * out[i * 4 + c]!} vs ${own[i * 4 + c]}`);
+  const tw = l.tw;
+  for (let y = 0; y < rect.h; y++)
+    for (let x = 0; x < rect.w; x++) {
+      const i = y * rect.w + x;
+      const cover = mtn.cover[(rect.y0 + y) * tw + rect.x0 + x]!;
+      for (let c = 0; c < 3; c++) {
+        const past = cover * (a * out[i * 4 + c]! - own[i * 4 + c]!);
+        const before = cover * Math.max(0, a * uncapped[i * 4 + c]! - own[i * 4 + c]!);
+        assert.ok(past <= (cover >= 0.5 ? 1 : before / 8 + 1), `texel ${x},${y} (cover ${cover}): ${past} past its own`);
+      }
+    }
   assert.ok(l.stats.uncapped > 0.2, 'the cap saw what it stopped');
 });
 
@@ -510,4 +522,21 @@ test('the iris: the cave\'s light inside its circle, daylight well outside', () 
       if (d <= iris.r) assert.equal(out[i], own[i], 'inside: the cave\'s own');
       if (d >= iris.r + iris.soft) assert.equal(out[i], 255, 'outside: daylight');
     }
+});
+
+test('the cave\'s edge is soft: whole on its floors, fading through the rock, no tile-sized steps', () => {
+  for (const a of [area, mtn]) {
+    const c = a.stack.layers[CAVE]!;
+    const per = TILE_PX / 4;
+    const tw = c.w * per;
+    let worst = 0;
+    for (let y = 0; y < c.h * per; y++)
+      for (let x = 0; x < tw - 1; x++) {
+        const k = c.kind[Math.floor(y / per) * c.w + Math.floor(x / per)];
+        if (k === KIND.flat || k === KIND.slope) assert.equal(a.cover[y * tw + x], 1, `${a.name}: floor covered`);
+        // Next to one another, texels differ by little (the old edge was 1 to 0 at a tile's side).
+        if (a.cover[y * tw + x]! > 0 && a.cover[y * tw + x + 1]! > 0) worst = Math.max(worst, Math.abs(a.cover[y * tw + x]! - a.cover[y * tw + x + 1]!));
+      }
+    assert.ok(worst < 0.3, `${a.name}: steepest step between texels ${worst}`);
+  }
 });

@@ -50,7 +50,7 @@ import {
   type Node,
   type Stack
 } from './levels.ts'
-import { DAYLIGHT, LIGHT_RES, caveAmbient, caveLevels, caveStops, crystalLight, daylight, openAir, sunnyFaceRock, type Glow } from './light.ts'
+import { DAYLIGHT, LIGHT_RES, caveAmbient, caveCover, caveLevels, caveStops, crystalLight, daylight, openAir, sunnyFaceRock, type Glow } from './light.ts'
 import { Lighting } from './lighting.ts'
 
 export { CAVE, SURFACE }
@@ -114,10 +114,12 @@ export interface LabArea {
   levels: Float32Array
   /** The mouths' arch tiles (1): where the cave's floor shows from outside, in the cave's light. */
   arches: Uint8Array
+  /** How much the cave's image covers, per light texel (./light.ts caveCover). */
+  cover: Float32Array
 }
 
 /** An area as authored: everything but what's worked out from it (light). */
-export type AreaPlan = Omit<LabArea, 'walk' | 'ambient' | 'air' | 'stops' | 'levels' | 'arches'>
+export type AreaPlan = Omit<LabArea, 'walk' | 'ambient' | 'air' | 'stops' | 'levels' | 'arches' | 'cover'>
 
 /** Work out an authored area's light: daylight from its mouths, open air, what stops light. */
 export function lightArea(plan: AreaPlan, opts: AreaOptions): LabArea {
@@ -126,7 +128,7 @@ export function lightArea(plan: AreaPlan, opts: AreaOptions): LabArea {
   const air = openAir(plan.stack, plan.top)
   const arches = new Uint8Array(plan.stack.w * plan.stack.h)
   for (const m of plan.mouths) for (let tx = m.x0; tx <= m.x1; tx++) for (const ty of m.arch) arches[ty * plan.stack.w + tx] = 1
-  return { ...plan, walk, ambient: caveAmbient(plan.stack, air), air, stops: caveStops(cave), levels: caveLevels(cave), arches }
+  return { ...plan, walk, ambient: caveAmbient(plan.stack, air), air, stops: caveStops(cave), levels: caveLevels(cave), arches, cover: caveCover(plan.stack, air, TILE_PX, LIGHT_RES) }
 }
 
 /** Where depth darkens the cave (1): its own floor, drops, water and rock, not the open air or the sunny face round an arch. */
@@ -147,6 +149,7 @@ export function areaLighting(area: LabArea): Lighting {
   lights.setAmbient(CAVE, area.ambient)
   lights.setOccluders(CAVE, area.stops)
   lights.setLevels(CAVE, area.levels, caveMaterial(area))
+  lights.setCover(CAVE, area.cover)
   area.glows.forEach((g, i) => lights.add(crystalLight(g, i, TILE_PX)))
   return lights
 }

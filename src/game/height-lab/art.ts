@@ -15,7 +15,7 @@ import { wildsLook } from '../wilds/wilds-looks.ts'
 import { fnv1a32 } from '../../lib/hash.ts'
 import { CAVE, G, GROUNDS, SURFACE, type LabArea } from './area.ts'
 import { DX, DY, KIND, TILE_PX, step, type Dir, type Layer } from './levels.ts'
-import { sunnyFaceRock } from './light.ts'
+import { LIGHT_RES, sunnyFaceRock } from './light.ts'
 
 type RGB = [number, number, number]
 
@@ -375,6 +375,18 @@ export function paintCave(scene: Phaser.Scene, area: LabArea, style: CaveStyle):
       for (let y = ty - r; y <= ty + r; y++) for (let x = tx - r; x <= tx + r; x++) if (floorish(kindAt(x, y)) || kindAt(x, y) === KIND.water || kindAt(x, y) === KIND.face) return r
     return 4
   }
+  const per = T / LIGHT_RES
+  const ctw = l.w * per
+  const coverAt = (wx: number, wy: number) => {
+    const gx = (wx + 0.5) / LIGHT_RES - 0.5
+    const gy = (wy + 0.5) / LIGHT_RES - 0.5
+    const x0 = Math.floor(gx)
+    const y0 = Math.floor(gy)
+    const fx = gx - x0
+    const fy = gy - y0
+    const c = (x: number, y: number) => area.cover[Math.min(l.h * per - 1, Math.max(0, y)) * ctw + Math.min(ctw - 1, Math.max(0, x))]!
+    return Math.min(1, (c(x0, y0) * (1 - fx) + c(x0 + 1, y0) * fx) * (1 - fy) + (c(x0, y0 + 1) * (1 - fx) + c(x0 + 1, y0 + 1) * fx) * fy)
+  }
   const drawn = (i: number) => l.kind[i] !== KIND.none && !sunnyFaceRock(area.stack, area.air, i)
   for (let ty = y0; ty <= y1; ty++)
     for (let tx = x0; tx <= x1; tx++) {
@@ -470,7 +482,8 @@ export function paintCave(scene: Phaser.Scene, area: LabArea, style: CaveStyle):
           px[o] = rgb[0]
           px[o + 1] = rgb[1]
           px[o + 2] = rgb[2]
-          px[o + 3] = 255
+          // Rock fades out smoothly as far as the cave's cover says (./light.ts caveCover); floors stay whole to their edge.
+          px[o + 3] = k === KIND.rock ? Math.round(255 * coverAt(wx, wy)) : 255
         }
     }
   // Where floors meet: lips and toes at a ramp's ends, rims where a floor drops away north, east or west.

@@ -116,6 +116,7 @@ export class Lighting {
   /** Per layer, texels: the level (bilinear between tile middles) and how much depth darkens there (0–1). */
   private levelTex: ({ lev: Float32Array; mat: Float32Array } | null)[] = []
   private material: (Uint8Array | null)[] = []
+  private cover: (Float32Array | null)[] = []
   private wBase: Float32Array[] = []
   private wSrc: Float32Array[] = []
   private bufAmb: Float32Array[] = []
@@ -168,6 +169,11 @@ export class Lighting {
     this.material[layer] = material ?? null
     this.levelTex[layer] = null
     this.rebuild(layer)
+  }
+
+  /** How much a layer's image covers per texel (0–1), for the cap; without it, where its levels' material is. */
+  setCover(layer: number, cover: Float32Array): void {
+    this.cover[layer] = cover
   }
 
   // ------------------------------------------------------------ sources
@@ -349,19 +355,22 @@ export class Lighting {
     if (cap && ci >= 0 && cap.alpha > 0.001) {
       const amb = this.bufAmb[ci]!
       const mov = this.bufMov[ci]!
-      const mat = this.levels[cap.layer] ? this.levelMap(cap.layer).mat : null
+      const mat = this.cover[cap.layer] ?? (this.levels[cap.layer] ? this.levelMap(cap.layer).mat : null)
       for (let y = 0; y < rect.h; y++) {
         const ty = Math.min(this.th - 1, Math.max(0, rect.y0 + y))
         for (let x = 0; x < rect.w; x++) {
           const t = y * rect.w + x
-          const m = mat ? mat[ty * this.tw + Math.min(this.tw - 1, Math.max(0, rect.x0 + x))]! : 1
+          // Fully capped where the image covers half or more; on its fading rim, less (the rim's material
+          // shows at most an eighth of what it would uncapped, and the surface beyond isn't darkened in a hard edge).
+          const cover = mat ? mat[ty * this.tw + Math.min(this.tw - 1, Math.max(0, rect.x0 + x))]! : 1
+          const m = Math.min(1, 2 * cover)
           if (m <= 0) continue
           const d = t * 3
           let over = 0
           for (let c = 0; c < 3; c++) {
             const own = clamp01(amb[d + c]! + mov[d + c]!)
             const shown = cap.alpha * clamp01(acc[d + c]!)
-            over = Math.max(over, m * (shown - own))
+            over = Math.max(over, cover * (shown - own))
             const excess = acc[d + c]! - own / cap.alpha
             if (excess > 0) acc[d + c] -= m * excess
           }
