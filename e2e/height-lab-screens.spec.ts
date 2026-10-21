@@ -34,6 +34,7 @@ type LabState = {
   corners?: { shown: number[]; own: number[] }
   uncapped?: number
   iris?: number
+  crossfade?: boolean
 }
 type Lab = { put: (layer: number, tx: number, ty: number) => void; look: (l: Look) => void; state: () => LabState }
 
