@@ -2,10 +2,10 @@ package wilds
 
 // Biome regions (~32 chunks across: terrain-decisions.md, terrain-sol.md §1,
 // terrain-argon.md §1.3). Each 32-chunk lattice cell (rx, ry) has a stable
-// id "r:<rx>:<ry>" and a deterministic site jittered within ±6 chunks of its
+// id "r:<rx>:<ry>" and a deterministic site jittered within ±10 chunks of its
 // centre. Ownership uses plain nearest-site squared distance (without dividing
 // by site size, so borders are never circular arcs) after a bounded 2-octave
-// coordinate warp (up to 4 chunks, wavelengths 24 and 8 chunks). Ties break by
+// coordinate warp (up to 6 chunks, wavelengths 24 and 8 chunks). Ties break by
 // signed (ry, rx). A signed border-distance band drives coherent patch
 // blending across region boundaries and three-region junctions.
 
@@ -17,21 +17,21 @@ import (
 const (
 	// RegionChunks is the nominal width/height of a biome region lattice cell.
 	RegionChunks = 32
-	// RegionJitterChunks is the maximum site jitter from a cell's centre (±6 chunks).
-	RegionJitterChunks = 6
+	// RegionJitterChunks is the maximum site jitter from a cell's centre (±10 chunks).
+	RegionJitterChunks = 10
 	// RegionWarpCoarseChunks and RegionWarpFineChunks are the two warp wavelengths.
 	RegionWarpCoarseChunks = 24
 	RegionWarpFineChunks   = 8
-	// RegionWarpCoarseTiles and RegionWarpFineTiles sum to 4 chunks (96 tiles) max displacement.
-	RegionWarpCoarseTiles = 68
-	RegionWarpFineTiles   = 28
+	// RegionWarpCoarseTiles and RegionWarpFineTiles sum to 6 chunks (144 tiles) max displacement.
+	RegionWarpCoarseTiles = 104
+	RegionWarpFineTiles   = 40
 	// BlendBandTiles is the total width of the biome border-distance blend band
-	// (8 tiles on each side of the Voronoi bisector = 16 tiles total).
-	BlendBandTiles     = 16
+	// (10 tiles on each side of the Voronoi bisector = 20 tiles total).
+	BlendBandTiles     = 20
 	BlendHalfBandTiles = BlendBandTiles / 2
-	// WhitequietBlendHalfTiles keeps the Whitequiet margin crisp (at most 4 tiles
+	// WhitequietBlendHalfTiles keeps the Whitequiet margin crisp (at most 5 tiles
 	// on each side of a Whitequiet border, terrain-sol.md §1).
-	WhitequietBlendHalfTiles = 4
+	WhitequietBlendHalfTiles = 5
 )
 
 // RegionCoord identifies a 32-chunk region lattice cell on signed coordinates.
@@ -103,7 +103,7 @@ func RegionSiteAt(worldSeed string, rx, ry int) RegionSite {
 }
 
 // regionWarped returns the warped tile centre in 1/256-tile (fp) units.
-// Bounded to ±4 chunks (±96 tiles) total displacement along each axis.
+// Bounded to ±6 chunks (±144 tiles) total displacement along each axis.
 func regionWarped(worldSeed string, tx, ty int) pt {
 	S := chunkSize()
 	p := tileCentre(tx, ty)
