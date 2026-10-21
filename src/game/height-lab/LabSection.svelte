@@ -21,7 +21,6 @@
     { key: 'cave', label: 'In a cave, your own light', options: [{ value: 'lantern', label: 'Close' }, { value: 'wide', label: 'Wide' }, { value: 'dim', label: 'None' }] },
     { key: 'skyTiles', label: 'Daylight reaches in', options: [{ value: 3, label: '3 tiles' }, { value: 6, label: '6 tiles' }, { value: 10, label: '10 tiles' }] },
     { key: 'way', label: 'Into a cave, the way in', options: [{ value: 'blend', label: 'Even (round 4)' }, { value: 'eased', label: 'Longer, eased' }, { value: 'stages', label: 'Dark first, then the cave' }, { value: 'iris', label: 'Iris from the mouth' }] },
-    { key: 'crossfade', label: 'The cave’s view comes in over', options: [{ value: 1, label: '1 tile' }, { value: 3, label: '3 tiles' }] },
     { key: 'grid', label: 'Levels overlay', options: [{ value: false, label: 'Off' }, { value: true, label: 'On' }] }
   ]
 </script>
@@ -38,6 +37,15 @@
           <button type="button" class="small" aria-pressed={look[c.key] === o.value} onclick={() => setLabLook({ [c.key]: o.value })}>{o.label}</button>
         {/each}
       </div>
+      {#if c.key === 'way'}
+        <label class="row">
+          <span class="label">The cave’s view comes in over: {look.crossfade} {look.crossfade === 1 ? 'tile' : 'tiles'}</span>
+          <input type="range" min="1" max="4" step="1" list="height-lab-crossfade-stops" value={look.crossfade} oninput={(e) => setLabLook({ crossfade: Number(e.currentTarget.value) })} data-testid="height-lab-crossfade" />
+          <datalist id="height-lab-crossfade-stops">
+            {#each [1, 2, 3, 4] as tiles}<option value={tiles} label={String(tiles)}></option>{/each}
+          </datalist>
+        </label>
+      {/if}
     {/each}
     <label class="row">
       <span class="label">Underground, levels above and below get darker: {Math.round(look.darkness * 100)}% at most</span>
