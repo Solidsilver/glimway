@@ -1,0 +1,162 @@
+{
+  "terrain": {
+    "recipe": "ridge-access-spike@1",
+    "seed": "terrain-17",
+    "fieldSeed": 1139476189,
+    "coldSamples": 1,
+    "shuffleSeed": 52,
+    "strategies": {
+      "chunk": {
+        "coldPlanMs": {
+          "p50": 115.532303,
+          "p95": 115.532303,
+          "max": 115.532303
+        },
+        "warmChunkMs": {
+          "p50": 0.605321,
+          "p95": 1.233474,
+          "max": 1.551689
+        },
+        "encodedHeightBytes": {
+          "p50": 434,
+          "p95": 1062,
+          "max": 1240
+        },
+        "bareWholeChunkBytes": {
+          "p50": 875,
+          "p95": 1503,
+          "max": 1681
+        },
+        "planStorageBytes": 0,
+        "encodedSnapshotBytes": 97002,
+        "constraintManifestBytes": 7592,
+        "ramps": 84,
+        "rejectedOptionalFloorTiles": 0,
+        "certificate": {
+          "components": 3,
+          "strandedComponents": 2,
+          "strandedTiles": 36,
+          "walkableTiles": 89790,
+          "heldExits": 288,
+          "heldExitsKept": 288,
+          "anchors": 5,
+          "anchorsReached": 4
+        },
+        "stranded": [
+          {
+            "tiles": 32,
+            "tileBounds": [
+              310,
+              66,
+              313,
+              73
+            ]
+          },
+          {
+            "tiles": 4,
+            "tileBounds": [
+              207,
+              96,
+              208,
+              97
+            ]
+          }
+        ],
+        "mismatchedSeamTiles": 0,
+        "geometrySHA256": "be40ee319d99ac181ee1e2bb896736c3746b94e0328b1ef379411d8d4e3d3f6b",
+        "seamEdgesCompared": 14016,
+        "mismatchedSeamEdges": 0
+      },
+      "region": {
+        "coldPlanMs": {
+          "p50": 684.18712,
+          "p95": 684.18712,
+          "max": 684.18712
+        },
+        "warmChunkMs": {
+          "p50": 0.01198,
+          "p95": 0.02273,
+          "max": 0.068171
+        },
+        "encodedHeightBytes": {
+          "p50": 434,
+          "p95": 1004,
+          "max": 1384
+        },
+        "bareWholeChunkBytes": {
+          "p50": 875,
+          "p95": 1445,
+          "max": 1825
+        },
+        "planStorageBytes": 92407,
+        "encodedSnapshotBytes": 92407,
+        "constraintManifestBytes": 7592,
+        "ramps": 16,
+        "rejectedOptionalFloorTiles": 0,
+        "certificate": {
+          "components": 1,
+          "strandedComponents": 0,
+          "strandedTiles": 0,
+          "walkableTiles": 89653,
+          "heldExits": 288,
+          "heldExitsKept": 288,
+          "anchors": 5,
+          "anchorsReached": 5
+        },
+        "stranded": null,
+        "mismatchedSeamTiles": 0,
+        "geometrySHA256": "840d6ff853709f469bdaf175fb29cd9df67f6185391b7689f5c2576ff5835a6e",
+        "seamEdgesCompared": 14016,
+        "mismatchedSeamEdges": 0
+      }
+    },
+    "anchors": [
+      {
+        "name": "gate",
+        "x": 228,
+        "y": 156
+      },
+      {
+        "name": "held-foot",
+        "x": 84,
+        "y": 132
+      },
+      {
+        "name": "diagonal-north",
+        "x": 108,
+        "y": 108
+      },
+      {
+        "name": "diagonal-south",
+        "x": 132,
+        "y": 132
+      },
+      {
+        "name": "saved-player",
+        "x": 207,
+        "y": 96
+      }
+    ],
+    "note": "Finite 20x8 chunk access domain; crop boundaries do not certify home. Local repair keeps a two-tile rim, never demotes boundary ground, and may fail closed. Corner bowl is an adversarial fixture, not prevalence evidence. Warm region = clip+encode; warm chunk = independent local sampling+repair+encode; decode excluded. Bare whole chunk = actual undressed flat-palette WorldChunk protobuf + lab height envelope (length prefix); no decor/entities/biome overhead. Storage is a reconstructible encoded plan, not Go heap. Hero 10x4 px foot box can follow every cardinal tile-centre edge; mount clearance is not certified."
+  },
+  "content": "",
+  "contentSHA256": "",
+  "view": "region",
+  "seed": "terrain-17",
+  "epoch": "t:1795000000:1796209600",
+  "rect": [
+    7,
+    2,
+    13,
+    4
+  ],
+  "chunkSize": 24,
+  "chunks": 21,
+  "generatedChunks": 160,
+  "fixedChunks": 0,
+  "landShareByChunkCentre": {},
+  "longestAxialLandRunChunks": 0,
+  "unreachableWalkableTiles": 36,
+  "generationMs": 956,
+  "note": "Terrain spike: chunk. Levels green/tan/ivory, faces dark, built ramps gold, rough orange, protected cyan, anchors white. Road overlay = realized saddle/end routes. Reach = home green, stranded magenta, outside the access domain grey. Metrics always cover the full 20x8 region, even when cropped. Finite 20x8 chunk access domain; crop boundaries do not certify home. Local repair keeps a two-tile rim, never demotes boundary ground, and may fail closed. Corner bowl is an adversarial fixture, not prevalence evidence. Warm region = clip+encode; warm chunk = independent local sampling+repair+encode; decode excluded. Bare whole chunk = actual undressed flat-palette WorldChunk protobuf + lab height envelope (length prefix); no decor/entities/biome overhead. Storage is a reconstructible encoded plan, not Go heap. Hero 10x4 px foot box can follow every cardinal tile-centre edge; mount clearance is not certified."
+}
