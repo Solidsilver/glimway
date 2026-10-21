@@ -47,6 +47,7 @@
   let epoch = $state(saved.epoch ?? '')
   let overlays = $state<string[]>(saved.overlays ?? [])
   let mode = $state<LabMode>(saved.mode ?? 'auto')
+  let terrain = $state('')
   let camera = $state<Camera>(saved.camera ?? { x: hero?.tx ?? 0, y: hero?.ty ?? 0, zoom: VIEW_ZOOM.atlas })
   let rulesA = $state<'server' | 'edited'>(saved.rulesA ?? 'server')
   let compare = $state(saved.compare ?? false)
@@ -78,6 +79,17 @@
   let message = $state<string | null>(null)
 
   let root = $state<HTMLDivElement | null>(null)
+
+  function chooseTerrain(value: string): void {
+    terrain = value
+    if (!terrain) return
+    camera = { x: 240, y: 96, zoom: 2 }
+    mode = 'region'
+    compare = false
+    picked = null
+    rulesA = 'server'
+    overlays = ['road', 'reach']
+  }
 
   onMount(() => {
     root?.focus()
@@ -129,7 +141,7 @@
   const view = $derived(viewOf(mode, camera.zoom))
 
   /** Everything a render depends on but the camera: a change starts again. */
-  const key = $derived(JSON.stringify({ a: versionA.seed, ra: hash(versionA.rules), b: versionB && [versionB.seed, hash(versionB.rules)], epoch, overlays: [...overlays].sort() }))
+  const key = $derived(JSON.stringify({ terrain, a: versionA.seed, ra: hash(versionA.rules), b: versionB && [versionB.seed, hash(versionB.rules)], epoch, overlays: [...overlays].sort() }))
 
   function hash(s: string): number {
     let h = 0x811c9dc5
@@ -139,7 +151,7 @@
 
   /** The overlays a view takes (the atlas has no tiles for solid or reach). */
   function overlayList(): string[] {
-    return overlays.filter((o) => view !== 'atlas' || (o !== 'solid' && o !== 'reach'))
+    return overlays.filter((o) => !!terrain || view !== 'atlas' || (o !== 'solid' && o !== 'reach'))
   }
 
   let inflight: { ctl: AbortController; body: string } | null = null
@@ -158,11 +170,12 @@
       renderError = 'The edited rules have a problem: see Rules.'
       return
     }
-    const want = plan(camera, pane, st.chunkSize, mode, st.limits)
+    const want = plan(camera, pane, st.chunkSize, terrain ? 'region' : mode, st.limits)
     const vis = visibleChunks(camera, pane, st.chunkSize)
     const k = key
     if (drawn.some((d) => d.key === k && covers(d.plan, want, vis))) return
     const body = renderBody(want, epoch, overlayList(), versionA, versionB)
+    if (terrain) body.terrain = terrain
     const text = JSON.stringify(body)
     if (inflight?.body === text) return
     inflight?.ctl.abort()
@@ -205,6 +218,7 @@
   const busy = $derived(busySince === null ? null : `Rendering the ${busyView}… ${((now - busySince) / 1000).toFixed(1)} s`)
 
   async function inspect(tx: number, ty: number, panel: 0 | 1 | 2): Promise<void> {
+    if (terrain) return
     if (!epoch) return
     picked = { tx, ty, panel }
     const v = panel > 0 && versionB ? versionB : versionA
@@ -329,6 +343,16 @@
         <div class="sheet">
           {#if tab === 'view'}
             <section>
+              <label class="field"><span>Terrain access experiment</span>
+                <select value={terrain} onchange={(e) => chooseTerrain(e.currentTarget.value)}>
+                  <option value="">Live generator</option>
+                  <option value="region">Ridge: region plan</option>
+                  <option value="chunk">Ridge: per-chunk repair</option>
+                </select>
+              </label>
+              {#if terrain}<p class="hint">Preview at chunks 0,0–19,7. Green reaches the gate; magenta is stranded; grey is unknown. Turn reach off to see levels and ramps. Stats include both strategies. White crosses mark preserved anchors.</p>{/if}
+            </section>
+            <section>
               <label class="field"><span>Seed</span><input bind:value={seed} spellcheck="false" autocomplete="off" /></label>
               <label class="field"><span>Epoch (wick season)</span><input bind:value={epoch} spellcheck="false" autocomplete="off" /></label>
               <div class="row">
@@ -429,6 +453,12 @@
 
 {#snippet statsOf(s: Stats, name: string | null)}
   <section>
+    {#if s.terrain}
+      {#each Object.entries(s.terrain.strategies) as [strategy, result] (strategy)}
+        <p>{strategy}: {result.certificate.strandedComponents} stranded components, {result.certificate.strandedTiles} tiles; {result.ramps} ramps.</p>
+      {/each}
+      <details><summary>Terrain measurements and manifest (JSON)</summary><pre style="white-space: pre-wrap; overflow-wrap: anywhere">{JSON.stringify(s.terrain, null, 2)}</pre></details>
+    {/if}
     <h3 title={s.seed}>{name ? `${name}: ` : ''}{short(s.seed)}{s.content === 'edited' ? ' · edited rules' : ''}</h3>
     <dl>
       <dt>View</dt><dd>{s.view}, chunks {s.rect[0]},{s.rect[1]} to {s.rect[2]},{s.rect[3]}</dd>

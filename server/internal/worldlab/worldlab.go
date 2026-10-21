@@ -46,6 +46,9 @@ var OverlayNames = []string{"land-cells", "place-cells", "tiers", "wend", "road"
 // Options is one render or inspection. Raw, when set, is the wilds rules a
 // worker installs before it starts; Content names where they came from.
 type Options struct {
+	Terrain        string  `json:"terrain,omitempty"`
+	TerrainSamples int     `json:"terrainSamples,omitempty"`
+	TerrainOrder   uint64  `json:"terrainOrder,omitempty"`
 	CompareSeed    string  `json:"compareSeed,omitempty"`
 	CompareContent string  `json:"compareContent,omitempty"`
 	Inspect        *[2]int `json:"inspect,omitempty"`
@@ -102,6 +105,17 @@ func enabled(o Options, name string) bool {
 
 // Validate refuses a render outside the limits, before any work.
 func Validate(o Options) error {
+	if o.Terrain != "" {
+		if o.Terrain != "region" && o.Terrain != "chunk" {
+			return errors.New("terrain must be region or chunk")
+		}
+		if o.View != "region" || o.Inspect != nil {
+			return errors.New("terrain spike requires region view and has no live-world tile inspection")
+		}
+		if o.TerrainSamples < 0 || o.TerrainSamples > 20 {
+			return errors.New("terrain samples must be in 0..20")
+		}
+	}
 	if o.View != "atlas" && o.View != "region" && o.View != "chunk" {
 		return errors.New("view must be atlas, region, or chunk")
 	}

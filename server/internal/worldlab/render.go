@@ -19,6 +19,7 @@ import (
 )
 
 type Stats struct {
+	Terrain         *TerrainMetrics    `json:"terrain,omitempty"`
 	Content         string             `json:"content"`
 	ContentSHA256   string             `json:"contentSHA256"`
 	View            string             `json:"view"`
@@ -63,6 +64,9 @@ func epoch(o Options, cx, cy int) wilds.Epoch {
 // content.WildsRules holds now (a worker's, after ConfigureForTools, or the
 // embedded ones). Use Spawn to render in a fresh worker process.
 func Render(ctx context.Context, o Options) (Result, error) {
+	if o.Terrain != "" {
+		return renderTerrain(ctx, o)
+	}
 	started := time.Now()
 	S := int(content.WildsRules.GetChunkSize())
 	cw, ch := o.Rect[2]-o.Rect[0]+1, o.Rect[3]-o.Rect[1]+1

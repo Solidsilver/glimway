@@ -97,6 +97,29 @@ test('the world lab: render, inspect, diff, rules, and go here', async ({ page }
     .toBe(true)
 })
 
+test('the terrain preview compares exact access without offering a live-world arrival', async ({ page }) => {
+  await freshPlayer(page)
+  await openLab(page)
+  await rendered(page, 'atlas')
+  await lab(page).getByRole('tab', { name: 'View' }).click()
+  await lab(page).getByLabel('Seed', { exact: true }).fill('terrain-17')
+  const preview = page.waitForRequest((r) => r.url().endsWith('/api/dev/worldlab/render') && r.method() === 'POST' && r.postDataJSON().terrain === 'region')
+  await lab(page).getByLabel('Terrain access experiment').selectOption('region')
+  const rect = (await preview).postDataJSON().rect as [number, number, number, number]
+  expect(Math.abs((rect[0] + rect[2] + 1) * 12 - 240)).toBeLessThanOrEqual(48)
+  expect(Math.abs((rect[1] + rect[3] + 1) * 12 - 96)).toBeLessThanOrEqual(48)
+  await rendered(page, 'region')
+  await expect(lab(page).getByText('region: 0 stranded components, 0 tiles;', { exact: false })).toBeVisible()
+  await expect(lab(page).getByText('chunk: 2 stranded components, 36 tiles;', { exact: false })).toBeVisible()
+  await lab(page).getByRole('tab', { name: 'View' }).click()
+  await lab(page).getByLabel('Terrain access experiment').selectOption('chunk')
+  await rendered(page, 'region')
+  await expect(lab(page).getByText('Terrain spike: chunk.', { exact: false })).toBeVisible({ timeout: 30_000 })
+  const map = (await lab(page).locator('canvas').first().boundingBox())!
+  await page.mouse.click(map.x + map.width / 2, map.y + map.height / 2)
+  await expect(lab(page).getByRole('button', { name: 'Go here' })).toHaveCount(0)
+})
+
 test.describe('on a phone', () => {
   const { viewport, deviceScaleFactor, isMobile, hasTouch, userAgent } = devices['iPhone 13']
   test.use({ viewport, deviceScaleFactor, isMobile, hasTouch, userAgent })
