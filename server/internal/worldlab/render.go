@@ -70,6 +70,10 @@ func epoch(o Options, cx, cy int) wilds.Epoch {
 // content.WildsRules holds now (a worker's, after ConfigureForTools, or the
 // embedded ones). Use Spawn to render in a fresh worker process.
 func Render(ctx context.Context, o Options) (Result, error) {
+	if o.Walk {
+		walk, err := RenderWalk(ctx, o)
+		return Result{Walk: walk}, err
+	}
 	if o.Terrain != "" {
 		return renderTerrain(ctx, o)
 	}

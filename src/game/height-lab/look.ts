@@ -31,10 +31,14 @@ export interface LabLook {
   way: WayIn
   /** Shade the tiles by level, show edges and layers (for reading the data). */
   grid: boolean
+  /** The generated area: which access strategy's terrain to walk (switching rebuilds it where you stand). */
+  strategy: 'region' | 'chunk'
+  /** The generated area: stranded floor magenta, chunk lines (switching repaints). */
+  walkOverlay: boolean
 }
 
 const KEY = 'glimway:height-lab-look'
-const DEFAULT: LabLook = { area: 'shoulder', fog: 'fog', fogStrength: 'medium', darkness: 0.6, caveStyle: 'mixed', zoom: true, haze: true, cave: 'lantern', skyTiles: 6, crossfade: 3, way: 'blend', grid: false }
+const DEFAULT: LabLook = { area: 'shoulder', fog: 'fog', fogStrength: 'medium', darkness: 0.6, caveStyle: 'mixed', zoom: true, haze: true, cave: 'lantern', skyTiles: 6, crossfade: 3, way: 'blend', grid: false, strategy: 'region', walkOverlay: false }
 
 function read(): LabLook {
   try {

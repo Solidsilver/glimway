@@ -46,6 +46,8 @@ var OverlayNames = []string{"land-cells", "place-cells", "tiers", "wend", "road"
 // Options is one render or inspection. Raw, when set, is the wilds rules a
 // worker installs before it starts; Content names where they came from.
 type Options struct {
+	// Walk: the walk lab's window (walk.go) instead of a picture.
+	Walk           bool    `json:"walk,omitempty"`
 	Terrain        string  `json:"terrain,omitempty"`
 	TerrainSamples int     `json:"terrainSamples,omitempty"`
 	TerrainOrder   uint64  `json:"terrainOrder,omitempty"`
@@ -68,14 +70,15 @@ type Options struct {
 // Result is a render (PNG and stats together, so an image and its
 // measurements are atomic) or an inspection (Tile).
 type Result struct {
-	Comparison *DiffStats `json:"comparison,omitempty"`
-	Tile       *TileInfo  `json:"tile,omitempty"`
-	PNG        []byte     `json:"png"`
-	Stats      Stats      `json:"stats"`
-	Signatures []uint64   `json:"signatures,omitempty"`
-	Width      int        `json:"width"`
-	Height     int        `json:"height"`
-	Scale      int        `json:"scale"`
+	Comparison *DiffStats   `json:"comparison,omitempty"`
+	Walk       *TerrainWalk `json:"walk,omitempty"`
+	Tile       *TileInfo    `json:"tile,omitempty"`
+	PNG        []byte       `json:"png"`
+	Stats      Stats        `json:"stats"`
+	Signatures []uint64     `json:"signatures,omitempty"`
+	Width      int          `json:"width"`
+	Height     int          `json:"height"`
+	Scale      int          `json:"scale"`
 }
 
 // Coordinates parses n comma-separated integers within MaxCoordinate.
@@ -106,6 +109,16 @@ func enabled(o Options, name string) bool {
 
 // Validate refuses a render outside the limits, before any work.
 func Validate(o Options) error {
+	if o.Walk {
+		// A fixed window with the embedded rules: only the seed and season vary.
+		if o.Terrain != "" || o.Inspect != nil || len(o.Raw) > 0 {
+			return errors.New("the walk takes only a seed and an epoch")
+		}
+		if len(o.Seed) == 0 || len(o.Seed) > 200 {
+			return errors.New("seed must be 1..200 characters")
+		}
+		return ValidateEpoch(o.Epoch)
+	}
 	if o.Terrain != "" {
 		if o.Terrain != "region" && o.Terrain != "chunk" {
 			return errors.New("terrain must be region or chunk")

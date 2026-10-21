@@ -11,8 +11,10 @@
   $effect(() => onLabLook((l) => (look = l)))
   const here = inLab()
 
-  const choices: { key: keyof LabLook; label: string; options: { value: LabLook[keyof LabLook]; label: string }[] }[] = [
-    { key: 'area', label: 'Area', options: [{ value: 'shoulder', label: 'Plateau and shoulder' }, { value: 'mountain', label: 'Mountain and deep cave' }] },
+  const choices: { key: keyof LabLook; label: string; walk?: boolean; options: { value: LabLook[keyof LabLook]; label: string }[] }[] = [
+    { key: 'area', label: 'Area', options: [{ value: 'shoulder', label: 'Plateau and shoulder' }, { value: 'mountain', label: 'Mountain and deep cave' }, { value: 'walk', label: 'Near home (generated)' }] },
+    { key: 'strategy', label: 'Near home, the way up', walk: true, options: [{ value: 'region', label: 'Region plan' }, { value: 'chunk', label: 'Per-chunk repair' }] },
+    { key: 'walkOverlay', label: 'Near home, stranded ground and chunk lines', walk: true, options: [{ value: false, label: 'Off' }, { value: true, label: 'On' }] },
     { key: 'fog', label: 'Levels above and below fade to', options: [{ value: 'fog', label: 'Fog' }, { value: 'sky', label: 'Sky' }, { value: 'none', label: 'Nothing' }] },
     { key: 'fogStrength', label: 'Fog per level', options: [{ value: 'light', label: 'Light' }, { value: 'medium', label: 'Medium' }, { value: 'strong', label: 'Strong' }] },
     { key: 'caveStyle', label: 'Cave floors', options: [{ value: 'mixed', label: 'Mixed' }, { value: 'built', label: 'Built' }, { value: 'rough', label: 'Rough' }] },
@@ -27,10 +29,10 @@
 
 <section class="lab" class:bare data-testid="height-lab-controls">
   {#if !bare}<h3 class="section-title"><Icon name="stone" size={14} /> Height lab</h3>{/if}
-  <p class="what">Hand-made areas with real levels and caves: a valley, plateau and shoulder; a mountain with a saddle and a deep cave. It doesn’t save or send anything.</p>
+  <p class="what">Hand-made areas with real levels and caves: a valley, plateau and shoulder; a mountain with a saddle and a deep cave. And near home, generated: the real fields' heights round Town under either way up (the server works it out; nothing is saved).</p>
   {#if here}
     <button type="button" onclick={() => location.assign(labUrl(false))}>Leave the lab</button>
-    {#each choices as c (c.key)}
+    {#each choices.filter((c) => !c.walk || look.area === 'walk') as c (c.key)}
       <div class="row" role="group" aria-label={c.label}>
         <span class="label">{c.label}</span>
         {#each c.options as o (String(o.value))}
