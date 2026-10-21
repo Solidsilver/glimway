@@ -334,8 +334,8 @@ export class Lighting {
           const h = this.wBase[oi]![t]!
           const a = iris ? h : over.alpha
           const rem = 1 - a * cov
-          const wc = rem > 1e-4 ? clamp01((h * (1 - cov)) / rem) : 0
-          const ws = rem > 1e-4 ? clamp01((1 - h) / rem) : 0
+          const wc = rem > 0 ? clamp01((h * (1 - cov)) / rem) : 0
+          const ws = rem > 0 ? clamp01((1 - h) / rem) : 0
           views.forEach((v, vi) => {
             const w = v.layer === over.layer ? wc : ws
             this.wBase[vi]![t] = w
@@ -574,6 +574,36 @@ export function sightLine(stops: Uint8Array, w: number, ax: number, ay: number, 
   return true
 }
 
+/** Nonempty horizontal span per source row, computed once for an immutable cave image. */
+export function pixelSpans(src: Uint8ClampedArray, w: number): Int32Array {
+  const spans = new Int32Array(src.length / 4 / w * 2)
+  for (let y = 0; y < spans.length / 2; y++) {
+    let left = w, right = 0
+    for (let x = 0; x < w; x++) if (src[(y * w + x) * 4 + 3]) {
+      left = Math.min(left, x)
+      right = x + 1
+    }
+    spans[y * 2] = left
+    spans[y * 2 + 1] = right
+  }
+  return spans
+}
+
+export function clearLitScratch(): void {
+  litIx = new Int32Array(0)
+  litFxs = new Float32Array(0)
+}
+
+/** A cave mover uses its own light and full depth darkening throughout the transition. */
+export function caveTint(rgb: readonly number[], tint: number, dz: number, darkness: number): number {
+  const kd = 1 - depthDark(dz, darkness)
+  const channel = (c: number, shift: number) => Math.round(((tint >> shift) & 255) * rgb[c]! * kd)
+  return (channel(0, 16) << 16) | (channel(1, 8) << 8) | channel(2, 0)
+}
+
+let litIx = new Int32Array(0)
+let litFxs = new Float32Array(0)
+
 /**
  * An image lit on the CPU: `src` (RGBA, `sw` px wide, its top left at world
  * px sx, sy) times the light texels in `light` (RGBA, `lw` × `lh`, the
@@ -581,11 +611,9 @@ export function sightLine(stops: Uint8Array, w: number, ax: number, ay: number, 
  * middles as the light's image is drawn, over the world box rx, ry, w, h
  * into `out` (RGBA, w × h; transparent where `src` has nothing). The way
  * in's crossfade (./scene.ts): the cave's floors in the cave's own light,
- * drawn over the lit surface.
+ * drawn over the lit surface. Optional clip bounds limit work to the visible
+ * image and its nonempty row spans; w remains the output row stride.
  */
-let litIx = new Int32Array(0)
-let litFxs = new Float32Array(0)
-
 export function litPixels(
   src: Uint8ClampedArray,
   sw: number,
@@ -602,7 +630,8 @@ export function litPixels(
   w: number,
   h: number,
   out: Uint8ClampedArray,
-  iris?: { x: number; y: number; r: number; soft: number } | null
+  iris?: { x: number; y: number; r: number; soft: number } | null,
+  clip?: { w: number; h: number; spans: Int32Array }
 ): void {
   const sh = src.length / 4 / sw
   if (litIx.length < w) {
@@ -611,7 +640,9 @@ export function litPixels(
   }
   const ix = litIx
   const fxs = litFxs
-  for (let x = 0; x < w; x++) {
+  const xEnd = Math.min(w, clip?.w ?? w, sx + sw - rx)
+  const yEnd = Math.min(h, clip?.h ?? h, sy + sh - ry)
+  for (let x = Math.max(0, sx - rx); x < xEnd; x++) {
     const g = (rx + x + 0.5) / res - 0.5 - lx0
     const i = Math.floor(g)
     ix[x] = Math.min(lw - 2, Math.max(0, i))
@@ -620,7 +651,7 @@ export function litPixels(
   out.fill(0, 0, w * h * 4)
   const irEnd = iris ? iris.r + iris.soft : 0
   const irSoft = iris ? Math.max(1e-6, iris.soft) : 1
-  for (let y = 0; y < h; y++) {
+  for (let y = Math.max(0, sy - ry); y < yEnd; y++) {
     const wy = ry + y
     const syy = wy - sy
     if (syy < 0 || syy >= sh) continue
@@ -631,7 +662,9 @@ export function litPixels(
     const fy = g < 0 ? 0 : Math.floor(g) > lh - 2 ? 1 : g - Math.floor(g)
     const r0 = iy * lw * 4
     const r1 = (iy + 1) * lw * 4
-    for (let x = 0; x < w; x++) {
+    const left = clip ? clip.spans[syy * 2]! : 0
+    const right = clip ? clip.spans[syy * 2 + 1]! : sw
+    for (let x = Math.max(0, sx + left - rx); x < Math.min(xEnd, sx + right - rx); x++) {
       const wx = rx + x
       const sxx = wx - sx
       if (sxx < 0 || sxx >= sw) continue
