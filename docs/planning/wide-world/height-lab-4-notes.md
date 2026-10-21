@@ -131,3 +131,56 @@ far into the cave's view, daylight, light at the hero and the light's ms for eac
   down the face. Readable as a drop, but a little light on the face would help if wanted.
 - Iteration 2's questions are untouched: mouth direction and identity, ramp length and landings,
   and both responses' lists (bounded plans, roof clearance, chunk caches).
+
+---
+
+## Round 4b: the way in
+
+*Added by Argon (`86ad6168`, CI run `39546306274`), with correctness/cover follow-up by Sol ([height-lab-4b-review-argon.md](responses/height-lab-4b-review-argon.md)).*
+
+### What was happening in the owner's two screenshots
+
+1. **"Some things flash, like the fog."** In Round 4, surface ground fog, thing fog twins, climbing edge haze, the climbing zoom-out, the background colour, and cave crystals/movers outside the arch all switched on `inCave` (`w.layer === CAVE`) in a single frame at the portal step, while the cave's floors and light faded over three walked tiles. All six now interpolate with `v.cave` / `v.alpha` (`scene.ts applyLook`), so nothing flips at the threshold.
+2. **"Mid-transition shows more of the cave than you see once inside" (and the two hard dark rectangles beside the passage).**
+   - In Round 4, the cave image was drawn at `alpha = v.cave` *under* the shared `MULTIPLY` light pass (`v.cave * CAVE + (1 - v.cave) * SURFACE`). Mid-way in (`v.cave = 0.5`), the unlit tunnel ahead and the `KIND.rock` slabs flanking it (`5%` cave ambient) were multiplied by `52.5%` blended light (half surface daylight!), showing at ~`26%` brightness before dropping to `5%` once fully inside.
+   - Worse, `caveRock` (`area.ts`) stamps `KIND.rock` out to `ROCK_REACH = 3` tiles around the floor with a hard tile boundary, so those half-lit rock walls appeared as two sharp tile-aligned dark rectangles beside the passage (`.agent/owner-walk-in-mid.png`).
+3. **How Round 4b fixes it:**
+   - **Soft rock cover (`light.ts caveCover`).** The cave image's alpha is `1` on walkable floors/ramps/water/drops and feathers smoothly by texel distance across the surrounding `KIND.rock` (`1.5` to `2.75` tiles from the floor), eliminating the outer vertical slab edges.
+   - **Lit crossfade over weighted surface light (`lighting.ts litPixels, fill`, `scene.ts drawCrossfade`).** While the way-in transition is active, `this.crossfade` draws the cave's floors and feathered rock walls *already multiplied by the cave's own light* (`litPixels` on the CPU) over the lit surface. Underneath `this.crossfade`, `Lighting.fill` (`over`) weights the surface light by `(1 - h) / (1 - a * cover)` so that after `this.crossfade` blends on top at `a * cover`, the buried hillside dims uniformly by `1 - h` everywhere—with no cave-shaped double-darkening trench over the tunnel footprint, no underground crystal/lantern light leaking onto the surface grass, and per-layer clamping so surface lanterns (Wren on the plateau) don't form a bright halo as the plateau dims.
+
+### The four ways in compared side by side
+
+The dev panel (`LabSection.svelte`) now has **"Way into a cave"** (4 choices) and **"Crossfade"** (`1 tile` / `3 tiles`):
+
+| Way in | Curve (`light.ts wayIn`) | How it looks in motion & in the 11-step CI strips (`w-*`, `pw-*`) | Trade-offs |
+|---|---|---|---|
+| **As now (`blend`)** | Linear `light = alpha = walked / tiles` over `3` tiles (`1` tile when switched). | Clean and direct now that the mid-transition brightening, fog flash, and double-darkening trench are gone (`w-blend-m-east-07.png`). The hill dims evenly while the lit stone passage fades in at the same rate. | Starts and ends at constant speed (`1/3` per tile), so the very first step past the arch still begins abruptly. |
+| **Slower, eased (`eased`)** | Smoothstep `s = t²(3 - 2t)` over `tiles + 2` (`5` tiles at default `3`). | Eases gently out of daylight on the first step in (`6%` at half a tile, `21%` at one tile), moves smoothly through the middle (`w-eased-m-east-07.png`, `w-eased-s-second-08.png`), and settles softly into cave dark over two extra tiles (`w-eased-m-east-09.png`). Directly answers *"a tiny bit sudden"* without changing the spatial layout of the screen. | Takes `5` walked tiles (`1` tile past the arch's back row plus `4` more) to reach `100%` cave view, so a player who stops one tile inside sees the hill only partly dimmed. |
+| **Dark first, then the cave (`stages`)** | Over `tiles + 1`: `light` smoothsteps to `1` over the first `55%` of the walk (`0 → 2.2` tiles); `alpha` stays `0` until `40%` (`1.6` tiles) and smoothsteps to `1` over the remaining `60%`. | In phase 1 (`w-stages-m-east-07.png`), the buried hillside above the cliff lip darkens first while only the arch floor is visible; in phase 2, the lit tunnel floor and walls fade in out of the already-darkened hill. | Because `light` reaches ~`98%` dark before `alpha` rises above `8%`, the tile just north of the arch (`row 71`, where the cave floor hasn't faded in yet over the dimmed surface) briefly dips dark underfoot around `1.5–2` tiles in before brightening as the stone floor appears (`w-stages-m-east-08.png`). |
+| **From the mouth outward (`iris`)** | Smoothstep circle centered on the nearest mouth's arch, expanding from `r0 = 1.5` tiles to past the viewport's far corner with a `2`-tile (`32 px`) feathered rim (`lighting.ts fill, litPixels`). | The cave's lit floor and darkness open radially outward from the arch as you walk in (`w-iris-m-east-07.png`, `w-iris-s-second-06.png`, `pw-iris-m-east-06.png`). At `walked = 0` (`04`) the iris stays off so nothing pops at the portal; as you step in, the `32 px` feathered rim reveals the tunnel around you first and sweeps across the hillside to the corners. Crystals and cave movers fade in as the feathered rim reaches them (`scene.ts caveShownAt`). | Very theatrical and grounds the transition at the mouth you stepped through, though the circular wipe across a wide desktop viewport is more overtly stylized than an even crossfade. |
+
+### Round 4b screenshots (CI run `39546306274`, `lab/height-4/`)
+
+All 176 way-in screenshots (`w-{blend,eased,stages,iris}-{m-east,m-west,s-second}-00..10.png` on desktop and `pw-{blend,eased,stages,iris}-m-east-00..10.png` on phone) were inspected alongside `.agent/owner-walk-in-mid.png` and `.agent/owner-walk-in-inside.png`. Representative frames copied into `docs/planning/wide-world/lab/height-4/`:
+
+| Image | What to look at |
+|---|---|
+| [w-blend-m-east-07.png](lab/height-4/w-blend-m-east-07.png) | Same spot as `.agent/owner-walk-in-mid.png` (`1.5` tiles in, `blend` at `50%`). The hillside dims evenly with no cave-shaped trench, the unlit tunnel ahead is never brighter than once inside, and the outer rock walls feather softly instead of cutting hard tile-aligned slabs. |
+| [w-blend-m-east-10.png](lab/height-4/w-blend-m-east-10.png) | Same mouth at `3` tiles in (`100%` cave view, compare `.agent/owner-walk-in-inside.png`). |
+| [w-eased-m-east-07.png](lab/height-4/w-eased-m-east-07.png), [w-eased-m-east-09.png](lab/height-4/w-eased-m-east-09.png) | `eased` at `1.5` tiles (`21%`) and `2.5` tiles (`50%`) into the mountain's east mouth: gentler entry and landing. |
+| [w-eased-s-second-08.png](lab/height-4/w-eased-s-second-08.png) | `eased` at the shoulder's second mouth (`2` tiles in, `35%`): the plateau and switchback stairs dim evenly with no dark trench across the trail and no spotlight halo around Wren. |
+| [w-stages-m-east-07.png](lab/height-4/w-stages-m-east-07.png) | `stages` phase 1 (`1.5` tiles in, `light = 65%`, `alpha = 0%`): the hillside darkens first with zero underground light leaking onto the surface grass. |
+| [w-iris-m-east-07.png](lab/height-4/w-iris-m-east-07.png), [w-iris-s-second-06.png](lab/height-4/w-iris-s-second-06.png) | `iris` opening from the mountain's east mouth and the shoulder's second mouth with a smooth `32 px` feathered rim (no stencil jag or dark ring). |
+| [pw-eased-m-east-08.png](lab/height-4/pw-eased-m-east-08.png), [pw-iris-m-east-06.png](lab/height-4/pw-iris-m-east-06.png) | Phone (`390×844 @ 3x`) way-in frames at the mountain's east mouth for `eased` and `iris`. |
+
+### What the owner should try
+
+1. Open the Dev Panel → **Height lab** and walk in and out of the mountain's east mouth (`Area: Mountain with deep cave`) and the shoulder's second mouth (`Area: Valley, plateau & shoulder`).
+2. Step slowly across the arch threshold (`row 73 → 72 → 71`): verify that fog, edge haze, and zoom no longer flash at the portal step, and that the unlit tunnel ahead never flashes brighter mid-transition than once inside.
+3. Switch **Way into a cave** between **As now** (`blend`), **Slower, eased** (`eased`), **Dark first, then the cave** (`stages`), and **From the mouth outward** (`iris`), and toggle **Crossfade** between **3 tiles** and **1 tile** (with `1 tile`, `eased` spans `3` eased tiles instead of `5`).
+
+### Recommendation for the default
+
+- **Make `eased` ("Slower, eased") the default** (especially paired with a `2`–`3` tile base crossfade).
+  - **Why:** Once the mid-transition brightening and fog flash are fixed, `blend` and `eased` have the cleanest, most natural look: the hill dims evenly while the lit passage comes in at the exact same rate, so lit stone underfoot never dips dark (`stages`) and there is no stylized circular wipe (`iris`). Between `blend` and `eased`, `eased`'s smoothstep onset removes the sudden first-step drop right at the arch (`6%` at half a tile vs `blend`'s `17%`) and eases softly into full cave dark at the end.
+  - **Runner-up:** **`iris` ("From the mouth outward")** is well worth trying in the panel—with the feathered `litPixels` alpha and `over` surface weighting, it opens smoothly from the arch around the hero and looks especially good on the narrower phone viewport (`pw-iris-m-east-06.png`).
