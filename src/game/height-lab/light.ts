@@ -91,8 +91,10 @@ export function daylight(stack: Stack, skyTiles: number): Float32Array {
     cave.sky[i] = Math.max(0, 1 - dist[i]! / skyTiles)
     cave.seen[i] = dist[i] === 0 ? 1 : dist[i] === 1 ? 0.5 : 0
   }
-  // Walls take the most daylight of the floor beside them, so light
-  // sampled between tiles doesn't dip at the walls.
+  // Include diagonal neighbours: bilinear sampling near an arch's corner
+  // touches the outside corner tile even while the foot box fits inside.
+  // Its distance must be the arch's zero, not FAR (which flashed the view
+  // fully into the cave); its daylight must agree, too.
   spreadToWalls(cave, cave.sky, dist)
   // The walked distance as a field to sample between tiles: walls take
   // the nearest floor's, and what no floor reaches is far.
@@ -105,11 +107,9 @@ export function daylight(stack: Stack, skyTiles: number): Float32Array {
     const tx = i % cave.w
     const ty = Math.floor(i / cave.w)
     let best = FAR
-    for (let d = 0; d < 4; d++) {
-      const x = tx + DX[d]
-      const y = ty + DY[d]
-      if (x >= 0 && y >= 0 && x < cave.w && y < cave.h && dist[y * cave.w + x]! >= 0) best = Math.min(best, dist[y * cave.w + x]!)
-    }
+    for (let y = ty - 1; y <= ty + 1; y++)
+      for (let x = tx - 1; x <= tx + 1; x++)
+        if (x >= 0 && y >= 0 && x < cave.w && y < cave.h && dist[y * cave.w + x]! >= 0) best = Math.min(best, dist[y * cave.w + x]!)
     walk[i] = best
   }
   return walk
@@ -125,11 +125,9 @@ function spreadToWalls(l: Layer, field: Float32Array, dist: Int32Array): void {
       const i = ty * l.w + tx
       if (dist[i]! >= 0) continue
       let best = 0
-      for (let d = 0; d < 4; d++) {
-        const x = tx + DX[d]
-        const y = ty + DY[d]
-        if (x >= 0 && y >= 0 && x < l.w && y < l.h && dist[y * l.w + x]! >= 0) best = Math.max(best, src[y * l.w + x]!)
-      }
+      for (let y = ty - 1; y <= ty + 1; y++)
+        for (let x = tx - 1; x <= tx + 1; x++)
+          if (x >= 0 && y >= 0 && x < l.w && y < l.h && dist[y * l.w + x]! >= 0) best = Math.max(best, src[y * l.w + x]!)
       field[i] = Math.max(field[i]!, best)
     }
 }
