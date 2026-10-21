@@ -52,6 +52,7 @@ import {
 } from './levels.ts'
 import { DAYLIGHT, LIGHT_RES, caveAmbient, caveCover, caveLevels, caveStops, crystalLight, daylight, openAir, sunnyFaceRock, type Glow } from './light.ts'
 import { Lighting } from './lighting.ts'
+import type { WalkInfo } from './walk.ts'
 
 export { CAVE, SURFACE }
 
@@ -59,13 +60,18 @@ export const LAB_W = 72
 export const LAB_H = 72
 
 /** Ground palette: indexes into this are a layer's `ground`. Content ground ids, plus the cave's own (its floor cut stone or rough rock: ./art.ts paintCave). */
-export const GROUNDS = ['meadow', 'moss', 'trodden', 'path', 'water', 'bank', 'woods', 'cave-floor', 'cave-rock', 'cave-rough'] as const
+export const GROUNDS = [
+  'meadow', 'moss', 'trodden', 'path', 'water', 'bank', 'woods', 'cave-floor', 'cave-rock', 'cave-rough',
+  // The generated area's (./walk.ts): the Wilds' other grounds, and the biomes' own (./art.ts BIOME_GROUNDS).
+  'verge', 'road', 'ford', 'paving', 'laid-stone', 'laid-plank',
+  'tops-woods', 'tops-moor', 'tops-turf', 'tops-scree', 'tops-crag', 'tops-path', 'wq-ivory', 'wq-soil', 'wq-birch', 'wq-stone', 'wq-path'
+] as const
 export type GroundId = (typeof GROUNDS)[number]
 export const G = Object.fromEntries(GROUNDS.map((g, i) => [g, i])) as Record<GroundId, number>
 
 
 export interface PropSpot {
-  kind: 'oak' | 'pine' | 'birch' | 'boulder' | 'fern' | 'cairn' | 'standing-stone' | 'thicket'
+  kind: 'oak' | 'pine' | 'birch' | 'boulder' | 'fern' | 'cairn' | 'standing-stone' | 'thicket' | 'snag'
   tx: number
   ty: number
   variant: number
@@ -81,8 +87,8 @@ export interface Mouth {
   arch: [number, number]
 }
 
-/** The lab's areas: the first round's valley, plateau and shoulder; the mountain with its saddle and deep cave (./mountain.ts). */
-export type AreaName = 'shoulder' | 'mountain'
+/** The lab's areas: the first round's valley, plateau and shoulder; the mountain with its saddle and deep cave (./mountain.ts); near home, generated (./walk.ts). */
+export type AreaName = 'shoulder' | 'mountain' | 'walk'
 
 export interface AreaOptions {
   /** Walked tiles from a mouth to where daylight is gone. */
@@ -116,10 +122,12 @@ export interface LabArea {
   arches: Uint8Array
   /** How much the cave's image covers, per light texel (./light.ts caveCover). */
   cover: Float32Array
+  /** The generated area's: where it is in the world, biomes, regions, what its strategy strands (./walk.ts). */
+  generated?: WalkInfo
 }
 
 /** An area as authored: everything but what's worked out from it (light). */
-export type AreaPlan = Omit<LabArea, 'walk' | 'ambient' | 'air' | 'stops' | 'levels' | 'arches' | 'cover'>
+export type AreaPlan = Omit<LabArea, 'walk' | 'generated' | 'ambient' | 'air' | 'stops' | 'levels' | 'arches' | 'cover'>
 
 /** Work out an authored area's light: daylight from its mouths, open air, what stops light. */
 export function lightArea(plan: AreaPlan, opts: AreaOptions): LabArea {

@@ -75,12 +75,16 @@ function addPixels(scene: Phaser.Scene, key: string, w: number, h: number, px: U
  * open map's (chunk by chunk, as the window paints); the shading on top is
  * the height's.
  */
-export function paintSurface(scene: Phaser.Scene, area: LabArea): LevelImage[] {
+export function paintSurface(scene: Phaser.Scene, area: LabArea, part?: PaintPart): LevelImage[] {
   const l = area.stack.layers[SURFACE]!
-  const W = l.w * T
-  const H = l.h * T
+  // The whole area, or one part of it (the generated area paints a chunk at a time, ./scene.ts).
+  const r = part ?? { x0: 0, y0: 0, x1: l.w - 1, y1: l.h - 1, key: 'hl-ground', overlay: false }
+  const W = (r.x1 - r.x0 + 1) * T
+  const H = (r.y1 - r.y0 + 1) * T
+  const ox = r.x0 * T
+  const oy = r.y0 * T
   const look = wildsLook('outer', 'Carting')
-  const terrain = GROUNDS.map((g) => (g.startsWith('cave') ? TERRAIN.dirt : (TERRAIN as Record<string, number>)[wildsGround(g).terrain]!))
+  const terrain = GROUNDS.map((g) => (g.startsWith('cave') ? TERRAIN.dirt : (TERRAIN as Record<string, number>)[BIOME_GROUNDS[g]?.terrain ?? wildsGround(g).terrain]!))
   const src = {
     ground: (tx: number, ty: number) => {
       const cx = Math.min(l.w - 1, Math.max(0, tx))
@@ -94,21 +98,22 @@ export function paintSurface(scene: Phaser.Scene, area: LabArea): LevelImage[] {
   const patch = new Uint8ClampedArray(CH * CH * 4)
   for (let y0 = 0; y0 < H; y0 += CH)
     for (let x0 = 0; x0 < W; x0 += CH) {
-      paintGround(patch, x0, y0, CH, CH, src, look.ground, fnv1a32('height-lab'), groundTable())
+      paintGround(patch, ox + x0, oy + y0, CH, CH, src, look.ground, fnv1a32('height-lab'), groundTable())
       for (let y = 0; y < CH; y++) px.set(patch.subarray(y * CH * 4, (y + 1) * CH * 4), ((y0 + y) * W + x0) * 4)
     }
-  shadeSurface(area, px, W)
+  shadeSurface(area, px, W, r)
+  if (r.overlay) walkOverlay(area, px, W, r)
   // Cut by level, each to its bounding box.
   const levels = new Map<number, { x0: number; y0: number; x1: number; y1: number }>()
   const lvl = new Int8Array(l.w * l.h)
-  for (let i = 0; i < l.w * l.h; i++) {
-    const z = groundLevel(area, i)
-    lvl[i] = z
-    const tx = i % l.w
-    const ty = Math.floor(i / l.w)
-    const b = levels.get(z) ?? { x0: tx, y0: ty, x1: tx, y1: ty }
-    levels.set(z, { x0: Math.min(b.x0, tx), y0: Math.min(b.y0, ty), x1: Math.max(b.x1, tx), y1: Math.max(b.y1, ty) })
-  }
+  for (let ty = r.y0; ty <= r.y1; ty++)
+    for (let tx = r.x0; tx <= r.x1; tx++) {
+      const i = ty * l.w + tx
+      const z = groundLevel(area, i)
+      lvl[i] = z
+      const b = levels.get(z) ?? { x0: tx, y0: ty, x1: tx, y1: ty }
+      levels.set(z, { x0: Math.min(b.x0, tx), y0: Math.min(b.y0, ty), x1: Math.max(b.x1, tx), y1: Math.max(b.y1, ty) })
+    }
   const out: LevelImage[] = []
   for (const [z, b] of [...levels].sort((a, b) => a[0] - b[0])) {
     const w = (b.x1 - b.x0 + 1) * T
@@ -118,30 +123,88 @@ export function paintSurface(scene: Phaser.Scene, area: LabArea): LevelImage[] {
       for (let tx = b.x0; tx <= b.x1; tx++) {
         if (lvl[ty * l.w + tx] !== z) continue
         for (let y = 0; y < T; y++) {
-          const from = ((ty * T + y) * W + tx * T) * 4
+          const from = (((ty - r.y0) * T + y) * W + (tx - r.x0) * T) * 4
           cut.set(px.subarray(from, from + T * 4), (((ty - b.y0) * T + y) * w + (tx - b.x0) * T) * 4)
         }
       }
-    const key = `hl-ground-${z}`
+    const key = `${r.key}-${z}`
     addPixels(scene, key, w, h, cut)
     out.push({ key, x: b.x0 * T, y: b.y0 * T, level: z })
   }
   return out
 }
 
+/** A part of the surface to paint (tiles, inclusive), its textures' key prefix, and whether to draw the generated area's overlay. */
+export interface PaintPart {
+  x0: number
+  y0: number
+  x1: number
+  y1: number
+  key: string
+  overlay: boolean
+}
+
+/**
+ * The biomes' own grounds (server/internal/wilds/biomes.go
+ * biomeGroundColours): the Wilds terrain the painter draws them with, then
+ * a tint toward the biome's colour. Pale, not snowy (the Whitequiet).
+ */
+export const BIOME_GROUNDS: Partial<Record<string, { terrain: keyof typeof TERRAIN; tint: RGB; k: number }>> = {
+  'tops-woods': { terrain: 'grass_b', tint: [40, 82, 54], k: 0.55 },
+  'tops-moor': { terrain: 'grass_c', tint: [142, 104, 82], k: 0.6 },
+  'tops-turf': { terrain: 'grass_a', tint: [122, 146, 76], k: 0.45 },
+  'tops-scree': { terrain: 'dirt', tint: [160, 144, 124], k: 0.55 },
+  'tops-crag': { terrain: 'stone_a', tint: [184, 178, 170], k: 0.5 },
+  'tops-path': { terrain: 'path_a', tint: [162, 150, 128], k: 0.4 },
+  'wq-ivory': { terrain: 'grass_c', tint: [216, 212, 192], k: 0.7 },
+  'wq-soil': { terrain: 'dirt', tint: [158, 156, 148], k: 0.6 },
+  'wq-birch': { terrain: 'grass_a', tint: [176, 180, 168], k: 0.6 },
+  'wq-stone': { terrain: 'stone_a', tint: [186, 186, 180], k: 0.55 },
+  'wq-path': { terrain: 'path_a', tint: [144, 140, 132], k: 0.45 }
+}
+
+/** The generated area's overlay: stranded floor magenta, chunk lines. */
+function walkOverlay(area: LabArea, px: Uint8ClampedArray, W: number, r: PaintPart): void {
+  const g = area.generated
+  if (!g) return
+  const l = area.stack.layers[SURFACE]!
+  const magenta: RGB = [236, 40, 196]
+  for (let ty = r.y0; ty <= r.y1; ty++)
+    for (let tx = r.x0; tx <= r.x1; tx++) {
+      const stranded = g.stranded[ty * l.w + tx] === 1
+      const wx = g.x0 + tx
+      const wy = g.y0 + ty
+      for (let y = 0; y < T; y++)
+        for (let x = 0; x < T; x++) {
+          const i = (((ty - r.y0) * T + y) * W + (tx - r.x0) * T + x) * 4
+          let k = stranded ? 0.55 : 0
+          let c = magenta
+          // Chunk lines: two px dark on each chunk's west and north edge.
+          if ((((wx % 24) + 24) % 24 === 0 && x < 2) || (((wy % 24) + 24) % 24 === 0 && y < 2)) {
+            k = 0.7
+            c = [20, 16, 28]
+          }
+          if (!k) continue
+          px[i] = mix(px[i]!, c[0], k)
+          px[i + 1] = mix(px[i + 1]!, c[1], k)
+          px[i + 2] = mix(px[i + 2]!, c[2], k)
+        }
+    }
+}
+
 /** Height's shading on the painted surface (in place). */
-function shadeSurface(area: LabArea, px: Uint8ClampedArray, W: number): void {
+function shadeSurface(area: LabArea, px: Uint8ClampedArray, W: number, r: PaintPart): void {
   const l = area.stack.layers[SURFACE]!
   const topAt = (tx: number, ty: number) => (tx < 0 || ty < 0 || tx >= l.w || ty >= l.h ? 0 : area.top[ty * l.w + tx]!)
   const kindAt = (tx: number, ty: number) => (tx < 0 || ty < 0 || tx >= l.w || ty >= l.h ? KIND.flat : l.kind[ty * l.w + tx]!)
   const tint = (x: number, y: number, c: RGB, t: number) => {
-    const i = (y * W + x) * 4
+    const i = ((y - r.y0 * T) * W + x - r.x0 * T) * 4
     px[i] = mix(px[i]!, c[0], t)
     px[i + 1] = mix(px[i + 1]!, c[1], t)
     px[i + 2] = mix(px[i + 2]!, c[2], t)
   }
   const shade = (x: number, y: number, k: number) => {
-    const i = (y * W + x) * 4
+    const i = ((y - r.y0 * T) * W + x - r.x0 * T) * 4
     px[i] = px[i]! * k
     px[i + 1] = px[i + 1]! * k
     px[i + 2] = px[i + 2]! * k
@@ -151,15 +214,18 @@ function shadeSurface(area: LabArea, px: Uint8ClampedArray, W: number): void {
   const ink = hex('#1d1a24')
   const dark = hex('#100c14')
   const snow = hex('#eef2f8')
-  for (let ty = 0; ty < l.h; ty++)
-    for (let tx = 0; tx < l.w; tx++) {
+  for (let ty = r.y0; ty <= r.y1; ty++)
+    for (let tx = r.x0; tx <= r.x1; tx++) {
       const i = ty * l.w + tx
       const k = l.kind[i]
       const z = groundLevel(area, i)
+      const biome = BIOME_GROUNDS[GROUNDS[l.ground[i]!]!]
       for (let y = 0; y < T; y++)
         for (let x = 0; x < T; x++) {
           const wx = tx * T + x
           const wy = ty * T + y
+          // The biomes' own grounds: toward their colour.
+          if (biome) tint(wx, wy, biome.tint, biome.k)
           // Higher land is drier and paler; the shoulder is stony.
           if (z === 1) tint(wx, wy, dry, 0.1)
           if (z >= 2) tint(wx, wy, stone, 0.32)
@@ -610,12 +676,13 @@ export function drawOverlays(scene: Phaser.Scene): void {
 }
 
 /** The level overlay (`grid`): a tint per level, slopes green, faces red, the cave violet. */
-export function drawGrid(g: Phaser.GameObjects.Graphics, l: Layer, area: LabArea): void {
+export function drawGrid(g: Phaser.GameObjects.Graphics, l: Layer, area: LabArea, part?: { x0: number; y0: number; x1: number; y1: number }): void {
   const colors = [0x3050ff, 0xffb030, 0xff4060, 0x40e0ff, 0xffffff]
   const caveColors = [0xd0a0ff, 0xa060ff, 0x7040e0, 0x4020b0, 0x200880]
   const lvl = l.name === 'cave' ? area.levels : null
-  for (let ty = 0; ty < l.h; ty++)
-    for (let tx = 0; tx < l.w; tx++) {
+  const r = part ?? { x0: 0, y0: 0, x1: l.w - 1, y1: l.h - 1 }
+  for (let ty = r.y0; ty <= r.y1; ty++)
+    for (let tx = r.x0; tx <= r.x1; tx++) {
       const i = ty * l.w + tx
       const k = l.kind[i]
       if (k === KIND.none) continue

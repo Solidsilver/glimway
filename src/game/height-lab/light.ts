@@ -355,6 +355,8 @@ export function caveCover(stack: Stack, air: Float32Array, tile: number, res: nu
   const per = tile / res
   const tw = cave.w * per
   const th = cave.h * per
+  // No cave (the generated area): nothing covers, and no distances to work out.
+  if (cave.kind.every((k) => k === KIND.none)) return new Float32Array(tw * th)
   let dist = new Float32Array(tw * th).fill(1e9)
   const tileOf = (x: number, y: number) => Math.floor(y / per) * cave.w + Math.floor(x / per)
   for (let y = 0; y < th; y++)

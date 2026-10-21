@@ -22,7 +22,11 @@
   "rules": [
     {
       "paths": ["src/game/height-lab/**"],
-      "specs": ["height-lab-screens.spec.ts"]
+      "specs": ["height-lab-screens.spec.ts", "height-lab-walk.spec.ts"]
+    },
+    {
+      "paths": ["server/internal/worldlab/walk.go", "server/internal/wilds/terrain_*.go"],
+      "specs": ["height-lab-walk.spec.ts"]
     },
     {
       "paths": ["server/internal/api/map_tiers*.go", "src/content/map-lamps.ts", "src/lib/wilds/map-lamps.ts"],

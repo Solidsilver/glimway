@@ -39,7 +39,8 @@ import { perfSpan, perfWatch } from '../perf'
 import { onSceneEnd } from '../scene-end'
 import { CAVE, SURFACE, areaLighting, type LabArea } from './area'
 import { buildArea } from './areas'
-import { type CaveImages, FACES_KEY, FACE_TINT, drawFaces, drawGrid, drawOverlays, facePart, paintCave, paintSurface } from './art'
+import { buildWalkArea, loadWalk, resumeAt, walkHere, walkLoaded, type Strategy, type WalkData } from './walk'
+import { type CaveImages, FACES_KEY, FACE_TINT, drawFaces, drawGrid, drawOverlays, facePart, paintCave, paintSurface, type PaintPart } from './art'
 import { KIND, TILE_PX, findPath, move, sample, standTile, zAt, type Node, type Walker } from './levels'
 import { FRIEND_LIGHT, HERO_LIGHT, LIGHT_RES, wayIn } from './light'
 import { caveTint, clearLitScratch, litPixels, pixelSpans, type FillOptions, type Lighting } from './lighting'
@@ -55,6 +56,54 @@ const FOG_COLOR: Record<LabLook['fog'], number> = { fog: 0xd4dae0, sky: 0x9ccaf0
 const CAVE_DARK = 0x07060b
 
 type Shown = Phaser.GameObjects.Image | Phaser.GameObjects.Sprite | Phaser.GameObjects.Text
+
+/** What a scene was built with (the switches that rebuild it). */
+type Built = Pick<LabLook, 'area' | 'skyTiles' | 'caveStyle' | 'strategy' | 'walkOverlay'>
+
+/** Tiles, inclusive. */
+interface Rect {
+  x0: number
+  y0: number
+  x1: number
+  y1: number
+}
+
+/** One built chunk of the generated area: its ground images and their textures, faces and props, levels overlay. */
+interface Part {
+  cx: number
+  cy: number
+  images: Phaser.GameObjects.Image[]
+  keys: string[]
+  things: Thing[]
+  grid: Phaser.GameObjects.Graphics
+}
+
+/** The generated area's window, once fetched (kept across restarts: switching strategy is instant), and where to stand after a switch. */
+let walkData: WalkData | null = null
+let walkResume: { tx: number; ty: number } | null = null
+
+/** The strategies, as the HUD and the panel name them. */
+const STRATEGY_NAME: Record<Strategy, string> = { region: 'Region plan', chunk: 'Per-chunk repair' }
+
+/** The generated area in the spec's state. */
+interface GeneratedState {
+  ready: true
+  strategy: Strategy
+  tile: [number, number]
+  here: ReturnType<typeof walkHere>
+  spots: { name: string; x: number; y: number; note?: string }[]
+  summary: Record<Strategy, { ramps: number; strandedTiles: number; strandedComponents: number; anchors: string; heldExits: string; solveMs: number }>
+  parts: number
+  things: number
+}
+
+/** A 1×1 clear texture. */
+function addBlank(scene: Phaser.Scene, key: string): void {
+  const c = document.createElement('canvas')
+  c.width = 1
+  c.height = 1
+  scene.textures.addCanvas(key, c)
+}
 
 /** Something drawn on a layer: its parts, a fog twin, where its foot is and how high. */
 interface Thing {
@@ -91,7 +140,7 @@ export class HeightLabScene extends Phaser.Scene {
   private area!: LabArea
   private look: LabLook = labLook()
   /** What this scene was built with (the switches that rebuild it), for the screenshot spec. */
-  private built: Pick<LabLook, 'area' | 'skyTiles' | 'caveStyle'> = { area: 'shoulder', skyTiles: 6, caveStyle: 'mixed' }
+  private built: Built = { area: 'shoulder', skyTiles: 6, caveStyle: 'mixed', strategy: 'region', walkOverlay: false }
   private things: Thing[] = []
   private movers: Mover[] = []
   private hero!: Mover
@@ -129,6 +178,11 @@ export class HeightLabScene extends Phaser.Scene {
   private buildMs = 0
   private paintMs = 0
   private facing = 'down'
+  /** The generated area's built chunks (./walk.ts), by "cx,cy" (the area's own chunks). */
+  private parts = new Map<string, Part>()
+  private propsByChunk: Map<string, LabArea['props']> | null = null
+  /** Waiting for the generated area's window (and what went wrong, if it did). */
+  private loading: { error: string | null } | null = null
 
   constructor() {
     super('HeightLab')
@@ -148,18 +202,32 @@ export class HeightLabScene extends Phaser.Scene {
     this.updateMs = []
     this.lightMs = []
     this.look = labLook()
-    this.built = { area: this.look.area, skyTiles: this.look.skyTiles, caveStyle: this.look.caveStyle }
+    this.built = { area: this.look.area, skyTiles: this.look.skyTiles, caveStyle: this.look.caveStyle, strategy: this.look.strategy, walkOverlay: this.look.walkOverlay }
+    this.parts = new Map()
+    this.propsByChunk = null
+    this.loading = null
+    // The generated area waits for the server's window (a few seconds the first time), the tab never frozen.
+    if (this.look.area === 'walk' && !walkData) {
+      this.waitForWalk()
+      return
+    }
     const endBuild = perfSpan('lab:build')
-    this.area = buildArea(this.look.area, { skyTiles: this.look.skyTiles })
+    this.area = this.look.area === 'walk' ? buildWalkArea(walkData!, this.look.strategy, { skyTiles: this.look.skyTiles }) : buildArea(this.look.area, { skyTiles: this.look.skyTiles })
+    if (this.area.generated && walkResume) this.area.spawn = resumeAt(this.area, walkResume.tx, walkResume.ty)
+    walkResume = null
     drawFaces(this)
     drawOverlays(this)
     ensureTangleAtlas(this, DECOR_ATLAS)
-    this.buildGround()
-    this.buildFaces()
-    this.buildProps()
-    this.buildCave()
+    if (this.area.generated) this.buildWalkCave()
+    else {
+      this.buildGround()
+      this.buildFaces()
+      this.buildProps()
+      this.buildCave()
+    }
     this.buildMovers()
     this.buildOverlays()
+    if (this.area.generated) this.stream(true)
     endBuild()
     this.buildMs = performance.now() - t0
 
@@ -178,11 +246,17 @@ export class HeightLabScene extends Phaser.Scene {
 
     let restarting = false
     const stopLook = onLabLook((l) => {
-      const rebuild = l.area !== this.look.area || l.skyTiles !== this.look.skyTiles || l.caveStyle !== this.look.caveStyle
+      const walk = l.area === 'walk' && this.look.area === 'walk'
+      const rebuild = l.area !== this.look.area || l.skyTiles !== this.look.skyTiles || l.caveStyle !== this.look.caveStyle || (walk && (l.strategy !== this.look.strategy || l.walkOverlay !== this.look.walkOverlay))
       this.look = l
       this.stillKey = ''
       if (rebuild && !restarting) {
         restarting = true
+        // The other strategy (or the overlay) where the hero stands.
+        if (walk) {
+          const [tx, ty] = standTile(this.hero.walker)
+          walkResume = { tx, ty }
+        }
         this.scene.restart()
       }
     })
@@ -204,6 +278,7 @@ export class HeightLabScene extends Phaser.Scene {
       this.lastIris = null
       clearLitScratch()
       if (this.textures.exists('hl-crossfade')) this.textures.remove('hl-crossfade')
+      for (const key of [...this.parts.keys()]) this.dropPart(key)
       labHook(null)
     })
     labHook(this)
@@ -243,11 +318,13 @@ export class HeightLabScene extends Phaser.Scene {
     return thing
   }
 
-  private buildFaces(): void {
+  private buildFaces(part?: Rect): Thing[] {
     const l = this.area.stack.layers[SURFACE]!
     const isFace = (tx: number, ty: number) => tx >= 0 && tx < l.w && (l.kind[ty * l.w + tx] === KIND.face || l.kind[ty * l.w + tx] === KIND.mouth)
-    for (let ty = 0; ty < l.h; ty++)
-      for (let tx = 0; tx < l.w; tx++) {
+    const r = part ?? { x0: 0, y0: 0, x1: l.w - 1, y1: l.h - 1 }
+    const made: Thing[] = []
+    for (let ty = r.y0; ty <= r.y1; ty++)
+      for (let tx = r.x0; tx <= r.x1; tx++) {
         const i = ty * l.w + tx
         if (l.kind[i] !== KIND.face) continue
         const rows = l.faceRows[i]!
@@ -259,20 +336,159 @@ export class HeightLabScene extends Phaser.Scene {
         const img = this.add.image(tx * T, ty * T, FACES_KEY, frame).setOrigin(0).setTint(FACE_TINT[l.faceTop[i]!] ?? 0xffffff)
         // Drawn by its own row's foot, so someone on a trail leg below it stands in front.
         const z = l.faceTop[i]! - (row + 0.5) / rows
-        this.addThing({ parts: [{ o: img, dz: 0, a: 1 }], layer: SURFACE, x: img.x + 8, y: (ty + 1) * T, z, seen: 1 }, true)
+        made.push(this.addThing({ parts: [{ o: img, dz: 0, a: 1 }], layer: SURFACE, x: img.x + 8, y: (ty + 1) * T, z, seen: 1 }, true))
       }
+    return made
   }
 
-  private buildProps(): void {
+  private buildProps(props = this.area.props): Thing[] {
     const tex = this.textures.get(DECOR_ATLAS)
-    for (const p of this.area.props) {
+    const made: Thing[] = []
+    for (const p of props) {
       const frame = tangleFrame(p.kind, p.variant)
       if (!tex.has(frame)) continue
       const x = p.tx * T + 8
       const y = (p.ty + 1) * T
       const img = this.add.image(x, y, DECOR_ATLAS, frame).setOrigin(0.5, 1)
-      this.addThing({ parts: [{ o: img, dz: 0, a: 1 }], layer: SURFACE, x, y, z: this.area.top[p.ty * this.area.stack.w + p.tx]!, seen: 1 }, true)
+      made.push(this.addThing({ parts: [{ o: img, dz: 0, a: 1 }], layer: SURFACE, x, y, z: this.area.top[p.ty * this.area.stack.w + p.tx]!, seen: 1 }, true))
     }
+    return made
+  }
+
+  // ---------------------------------------------------------------- the generated area
+
+  /** Waiting for the window: a line on the HUD, then the scene again once it's here. */
+  private waitForWalk(): void {
+    this.cameras.main.setBackgroundColor(FOG_COLOR.fog)
+    this.buildHud()
+    const started = performance.now()
+    const say = (s: string) => {
+      if (this.hud) this.hud.textContent = s
+    }
+    say('Height lab, near home — generating the window on the server…')
+    this.loading = { error: null }
+    const tick = this.time.addEvent({ delay: 500, loop: true, callback: () => !this.loading?.error && say(`Height lab, near home — generating the window on the server… ${((performance.now() - started) / 1000).toFixed(1)} s`) })
+    const pending = walkLoaded() ?? loadWalk()
+    let live = true
+    pending.then(
+      (d) => {
+        walkData = d
+        if (live) this.scene.restart()
+      },
+      (e: unknown) => {
+        if (!live || !this.loading) return
+        this.loading.error = e instanceof Error ? e.message : String(e)
+        say(`Height lab, near home — couldn't generate it: ${this.loading.error}`)
+      }
+    )
+    // Another area picked meanwhile: build that one.
+    const stopLook = onLabLook((l) => {
+      this.look = l
+      if (l.area !== 'walk' && live) {
+        live = false
+        this.scene.restart()
+      }
+    })
+    onSceneEnd(this, () => {
+      live = false
+      stopLook()
+      tick.remove()
+      this.hud?.remove()
+      this.hud = null
+      perfWatch(null)
+      labHook(null)
+    })
+    labHook(this)
+    bus.emit(EV.worldShown)
+  }
+
+  /** The generated area has no cave: an empty cave image and pixels, so the way-in code has its pieces. */
+  private buildWalkCave(): void {
+    if (!this.textures.exists('hl-cave-none')) addBlank(this, 'hl-cave-none')
+    this.caveImage = this.add.image(0, 0, 'hl-cave-none').setOrigin(0).setAlpha(0).setVisible(false)
+    this.cavePixels = { px: new Uint8ClampedArray(4), w: 1, x: 0, y: 0 }
+    this.caveSpans = pixelSpans(this.cavePixels.px, 1)
+    // Two empty level overlays (each part draws its own).
+    for (let i = 0; i < 2; i++) this.grids.push(this.add.graphics())
+  }
+
+  /**
+   * Keep the generated area's chunks round the hero built (ground, faces,
+   * props, the levels overlay) and drop the far ones: it's too big to draw
+   * all at once. At most two new chunks a frame, nearest first, unless
+   * `all` (the first frame, or a jump).
+   */
+  private stream(all = false): void {
+    const g = this.area.generated
+    if (!g) return
+    const C = 24
+    const cw = g.chunks[2]
+    const ch = g.chunks[3]
+    const w = this.hero.walker
+    // Half the view, at the widest the climbing zoom gets, and a chunk more.
+    const hx = this.scale.width / (2 * this.baseZoom * 0.75) + C * T
+    const hy = this.scale.height / (2 * this.baseZoom * 0.75) + C * T
+    const cx0 = Math.max(0, Math.floor((w.x - hx) / (C * T)))
+    const cx1 = Math.min(cw - 1, Math.floor((w.x + hx) / (C * T)))
+    const cy0 = Math.max(0, Math.floor((w.y - hy) / (C * T)))
+    const cy1 = Math.min(ch - 1, Math.floor((w.y + hy) / (C * T)))
+    for (const [key, p] of this.parts) if (p.cx < cx0 - 1 || p.cx > cx1 + 1 || p.cy < cy0 - 1 || p.cy > cy1 + 1) this.dropPart(key)
+    const want: [number, number][] = []
+    for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) if (!this.parts.has(`${cx},${cy}`)) want.push([cx, cy])
+    const mx = w.x / (C * T) - 0.5
+    const my = w.y / (C * T) - 0.5
+    want.sort((a, b) => Math.hypot(a[0] - mx, a[1] - my) - Math.hypot(b[0] - mx, b[1] - my))
+    for (const [cx, cy] of all ? want : want.slice(0, 2)) this.addPart(cx, cy)
+    for (const p of this.parts.values()) p.grid.setVisible(this.look.grid)
+  }
+
+  private addPart(cx: number, cy: number): void {
+    const C = 24
+    const rect = { x0: cx * C, y0: cy * C, x1: cx * C + C - 1, y1: cy * C + C - 1 }
+    const key = `hl-walk-${cx}-${cy}`
+    const part: PaintPart = { ...rect, key, overlay: this.look.walkOverlay }
+    const images: Phaser.GameObjects.Image[] = []
+    const keys: string[] = []
+    for (const li of paintSurface(this, this.area, part)) {
+      const img = this.add.image(li.x, li.y, li.key).setOrigin(0).setDepth(BAND.ground + li.level)
+      this.levelImages.push({ img, level: li.level })
+      images.push(img)
+      keys.push(li.key)
+    }
+    const props = (this.propsByChunk ??= this.groupProps()).get(`${cx},${cy}`) ?? []
+    const things = [...this.buildFaces(rect), ...this.buildProps(props)]
+    const grid = this.add.graphics().setDepth(BAND.gridOut).setVisible(this.look.grid)
+    drawGrid(grid, this.area.stack.layers[SURFACE]!, this.area, rect)
+    this.parts.set(`${cx},${cy}`, { cx, cy, images, keys, things, grid })
+    this.stillKey = ''
+  }
+
+  private dropPart(key: string): void {
+    const p = this.parts.get(key)
+    if (!p) return
+    this.parts.delete(key)
+    const gone = new Set(p.things)
+    for (const t of p.things) {
+      for (const part of t.parts) part.o.destroy()
+      t.twin?.destroy()
+    }
+    this.things = this.things.filter((t) => !gone.has(t))
+    const imgs = new Set(p.images)
+    this.levelImages = this.levelImages.filter((li) => !imgs.has(li.img))
+    for (const img of p.images) img.destroy()
+    p.grid.destroy()
+    for (const k of p.keys) if (this.textures.exists(k)) this.textures.remove(k)
+  }
+
+  private groupProps(): Map<string, LabArea['props']> {
+    const out = new Map<string, LabArea['props']>()
+    for (const p of this.area.props) {
+      const key = `${Math.floor(p.tx / 24)},${Math.floor(p.ty / 24)}`
+      const list = out.get(key)
+      if (list) list.push(p)
+      else out.set(key, [p])
+    }
+    return out
   }
 
   private buildCave(): void {
@@ -389,11 +605,13 @@ export class HeightLabScene extends Phaser.Scene {
   // ---------------------------------------------------------------- every frame
 
   update(_time: number, deltaMs: number): void {
+    if (this.loading) return
     const t0 = performance.now()
     const dt = Math.min(0.05, deltaMs / 1000)
     this.steerHero(dt)
     for (const m of this.movers) if (m !== this.hero) this.walkOn(m, dt)
     for (const m of this.movers) this.place(m)
+    this.stream()
     this.applyLook(dt)
     const ms = performance.now() - t0
     this.updateMs.push(ms)
@@ -731,6 +949,7 @@ export class HeightLabScene extends Phaser.Scene {
     w.x = tx * T + 8
     w.y = ty * T + 12
     this.place(this.hero)
+    this.stream(true)
     this.cameras.main.centerOn(w.x, w.y - 8)
     this.stillKey = ''
   }
@@ -748,7 +967,7 @@ export class HeightLabScene extends Phaser.Scene {
   state(): {
     area: string
     look: LabLook
-    built: Pick<LabLook, 'area' | 'skyTiles' | 'caveStyle'>
+    built: Built
     layer: number
     z: number
     sky: number
@@ -761,10 +980,25 @@ export class HeightLabScene extends Phaser.Scene {
     uncapped: number
     iris: number
     crossfade: boolean
+    generated?: GeneratedState
   } {
     const v = this.view()
     const avg = this.lightMs.reduce((a, b) => a + b, 0) / Math.max(1, this.lightMs.length)
-    return { area: this.built.area, look: this.look, built: this.built, ...v, light: this.lightAtHero(), lightMs: avg, corners: this.corners(), uncapped: this.lighting.stats.uncapped, iris: this.lastIris?.r ?? 0, crossfade: !!this.crossfade?.visible }
+    const generated = this.generatedState()
+    return { area: this.built.area, look: this.look, built: this.built, ...v, light: this.lightAtHero(), lightMs: avg, corners: this.corners(), uncapped: this.lighting.stats.uncapped, iris: this.lastIris?.r ?? 0, crossfade: !!this.crossfade?.visible, ...(generated ? { generated } : {}) }
+  }
+
+  /** The generated area, for the spec: the strategy, where the hero is, the named spots, both strategies' numbers. */
+  private generatedState(): GeneratedState | undefined {
+    const g = this.area.generated
+    if (!g) return undefined
+    const [tx, ty] = standTile(this.hero.walker)
+    return { ready: true, strategy: g.strategy, tile: [tx, ty], here: walkHere(this.area, tx, ty), spots: g.spots, summary: g.summary, parts: this.parts.size, things: this.things.length }
+  }
+
+  /** Still fetching the generated area's window (the spec waits on this). */
+  loadingState(): { area: string; built: Built; look: LabLook; generated: { ready: false; error: string | null } } | null {
+    return this.loading ? { area: this.built.area, built: this.built, look: this.look, generated: { ready: false, error: this.loading.error } } : null
   }
 
   private updateHud(): void {
@@ -773,13 +1007,23 @@ export class HeightLabScene extends Phaser.Scene {
     this.hudAt = now
     const v = this.view()
     const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / Math.max(1, xs.length)
-    const here = this.lightAtHero()
+    const dark = this.lightMs.length ? ` (light ${avg(this.lightMs).toFixed(2)})` : ''
+    const perf = `lab update ${avg(this.updateMs).toFixed(2)} ms${dark} · ${this.children.length} objects · built in ${Math.round(this.buildMs)} ms (ground ${Math.round(this.paintMs)})`
+    const g = this.area.generated
+    if (g) {
+      // One line, as short as the others: the strategy, the biome@version, the region, the level.
+      const [tx, ty] = standTile(this.hero.walker)
+      const h = walkHere(this.area, tx, ty)
+      const where = h ? `${h.biome} · ${h.region} · level ${v.z.toFixed(2)}${h.stranded ? ' · stranded' : ''}` : `level ${v.z.toFixed(2)}`
+      this.hud.textContent = `Near home — ${STRATEGY_NAME[g.strategy]} · ${where}\n${perf}`
+      return
+    }
+    const here = v.layer === CAVE ? this.lightAtHero() : 1
     const where =
       v.layer === CAVE
         ? `In the cave · level ${v.z.toFixed(2)} · daylight ${Math.round(v.sky * 100)}% · light here ${Math.round(here * 100)}%`
         : `Surface · level ${v.z.toFixed(2)}`
-    const dark = this.lightMs.length ? ` (light ${avg(this.lightMs).toFixed(2)})` : ''
-    this.hud.textContent = `Height lab, ${this.area.name} — ${where}\nlab update ${avg(this.updateMs).toFixed(2)} ms${dark} · ${this.children.length} objects · built in ${Math.round(this.buildMs)} ms (ground ${Math.round(this.paintMs)})`
+    this.hud.textContent = `Height lab, ${this.area.name} — ${where}\n${perf}`
   }
 }
 
@@ -869,9 +1113,13 @@ function labHook(scene: HeightLabScene | null): void {
     return
   }
   w.__fsLab = {
-    put: (layer: number, tx: number, ty: number) => scene.put(layer, tx, ty),
-    step: (dx: number, dy: number) => scene.stepHero(dx, dy),
+    put: (layer: number, tx: number, ty: number) => {
+      if (!scene.loadingState()) scene.put(layer, tx, ty)
+    },
+    step: (dx: number, dy: number) => {
+      if (!scene.loadingState()) scene.stepHero(dx, dy)
+    },
     look: (change: Partial<LabLook>) => setLabLook(change),
-    state: () => scene.state()
+    state: () => scene.loadingState() ?? scene.state()
   }
 }

@@ -92,7 +92,7 @@ func (l *Lab) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		l.state(w, r)
 		return
 	}
-	if name != "check" && name != "render" && name != "tile" && name != "hover" {
+	if name != "check" && name != "render" && name != "tile" && name != "hover" && name != WalkPath {
 		http.NotFound(w, r)
 		return
 	}
@@ -125,7 +125,47 @@ func (l *Lab) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		l.tile(w, r, req)
 	case "hover":
 		l.hover(w, req)
+	case WalkPath:
+		l.walk(w, r, req)
 	}
+}
+
+// walk is the walk lab's window ({seed, epoch}; walk.go), solved in a
+// worker like a render and cached the same way.
+func (l *Lab) walk(w http.ResponseWriter, r *http.Request, req labRequest) {
+	if req.Rules != "" || req.B != nil || req.Terrain != "" || req.At != nil {
+		labError(w, http.StatusBadRequest, "the walk takes only a seed and an epoch")
+		return
+	}
+	o := Options{Walk: true, View: "region", Seed: req.Seed, Epoch: cmp.Or(req.Epoch, DefaultEpoch), Workers: labWorkers, Scale: 1}
+	if err := Validate(o); err != nil {
+		labError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	key := cacheKey("walk", o, nil)
+	if body, ok := l.cache.get(key); ok {
+		w.Header().Set("X-Worldlab-Cache", "hit")
+		writeLabBytes(w, body)
+		return
+	}
+	ctx, cancel := context.WithCancel(r.Context())
+	defer cancel()
+	out, err := l.run(ctx, o)
+	if err != nil {
+		l.fail(w, err)
+		return
+	}
+	if out.Walk == nil {
+		labError(w, http.StatusInternalServerError, "the worker returned no walk")
+		return
+	}
+	body, err := json.Marshal(out.Walk)
+	if err != nil {
+		labError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	l.cache.put(key, body)
+	writeLabBytes(w, body)
 }
 
 // labRequest is a render ({view, seed, epoch, rect, scale, overlays, field,
