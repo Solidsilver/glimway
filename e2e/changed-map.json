@@ -144,8 +144,8 @@
       "smoke": true
     },
     {
-      "about": "The world lab: the dev panel's page (src/ui/dev/world-lab) and its dev server routes and workers (server/internal/worldlab).",
-      "paths": ["src/ui/dev/world-lab/**", "src/game/dev-warp.ts", "src/game/scenes/world-dev-hooks.ts", "src/ui/dev/DevPanel.svelte", "server/internal/worldlab/**", "server/internal/api/dev_worldlab.go", "server/cmd/glimway-server/dev_routes.go"],
+      "about": "Dev mode: the dev panel (src/ui/dev), the world lab (src/ui/dev/world-lab) and its dev server routes and workers (server/internal/worldlab).",
+      "paths": ["src/ui/dev/**", "src/game/dev-warp.ts", "src/game/scenes/world-dev-hooks.ts", "server/internal/worldlab/**", "server/internal/api/dev_worldlab.go", "server/cmd/glimway-server/dev_routes.go"],
       "specs": ["world-lab.spec.ts", "dev-mode.spec.ts"]
     },
     {

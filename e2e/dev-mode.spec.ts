@@ -1,25 +1,64 @@
-import { devices } from '@playwright/test'
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { devices, type TestInfo } from '@playwright/test'
 import { expect, test, type Page } from './fixtures'
-import { serverState } from './connected'
+import { serverState, waitForWorld } from './connected'
 import { freshPlayer } from './home-helpers'
+import { player, waitForLive, warp } from './helpers'
 
 /**
  * Dev mode (local playtesting only): the e2e page is Vite dev and its server
  * a `-tags dev` build, so the dev panel and its grant route are here. Opened
  * with the backquote key (and from the Menu), it gives this account glims
  * and Glimway's own things, and the game shows them like any other answer.
+ * On a desktop it docks at the right beside the game, which keeps playing;
+ * on a phone it is the shared sheet.
+ *
+ * The screenshots go to .e2e-artifacts/dev-panel/ (CI uploads them with the
+ * run's evidence) for a person to look at.
  */
 
-const devPanel = (page: Page) => page.getByRole('dialog', { name: 'Dev' })
+const OUT = '.e2e-artifacts/dev-panel'
+const devPanel = (page: Page) => page.getByTestId('dev-panel')
 const hud = (page: Page) => page.locator('.hud .glims')
 
-test('dev mode: ` opens the panel; glims and a material arrive in the HUD and the bag', async ({ page }) => {
+async function evidence(page: Page, testInfo: TestInfo, name: string): Promise<void> {
+  const png = await page.screenshot()
+  mkdirSync(OUT, { recursive: true })
+  writeFileSync(`${OUT}/${name}.png`, png)
+  await testInfo.attach(name, { body: png, contentType: 'image/png' })
+}
+
+/** The hero walks while `key` is held: some way, for a moment. */
+async function walks(page: Page, key: string): Promise<boolean> {
+  const from = await player(page)
+  await page.keyboard.down(key)
+  await page.waitForTimeout(450)
+  await page.keyboard.up(key)
+  const to = await player(page)
+  return Math.hypot(to.x - from.x, to.y - from.y) > 4
+}
+
+test('dev mode docked: beside the game, which keeps playing; gives arrive; the folds and the panel come back after a reload', async ({ page }, testInfo) => {
   await freshPlayer(page)
+  await warp(page, 'outdoors', 16, 66)
+  await waitForLive(page)
   const before = (await serverState(page)).body.state.glims as number
+  const vw = page.viewportSize()!.width
+  const stageWidth = () => page.locator('main > .stage').evaluate((el) => el.getBoundingClientRect().width)
+  expect(await stageWidth()).toBeCloseTo(vw, 0)
 
   await page.keyboard.press('Backquote')
-  await expect(devPanel(page)).toBeVisible()
+  const panel = page.getByRole('complementary', { name: 'Dev' })
+  await expect(panel).toBeVisible()
   await expect(devPanel(page).getByTestId('dev-banner')).toHaveText(/Dev mode \(local only\)/)
+  // Docked at the right edge; the game has the rest of the screen, no backdrop over it.
+  const box = (await panel.boundingBox())!
+  expect(box.x + box.width).toBeCloseTo(vw, 0)
+  await expect.poll(stageWidth).toBeCloseTo(vw - box.width, 0)
+  await expect(page.locator('.overlay')).toHaveCount(0)
+  // The game still plays beside it.
+  expect(await walks(page, 'ArrowRight') || (await walks(page, 'ArrowLeft'))).toBe(true)
+  await evidence(page, testInfo, 'desktop-docked')
 
   // +100 glims: the answer's state is the game's at once.
   await devPanel(page).getByTestId('dev-glims').click()
@@ -27,47 +66,110 @@ test('dev mode: ` opens the panel; glims and a material arrive in the HUD and th
   await expect(hud(page)).toHaveText(String(before + 100))
   expect((await serverState(page)).body.state.glims).toBe(before + 100)
 
-  // One material, found by search, a count of 7.
-  await devPanel(page).getByTestId('dev-search').fill('timber')
+  // Typing in the search never moves the hero (w, a, s, d are walking keys).
+  const search = devPanel(page).getByTestId('dev-search')
+  await search.click()
+  const still = await player(page)
+  await page.keyboard.type('wood saw', { delay: 30 })
+  await expect(search).toHaveValue('wood saw')
+  await page.waitForTimeout(200)
+  expect(await player(page)).toEqual(still)
+
+  // One material, found by search and kind, a count of 7.
+  await search.fill('')
+  await page.keyboard.type('tim')
+  await devPanel(page).getByTestId('dev-group').selectOption('Material')
   const row = devPanel(page).locator('[data-grant="timber"]')
   await expect(row).toBeVisible()
+  await expect(devPanel(page).locator('[data-grant]')).not.toHaveCount(0)
+  await expect(devPanel(page).locator('[data-grant="glims"]')).toHaveCount(0)
+  await evidence(page, testInfo, 'desktop-give-searched')
   await row.getByRole('spinbutton').fill('7')
   await row.getByRole('button', { name: 'Give' }).click()
   await expect(page.getByTestId('dev-message')).toContainText('Given: 7 × Timber')
+  // Given lately: once more from the Quick section, at the same count.
+  const again = devPanel(page).getByTestId('dev-recent').locator('[data-again="timber"]')
+  await expect(again).toBeVisible()
 
-  // ` again closes it; the bag shows the timber.
-  await page.keyboard.press('Backquote')
-  await expect(devPanel(page)).toBeHidden()
+  // Escape leaves the field; then the game's keys are the game's: the bag opens beside the docked panel.
+  await row.getByRole('spinbutton').press('Escape')
   await page.keyboard.press('i')
   const bag = page.getByRole('dialog', { name: 'Inventory' })
   await expect(bag).toBeVisible()
   await expect(bag.locator('[data-cell="material:timber"]')).toHaveAccessibleName(/^Timber, 7/)
+  await expect(panel).toBeVisible()
+  await evidence(page, testInfo, 'desktop-docked-with-bag')
   await page.keyboard.press('Escape')
+  await expect(bag).toBeHidden()
+
+  // Fold Give an item; after a reload the panel is open again, still folded.
+  const give = devPanel(page).getByTestId('dev-give')
+  await give.locator('summary').click()
+  await expect(search).toBeHidden()
+  await page.reload()
+  await page.getByTestId('continue-world').click()
+  await waitForWorld(page)
+  await expect(panel).toBeVisible()
+  await expect(devPanel(page).getByTestId('dev-give')).not.toHaveAttribute('open', /.*/)
+  await expect(devPanel(page).getByTestId('dev-quick')).toHaveAttribute('open', /.*/)
+  await expect(devPanel(page).getByTestId('dev-recent').locator('[data-again="timber"]')).toBeVisible()
+
+  // ` closes it, and the game has the whole screen again.
+  await page.keyboard.press('Backquote')
+  await expect(panel).toBeHidden()
+  await expect.poll(stageWidth).toBeCloseTo(vw, 0)
 
   // The Menu has a Dev row that opens it too.
   await page.keyboard.press('Escape')
   await page.getByTestId('menu-dev').getByRole('button', { name: 'Open dev mode' }).click()
-  await expect(devPanel(page)).toBeVisible()
+  await expect(panel).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Menu' })).toBeHidden()
+})
+
+test('dev mode docked in the height lab: its section comes first, with every control, and switches the look', async ({ page }, testInfo) => {
+  await freshPlayer(page)
+  await page.goto('/?lab=height')
+  await page.getByRole('button', { name: /^Continue/ }).click()
+  await page.waitForFunction(() => !!(window as unknown as { __fsLab?: unknown }).__fsLab, undefined, { timeout: 60_000 })
+  await page.keyboard.press('Backquote')
+  const panel = page.getByRole('complementary', { name: 'Dev' })
+  await expect(panel).toBeVisible()
+  await expect(panel.locator('details[data-section]').first()).toHaveAttribute('data-section', 'height-lab')
+  const lab = devPanel(page).getByTestId('height-lab-controls')
+  await expect(lab.getByRole('button', { name: 'Leave the lab' })).toBeVisible()
+  // Every switch the lab has (src/game/height-lab/LabSection.svelte), and the darkness slider.
+  for (const group of ['Area', 'Levels above and below fade to', 'Fog per level', 'Cave floors', 'Climbing, the camera', 'Climbing, haze at the edges', 'In a cave, your own light', 'Daylight reaches in', 'Into a cave, the way in', 'The cave’s view comes in over', 'Levels overlay'])
+    await expect(lab.getByRole('group', { name: group })).toBeVisible()
+  await expect(lab.getByTestId('height-lab-darkness')).toBeVisible()
+  // A switch still switches.
+  const way = lab.getByRole('group', { name: 'Into a cave, the way in' }).getByRole('button', { name: 'Iris from the mouth' })
+  await way.click()
+  await expect(way).toHaveAttribute('aria-pressed', 'true')
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __fsLab: { state: () => { look: { way?: string } } } }).__fsLab.state().look.way)).toBe('iris')
+  await evidence(page, testInfo, 'desktop-height-lab')
 })
 
 test.describe('on a phone', () => {
   const { viewport, deviceScaleFactor, isMobile, hasTouch, userAgent } = devices['iPhone 13']
   test.use({ viewport, deviceScaleFactor, isMobile, hasTouch, userAgent })
 
-  test('dev mode on a phone: from the Menu, it fits and gives', async ({ page }) => {
+  test('dev mode on a phone: from the Menu, a sheet that fits and gives', async ({ page }, testInfo) => {
     await freshPlayer(page)
     const before = (await serverState(page)).body.state.glims as number
     await page.getByRole('button', { name: /^Menu/ }).tap()
     await page.getByTestId('menu-dev').getByRole('button', { name: 'Open dev mode' }).tap()
-    await expect(devPanel(page)).toBeVisible()
+    await expect(page.getByRole('dialog', { name: 'Dev' })).toBeVisible()
     // Nothing spills off the side of the screen, the rows included.
     const vw = page.viewportSize()!.width
-    for (const el of [devPanel(page).locator('.panel'), devPanel(page).locator('[data-grant="timber"]')]) {
+    for (const el of [devPanel(page), devPanel(page).locator('[data-grant="timber"]')]) {
       const box = (await el.boundingBox())!
       expect(box.x).toBeGreaterThanOrEqual(0)
       expect(box.x + box.width).toBeLessThanOrEqual(vw)
     }
+    await evidence(page, testInfo, 'phone-sheet')
     await devPanel(page).getByTestId('dev-glims').tap()
     await expect(hud(page)).toHaveText(String(before + 100))
+    await devPanel(page).getByTestId('dev-search').fill('axe')
+    await evidence(page, testInfo, 'phone-searched')
   })
 })

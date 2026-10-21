@@ -77,3 +77,8 @@ export function everyMaterial(qty: number): { id: string; qty: number }[] {
 export function clampCount(g: Pick<Grantable, 'max'>, n: number): number {
   return Number.isFinite(n) ? Math.min(Math.max(1, Math.floor(n)), g.max) : 1;
 }
+
+/** The list's groups, each once, in the order they first come (glims first). */
+export function grantGroups(list: readonly Grantable[]): string[] {
+  return [...new Set(list.map((g) => g.group))];
+}
