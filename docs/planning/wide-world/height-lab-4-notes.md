@@ -184,3 +184,54 @@ All 176 way-in screenshots (`w-{blend,eased,stages,iris}-{m-east,m-west,s-second
 - **Make `eased` ("Slower, eased") the default** (especially paired with a `2`–`3` tile base crossfade).
   - **Why:** Once the mid-transition brightening and fog flash are fixed, `blend` and `eased` have the cleanest, most natural look: the hill dims evenly while the lit passage comes in at the exact same rate, so lit stone underfoot never dips dark (`stages`) and there is no stylized circular wipe (`iris`). Between `blend` and `eased`, `eased`'s smoothstep onset removes the sudden first-step drop right at the arch (`6%` at half a tile vs `blend`'s `17%`) and eases softly into full cave dark at the end.
   - **Runner-up:** **`iris` ("From the mouth outward")** is well worth trying in the panel—with the feathered `litPixels` alpha and `over` surface weighting, it opens smoothly from the arch around the hero and looks especially good on the narrower phone viewport (`pw-iris-m-east-06.png`).
+
+## Round 4c
+
+The owner's three wall-edge shots exposed a sampling hole, rather than a fade-curve problem.
+`daylight` extended the walked-distance field only to cardinal neighbours of reachable cave
+floor. Beside the arch's bottom corner, the hero's foot box fits but bilinear sampling also
+uses the **diagonal** outside tile. That tile still held `FAR = 99`, so a small step changed
+the view from almost surface to fully cave, before switching back to surface at the portal.
+Daylight's matching corner tile was zero, explaining the owner's 100% → 96% readout.
+Both fields now extend to diagonal neighbours from the original reachable-floor values;
+the floor's distances and light propagation through the cave are unchanged.
+
+The regression walks one pixel at a time in both directions, at every pixel across the
+standable width (including both wall-flush positions) of both mouths in both areas. It checks
+light and floor-alpha changes stay below 0.1 per step for all four ways and every slider
+length, plus continuity of daylight and actual portal crossing. Before the fix it failed at
+the shoulder's first mouth, x=485, y=641: **view 0 → 1**. Afterward all 34 lab tests pass.
+Round 4b's brightness, surface-weight and cave-contribution invariants now cover **1, 2, 3 and
+4 tiles**. Full local `npm run verify` passed (2,814 tests, type checks, Svelte checks and build),
+as did `go test ./...`, both in the low-priority dev shell.
+
+The owner's choice, **Even (round 4), 3 tiles**, stays the default. The two fade-length buttons
+are now a notched whole-tile slider from 1 to 4. The other ways and all three own-light modes
+remain in the panel.
+
+The new screenshot walk uses real collision-respecting four-pixel steps, pressed against each
+wall of all four mouths with Even, and each alternative at the owner's first shoulder mouth.
+Every frame's view weight, floor alpha and daylight are saved in `height-lab/r4c/states.json`.
+
+**Seen on CI run [39625507725](https://github.com/Solidsilver/glimway/actions/runs/39625507725)**:
+all seven lab browser tests passed, with no flakes or retries. Downloaded `e2e-full-evidence`
+and inspected all **334 new frames** in 14 contact sheets (left/right for Even at all four
+mouths, left/right for Eased, Dark first and Iris at the first shoulder mouth), plus full-size
+near-exit frames against the owner's three originals. No black-view return in any walk.
+At the owner's mouth, Even's final weights are **0.102 → 0.034 → 0 → 0**, with daylight
+**94.9% → 98.3% → 100% → 100%** on both sides. The layer switches only after the view is
+already zero. The other modes also decrease to zero and stay there; Iris closes smoothly,
+and Dark first retains its intentional underfoot dip described in Round 4b.
+
+Representative full-size frames kept here:
+
+- [Right wall, nearly out](lab/height-4/r4c-blend-s-first-right-19.png),
+  [one more step](lab/height-4/r4c-blend-s-first-right-20.png),
+  [surface](lab/height-4/r4c-blend-s-first-right-22.png): the owner's sequence, now clear throughout.
+- [Left wall](lab/height-4/r4c-blend-s-first-left-20.png): same zero view weight at the opposite corner.
+- [Shoulder's second mouth, left wall](lab/height-4/r4c-blend-s-second-left-12.png) and
+  [mountain's west mouth, right wall](lab/height-4/r4c-blend-m-west-right-20.png): clear at the corners too.
+
+Retrieve all frames and per-frame states with
+`gh run download 39625507725 -n e2e-full-evidence`; look under `height-lab/r4c/`.
+Nothing remains in the Round 4c brief; the later-iteration questions above stay deferred.
