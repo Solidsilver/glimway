@@ -230,4 +230,22 @@ test.describe('phone', () => {
     }
     writeFileSync(`${OUT}/states-phone.json`, JSON.stringify(phone, null, 1))
   })
+
+  test('height lab round 4b: the way in on a phone, each way, the mountain\'s east mouth', async ({ page }) => {
+    test.setTimeout(600_000)
+    mkdirSync(OUT, { recursive: true })
+    await openLab(page)
+    const phone: Record<string, LabState> = {}
+    for (const way of ['blend', 'eased', 'stages', 'iris'] as const) {
+      await setLook(page, { area: 'mountain', way, crossfade: 3, skyTiles: 6, cave: 'lantern', caveStyle: 'mixed', darkness: 0.6 })
+      for (let k = 0; k <= 10; k++) {
+        const ty = 73 + 2 - k * 0.5
+        const layer = Math.floor(ty + 10 / 16) > 73 ? SURFACE : CAVE
+        const name = `pw-${way}-m-east-${String(k).padStart(2, '0')}`
+        await shot(page, name, layer, 56.5, ty)
+        phone[name] = states[name]!
+      }
+    }
+    writeFileSync(`${OUT}/states-way-phone.json`, JSON.stringify(phone, null, 1))
+  })
 })
