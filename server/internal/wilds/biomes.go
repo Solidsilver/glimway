@@ -45,19 +45,19 @@ type BiomeSelection struct {
 // calls 3, 4, 8). A region pins when a chunk inside it is generated, and
 // lasts until the next update turning.
 type RegionPin struct {
-	WorldSeed       string      `json:"worldSeed"`
-	RX              int         `json:"rx"`
-	RY              int         `json:"ry"`
-	RegionID        string      `json:"regionId"`
-	Site            [2]int      `json:"site"`
-	Biome           string      `json:"biome"`
-	BiomeVersion    int         `json:"biomeVersion"`
-	BiomeRef        string      `json:"biomeRef"`
-	FieldsVersion   int         `json:"fieldsVersion"`
-	LandformVersion int         `json:"landformVersion"`
-	RecipeDigest    string      `json:"recipeDigest"`
-	TriggerChunk    [2]int      `json:"triggerChunk"`
-	Support         bool        `json:"support"`
+	WorldSeed       string `json:"worldSeed"`
+	RX              int    `json:"rx"`
+	RY              int    `json:"ry"`
+	RegionID        string `json:"regionId"`
+	Site            [2]int `json:"site"`
+	Biome           string `json:"biome"`
+	BiomeVersion    int    `json:"biomeVersion"`
+	BiomeRef        string `json:"biomeRef"`
+	FieldsVersion   int    `json:"fieldsVersion"`
+	LandformVersion int    `json:"landformVersion"`
+	RecipeDigest    string `json:"recipeDigest"`
+	TriggerChunk    [2]int `json:"triggerChunk"`
+	Support         bool   `json:"support"`
 }
 
 // PinManifest is a disposable in-memory manifest of regions pinned during a
@@ -262,7 +262,7 @@ func naturalRegionBiome(worldSeed string, rx, ry int, mean Fields) string {
 	wqChance := 140
 	wqMinQ := 620
 	if ry < 0 {
-		wqChance = 490
+		wqChance = 400
 		wqMinQ = 560
 	}
 	if mean.Quiet >= wqMinQ && elig < wqChance {
@@ -272,7 +272,7 @@ func naturalRegionBiome(worldSeed string, rx, ry int, mean Fields) string {
 	// Tops: high structural upland (with a modest contribution from relief).
 	topsScore := mean.Upland + (mean.Relief-500)/5
 	topsElig := int(landformV2Hash(worldSeed, "region-tops-elig", rx, ry) % 1000)
-	if topsScore >= 740 || (topsScore >= 590 && topsElig < 390) {
+	if topsScore >= 760 || (topsScore >= 610 && topsElig < 360) {
 		return BiomeTops
 	}
 
@@ -290,9 +290,9 @@ var regionBiomeCache sync.Map
 // SelectRegionBiome returns the deterministic BiomeSelection for region (rx, ry).
 // In the 2×2 central neighbourhood around (0, 0) (rx in -1..0, ry in -1..0), it
 // ensures that all three biomes appear in the four regions meeting near home
-// (with Whitequiet in the northern pair) without forcing which region owns
-// (0, 0), so the owner always meets Tops and Whitequiet within a short walk
-// from home.
+// (Whitequiet in the region holding the named whitequiet place) without
+// forcing which region owns (0, 0), so the owner always meets Tops and
+// Whitequiet within a short walk from home.
 func SelectRegionBiome(worldSeed string, rx, ry int) BiomeSelection {
 	key := regionCacheKey{worldSeed, rx, ry}
 	if v, ok := regionBiomeCache.Load(key); ok {
@@ -335,13 +335,27 @@ func computeRegionBiome(worldSeed string, rx, ry int) BiomeSelection {
 			biomes[i] = naturalRegionBiome(worldSeed, c.RX, c.RY, means[i])
 		}
 
-		// 1. Ensure at least one of the two northern cells ((-1,-1) or (0,-1))
-		// is whitequiet@1 (picking the one with higher Quiet affinity).
+		// 1. The region holding the named whitequiet place is whitequiet@1, so
+		// the place seeds a Whitequiet neighbourhood (terrain-sol.md §1).
+		// Without that place, the northern cell with more Quiet is chosen.
 		wqIdx := -1
-		for i := 0; i < 2; i++ {
-			if biomes[i] == BiomeWhitequiet {
-				wqIdx = i
-				break
+		if wq := Footprint("whitequiet"); wq != nil {
+			S := chunkSize()
+			wx := (int(wq.GetCx())*2 + int(wq.GetWidth())) * S / 2
+			wy := (int(wq.GetCy())*2 + int(wq.GetHeight())) * S / 2
+			owner := RegionAt(worldSeed, wx, wy).Primary
+			for i, c := range coords {
+				if c == owner {
+					wqIdx = i
+				}
+			}
+		}
+		if wqIdx < 0 {
+			for i := 0; i < 2; i++ {
+				if biomes[i] == BiomeWhitequiet {
+					wqIdx = i
+					break
+				}
 			}
 		}
 		if wqIdx < 0 {
@@ -349,8 +363,8 @@ func computeRegionBiome(worldSeed string, rx, ry int) BiomeSelection {
 			if means[1].Quiet > means[0].Quiet {
 				wqIdx = 1
 			}
-			biomes[wqIdx] = BiomeWhitequiet
 		}
+		biomes[wqIdx] = BiomeWhitequiet
 
 		// 2. Ensure at least one of the remaining 3 cells is tops@1 (picking
 		// the non-whitequiet cell with highest Upland).
@@ -461,7 +475,7 @@ func BiomeAt(worldSeed string, tx, ty int, pins *PinManifest) TileBiomeSample {
 	// Coherent 3–6-tile patch noise in [0, 1000).
 	patchRaw := sampleFieldOctave(landformV2Hash(worldSeed, "blend-patch:5"), tx, ty, 5)
 	patchFine := sampleFieldOctave(landformV2Hash(worldSeed, "blend-patch:3"), tx, ty, 3)
-	patch := stretchPermille((patchRaw*75+patchFine*25)/100, 175)
+	patch := stretchPermille((patchRaw*75+patchFine*25)/100, 215)
 
 	out := TileBiomeSample{
 		PrimaryRegion:   rs.Primary,
@@ -480,18 +494,22 @@ func BiomeAt(worldSeed string, tx, ty int, pins *PinManifest) TileBiomeSample {
 		PatchPermille:   patch,
 	}
 
-	// Honour named footprints: the Tangle is always hearthwick-woods@1, and
-	// the existing named whitequiet place is always whitequiet@1.
+	// Named footprints keep their own country: the Tangle stays
+	// hearthwick-woods@1, and the existing named whitequiet place is always
+	// whitequiet@1 whichever region holds it (terrain-decisions.md call 6).
 	if fpPlace := FootprintAt(cx, cy); fpPlace != nil {
-		if fpPlace.GetId() == "tangle" {
+		switch fpPlace.GetId() {
+		case "tangle":
 			out.EffectiveBiome = BiomeHearthwickWoods
 			out.EffectiveRef = BiomeRef(BiomeHearthwickWoods, BiomeVersion)
 			out.InBlendBand = false
+			out.TripleJunction = false
 			return out
-		}
-		if fpPlace.GetId() == "whitequiet" {
+		case "whitequiet":
 			out.EffectiveBiome = BiomeWhitequiet
 			out.EffectiveRef = BiomeRef(BiomeWhitequiet, BiomeVersion)
+			out.InBlendBand = false
+			out.TripleJunction = false
 			return out
 		}
 	}
@@ -502,7 +520,7 @@ func BiomeAt(worldSeed string, tx, ty int, pins *PinManifest) TileBiomeSample {
 		return out
 	}
 
-	// Half-band width: 8 tiles normally; 4 tiles when bordering Whitequiet so
+	// Half-band width: 10 tiles normally; 5 tiles when bordering Whitequiet so
 	// its pale margin stays crisp and distinct (terrain-sol.md §1).
 	half12 := BlendHalfBandTiles * fp
 	if b1 == BiomeWhitequiet || b2 == BiomeWhitequiet {
@@ -568,14 +586,15 @@ func BiomeGroundColour(id string) color.RGBA {
 }
 
 var biomeGroundColours = map[string]color.RGBA{
-	// Tops ground palette: valley pine woods, heather moor, alpine turf, scree, slate crag.
-	"tops-woods": {46, 82, 58, 255},
-	"tops-moor":  {136, 122, 92, 255},
-	"tops-turf":  {126, 152, 90, 255},
-	"tops-scree": {150, 144, 134, 255},
-	"tops-crag":  {170, 174, 182, 255},
+	// Tops ground palette: valley pine woods, warm russet heather moor, olive alpine turf, ochre scree, high slate crag.
+	"tops-woods": {40, 82, 54, 255},
+	"tops-moor":  {142, 104, 82, 255},
+	"tops-turf":  {122, 146, 76, 255},
+	"tops-scree": {160, 144, 124, 255},
+	"tops-crag":  {184, 178, 170, 255},
 	"tops-path":  {162, 150, 128, 255},
-	// Whitequiet ground palette: ivory grass, grey soil, pale birch/snag floor, pale stone.
+	// Whitequiet ground palette: warm ivory grass, grey soil, pale birch/snag floor, pale stone
+	// (pale, not snowy: terrain-decisions.md call 6).
 	"wq-ivory": {216, 212, 192, 255},
 	"wq-soil":  {158, 156, 148, 255},
 	"wq-birch": {176, 180, 168, 255},
@@ -593,6 +612,49 @@ func shadePermille(c color.RGBA, permille int) color.RGBA {
 	}
 }
 
+func biomeSingleAtlasColour(biome string, f Fields, land string, patchPermille int) color.RGBA {
+	switch biome {
+	case BiomeWhitequiet:
+		var col color.RGBA
+		switch {
+		case (f.Upland >= 760 || f.Relief >= 780) && patchPermille >= 600:
+			col = biomeGroundColours["wq-stone"]
+		case f.Wetness >= 540 && patchPermille < 420:
+			col = biomeGroundColours["wq-birch"]
+		case f.Quiet >= 720 && patchPermille < 380:
+			col = biomeGroundColours["wq-soil"]
+		default:
+			col = biomeGroundColours["wq-ivory"]
+		}
+		return shadePermille(col, 960+f.Upland*70/1000)
+
+	case BiomeTops:
+		var col color.RGBA
+		switch {
+		case f.Upland >= 820:
+			col = biomeGroundColours["tops-crag"]
+		case f.Upland >= 700 || (f.Upland >= 620 && f.Relief >= 680):
+			col = biomeGroundColours["tops-scree"]
+		case f.Upland < 540 && f.Wetness >= 470:
+			col = biomeGroundColours["tops-woods"]
+		case f.Wetness >= 530:
+			col = biomeGroundColours["tops-turf"]
+		default:
+			col = biomeGroundColours["tops-moor"]
+		}
+		return shadePermille(col, 920+f.Upland*140/1000)
+
+	default:
+		var col color.RGBA
+		if land == "woods" {
+			col = color.RGBA{34, 66, 38, 255}
+		} else {
+			col = color.RGBA{150, 190, 96, 255}
+		}
+		return shadePermille(col, 950+f.Upland*100/1000)
+	}
+}
+
 // BiomeAtlasColour computes the chunk-glimpse colour and resolved biome@version
 // for chunk (cx, cy) in the world-lab atlas so the atlas reads clearly as three
 // kinds of country with coherent patch blending across region borders.
@@ -602,56 +664,26 @@ func BiomeAtlasColour(worldSeed string, cx, cy int, land string, river bool, pin
 	bs := BiomeAt(worldSeed, tx, ty, pins)
 	f := FieldsAt(worldSeed, tx, ty)
 
-	var col color.RGBA
-	switch bs.EffectiveBiome {
-	case BiomeWhitequiet:
-		// Pale, hushed country: ivory grass in open expanses, grey soil and
-		// sparse pale birch stands where land is woods, pale stone on shoulders.
-		switch {
-		case f.Upland >= 560 || f.Relief >= 650:
-			col = biomeGroundColours["wq-stone"]
-		case land == "woods":
-			if bs.PatchPermille < 380 {
-				col = biomeGroundColours["wq-birch"]
-			} else if bs.PatchPermille < 650 {
-				col = biomeGroundColours["wq-soil"]
-			} else {
-				col = biomeGroundColours["wq-ivory"]
-			}
-		default:
-			col = biomeGroundColours["wq-ivory"]
+	// Chunk-scale patches (about 4 chunks) so the atlas shows coherent birch
+	// stands and grey-soil hollows rather than per-chunk speckle.
+	atlasPatch := stretchPermille(sampleFieldOctave(landformV2Hash(worldSeed, "atlas-patch"), tx, ty, 4*S), 175)
+	col := biomeSingleAtlasColour(bs.EffectiveBiome, f, land, atlasPatch)
+	// When a 24×24-tile chunk lies within 1 chunk of a region border between two
+	// different biomes, blend its chunk-glimpse colour proportionally so atlas
+	// borders show the multi-tile transition zone instead of a 1-chunk staircase.
+	if FixedFootprintAt(cx, cy) == nil && bs.PrimaryBiome != bs.SecondaryBiome && bs.BorderDistTiles <= S {
+		otherBiome := bs.SecondaryBiome
+		if bs.EffectiveBiome == bs.SecondaryBiome {
+			otherBiome = bs.PrimaryBiome
 		}
-		col = shadePermille(col, 960+f.Upland*80/1000)
-
-	case BiomeTops:
-		// Upland country: valley pine copses, broad heather moor and alpine
-		// turf benches, scree slopes, and bare slate/crag crowns high up.
-		switch {
-		case f.Upland >= 760:
-			col = biomeGroundColours["tops-crag"]
-		case f.Upland >= 640 || f.Relief >= 680:
-			col = biomeGroundColours["tops-scree"]
-		case land == "woods" && f.Upland < 540:
-			col = biomeGroundColours["tops-woods"]
-		case land == "woods":
-			col = biomeGroundColours["tops-moor"]
-		default:
-			if f.Wetness >= 520 {
-				col = biomeGroundColours["tops-turf"]
-			} else {
-				col = biomeGroundColours["tops-moor"]
-			}
+		otherCol := biomeSingleAtlasColour(otherBiome, f, land, atlasPatch)
+		wOther := (S - bs.BorderDistTiles) * 380 / S
+		col = color.RGBA{
+			R: uint8((int(col.R)*(1000-wOther) + int(otherCol.R)*wOther) / 1000),
+			G: uint8((int(col.G)*(1000-wOther) + int(otherCol.G)*wOther) / 1000),
+			B: uint8((int(col.B)*(1000-wOther) + int(otherCol.B)*wOther) / 1000),
+			A: 255,
 		}
-		col = shadePermille(col, 920+f.Upland*140/1000)
-
-	default:
-		// hearthwick-woods@1: green low country (woods and meadow).
-		if land == "woods" {
-			col = color.RGBA{34, 66, 38, 255}
-		} else {
-			col = color.RGBA{150, 190, 96, 255}
-		}
-		col = shadePermille(col, 950+f.Upland*100/1000)
 	}
 
 	if river {
@@ -688,30 +720,35 @@ func BiomeTileLook(worldSeed string, tx, ty int, baseGround string, baseSolid bo
 	}
 
 	f := FieldsAt(worldSeed, tx, ty)
-	grove := sampleFieldOctave(landformV2Hash(worldSeed, "biome-grove"), tx, ty, 6) * 1000 / noiseOne
+	grove := stretchPermille(sampleFieldOctave(landformV2Hash(worldSeed, "biome-grove"), tx, ty, 5), 185)
+	copse := stretchPermille(sampleFieldOctave(landformV2Hash(worldSeed, "biome-copse"), tx, ty, 16), 175)
+	effU := f.Upland + (copse-500)/5 + (grove-500)/9
+	effW := f.Wetness + (copse-500)/6
+	lx, ly := LocalOf(tx, ty)
+	S := chunkSize()
+	// A tile is eligible for field-driven biome cover if it is not on a carved
+	// path/clearing and not blocking an open chunk border.
+	canPlaceCover := baseSolid || (baseGround != "path" && baseGround != "trodden" && lx > 1 && ly > 1 && lx < S-2 && ly < S-2 && (tx+ty)%2 == 0)
 
 	switch sample.EffectiveBiome {
 	case BiomeWhitequiet:
-		solid = baseSolid
-		if baseSolid && thicketPermille > 0 {
-			// Sparse pale birch and bare snags (~24% of normal forest cover,
-			// clustered in small stands) instead of a solid wall of trees.
-			keepThresh := min(260, thicketPermille*260/1000)
-			solid = grove < keepThresh
+		solid = false
+		if canPlaceCover && thicketPermille > 0 {
+			// Sparse pale birch and bare snags clustered in small hushed stands,
+			// independent of LandformV1 chunk boundaries.
+			standScore := (grove*65 + copse*35) / 100
+			keepThresh := min(160, thicketPermille*160/1000)
+			solid = standScore < keepThresh
 		}
 		switch {
-		case baseGround == "path" || baseGround == "trodden" || baseGround == "verge":
-			groundID = "wq-path"
-		case f.Upland >= 580 || f.Relief >= 660:
-			groundID = "wq-stone"
 		case solid:
 			groundID = "wq-birch"
-		case baseGround == "woods" || baseGround == "moss":
-			if grove < 460 {
-				groundID = "wq-soil"
-			} else {
-				groundID = "wq-ivory"
-			}
+		case (effU >= 760 || f.Relief >= 780) && copse >= 640:
+			groundID = "wq-stone"
+		case copse < 290 || (f.Quiet >= 760 && grove < 240):
+			groundID = "wq-soil"
+		case baseGround == "path" && effU < 540:
+			groundID = "wq-path"
 		default:
 			groundID = "wq-ivory"
 		}
@@ -723,34 +760,38 @@ func BiomeTileLook(worldSeed string, tx, ty int, baseGround string, baseSolid bo
 		return groundID, col, solid, sample
 
 	case BiomeTops:
-		solid = baseSolid
-		if baseSolid && thicketPermille > 0 {
-			// Rule 15 (trees thin as you climb): full copses in valleys,
-			// thinning across shoulders, bare stone/scree above timberline.
+		solid = false
+		if canPlaceCover && thicketPermille > 0 {
+			// Rule 15 (trees thin as you climb): valley pine copses below,
+			// sparse wind-bent pines on heather moor shoulders, rare boulders on
+			// scree, and bare open crag crowns above the treeline.
+			standScore := (grove*60 + copse*40) / 100
 			var canopyKeep int
 			switch {
-			case f.Upland >= 780:
-				canopyKeep = 60 // rare summit boulder/cairn
-			case f.Upland >= 640:
-				canopyKeep = 150 // sparse sub-alpine scrub / rock
-			case f.Upland >= 500:
-				canopyKeep = 380 // open shoulder pine/birch stands
+			case effU >= 810:
+				canopyKeep = 20 // bare crag crowns (rare summit cairn/boulder)
+			case effU >= 690:
+				canopyKeep = 75 // sparse scree boulders
+			case effU >= 530:
+				canopyKeep = 200 // sparse wind-bent pines below treeline
 			default:
-				canopyKeep = 780 // valley copses
+				canopyKeep = 440 // valley pine woods
 			}
 			keepThresh := min(canopyKeep, thicketPermille*canopyKeep/1000)
-			solid = grove < keepThresh
+			solid = standScore < keepThresh
 		}
 		switch {
-		case baseGround == "path" || baseGround == "trodden" || baseGround == "verge":
-			groundID = "tops-path"
-		case f.Upland >= 780:
+		case effU >= 810:
 			groundID = "tops-crag"
-		case f.Upland >= 640 || f.Relief >= 680:
+		case effU >= 690 || (effU >= 610 && f.Relief >= 670):
 			groundID = "tops-scree"
 		case solid:
 			groundID = "tops-woods"
-		case baseGround == "meadow" || f.Wetness >= 520:
+		case effU < 510 && effW >= 470 && copse < 560:
+			groundID = "tops-woods"
+		case baseGround == "path" && effU < 540:
+			groundID = "tops-path"
+		case effW >= 530 || (effU < 550 && copse >= 580):
 			groundID = "tops-turf"
 		default:
 			groundID = "tops-moor"
@@ -762,13 +803,24 @@ func BiomeTileLook(worldSeed string, tx, ty int, baseGround string, baseSolid bo
 		return groundID, col, solid, sample
 
 	default:
-		// hearthwick-woods@1
+		// hearthwick-woods@1: feather out dense forest-maze verge/thickets across
+		// the border-distance band when meeting Tops or Whitequiet.
 		groundID = baseGround
+		solid = baseSolid
+		if sample.InBlendBand && sample.SecondaryBiome != BiomeHearthwickWoods {
+			fade := (BlendHalfBandTiles - min(sample.BorderDistTiles, BlendHalfBandTiles)) * 1000 / BlendHalfBandTiles
+			if solid && grove < fade*650/1000 {
+				solid = false
+			}
+			if (groundID == "verge" || groundID == "trodden") && grove < fade*750/1000 {
+				groundID = "moss"
+			}
+		}
 		col = GroundColour(groundID)
-		if baseSolid {
+		if solid {
 			col = shadePermille(col, 600)
 		}
-		return groundID, col, baseSolid, sample
+		return groundID, col, solid, sample
 	}
 }
 

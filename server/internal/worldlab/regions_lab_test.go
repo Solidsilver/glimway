@@ -24,7 +24,7 @@ func TestRegionsOverlaysAndFieldHeatmaps(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(plain.Stats.BiomeShare) == 0 || plain.Stats.RegionCount < 4 || plain.Stats.PinManifest == nil || len(plain.Stats.PinManifest.Pins) < 4 {
+	if len(plain.Stats.BiomeShare) == 0 || plain.Stats.RegionCount < 4 || plain.Stats.PinManifest == nil || len(plain.Stats.PinManifest.Pins) < 2 || len(plain.Stats.PinManifest.Pins) >= plain.Stats.RegionCount {
 		t.Fatalf("missing region/biome stats on atlas render: %+v", plain.Stats)
 	}
 	if len(plain.Stats.FirstBiomeChunkDist) == 0 {

@@ -175,8 +175,8 @@ func newRegionTracker(o Options, width, height, unit int) *regionTracker {
 		// home frontier chunks so the manifest and pins overlay show pinned
 		// home-adjacent regions versus unpinned outer country.
 		x0, y0, x1, y1 := wilds.HomeRect()
-		for cy := y0 - 2; cy <= y1 + 2; cy++ {
-			for cx := x0 - 2; cx <= x1 + 2; cx++ {
+		for cy := y0 - 2; cy <= y1+2; cy++ {
+			for cx := x0 - 2; cx <= x1+2; cx++ {
 				if wilds.FixedFootprintAt(cx, cy) == nil {
 					pins.PinChunk(cx, cy)
 				}
