@@ -1,0 +1,109 @@
+{
+  "content": "content/wilds.json",
+  "contentSHA256": "9b949340120baadc879589d7012741de759df259a635ae308df290238722469b",
+  "view": "atlas",
+  "seed": "map",
+  "epoch": "t:1795000000:1796209600",
+  "rect": [
+    -128,
+    -128,
+    127,
+    127
+  ],
+  "chunkSize": 24,
+  "chunks": 65536,
+  "generatedChunks": 0,
+  "fixedChunks": 0,
+  "biomeShare": {
+    "hearthwick-woods@1": 0.663299560546875,
+    "tops@1": 0.23681640625,
+    "whitequiet@1": 0.099884033203125
+  },
+  "firstBiomeChunkDistFromHome": {
+    "hearthwick-woods@1": 0,
+    "tops@1": 9,
+    "whitequiet@1": 2
+  },
+  "regionCount": 86,
+  "blendBandShare": 0.045379638671875,
+  "pinManifest": {
+    "worldSeed": "map",
+    "landformVersion": 2,
+    "fieldsVersion": 1,
+    "generatedChunks": 280,
+    "directPins": 3,
+    "supportPins": 0,
+    "pins": [
+      {
+        "worldSeed": "map",
+        "rx": -1,
+        "ry": -1,
+        "regionId": "r:-1:-1",
+        "site": [
+          -264,
+          -154
+        ],
+        "biome": "whitequiet",
+        "biomeVersion": 1,
+        "biomeRef": "whitequiet@1",
+        "fieldsVersion": 1,
+        "landformVersion": 2,
+        "recipeDigest": "06ccc269aa26fda0",
+        "triggerChunk": [
+          -7,
+          -10
+        ],
+        "support": false
+      },
+      {
+        "worldSeed": "map",
+        "rx": 0,
+        "ry": -1,
+        "regionId": "r:0:-1",
+        "site": [
+          558,
+          -313
+        ],
+        "biome": "tops",
+        "biomeVersion": 1,
+        "biomeRef": "tops@1",
+        "fieldsVersion": 1,
+        "landformVersion": 2,
+        "recipeDigest": "71047f4f4b7f9e0c",
+        "triggerChunk": [
+          7,
+          -10
+        ],
+        "support": false
+      },
+      {
+        "worldSeed": "map",
+        "rx": -1,
+        "ry": 0,
+        "regionId": "r:-1:0",
+        "site": [
+          -300,
+          280
+        ],
+        "biome": "hearthwick-woods",
+        "biomeVersion": 1,
+        "biomeRef": "hearthwick-woods@1",
+        "fieldsVersion": 1,
+        "landformVersion": 2,
+        "recipeDigest": "7ff728be62f45160",
+        "triggerChunk": [
+          -4,
+          -1
+        ],
+        "support": false
+      }
+    ]
+  },
+  "landShareByChunkCentre": {
+    "meadow": 0.429534912109375,
+    "woods": 0.570465087890625
+  },
+  "longestAxialLandRunChunks": 51,
+  "generationMs": 702.033,
+  "note": "Land shares and axial runs sample chunk centres. Rectangles include both endpoints. Atlas never generates chunks; tile, camp, solid and reach metrics are unavailable. Blue tint marks chunks crossed by the Wend."
+}
