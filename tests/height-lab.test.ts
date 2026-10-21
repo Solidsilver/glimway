@@ -556,4 +556,31 @@ test('the crossfade lights the floors as the light image would: each pixel times
   assert.equal(out[at(6, 6) + 2], 0, 'blue: none');
   // Red rises smoothly left to right across the image.
   for (let x = 5; x < 11; x++) assert.ok(out[at(x + 1, 6)]! >= out[at(x, 6)]!, `smooth at ${x}`);
+  // With an iris, alpha stays whole inside r, feathers across soft, and is 0 outside r + soft.
+  litPixels(src, 8, 4, 4, light, 3, 3, 0, 0, 4, 0, 0, 12, 12, out, { x: 6.5, y: 6.5, r: 1, soft: 3 });
+  assert.equal(out[at(6, 6) + 3], 200, 'inside the iris: full alpha');
+  assert.ok(out[at(8, 6) + 3]! > 0 && out[at(8, 6) + 3]! < 200, 'in the feather ring: partial alpha');
+  assert.equal(out[at(11, 6) + 3], 0, 'past the feather ring: transparent');
+});
+
+test('the crossfade light pass: no double-darkening over the cave and no halo around a surface light', () => {
+  const l = areaLighting(mtn);
+  const rect = { x0: (56 * TILE_PX) / l.res, y0: (63 * TILE_PX) / l.res, w: 8, h: 8 };
+  const out = new Uint8ClampedArray(rect.w * rect.h * 4);
+  const h = 0.5;
+  const a = 0.5;
+  l.fill(rect, out, [{ layer: CAVE, weight: h }, { layer: SURFACE, weight: 1 - h }], { over: { layer: CAVE, alpha: a } });
+  // Over fully covered cave floor (cover = 1), the crossfade already dims the surface by (1 - a);
+  // the light pass underneath supplies (1 - h) / (1 - a) = 1 so the product is (1 - h), not (1 - h)^2.
+  assert.equal(out[0], 255, 'surface underneath is not darkened twice where cover is 1 and alpha equals h');
+  // In stages phase 1 (h > 0, alpha = 0), the surface over the cave dims to (1 - h) with no underground light on the grass.
+  l.add({ id: 'crystal-test', x: 57 * TILE_PX, y: 64 * TILE_PX, layer: CAVE, z: -1, color: 0xffffff, radius: 64, inner: 16, intensity: 1, moving: true });
+  l.fill(rect, out, [{ layer: CAVE, weight: 0.6 }, { layer: SURFACE, weight: 0.4 }], { over: { layer: CAVE, alpha: 0 } });
+  assert.equal(out[0], Math.round(0.4 * 255), 'stages phase 1: surface dims evenly to 1 - h with no cave light on the grass');
+  l.remove('crystal-test');
+  // A moving light on the sunny surface clamps at 1 on its own layer before weighting, so it never forms a bright halo as the surface dims.
+  l.add({ id: 'friend-test', x: 57 * TILE_PX, y: 64 * TILE_PX, layer: SURFACE, z: 2, color: 0xffffff, radius: 64, inner: 16, intensity: 0.9, moving: true });
+  l.fill(rect, out, [{ layer: CAVE, weight: 0.5 }, { layer: SURFACE, weight: 0.5 }], { over: { layer: CAVE, alpha: 0 } });
+  assert.equal(out[0], Math.round(0.5 * 255), 'surface moving light does not exceed daylight on its layer');
+  l.remove('friend-test');
 });

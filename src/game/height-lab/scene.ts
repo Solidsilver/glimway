@@ -42,7 +42,7 @@ import { buildArea } from './areas'
 import { type CaveImages, FACES_KEY, FACE_TINT, drawFaces, drawGrid, drawOverlays, facePart, paintCave, paintSurface } from './art'
 import { KIND, TILE_PX, findPath, move, sample, standTile, zAt, type Node, type Walker } from './levels'
 import { FRIEND_LIGHT, HERO_LIGHT, LIGHT_RES, wayIn } from './light'
-import { litPixels, type FillOptions, type Lighting } from './lighting'
+import { depthDark, litPixels, type FillOptions, type Lighting } from './lighting'
 import { fogFor, labLook, onLabLook, setLabLook, type LabLook } from './look'
 
 const T = TILE_PX
@@ -104,12 +104,12 @@ export class HeightLabScene extends Phaser.Scene {
   private lighting!: Lighting
   private lightView!: LightView
   /**
-   * The even and eased ways in: the cave's floors times the cave's own
-   * light, as one image drawn over the lit surface at the floors' alpha (a
-   * true crossfade: the cave never shows lit by daylight, nor the hill
-   * dark over the cave's shape).
+   * The ways in: the cave's floors times the cave's own light, as one image
+   * drawn over the lit surface at the floors' alpha (or inside the iris's
+   * soft circle): a true crossfade, so the cave never shows lit by daylight,
+   * nor the hill dark over the cave's shape.
    */
-  private caveLightView!: LightView
+  private caveLightBuf = new Uint8ClampedArray(0)
   private crossfade: Phaser.GameObjects.Image | null = null
   private crossfadeTex: Phaser.Textures.CanvasTexture | null = null
   private crossfadeData: ImageData | null = null
@@ -117,9 +117,6 @@ export class HeightLabScene extends Phaser.Scene {
   private friend!: Mover
   private heroLight: LabLook['cave'] = 'lantern'
   private haze!: Phaser.GameObjects.Image
-  /** The iris way in: the circle the cave's floors show inside (a mask on the cave's image). */
-  private irisShape!: Phaser.GameObjects.Graphics
-  private irisMask!: Phaser.Display.Masks.GeometryMask
   private keys!: { up: Phaser.Input.Keyboard.Key[]; down: Phaser.Input.Keyboard.Key[]; left: Phaser.Input.Keyboard.Key[]; right: Phaser.Input.Keyboard.Key[] }
   private hud: HTMLDivElement | null = null
   private hudAt = 0
@@ -196,7 +193,11 @@ export class HeightLabScene extends Phaser.Scene {
       this.hud = null
       perfWatch(null)
       this.lightView.destroy()
-      this.caveLightView.destroy()
+      this.crossfade?.destroy()
+      this.crossfade = null
+      this.crossfadeTex = null
+      this.crossfadeData = null
+      this.cavePixels = null
       if (this.textures.exists('hl-crossfade')) this.textures.remove('hl-crossfade')
       labHook(null)
     })
@@ -358,14 +359,10 @@ export class HeightLabScene extends Phaser.Scene {
     }
     endLight()
     this.lightView = new LightView(this, BAND.dark)
-    // The cave's own light alone, never shown: multiplied into the crossfade's image (drawLight).
-    this.caveLightView = new LightView(this, BAND.dark, 'hl-light-cave')
     this.crossfade = null
     this.crossfadeTex = null
     this.crossfadeData = null
     this.haze = this.add.image(0, 0, 'hl-haze').setDepth(BAND.haze).setAlpha(0)
-    this.irisShape = this.make.graphics({}, false)
-    this.irisMask = this.irisShape.createGeometryMask()
   }
 
   private buildHud(): void {
@@ -505,7 +502,7 @@ export class HeightLabScene extends Phaser.Scene {
 
   /** The iris way in: a circle from the nearest mouth's arch, opening with how far in the hero is, to past the view's far corner. */
   private iris(v: { layer: number; cave: number }, wv: Phaser.Geom.Rectangle): { x: number; y: number; r: number; soft: number } | null {
-    if (this.look.way !== 'iris' || v.layer !== CAVE || v.cave >= 0.999) return null
+    if (this.look.way !== 'iris' || v.layer !== CAVE || v.cave <= 0.001 || v.cave >= 0.999) return null
     const h = this.hero.walker
     let best: { x: number; y: number } | null = null
     for (const m of this.area.mouths) {
@@ -519,9 +516,10 @@ export class HeightLabScene extends Phaser.Scene {
   }
 
   /** How much of the cave's own things (crystals, people) shows at a point, in the cave's view: its floors' alpha, or inside the iris. */
-  private caveShownAt(x: number, y: number, v: { alpha: number }, iris: { x: number; y: number; r: number } | null): number {
+  private caveShownAt(x: number, y: number, v: { alpha: number }, iris: { x: number; y: number; r: number; soft: number } | null): number {
     if (!iris) return v.alpha
-    return Math.hypot(x - iris.x, y - iris.y) <= iris.r ? 1 : 0
+    const d = Math.hypot(x - iris.x, y - iris.y)
+    return Math.max(0, Math.min(1, (iris.r + iris.soft - d) / Math.max(1e-6, iris.soft)))
   }
 
   private fogOf(viewZ: number, z: number): number {
@@ -550,14 +548,11 @@ export class HeightLabScene extends Phaser.Scene {
     const iris = this.iris(v, wv)
     for (const li of this.levelImages) li.img.setAlpha(1 - this.fogOf(v.z, li.level) * (1 - v.cave))
     const caveBand = inCave ? BAND.caveGroundIn : BAND.caveGroundOut
-    const caveAlpha = iris ? (v.cave > 0 ? 1 : 0) : v.alpha
-    // The even and eased ways cross-fade: the cave's floors are drawn lit, in the crossfade's image (drawLight).
-    const fade = inCave && (look.way === 'blend' || look.way === 'eased') && v.alpha > 0.001 && v.alpha < 0.999
+    const caveAlpha = iris ? (v.cave > 0.001 ? 1 : 0) : v.alpha
+    // While the way in lasts, the cave's floors are drawn lit in the crossfade's image (drawLight),
+    // and the light pass underneath weights the remaining surface so the hill darkens evenly.
+    const fade = inCave && (v.cave > 0.001 || v.alpha > 0.001) && (v.cave < 0.999 || v.alpha < 0.999)
     this.caveImage!.setDepth(caveBand).setAlpha(inCave ? caveAlpha : 0).setVisible(inCave && caveAlpha > 0.001 && !fade)
-    if (iris) {
-      this.irisShape.clear().fillStyle(0xffffff).fillCircle(iris.x, iris.y, iris.r)
-      this.caveImage!.setMask(this.irisMask)
-    } else this.caveImage!.clearMask()
     for (const m of this.mouthImages) m.setDepth(BAND.caveGroundOut - 1)
     this.grids[0]!.setVisible(look.grid).setDepth(BAND.gridOut)
     this.grids[1]!.setVisible(look.grid && inCave).setDepth(BAND.gridIn)
@@ -581,7 +576,8 @@ export class HeightLabScene extends Phaser.Scene {
       const body = t.parts[0]!.o
       if (byTint && !(body instanceof Phaser.GameObjects.Text)) {
         const c = this.lighting.at(CAVE, t.x, t.y - 8)
-        const k = (ch: number, sh: number) => Math.round((((t.tint ?? 0xffffff) >> sh) & 255) * (v.cave * c[ch]! + 1 - v.cave))
+        const kd = 1 - v.cave * depthDark(t.z - v.z, look.darkness)
+        const k = (ch: number, sh: number) => Math.round((((t.tint ?? 0xffffff) >> sh) & 255) * c[ch]! * kd)
         body.setTint((k(0, 16) << 16) | (k(1, 8) << 8) | k(2, 0))
         t.tinted = true
       } else if (t.tinted && !(body instanceof Phaser.GameObjects.Text)) {
@@ -638,7 +634,8 @@ export class HeightLabScene extends Phaser.Scene {
     for (const [id, m] of [['hero', this.hero], ['friend', this.friend]] as const) this.lighting.move(id, m.walker.x, m.walker.y - 10, m.walker.layer, m.thing.z)
     const archInView = this.area.mouths.some((m) => (m.x1 + 1) * T > wv.x && m.x0 * T < wv.right && (m.arch[1] + 1) * T > wv.y && m.arch[0] * T < wv.bottom)
     this.lastIris = iris
-    if (!fade) this.crossfade?.setVisible(false)
+    const showCrossfade = fade && (iris !== null || v.alpha > 0.001)
+    if (!showCrossfade) this.crossfade?.setVisible(false)
     if (view <= 0.001 && !archInView) {
       this.lightView.hide()
       this.lighting.stats.uncapped = 0
@@ -654,24 +651,29 @@ export class HeightLabScene extends Phaser.Scene {
       {
         depth: { layer: CAVE, z: v.z, cap: this.look.darkness, weight: iris ? 1 : view },
         portal: { layer: CAVE, mask: this.area.arches },
-        // The cave's floors fade in at alpha under this light (dark first, then the cave): never more than
-        // their own light over alpha (they showed lit mid-way, then went dark). The crossfade and the
-        // iris don't draw them under it.
-        cap: iris || fade ? undefined : { layer: CAVE, alpha: v.alpha },
+        over: fade ? { layer: CAVE, alpha: v.alpha } : undefined,
         iris: iris ? { layer: CAVE, ...iris } : undefined
       }
     )
-    if (fade) this.drawCrossfade(v, wv)
+    if (showCrossfade) this.drawCrossfade(v, iris, wv)
     this.lightMs.push(performance.now() - t0)
     if (this.lightMs.length > 120) this.lightMs.shift()
   }
 
   private lastIris: { x: number; y: number; r: number; soft: number } | null = null
 
-  /** The crossfade's image: the cave's floors times the cave's own light, over the view, at the floors' alpha. */
-  private drawCrossfade(v: { alpha: number; z: number }, wv: Phaser.Geom.Rectangle): void {
-    this.caveLightView.draw(this.lighting, wv, [{ layer: CAVE, weight: 1 }], { depth: { layer: CAVE, z: v.z, cap: this.look.darkness, weight: 1 }, portal: { layer: CAVE, mask: this.area.arches } })
-    this.caveLightView.hide()
+  /** The crossfade's image: the cave's floors times the cave's own light, over the view, at the floors' alpha (or inside the iris). */
+  private drawCrossfade(v: { alpha: number; z: number }, iris: { x: number; y: number; r: number; soft: number } | null, wv: Phaser.Geom.Rectangle): void {
+    const R = LIGHT_RES
+    const lx0 = Math.floor(wv.x / R) - 1
+    const ly0 = Math.floor(wv.y / R) - 1
+    const lw = Math.ceil(wv.width / R) + 3
+    const lh = Math.ceil(wv.height / R) + 3
+    if (this.caveLightBuf.length < lw * lh * 4) this.caveLightBuf = new Uint8ClampedArray(lw * lh * 4)
+    this.lighting.fill({ x0: lx0, y0: ly0, w: lw, h: lh }, this.caveLightBuf, [{ layer: CAVE, weight: 1 }], {
+      depth: { layer: CAVE, z: v.z, cap: this.look.darkness, weight: 1 },
+      portal: { layer: CAVE, mask: this.area.arches }
+    })
     const rx = Math.floor(wv.x)
     const ry = Math.floor(wv.y)
     const w = Math.ceil(wv.width) + 2
@@ -690,12 +692,11 @@ export class HeightLabScene extends Phaser.Scene {
     }
     const tex = this.crossfadeTex
     const data = this.crossfadeData!
-    const lt = this.caveLightView.texels()!
     const cp = this.cavePixels!
-    litPixels(cp.px, cp.w, cp.x, cp.y, lt.data, lt.w, lt.h, lt.x0, lt.y0, LIGHT_RES, rx, ry, tex.width, tex.height, data.data)
+    litPixels(cp.px, cp.w, cp.x, cp.y, this.caveLightBuf, lw, lh, lx0, ly0, R, rx, ry, tex.width, tex.height, data.data, iris)
     tex.context.putImageData(data, 0, 0)
     tex.refresh()
-    this.crossfade!.setPosition(rx, ry).setAlpha(v.alpha).setVisible(true)
+    this.crossfade!.setPosition(rx, ry).setAlpha(iris ? 1 : v.alpha).setVisible(true)
   }
 
   /** The light at the hero (0–1), as shown: the cave's over the surface's. */

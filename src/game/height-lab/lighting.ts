@@ -98,6 +98,8 @@ export interface FillOptions {
   portal?: { layer: number; mask: Uint8Array }
   /** This layer's material is drawn at `alpha` over the others: its light never more than its own over alpha there. */
   cap?: { layer: number; alpha: number }
+  /** This layer's material is drawn lit over the light pass at `alpha`: weight the light under it for the remaining surface. */
+  over?: { layer: number; alpha: number }
   /** This layer's light inside a circle (world px), the others' outside, over a soft ring. */
   iris?: { layer: number; x: number; y: number; r: number; soft: number }
 }
@@ -267,7 +269,7 @@ export class Lighting {
     if (this.acc.length < n) this.acc = new Float32Array(n)
     const acc = this.acc
     acc.fill(0, 0, n)
-    const { depth, portal, cap, iris } = opts
+    const { depth, portal, cap, over, iris } = opts
     const per = this.tile / this.res
     // Each view's light at full weight: its ambient and still lights, and its moving lights, apart.
     views.forEach((v, vi) => {
@@ -318,6 +320,30 @@ export class Lighting {
             this.wSrc[vi]![y * rect.w + x] = w
           })
         }
+    const oi = over ? views.findIndex((v) => v.layer === over.layer) : -1
+    if (over && oi >= 0) {
+      // Where the layer's lit image is drawn over this pass at `a * cov`, weight the surface underneath so
+      // `(1 - a * cov) * wSurface = 1 - h` (no double-darkening over the cave, and no underground light on the grass).
+      const mat = this.cover[over.layer]
+      for (let y = 0; y < rect.h; y++) {
+        const ty = Math.min(this.th - 1, Math.max(0, rect.y0 + y))
+        for (let x = 0; x < rect.w; x++) {
+          const t = y * rect.w + x
+          const cov = mat ? mat[ty * this.tw + Math.min(this.tw - 1, Math.max(0, rect.x0 + x))]! : 1
+          if (cov <= 0) continue
+          const h = this.wBase[oi]![t]!
+          const a = iris ? h : over.alpha
+          const rem = 1 - a * cov
+          const wc = rem > 1e-4 ? clamp01((h * (1 - cov)) / rem) : 0
+          const ws = rem > 1e-4 ? clamp01((1 - h) / rem) : 0
+          views.forEach((v, vi) => {
+            const w = v.layer === over.layer ? wc : ws
+            this.wBase[vi]![t] = w
+            this.wSrc[vi]![t] = w
+          })
+        }
+      }
+    }
     if (portal) {
       // Tile by tile over the box: a masked tile's texels.
       const tx0 = Math.max(0, Math.floor(rect.x0 / per))
@@ -343,9 +369,9 @@ export class Lighting {
       for (let t = 0, d = 0; t < nt; t++, d += 3) {
         const b = wb[t]!
         const m = ws[t]!
-        acc[d] += amb[d]! * b + mov[d]! * m
-        acc[d + 1] += amb[d + 1]! * b + mov[d + 1]! * m
-        acc[d + 2] += amb[d + 2]! * b + mov[d + 2]! * m
+        acc[d] += b * clamp01(amb[d]! + mov[d]!) + (m - b) * mov[d]!
+        acc[d + 1] += b * clamp01(amb[d + 1]! + mov[d + 1]!) + (m - b) * mov[d + 1]!
+        acc[d + 2] += b * clamp01(amb[d + 2]! + mov[d + 2]!) + (m - b) * mov[d + 2]!
       }
     })
     // The cap: where the layer's material is drawn at \`alpha\` over another, the light there is never more
@@ -557,6 +583,9 @@ export function sightLine(stops: Uint8Array, w: number, ax: number, ay: number, 
  * in's crossfade (./scene.ts): the cave's floors in the cave's own light,
  * drawn over the lit surface.
  */
+let litIx = new Int32Array(0)
+let litFxs = new Float32Array(0)
+
 export function litPixels(
   src: Uint8ClampedArray,
   sw: number,
@@ -572,11 +601,16 @@ export function litPixels(
   ry: number,
   w: number,
   h: number,
-  out: Uint8ClampedArray
+  out: Uint8ClampedArray,
+  iris?: { x: number; y: number; r: number; soft: number } | null
 ): void {
   const sh = src.length / 4 / sw
-  const ix = new Int32Array(w)
-  const fxs = new Float32Array(w)
+  if (litIx.length < w) {
+    litIx = new Int32Array(w)
+    litFxs = new Float32Array(w)
+  }
+  const ix = litIx
+  const fxs = litFxs
   for (let x = 0; x < w; x++) {
     const g = (rx + x + 0.5) / res - 0.5 - lx0
     const i = Math.floor(g)
@@ -584,20 +618,32 @@ export function litPixels(
     fxs[x] = i < 0 ? 0 : i > lw - 2 ? 1 : g - i
   }
   out.fill(0, 0, w * h * 4)
+  const irEnd = iris ? iris.r + iris.soft : 0
+  const irSoft = iris ? Math.max(1e-6, iris.soft) : 1
   for (let y = 0; y < h; y++) {
-    const syy = ry + y - sy
+    const wy = ry + y
+    const syy = wy - sy
     if (syy < 0 || syy >= sh) continue
-    const g = (ry + y + 0.5) / res - 0.5 - ly0
+    const dy = iris ? wy + 0.5 - iris.y : 0
+    if (iris && Math.abs(dy) >= irEnd) continue
+    const g = (wy + 0.5) / res - 0.5 - ly0
     const iy = Math.min(lh - 2, Math.max(0, Math.floor(g)))
     const fy = g < 0 ? 0 : Math.floor(g) > lh - 2 ? 1 : g - Math.floor(g)
     const r0 = iy * lw * 4
     const r1 = (iy + 1) * lw * 4
     for (let x = 0; x < w; x++) {
-      const sxx = rx + x - sx
+      const wx = rx + x
+      const sxx = wx - sx
       if (sxx < 0 || sxx >= sw) continue
       const s = (syy * sw + sxx) * 4
-      const a = src[s + 3]!
+      let a = src[s + 3]!
       if (a === 0) continue
+      if (iris) {
+        const d = Math.hypot(wx + 0.5 - iris.x, dy)
+        if (d >= irEnd) continue
+        if (d > iris.r) a = Math.round(a * ((irEnd - d) / irSoft))
+        if (a === 0) continue
+      }
       const fx = fxs[x]!
       const c0 = ix[x]! * 4
       const o = (y * w + x) * 4
