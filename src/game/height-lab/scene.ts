@@ -735,6 +735,15 @@ export class HeightLabScene extends Phaser.Scene {
     this.stillKey = ''
   }
 
+  /** Collision-respecting small steps for the wall-hugging screenshot walk. */
+  stepHero(dx: number, dy: number): void {
+    move(this.area.stack, this.hero.walker, dx, dy)
+    this.place(this.hero)
+    const w = this.hero.walker
+    this.cameras.main.centerOn(w.x, w.y - 8)
+    this.stillKey = ''
+  }
+
   /** The lab's state, for the screenshot spec. */
   state(): {
     area: string
@@ -861,6 +870,7 @@ function labHook(scene: HeightLabScene | null): void {
   }
   w.__fsLab = {
     put: (layer: number, tx: number, ty: number) => scene.put(layer, tx, ty),
+    step: (dx: number, dy: number) => scene.stepHero(dx, dy),
     look: (change: Partial<LabLook>) => setLabLook(change),
     state: () => scene.state()
   }

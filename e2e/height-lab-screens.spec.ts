@@ -36,7 +36,7 @@ type LabState = {
   iris?: number
   crossfade?: boolean
 }
-type Lab = { put: (layer: number, tx: number, ty: number) => void; look: (l: Look) => void; state: () => LabState }
+type Lab = { put: (layer: number, tx: number, ty: number) => void; step: (dx: number, dy: number) => void; look: (l: Look) => void; state: () => LabState }
 
 const labState = (page: Page) => page.evaluate(() => (window as unknown as { __fsLab: Lab }).__fsLab.state())
 
@@ -75,6 +75,55 @@ async function openLab(page: Page): Promise<void> {
 
 test.describe('desktop', () => {
   test.use({ viewport: { width: 1280, height: 800 } })
+  test('height lab round 4c: walk out pressed against each mouth wall', async ({ page }) => {
+    test.setTimeout(900_000)
+    const out = `${OUT}/r4c`
+    mkdirSync(out, { recursive: true })
+    await openLab(page)
+    const frames: Record<string, LabState> = {}
+    const mouths = [
+      { area: 'shoulder', name: 's-first', x: 30, arch: 39 },
+      { area: 'shoulder', name: 's-second', x: 52, arch: 24 },
+      { area: 'mountain', name: 'm-east', x: 56, arch: 73 },
+      { area: 'mountain', name: 'm-west', x: 40, arch: 73 }
+    ] as const
+    for (const m of mouths)
+      for (const way of ['blend', 'eased', 'stages', 'iris'] as const) {
+        // Even at every mouth; also exercise the retained alternatives at the owner's mouth.
+        if (way !== 'blend' && m.name !== 's-first') continue
+        await setLook(page, { area: m.area, way, crossfade: 3, skyTiles: 6, cave: 'wide', caveStyle: 'mixed', darkness: 0.6 })
+        for (const side of ['left', 'right'] as const) {
+          // put() uses tile offsets (+8,+12). At ±11 px from the mouth's
+          // centre the 10 px foot box is flush with the wall, as in the owner shots.
+          const tx = side === 'left' ? m.x - 3 / 16 : m.x + 19 / 16
+          const depth = m.name === 's-second' ? 3 : 5
+          await page.evaluate(([x, y]) => (window as unknown as { __fsLab: Lab }).__fsLab.put(1, x, y), [tx, m.arch - depth])
+          await page.waitForTimeout(900)
+          let previous: LabState | undefined
+          for (let k = 0; k <= (depth + 1) * 4; k++) {
+            if (k) await page.evaluate(() => (window as unknown as { __fsLab: Lab }).__fsLab.step(0, 4))
+            await page.waitForTimeout(200)
+            const name = `${way}-${m.name}-${side}-${String(k).padStart(2, '0')}`
+            const st = await labState(page)
+            frames[name] = st
+            writeFileSync(`${out}/states.json`, JSON.stringify(frames, null, 1))
+            await page.screenshot({ path: `${out}/${name}.png` })
+            if (previous) {
+              expect(st.cave, name).toBeLessThanOrEqual(previous.cave + 0.001)
+              // Stages has the steepest curve: 1.5 / (4 * .55) per tile,
+              // at most .171 per four-pixel step. A corner flash jumps to 1.
+              expect(Math.abs(st.cave - previous.cave), name).toBeLessThanOrEqual(0.18)
+              expect(Math.abs(st.alpha! - previous.alpha!), name).toBeLessThanOrEqual(0.18)
+              expect(Math.abs(st.sky - previous.sky), name).toBeLessThanOrEqual(0.1)
+            }
+            previous = st
+          }
+          expect(previous!.layer).toBe(SURFACE)
+        }
+      }
+    writeFileSync(`${out}/states.json`, JSON.stringify(frames, null, 1))
+  })
+
   test('height lab: cave light at set spots', async ({ page }) => {
     test.setTimeout(240_000)
     mkdirSync(OUT, { recursive: true })

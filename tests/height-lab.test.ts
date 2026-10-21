@@ -492,9 +492,40 @@ test('the way in: the cave never shows brighter mid-way than once in (the corner
   assert.ok(l.stats.uncapped > 0.2, 'the cap saw what it stopped');
 });
 
+test('mouth view stays continuous across the full width, against both walls, walking in and out', () => {
+  for (const a of [area, mtn])
+    for (const mouth of a.mouths)
+      for (let x = mouth.x0 * TILE_PX + 5; x <= (mouth.x1 + 1) * TILE_PX - 5; x++)
+        for (const direction of [-1, 1]) {
+          const w = walker(direction < 0 ? SURFACE : CAVE, mouth.x0, mouth.arch[1] + (direction < 0 ? 2 : -3));
+          w.x = x;
+          const field = a.stack.layers[CAVE]!;
+          const view = () => {
+            const distance = w.layer === CAVE ? sample(field, a.walk, w.x, w.y - 2) : 0;
+            return (['blend', 'eased', 'stages', 'iris'] as const).flatMap(way =>
+              [1, 2, 3, 4].flatMap(tiles => Object.values(wayIn(distance, tiles, way))));
+          };
+          let last = view();
+          let lastSky = w.layer === CAVE ? sample(field, field.sky, w.x, w.y - 2) : 1;
+          for (let pixel = 0; pixel < 9 * TILE_PX; pixel++) {
+            move(a.stack, w, 0, direction);
+            const next = view();
+            const sky = w.layer === CAVE ? sample(field, field.sky, w.x, w.y - 2) : 1;
+            const where = `${a.name} mouth ${mouth.x0}, x=${x}, direction=${direction}, y=${w.y}`;
+            for (let i = 0; i < next.length; i++) {
+              assert.ok(Math.abs(next[i]! - last[i]!) <= 0.1, `${where}: view jump ${last[i]} → ${next[i]}`);
+            }
+            assert.ok(Math.abs(sky - lastSky) <= 0.1, `${where}: daylight jump ${lastSky} → ${sky}`);
+            last = next;
+            lastSky = sky;
+          }
+          assert.equal(w.layer, direction < 0 ? CAVE : SURFACE, 'crossed the portal');
+        }
+});
+
 test('the ways in start outside, end in the cave, and only go one way', () => {
   for (const way of ['blend', 'eased', 'stages', 'iris'] as const)
-    for (const tiles of [1, 3]) {
+    for (const tiles of [1, 2, 3, 4]) {
       let last = { light: 0, alpha: 0 };
       assert.deepEqual(wayIn(0, tiles, way), { light: 0, alpha: 0 }, `${way}: outside at the arch`);
       for (let w = 0; w <= 8; w += 0.1) {
@@ -602,7 +633,7 @@ test('every way in preserves surface weight and bounds cave light at every step 
   const material = new Uint8ClampedArray(16 * 16 * 4).fill(255);
   const pixels = new Uint8ClampedArray(material.length);
   for (const way of ['blend', 'eased', 'stages', 'iris'] as const)
-    for (const tiles of [1, 3])
+    for (const tiles of [1, 2, 3, 4])
       for (let step = 0; step <= 100; step++) {
         const v = wayIn(step * (tiles + 2) / 100, tiles, way);
         const iris = way === 'iris' && v.light > 0.001 && v.light < 0.999
