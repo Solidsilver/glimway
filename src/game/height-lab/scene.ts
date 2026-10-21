@@ -349,9 +349,12 @@ export class HeightLabScene extends Phaser.Scene {
     if (!parent) return
     const d = document.createElement('div')
     d.dataset.testid = 'height-lab-hud'
+    // On a phone the game's own panel sits at the top: the lab's line goes just below its top stack
+    // (where the game's notice card goes, src/ui/NoticeCard.svelte), smaller.
+    const phone = typeof matchMedia !== 'undefined' && matchMedia('(max-width: 700px)').matches
     d.style.cssText =
-      'position:absolute;left:50%;top:max(8px, env(safe-area-inset-top));transform:translateX(-50%);z-index:5;pointer-events:none;' +
-      'padding:4px 12px;border-radius:999px;background:rgba(20,16,28,.72);color:#fff3d6;font:600 12px/1.35 system-ui,sans-serif;text-align:center;white-space:pre'
+      `position:absolute;left:50%;top:${phone ? 'calc(env(safe-area-inset-top) + 190px)' : 'max(8px, env(safe-area-inset-top))'};transform:translateX(-50%);z-index:30;pointer-events:none;` +
+      `padding:4px 12px;border-radius:${phone ? '10px' : '999px'};background:rgba(20,16,28,.72);color:#fff3d6;font:600 ${phone ? '10px/1.3' : '12px/1.35'} system-ui,sans-serif;text-align:center;white-space:${phone ? 'pre-line;width:max-content;max-width:94vw' : 'pre'}`
     parent.appendChild(d)
     this.hud = d
   }
