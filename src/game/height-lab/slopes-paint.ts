@@ -231,7 +231,7 @@ export function paintField(area: LabArea, x0: number, y0: number, w: number, h: 
         else if (ey === 0 || ex === 0) tint([220, 214, 200], 0.3)
       } else if (ground === G['tops-path']) {
         // The rocky path: flat stones of the scree's own stone, laid (scree has streaks down the fall line and loose
-        // stones): each stone a jittered 7 px cell's nearest pixels, its own shade, a dark joint round it, lit on its
+        // stones): each stone a jittered 9 px cell's nearest pixels, its own shade, a dark joint round it, lit on its
         // north-west side, worn smooth (no grit).
         const [stoneId, edge, nw] = flagstone(wx, wy)
         const v = hash(stoneId, 0, 35)
@@ -239,9 +239,9 @@ export function paintField(area: LabArea, x0: number, y0: number, w: number, h: 
         r = c[0]
         g = c[1]
         b = c[2]
-        if (edge < 0.9) tint([64, 58, 54], 0.6)
-        else if (edge < 1.9 && nw) tint([234, 228, 214], 0.32)
-        else if (edge < 1.9) tint([92, 86, 80], 0.2)
+        if (edge < 0.45) tint([95, 90, 82], 0.45)
+        else if (edge < 1.1 && nw) tint([234, 228, 214], 0.2)
+        else if (edge < 1.1) tint([92, 86, 80], 0.12)
       }
       // The treatments: light, then lines.
       let k = 1
@@ -294,20 +294,20 @@ export function paintField(area: LabArea, x0: number, y0: number, w: number, h: 
         const line = above < below ? Math.floor(lv) : Math.ceil(lv)
         const cell = hash(Math.floor(wx / SPARSE_CELL), Math.floor(wy / SPARSE_CELL), 41 + line)
         const fade = 1 - smoothstep(0.18, 0.26, slope)
-        if (cell >= 0.3 && fade > 0) {
-          if (cell < 0.65) {
+        if (cell >= 0.5 && fade > 0) {
+          if (cell < 0.78) {
             // Grass tips: light blades of uneven height on the high side's edge, a dark shade under them.
-            if (hash(wx, line, 43) < 0.6 && above < 1 + 1.6 * hash(wx, line, 44)) tint([204, 228, 124], 0.55 * fade)
-            else if (below < 1.6) tint([32, 56, 26], 0.48 * fade)
-            else if (below < 3) tint([32, 56, 26], 0.2 * fade)
-          } else if (cell < 0.87) {
+            if (hash(wx, line, 43) < 0.6 && above < 0.7 + 1.1 * hash(wx, line, 44)) tint([204, 228, 124], 0.42 * fade)
+            else if (below < 0.9) tint([32, 56, 26], 0.28 * fade)
+            else if (below < 1.8) tint([32, 56, 26], 0.1 * fade)
+          } else if (cell < 0.94) {
             // A soil edge: a light rim, bare soil just below it.
-            if (above < 1.5) tint([240, 230, 186], 0.45 * fade)
-            else if (below < 1.5) tint([92, 68, 44], 0.58 * fade)
-            else if (below < 3) tint([92, 68, 44], 0.26 * fade)
-          } else if (below < 3 && hash(wx >> 1, wy >> 1, 45) < 0.45) {
+            if (above < 0.9) tint([240, 230, 186], 0.32 * fade)
+            else if (below < 0.9) tint([92, 68, 44], 0.32 * fade)
+            else if (below < 1.8) tint([92, 68, 44], 0.12 * fade)
+          } else if (below < 1.8 && hash(wx >> 1, wy >> 1, 45) < 0.45) {
             // A few stones along the line, each lit on top, a shadow under it.
-            tint((wy & 1) === 0 ? [222, 216, 200] : [48, 44, 40], (wy & 1) === 0 ? 0.65 * fade : 0.45 * fade)
+            tint((wy & 1) === 0 ? [222, 216, 200] : [48, 44, 40], (wy & 1) === 0 ? 0.48 * fade : 0.28 * fade)
           }
         }
       }
@@ -357,7 +357,7 @@ export function paintField(area: LabArea, x0: number, y0: number, w: number, h: 
 
 /** Flagstones: the stone (a cell id) a pixel is in, how far it is from the stone's edge (px), and whether that edge is its north-west side. */
 function flagstone(wx: number, wy: number): [number, number, boolean] {
-  const S = 7
+  const S = 9
   const cx = Math.floor(wx / S)
   const cy = Math.floor(wy / S)
   let best = Infinity

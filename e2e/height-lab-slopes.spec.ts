@@ -65,14 +65,15 @@ async function shot(page: Page, name: string, spot: Spot) {
 /** rAF recording lives outside Phaser so a scene restart cannot reset it. */
 async function startFrames(page: Page) {
   await page.evaluate(() => {
-    const w = window as unknown as { __frames: number[]; __framesOn: boolean }
+    const w = window as unknown as { __frames: number[]; __framesId?: number }
     w.__frames = []
-    w.__framesOn = true
+    const id = w.__framesId = (w.__framesId ?? 0) + 1
     let last = performance.now()
     const tick = (t: number) => {
+      if (w.__framesId !== id) return
       w.__frames.push(t - last)
       last = t
-      if (w.__framesOn) requestAnimationFrame(tick)
+      requestAnimationFrame(tick)
     }
     requestAnimationFrame(tick)
   })
@@ -80,8 +81,8 @@ async function startFrames(page: Page) {
 }
 async function endFrames(page: Page) {
   const raw = await page.evaluate(() => {
-    const w = window as unknown as { __frames: number[]; __framesOn: boolean }
-    w.__framesOn = false
+    const w = window as unknown as { __frames: number[]; __framesId?: number }
+    w.__framesId = (w.__framesId ?? 0) + 1
     return w.__frames.slice(1)
   })
   const s = [...raw].sort((a, b) => a - b)
@@ -146,7 +147,7 @@ test.describe('desktop', () => {
       expect(runs.down.seconds).toBeCloseTo(runs.off.seconds, 6)
       expect(runs.up.seconds / runs.off.seconds).toBeGreaterThan(1.08)
       expect(runs.up.seconds / runs.off.seconds).toBeLessThan(1.14)
-      expect(runs.across.seconds / 32).toBeCloseTo(runs.off.seconds / 56, 3)
+      expect(runs.across.seconds / (runs.off.seconds * 32 / 56)).toBeCloseTo(1, 2)
       if (reference) for (const key of ['up', 'down', 'across', 'off'] as const) {
         expect(runs[key].seconds, `${preset}: ${key} field time`).toBeCloseTo(reference[key].seconds, 8)
         expect(runs[key].to, `${preset}: ${key} destination`).toEqual(reference[key].to)

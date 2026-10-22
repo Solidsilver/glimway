@@ -90,7 +90,10 @@ and sprite contrast. After inspecting the faint hills, the shade response was
 increased from 6 to 12: small gradients get a stronger cue while the warm/cool
 palette endpoints stay fixed. Sparse contours put broken grass, soil and stone accents at
 world-anchored one-level intervals, with light high edges and soft low edges;
-they fade out toward steep rock. Terraces remain visual: collision stays smooth.
+they fade out toward steep rock. CI review found wall-like edges, so gaps now
+cover half the world cells and the light/shadow pairs are thinner and softer.
+The rocky slab strip has broader stones with shallow joints: its former heavy
+mortar read as raised edging. Terraces remain visual: collision stays smooth.
 Lift is consistently 0, 24 or 48 pixels per level for ground, feet, props, camera,
 bounds and cache keys. The closed cliff footprint is drawn as talus at reduced lift.
 
