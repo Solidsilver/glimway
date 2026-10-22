@@ -91,3 +91,13 @@ The round tries all four drawing styles the owner picked: shading by facing, con
 small terraces, and a true ¾ lift. The owner walks it and picks. Only then is the generator
 rebuilt around slopes; lane B's fields and biomes stay, and upland becomes the smooth mountain
 height.
+
+**Further thoughts (owner, same day):**
+
+- **Fog alone won't do** for hills and edges; slopes need their own shading.
+- **Routes are part of the play.** Mountains should make players look for a pass, go around, or
+  find a tunnel under (the caves work comes back here). Mountains are there to break up travel.
+- **Let mountains get tall.** Not massive, but don't cap them tightly. **Unreachable spires**
+  are welcome.
+- **Later, climbing gear** may open too-steep ground and spires. So too-steep rock and crags are
+  their own kinds of ground, never just "solid", so a later rule can let gear climb them.
