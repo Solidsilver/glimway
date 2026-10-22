@@ -1,0 +1,320 @@
+{
+ "area": "slopes",
+ "look": {
+  "area": "slopes",
+  "fog": "fog",
+  "fogStrength": "medium",
+  "darkness": 0.6,
+  "caveStyle": "mixed",
+  "zoom": true,
+  "haze": true,
+  "cave": "lantern",
+  "skyTiles": 6,
+  "crossfade": 3,
+  "way": "blend",
+  "grid": false,
+  "strategy": "region",
+  "walkOverlay": false,
+  "slopeFacing": "restrained",
+  "slopeContours": "off",
+  "slopeTerraces": true,
+  "slopeLift": 0,
+  "slopeUphill": "gentle"
+ },
+ "built": {
+  "area": "slopes",
+  "skyTiles": 6,
+  "caveStyle": "mixed",
+  "strategy": "region",
+  "walkOverlay": false,
+  "slopeFacing": "restrained",
+  "slopeContours": "off",
+  "slopeTerraces": true,
+  "slopeLift": 0
+ },
+ "layer": 0,
+ "z": 2.180317540322581,
+ "sky": 1,
+ "walked": 0,
+ "cave": 0,
+ "alpha": 0,
+ "light": 1,
+ "lightMs": 0,
+ "corners": {
+  "shown": [
+   1,
+   1,
+   1,
+   1
+  ],
+  "own": [
+   0,
+   0,
+   0,
+   0
+  ]
+ },
+ "uncapped": 0,
+ "iris": 0,
+ "crossfade": false,
+ "slopes": {
+  "look": {
+   "facing": "restrained",
+   "contours": "off",
+   "terraces": true,
+   "lift": 0
+  },
+  "preset": "terraces",
+  "style": "terraces",
+  "lift": false,
+  "gentle": true,
+  "uphill": {
+   "gx": -0.030517578124998335,
+   "gy": -0.203125,
+   "up": 0.203125,
+   "k": 1
+  },
+  "tile": [
+   30,
+   88
+  ],
+  "at": [
+   488,
+   1420
+  ],
+  "shown": [
+   488,
+   1420
+  ],
+  "silhouette": false,
+  "kind": 2,
+  "size": [
+   144,
+   144
+  ],
+  "pending": 0,
+  "slow": [],
+  "paint": {
+   "frames": 435,
+   "p50": 5.300000190734863,
+   "p95": 7.300000190734863,
+   "max": 12
+  },
+  "upload": {
+   "frames": 155,
+   "p50": 5.3999998569488525,
+   "p95": 10,
+   "max": 10.600000143051147
+  },
+  "update": {
+   "frames": 120,
+   "p50": 0.20000004768371582,
+   "p95": 10.299999952316284,
+   "max": 11.400000095367432
+  },
+  "spots": [
+   {
+    "name": "spawn",
+    "x": 70,
+    "y": 96,
+    "fx": 70,
+    "fy": 96,
+    "note": "low ground in the valley; the range north, the hills west, the sea south",
+    "look": null
+   },
+   {
+    "name": "hills",
+    "x": 30,
+    "y": 88,
+    "fx": 30,
+    "fy": 88,
+    "note": "rolling hills: walkable anywhere, no cliffs",
+    "look": null
+   },
+   {
+    "name": "pass-foot",
+    "x": 72,
+    "y": 70,
+    "fx": 72,
+    "fy": 70,
+    "note": "where the climb to the pass starts (path ground)",
+    "look": null
+   },
+   {
+    "name": "pass-mid",
+    "x": 72,
+    "y": 48,
+    "fx": 72,
+    "fy": 48,
+    "note": "halfway up: the too-steep band closes in on both sides",
+    "look": null
+   },
+   {
+    "name": "pass-top",
+    "x": 72,
+    "y": 31,
+    "fx": 72,
+    "fy": 31,
+    "note": "the saddle, about level 6; shoulders too steep either side",
+    "look": null
+   },
+   {
+    "name": "pass-north",
+    "x": 72,
+    "y": 10,
+    "fx": 72,
+    "fy": 10,
+    "note": "down the far side to the upland",
+    "look": null
+   },
+   {
+    "name": "steep-band",
+    "x": 56,
+    "y": 46,
+    "fx": 56,
+    "fy": 46,
+    "note": "below the scree band on the range’s south side, looking north",
+    "look": [
+     56,
+     40
+    ]
+   },
+   {
+    "name": "crags",
+    "x": 90,
+    "y": 40,
+    "fx": 90,
+    "fy": 40,
+    "note": "under the crags near the eastern peaks",
+    "look": [
+     92,
+     31
+    ]
+   },
+   {
+    "name": "spire",
+    "x": 37,
+    "y": 49,
+    "fx": 40,
+    "fy": 52,
+    "note": "below the spire (level 15): its face, crags round its foot; no way up",
+    "look": [
+     40,
+     40
+    ]
+   },
+   {
+    "name": "outcrop-slope",
+    "x": 103,
+    "y": 82,
+    "fx": 103,
+    "fy": 82,
+    "note": "the outcrop’s gentle side: walk south up onto it",
+    "look": null
+   },
+   {
+    "name": "outcrop-top",
+    "x": 103,
+    "y": 95,
+    "fx": 103,
+    "fy": 95,
+    "note": "the outcrop’s edge, about 3 levels over the valley",
+    "look": null
+   },
+   {
+    "name": "outcrop-cliff",
+    "x": 103,
+    "y": 108,
+    "fx": 103,
+    "fy": 108,
+    "note": "below the outcrop’s cliff, looking north at its face",
+    "look": [
+     103,
+     100
+    ]
+   },
+   {
+    "name": "sea-cliff",
+    "x": 30,
+    "y": 118,
+    "fx": 30,
+    "fy": 118,
+    "note": "the sea cliff’s top, the sand flats below",
+    "look": [
+     30,
+     123
+    ]
+   },
+   {
+    "name": "gully",
+    "x": 45,
+    "y": 112,
+    "fx": 45,
+    "fy": 112,
+    "note": "the one way down to the sea",
+    "look": null
+   },
+   {
+    "name": "sea",
+    "x": 45,
+    "y": 134,
+    "fx": 45,
+    "fy": 134,
+    "note": "on the sand flats under the cliff",
+    "look": null
+   },
+   {
+    "name": "plateau",
+    "x": 132,
+    "y": 110,
+    "fx": 132,
+    "fy": 110,
+    "note": "the plateau patch: whole levels, cliffs, ramps (like the generator)",
+    "look": null
+   },
+   {
+    "name": "behind-plateau",
+    "x": 132,
+    "y": 66,
+    "fx": 132,
+    "fy": 66,
+    "note": "just north of the plateau patch: in the lift, hidden behind it (drawn as a silhouette)",
+    "look": null
+   },
+   {
+    "name": "around-east",
+    "x": 128,
+    "y": 40,
+    "fx": 128,
+    "fy": 40,
+    "note": "round the range’s east end: the long way north",
+    "look": null
+   },
+   {
+    "name": "knoll",
+    "x": 86,
+    "y": 100,
+    "fx": 86,
+    "fy": 100,
+    "note": "the knoll: a cone, 0.2 level a tile every way round (the uphill runs)",
+    "look": [
+     86,
+     92
+    ]
+   },
+   {
+    "name": "rocky-path",
+    "x": 53,
+    "y": 42,
+    "fx": 53,
+    "fy": 42,
+    "note": "the rocky path beside the scree: walkable stone next to too-steep stone",
+    "look": [
+     51,
+     40
+    ]
+   }
+  ],
+  "parts": 24
+ }
+}

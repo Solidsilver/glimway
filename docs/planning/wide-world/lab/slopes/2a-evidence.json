@@ -1,0 +1,143 @@
+{
+  "run": "https://github.com/Solidsilver/glimway/actions/runs/39834935093",
+  "commit": "044da89c8e8109e12f7eed46cfb9bc9faa24f5bd",
+  "inspected": [
+    "baseline-fog-off-pass-top.png",
+    "baseline-hills.png",
+    "baseline-outcrop-cliff.png",
+    "baseline-pass-north.png",
+    "baseline-pass-top.png",
+    "baseline-rocky-path.png",
+    "baseline-steep-band.png",
+    "baseline-steep-walk-stopped.png",
+    "full-behind-plateau.png",
+    "full-fog-off-pass-top.png",
+    "full-hills.png",
+    "full-outcrop-cliff.png",
+    "full-pass-north.png",
+    "full-pass-top.png",
+    "full-rocky-path.png",
+    "full-steep-band.png",
+    "full-steep-walk-stopped.png",
+    "moderate-fog-off-pass-top.png",
+    "moderate-hills.png",
+    "moderate-outcrop-cliff.png",
+    "moderate-pass-north.png",
+    "moderate-pass-top.png",
+    "moderate-rocky-path.png",
+    "moderate-steep-band.png",
+    "phone-moderate-pass-mid.png",
+    "sparse-fog-off-pass-top.png",
+    "sparse-hills.png",
+    "sparse-outcrop-cliff.png",
+    "sparse-pass-north.png",
+    "sparse-pass-top.png",
+    "sparse-rocky-path.png",
+    "sparse-steep-band.png",
+    "terraces-fog-off-pass-top.png",
+    "terraces-hills.png",
+    "terraces-outcrop-cliff.png",
+    "terraces-pass-north.png",
+    "terraces-pass-top.png",
+    "terraces-rocky-path.png",
+    "terraces-steep-band.png"
+  ],
+  "selected": {
+    "baseline-hills": {
+      "sha256": "f08aca34af12e65b42cdbde41ddd914fab61fa0e31c7cf810b52b74eb15fed45",
+      "state": "baseline-hills.json"
+    },
+    "baseline-pass-top": {
+      "sha256": "30bf45743d6f7e8d46e440224692c2bbc70bcdec48234bb84657f22c3b59aed8",
+      "state": "baseline-pass-top.json"
+    },
+    "baseline-rocky-path": {
+      "sha256": "cbe759716d3f1b2a5e6bcdf6a8cec9092b1c82eb41257ce95b3f4f7e1bcabf1b",
+      "state": "baseline-rocky-path.json"
+    },
+    "sparse-hills": {
+      "sha256": "459cc167194b72deb04ff8ab5be38d670729eff727e7e883fda516b827782c76",
+      "state": "sparse-hills.json"
+    },
+    "sparse-pass-top": {
+      "sha256": "a39a6d8a1784988596d7f405068509351d4c5814f24e2152295ed301cf2d9b36",
+      "state": "sparse-pass-top.json"
+    },
+    "sparse-rocky-path": {
+      "sha256": "05f4a2dd205d96e6891ef13c862c0d28068fcf9413edbc2c08832a1642f93103",
+      "state": "sparse-rocky-path.json"
+    },
+    "terraces-hills": {
+      "sha256": "3b138c5444fdf14813ce4d5bd97eb625ef4975abdcfe386e43da23a86fb8668d",
+      "state": "terraces-hills.json"
+    },
+    "terraces-pass-top": {
+      "sha256": "f3d782db6a4a61f618310a6c28a70897aeac8d4dd747e4f684b3a695e583c647",
+      "state": "terraces-pass-top.json"
+    },
+    "terraces-rocky-path": {
+      "sha256": "eacf964bd955ab97f03215aeb4333ccbea1d8873727648cbaf8bfc797121db88",
+      "state": "terraces-rocky-path.json"
+    },
+    "moderate-hills": {
+      "sha256": "1cbf9584d087a6ab84ceb8f9296de47014bae3cf174f4461159444886be4a752",
+      "state": "moderate-hills.json"
+    },
+    "moderate-pass-top": {
+      "sha256": "db159c403250365e2e55fcf1ae2bdcc062f6fad3276ee12197d8390d37b97394",
+      "state": "moderate-pass-top.json"
+    },
+    "moderate-rocky-path": {
+      "sha256": "a9871d78e6d206ecb9c7449b21fc1a3ad16dbddea541b253fbb027dafb95fb33",
+      "state": "moderate-rocky-path.json"
+    },
+    "full-hills": {
+      "sha256": "79cd72c79fd018778e90967f1461122b93bf0478a0528b3ccaac67e1dfc1faac",
+      "state": "full-hills.json"
+    },
+    "full-pass-top": {
+      "sha256": "cf20a2f16bfe45433d8498d299cc16e816507e60b8eacf6d6e53ed451e3ae18b",
+      "state": "full-pass-top.json"
+    },
+    "full-rocky-path": {
+      "sha256": "96686ef0a8b474a19c57fce1e9cf8f0991f8f56965113731fb56063dec9b46e5",
+      "state": "full-rocky-path.json"
+    },
+    "moderate-outcrop-cliff": {
+      "sha256": "9254e067dd37cde4c4c69dca98dae7678c4917192fc06940f986bd92d0c61e39",
+      "state": "moderate-outcrop-cliff.json"
+    },
+    "moderate-pass-north": {
+      "sha256": "86aca66bf4b0b39ddb04d888285048c33a7c2410ba1bb6046734fd3f2d23315a",
+      "state": "moderate-pass-north.json"
+    },
+    "full-outcrop-cliff": {
+      "sha256": "f5b392d9fbd9d0116abf22a5adb66664ebae8a7c7c71a5ac258414c2968b6c5a",
+      "state": "full-outcrop-cliff.json"
+    },
+    "full-pass-north": {
+      "sha256": "20100f73a0a81567f29f73d4fcfbe12099fd4aecf43a0b425cefbb2913ba6dda",
+      "state": "full-pass-north.json"
+    },
+    "baseline-fog-off-pass-top": {
+      "sha256": "4f1b4ad7d41693ce8cbb882c5dcf7661b7bbf7dc0b301fcb562666eaed64587b",
+      "state": "baseline-fog-off-pass-top.json"
+    },
+    "moderate-fog-off-pass-top": {
+      "sha256": "c9fd63f702098651fa33b278a62037de4ca17ad37e5257a67db51ad248fbe584",
+      "state": "moderate-fog-off-pass-top.json"
+    },
+    "phone-moderate-pass-mid": {
+      "sha256": "16d0159ae198ed26e3faf03ecea9707bfd6f0fa55d2aeb68f9b22b1ddd63406f",
+      "state": "phone-moderate-pass-mid.json"
+    },
+    "full-behind-plateau": {
+      "sha256": "de9c46a8a73102a2cc44c30601cb12b6d637b97264c9db457e0de50ff62b5164",
+      "state": "full-behind-plateau.json"
+    },
+    "baseline-steep-walk-stopped": {
+      "sha256": "598cac8d0453854e4d1d27a26be6d842fa44e98738eb3a45c21d4ed52fbe606b",
+      "state": "baseline-steep-walk-stopped.json"
+    }
+  }
+}

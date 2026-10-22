@@ -35,7 +35,7 @@ The independent rows are **Facing shade: Off / Restrained / Current**,
 The old “Slopes, with shading” row is now **Facing shade**.
 
 Walk the same route for each preset. Coordinates below are field tiles, also in
-[lab/slopes/spots.json](lab/slopes/spots.json). The lifted view moves drawing north,
+[lab/slopes/2a-spots.json](lab/slopes/2a-spots.json). The lifted view moves drawing north,
 while walking continues in field coordinates.
 
 | Stop | Field tile | From spawn (70,96); what to judge |
@@ -131,6 +131,57 @@ The fog-off saddle keeps the opening readable in every preset. The phone frame
 shows the moderate-lift halfway approach; it proves framing, not a mobile frame
 budget. Tall north-facing field-boundary views can expose the finite lab's outer
 edge, which is not an unpainted interior chunk.
+
+## Measured browser tails (2a)
+
+[Run 39834935093](https://github.com/Solidsilver/glimway/actions/runs/39834935093),
+code `044da89c`, desktop 1280×800 on the CI GPU runner. Full E2E: **11 passed,
+0 flaky, 0 failed, 0 helper retries**. The final 39 slopes frames were all inspected;
+24 originals and their state JSON are in the [evidence index](lab/slopes/README.md).
+The targeted height-lab/dead-export Node suite passed all 76 tests locally; full
+repository verification runs in CI. No Playwright or Vite was run on this host.
+
+All values below are milliseconds. Walking combines the 4 s east and 3 s north
+real-key runs. Switch recording spans the restart, progressive painting/upload,
+wait for all pending work, and a 250 ms settle. It measures the whole browser,
+not just Phaser update. Raw samples and long tasks are retained in
+[2a-timing.json](lab/slopes/2a-timing.json).
+
+| Preset | Walk p95 / p99 / max | First-tour switch p99 / max | Repeat at spawn p99 / max | Upload p95 / max |
+|---|---|---|---|---|
+| Shading baseline | 16.7 / 16.8 / 33.3 | 16.8 / 66.7 | 16.8 / 33.3 | 9.3 / 9.8 |
+| Sparse contours | 16.8 / 33.3 / 33.4 | 33.3 / 66.6 | 16.8 / 33.4 | 10.2 / 11.9 |
+| Small terraces | 16.7 / 16.8 / 16.8 | 16.8 / 49.9 | 16.8 / 33.3 | 9.7 / 10.4 |
+| Moderate lift | 16.8 / 16.8 / 16.8 | 16.8 / 66.6 | 16.8 / 50.1 | 5.2 / 5.4 |
+| Full lift reference | 16.7 / 16.8 / 16.8 | 16.8 / 66.6 | 16.8 / 50.0 | 5.3 / 5.6 |
+
+Walks recorded **no browser long tasks ≥50 ms**; first-tour preset switches
+recorded 53–73 ms main-thread tasks, and the repeated moderate/full switches
+recorded 52 ms tasks. Most pacing is 16.7–16.8 ms; a 5 ms work budget still is
+not a 5 ms frame guarantee. Paint p95 was 7.0–8.2 ms, with a 25 ms maximum.
+The paint/upload columns are scene-lifetime samples through the walk, including
+entry work, rather than isolated walking-only step costs.
+
+The previous pass had flat-style upload maxima of 48–49.9 ms; splitting faces,
+props and grid work brought these to 9.8–11.9 ms here. That previous pass also
+had **one 2166.6 ms sparse-switch rAF gap**, absent from the lab's >20 ms update
+log. It did not recur in this final pass. Its cause remains unassigned; there
+was no long-task observer in that run, so it cannot be blamed on the GPU or CI
+host from these measurements alone. The raw evidence is preserved in
+[2a-timing-before-final-batching.json](lab/slopes/2a-timing-before-final-batching.json).
+
+Repeat switching follows the tour at one fixed spawn location. The 48-chunk pixel
+cache can evict earlier presets, so this is a repeat/cache-reuse test, not a promise
+that every chunk was cached. Complete pending-window fill took roughly 4.3–5.4 s
+including the settle wait; the first chunks appear progressively, not after that
+whole wait. A cold view can therefore show loading gaps. Memory and phone frame
+tails remain unmeasured. Short fixed walks also do not establish a world-wide
+streaming budget or worst-case performance.
+
+For every preset, the same knoll run took **0.571788 s uphill over 56 px** with
+Gentle, **0.509091 s downhill over 56 px**, **0.290976 s across over 32 px**, and
+**0.509091 s uphill with Off**. Every destination and field time matched across
+all five presets. The uphill cap refers to speed loss (12%), not time added.
 
 ## Evidence and owner questions
 
