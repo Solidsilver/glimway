@@ -101,3 +101,18 @@ height.
   are welcome.
 - **Later, climbing gear** may open too-steep ground and spires. So too-steep rock and crags are
   their own kinds of ground, never just "solid", so a later rule can let gear climb them.
+
+## After walking slopes 2a (owner, 2026-10-22)
+
+- **Shading by facing is the favourite.** Lift, contours and terraces stay in the lab as options
+  and get no more work for now.
+- **Speed is what makes height felt.** The lift's best part was the speed feel, so slope speed
+  gets sliders: uphill slowdown 0–40% (today's Gentle is 12%) and downhill quickening 0–20%.
+- **Slope animations:** a different gait uphill, and on steeper ground, to help read slopes.
+  Coded first (cadence from real speed, a small lean, foot scuffs on steep). Drawn frames are a
+  later art lane, if the coded version helps.
+- **A sunlight system**, as the cave lighting did for caves: one sun for ground and sprites,
+  sprite shadows cast away from the sun that stretch or shorten with the slope, and sprites lit
+  by the facing of the ground they stand on. A sun that moves with the clock comes later.
+- Round 2b is now this: "shading plus feel". Hidden ground, picking and the tunnel inside the
+  lift are dropped. The tunnel comes back with the caves work.
