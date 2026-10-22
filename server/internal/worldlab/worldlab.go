@@ -49,6 +49,7 @@ type Options struct {
 	// Walk: the walk lab's window (walk.go) instead of a picture.
 	Walk           bool    `json:"walk,omitempty"`
 	Terrain        string  `json:"terrain,omitempty"`
+	Slopes         string  `json:"slopes,omitempty"` // height, kinds, routes, reach, tunnels
 	TerrainSamples int     `json:"terrainSamples,omitempty"`
 	TerrainOrder   uint64  `json:"terrainOrder,omitempty"`
 	CompareSeed    string  `json:"compareSeed,omitempty"`
@@ -109,6 +110,23 @@ func enabled(o Options, name string) bool {
 
 // Validate refuses a render outside the limits, before any work.
 func Validate(o Options) error {
+	if o.Slopes != "" {
+		if len(o.Raw) > 0 && !bytes.Equal(o.Raw, embeddedRules()) {
+			return errors.New("slopes uses embedded rules")
+		}
+		if o.Walk || o.Terrain != "" || o.Inspect != nil || o.Signatures || o.Field != "" || o.Overlays != "" || o.CompareSeed != "" || o.CompareContent != "" {
+			return errors.New("slopes takes its own diagnostic view, seed and crop")
+		}
+		if o.View != "region" && o.View != "atlas" {
+			return errors.New("slopes requires region or atlas view")
+		}
+		if o.Slopes != "height" && o.Slopes != "kinds" && o.Slopes != "routes" && o.Slopes != "reach" && o.Slopes != "tunnels" {
+			return errors.New("slopes must be height, kinds, routes, reach or tunnels")
+		}
+		if o.Rect[0] < -24 || o.Rect[1] < -24 || o.Rect[2] > 23 || o.Rect[3] > 23 {
+			return errors.New("slopes crop must be inside its certified -24..23 chunk domain")
+		}
+	}
 	if o.Walk {
 		// A fixed window with the embedded rules: only the seed and season vary.
 		if o.Terrain != "" || o.Inspect != nil || len(o.Raw) > 0 {
@@ -162,7 +180,7 @@ func Validate(o Options) error {
 	limit := MaxAtlasChunks
 	if o.View != "atlas" {
 		size := int(content.WildsRules.GetChunkSize())
-		if o.Terrain != "" {
+		if o.Terrain != "" || o.Slopes != "" {
 			size = wilds.TerrainChunkSize
 		}
 		units *= size * size
