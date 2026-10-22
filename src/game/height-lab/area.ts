@@ -53,6 +53,7 @@ import {
 import { DAYLIGHT, LIGHT_RES, caveAmbient, caveCover, caveLevels, caveStops, crystalLight, daylight, openAir, sunnyFaceRock, type Glow } from './light.ts'
 import { Lighting } from './lighting.ts'
 import type { WalkInfo } from './walk.ts'
+import type { SlopesInfo } from './slopes.ts'
 
 export { CAVE, SURFACE }
 
@@ -71,10 +72,12 @@ export const G = Object.fromEntries(GROUNDS.map((g, i) => [g, i])) as Record<Gro
 
 
 export interface PropSpot {
-  kind: 'oak' | 'pine' | 'birch' | 'boulder' | 'fern' | 'cairn' | 'standing-stone' | 'thicket' | 'snag'
+  kind: 'oak' | 'pine' | 'birch' | 'boulder' | 'fern' | 'cairn' | 'standing-stone' | 'thicket' | 'snag' | 'crag'
   tx: number
   ty: number
   variant: number
+  /** Its ground's height, where that isn't the tile's whole level (the slopes area). */
+  z?: number
   /** Walks are shut on its tile (ferns aren't). */
   blocks: boolean
 }
@@ -87,8 +90,8 @@ export interface Mouth {
   arch: [number, number]
 }
 
-/** The lab's areas: the first round's valley, plateau and shoulder; the mountain with its saddle and deep cave (./mountain.ts); near home, generated (./walk.ts). */
-export type AreaName = 'shoulder' | 'mountain' | 'walk'
+/** The lab's areas: the first round's valley, plateau and shoulder; the mountain with its saddle and deep cave (./mountain.ts); near home, generated (./walk.ts); slopes, hills and passes (./slopes.ts). */
+export type AreaName = 'shoulder' | 'mountain' | 'walk' | 'slopes'
 
 export interface AreaOptions {
   /** Walked tiles from a mouth to where daylight is gone. */
@@ -124,10 +127,12 @@ export interface LabArea {
   cover: Float32Array
   /** The generated area's: where it is in the world, biomes, regions, what its strategy strands (./walk.ts). */
   generated?: WalkInfo
+  /** The slopes area's: its field, the style it was built for, how map tiles map to the field (./slopes.ts). */
+  slopes?: SlopesInfo
 }
 
 /** An area as authored: everything but what's worked out from it (light). */
-export type AreaPlan = Omit<LabArea, 'walk' | 'generated' | 'ambient' | 'air' | 'stops' | 'levels' | 'arches' | 'cover'>
+export type AreaPlan = Omit<LabArea, 'walk' | 'generated' | 'slopes' | 'ambient' | 'air' | 'stops' | 'levels' | 'arches' | 'cover'>
 
 /** Work out an authored area's light: daylight from its mouths, open air, what stops light. */
 export function lightArea(plan: AreaPlan, opts: AreaOptions): LabArea {

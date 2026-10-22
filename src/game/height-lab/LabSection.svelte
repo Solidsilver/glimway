@@ -11,8 +11,10 @@
   $effect(() => onLabLook((l) => (look = l)))
   const here = inLab()
 
-  const choices: { key: keyof LabLook; label: string; walk?: boolean; options: { value: LabLook[keyof LabLook]; label: string }[] }[] = [
-    { key: 'area', label: 'Area', options: [{ value: 'shoulder', label: 'Plateau and shoulder' }, { value: 'mountain', label: 'Mountain and deep cave' }, { value: 'walk', label: 'Near home (generated)' }] },
+  const choices: { key: keyof LabLook; label: string; walk?: boolean; slopes?: boolean; options: { value: LabLook[keyof LabLook]; label: string }[] }[] = [
+    { key: 'area', label: 'Area', options: [{ value: 'shoulder', label: 'Plateau and shoulder' }, { value: 'mountain', label: 'Mountain and deep cave' }, { value: 'walk', label: 'Near home (generated)' }, { value: 'slopes', label: 'Slopes, hills and passes' }] },
+    { key: 'slopeStyle', label: 'Slopes, drawn as', slopes: true, options: [{ value: 'shade', label: 'Shading by facing' }, { value: 'contours', label: 'Contour hints' }, { value: 'terraces', label: 'Small terraces' }, { value: 'lift', label: 'True ¾ lift' }] },
+    { key: 'slopeShade', label: 'Slopes, with shading (on contours, terraces, lift)', slopes: true, options: [{ value: true, label: 'On' }, { value: false, label: 'Off' }] },
     { key: 'strategy', label: 'Near home, the way up', walk: true, options: [{ value: 'region', label: 'Region plan' }, { value: 'chunk', label: 'Per-chunk repair' }] },
     { key: 'walkOverlay', label: 'Near home, stranded ground and chunk lines', walk: true, options: [{ value: false, label: 'Off' }, { value: true, label: 'On' }] },
     { key: 'fog', label: 'Levels above and below fade to', options: [{ value: 'fog', label: 'Fog' }, { value: 'sky', label: 'Sky' }, { value: 'none', label: 'Nothing' }] },
@@ -29,10 +31,10 @@
 
 <section class="lab" class:bare data-testid="height-lab-controls">
   {#if !bare}<h3 class="section-title"><Icon name="stone" size={14} /> Height lab</h3>{/if}
-  <p class="what">Hand-made areas with real levels and caves: a valley, plateau and shoulder; a mountain with a saddle and a deep cave. And near home, generated: the real fields' heights round Town under either way up (the server works it out; nothing is saved).</p>
+  <p class="what">Hand-made areas with real levels and caves: a valley, plateau and shoulder; a mountain with a saddle and a deep cave. And near home, generated: the real fields' heights round Town under either way up (the server works it out; nothing is saved). And slopes, hills and passes: smooth ground, a tall range with a pass, an outcrop and a sea cliff, in four drawing styles.</p>
   {#if here}
     <button type="button" onclick={() => location.assign(labUrl(false))}>Leave the lab</button>
-    {#each choices.filter((c) => !c.walk || look.area === 'walk') as c (c.key)}
+    {#each choices.filter((c) => (!c.walk || look.area === 'walk') && (!c.slopes || look.area === 'slopes')) as c (c.key)}
       <div class="row" role="group" aria-label={c.label}>
         <span class="label">{c.label}</span>
         {#each c.options as o (String(o.value))}

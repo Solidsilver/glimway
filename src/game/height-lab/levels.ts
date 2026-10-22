@@ -45,7 +45,11 @@ export const KIND = {
   /** Cave rock (inside the hill): closed. */
   rock: 6,
   /** A tree or boulder stands here: closed. */
-  prop: 7
+  prop: 7,
+  /** Ground past the steepness limit (scree or bare rock): closed, its own kind so climbing gear can open it later (./slopes.ts). */
+  steep: 8,
+  /** Crags: jagged rock near the tops: closed, its own kind too. */
+  crag: 9
 } as const
 export type Kind = (typeof KIND)[keyof typeof KIND]
 
