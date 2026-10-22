@@ -2,247 +2,209 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { expect, test } from './fixtures'
 import type { Page } from './fixtures'
 import { freshPlayer } from './home-helpers'
+import { SLOPE_PRESETS, type LabLook, type SlopePreset } from '../src/game/height-lab/look'
 
-/**
- * The height lab's slopes round, "Slopes, hills and passes" (dev builds
- * only: `?lab=height`, src/game/height-lab/slopes.ts). Every style walks the
- * same field; a style only changes the drawing. The spec:
- *  - walks north from spawn for a few seconds in shading and in the lift
- *    (chunks not yet painted in that style), recording frame intervals and
- *    the lab's paint/update times per frame (timing.json);
- *  - stands at each feature under each drawing style (the last three with
- *    and without shading at a few spots) and saves a screenshot with the
- *    HUD hidden, the lab's state beside it;
- *  - checks switching style never moves the hero, and moves still work
- *    after it, both ways;
- *  - walks up the pass and along the steep band in the lift, and stands
- *    behind the plateau patch (drawn as a silhouette).
- * Frames go to .e2e-artifacts/height-lab/slopes/ (e2e-full-evidence).
- */
-
+/** Round 2a: matching overlay-free frames, field travel times, and browser frame
+ * tails during walking and scene-rebuilding preset changes. CI only. */
 const OUT = '.e2e-artifacts/height-lab/slopes'
-
-type Style = 'shade' | 'contours' | 'terraces' | 'lift'
-type Look = { area?: 'shoulder' | 'mountain' | 'walk' | 'slopes'; slopeStyle?: Style; slopeShade?: boolean; grid?: boolean }
-type Spot = { name: string; x: number; y: number; fx: number; fy: number; note: string; look: [number, number] | null }
+const FEATURES = ['hills', 'pass-top', 'pass-north', 'outcrop-cliff', 'steep-band', 'rocky-path']
+const PRESETS = Object.keys(SLOPE_PRESETS) as SlopePreset[]
+type Look = Partial<LabLook>
+type Spot = { name: string; x: number; y: number; fx: number; fy: number; look: [number, number] | null }
 type Times = { frames: number; p50: number; p95: number; max: number }
-type Slow = { ms: number; paint: number; upload: number; parts: number }
-type Slopes = { style: Style; shade: boolean; lift: boolean; tile: [number, number]; at: [number, number]; shown: [number, number]; silhouette: boolean; kind: number; size: [number, number]; pending: number; slow: Slow[]; paint: Times; update: Times; spots: Spot[] }
-type LabState = { area: string; look: Look; built: Look; z?: number; layer?: number; slopes?: Slopes }
-type Lab = { put: (layer: number, tx: number, ty: number, look?: [number, number]) => void; step: (dx: number, dy: number) => void; look: (l: Look) => void; state: () => LabState }
-
+type Slopes = { preset: SlopePreset; at: [number, number]; tile: [number, number]; silhouette: boolean; kind: number; pending: number; slow: unknown[]; paint: Times; upload: Times; update: Times; spots: Spot[] }
+type LabState = { area: string; look: LabLook; built: Look; z?: number; slopes?: Slopes }
+type Run = { seconds: number; px: number; kMin: number; kMax: number; blocked: boolean; from: [number, number]; to: [number, number] }
+type Lab = { put: (layer: number, tx: number, ty: number, look?: [number, number]) => void; step: (dx: number, dy: number) => void; run: (dx: number, dy: number, px: number) => Run; look: (l: Look) => void; state: () => LabState }
 const labState = (page: Page) => page.evaluate(() => (window as unknown as { __fsLab: Lab }).__fsLab.state())
 
-async function openLab(page: Page): Promise<void> {
+async function openLab(page: Page) {
   await freshPlayer(page)
   await page.goto('/?lab=height')
   await page.getByRole('button', { name: /^Continue/ }).click()
   await page.waitForFunction(() => !!(window as unknown as { __fsLab?: unknown }).__fsLab, undefined, { timeout: 60_000 })
   await page.waitForTimeout(1200)
 }
-
-/** Until every chunk round the view is painted (the slopes area paints a step a frame). */
-async function painted(page: Page): Promise<void> {
+async function painted(page: Page) {
   await expect.poll(async () => (await labState(page)).slopes?.pending ?? 0, { timeout: 60_000 }).toBe(0)
 }
-
-/**
- * Round 1's styles as round 2a's settings (src/game/height-lab/look.ts styleSettings). Round 2a still has to
- * move this spec onto the presets (.agent/HANDOFF.md).
- */
-function settings(look: Look): Record<string, unknown> {
-  const { slopeStyle, slopeShade, ...rest } = look
-  if (!slopeStyle) return rest
-  const facing = slopeStyle === 'shade' || slopeShade !== false ? 'current' : 'off'
-  return { ...rest, slopeFacing: facing, slopeContours: slopeStyle === 'contours' ? 'current' : 'off', slopeTerraces: slopeStyle === 'terraces', slopeLift: slopeStyle === 'lift' ? 48 : 0 }
-}
-
-async function setLook(page: Page, given: Look): Promise<void> {
-  const look = settings(given)
-  await page.evaluate((l) => (window as unknown as { __fsLab: Lab }).__fsLab.look(l as Look), look)
+async function setLook(page: Page, look: Look) {
+  await page.evaluate((l) => (window as unknown as { __fsLab: Lab }).__fsLab.look(l), look)
   const rebuilds = ['area', 'slopeFacing', 'slopeContours', 'slopeTerraces', 'slopeLift']
-  try {
-    await expect
-      .poll(
-        async () => {
-          const st = await page.evaluate(() => (window as unknown as { __fsLab?: Lab }).__fsLab?.state())
-          if (!st) return 'none'
-          const done = Object.keys(look).every((k) => ((rebuilds.includes(k) ? st.built : st.look) as Record<string, unknown>)[k] === look[k])
-          return done && (st.built.area !== 'slopes' || st.slopes) ? 'ready' : 'waiting'
-        },
-        { timeout: 60_000 }
-      )
-      .toBe('ready')
-  } catch (e) {
-    mkdirSync(OUT, { recursive: true })
-    await page.screenshot({ path: `${OUT}/failed-wait.png` })
-    writeFileSync(`${OUT}/failed-wait.json`, JSON.stringify(await labState(page).catch(() => null), null, 1))
-    throw e
-  }
+  await expect.poll(async () => {
+    const st = await page.evaluate(() => (window as unknown as { __fsLab?: Lab }).__fsLab?.state())
+    if (!st) return false
+    return Object.keys(look).every((k) => ((rebuilds.includes(k) ? st.built : st.look) as Record<string, unknown>)[k] === (look as Record<string, unknown>)[k]) && (st.built.area !== 'slopes' || !!st.slopes)
+  }, { timeout: 60_000 }).toBe(true)
 }
-
-const states: Record<string, LabState> = {}
-
-async function hud(page: Page, shown: boolean): Promise<void> {
-  await page.evaluate((s) => {
+async function hudOff(page: Page) {
+  await page.evaluate(() => {
     const el = document.querySelector<HTMLElement>('[data-testid="height-lab-hud"]')
-    if (el) el.style.visibility = s ? 'visible' : 'hidden'
-  }, shown)
+    if (el) el.style.visibility = 'hidden'
+  })
 }
-
-async function save(page: Page, name: string): Promise<LabState> {
+async function put(page: Page, spot: Spot) {
+  await page.evaluate(([x, y, look]) => (window as unknown as { __fsLab: Lab }).__fsLab.put(0, x, y, look ?? undefined), [spot.x, spot.y, spot.look] as const)
+}
+async function save(page: Page, name: string) {
+  await painted(page)
+  await hudOff(page)
+  await page.waitForTimeout(500)
   const st = await labState(page)
-  states[name] = st
-  writeFileSync(`${OUT}/states.json`, JSON.stringify(states, null, 1))
+  expect(st.look.grid).toBe(false)
+  expect(st.look.walkOverlay).toBe(false)
+  writeFileSync(`${OUT}/${name}.json`, JSON.stringify(st, null, 1))
   await page.screenshot({ path: `${OUT}/${name}.png` })
   return st
 }
-
-/** Stand at a spot (field tile; framed on its feature when it has one), wait for the paint, shoot. */
-async function shot(page: Page, name: string, spot: Spot): Promise<LabState> {
-  await page.evaluate(([x, y, look]) => (window as unknown as { __fsLab: Lab }).__fsLab.put(0, x, y, look ?? undefined), [spot.x, spot.y, spot.look] as const)
-  await painted(page)
-  await page.waitForTimeout(500)
+async function shot(page: Page, name: string, spot: Spot) {
+  await put(page, spot)
   return save(page, name)
 }
 
-/** Hold a key for a while, recording frame intervals (ms) in the page. */
-async function walkTimed(page: Page, key: string, ms: number): Promise<{ frames: number; p50: number; p95: number; max: number; over33: number }> {
+/** rAF recording lives outside Phaser so a scene restart cannot reset it. */
+async function startFrames(page: Page) {
   await page.evaluate(() => {
-    const w = window as unknown as { __frames?: number[]; __framesOn?: boolean }
+    const w = window as unknown as { __frames: number[]; __framesOn: boolean }
     w.__frames = []
     w.__framesOn = true
     let last = performance.now()
     const tick = (t: number) => {
-      w.__frames!.push(t - last)
+      w.__frames.push(t - last)
       last = t
       if (w.__framesOn) requestAnimationFrame(tick)
     }
     requestAnimationFrame(tick)
   })
-  await page.keyboard.down(key)
-  await page.waitForTimeout(ms)
-  await page.keyboard.up(key)
-  const f = await page.evaluate(() => {
-    const w = window as unknown as { __frames?: number[]; __framesOn?: boolean }
+  await page.waitForTimeout(50)
+}
+async function endFrames(page: Page) {
+  const raw = await page.evaluate(() => {
+    const w = window as unknown as { __frames: number[]; __framesOn: boolean }
     w.__framesOn = false
-    return w.__frames!.slice(1)
+    return w.__frames.slice(1)
   })
-  const s = [...f].sort((a, b) => a - b)
-  return { frames: s.length, p50: s[s.length >> 1] ?? 0, p95: s[Math.floor(s.length * 0.95)] ?? 0, max: s.at(-1) ?? 0, over33: s.filter((x) => x > 33).length }
+  const s = [...raw].sort((a, b) => a - b)
+  return { frames: s.length, p50: s[s.length >> 1] ?? 0, p95: s[Math.floor(s.length * 0.95)] ?? 0, p99: s[Math.floor(s.length * 0.99)] ?? 0, max: s.at(-1) ?? 0, over33: s.filter((x) => x > 33).length, over50: s.filter((x) => x > 50).length, raw }
+}
+async function walkTimed(page: Page, key: string, ms: number) {
+  await startFrames(page)
+  await page.keyboard.down(key)
+  try { await page.waitForTimeout(ms) } finally { await page.keyboard.up(key) }
+  return endFrames(page)
 }
 
-/** Every feature, under every style. */
-const FEATURES = ['spawn', 'hills', 'pass-foot', 'pass-mid', 'pass-top', 'steep-band', 'crags', 'spire', 'outcrop-slope', 'outcrop-cliff', 'sea-cliff', 'gully', 'sea', 'plateau', 'around-east', 'behind-plateau']
-const STYLES: Style[] = ['shade', 'contours', 'terraces', 'lift']
+/** Pixel positions mirror the knoll node tests; put() adds 8 to x and 12 to y. */
+async function fieldRuns(page: Page) {
+  return page.evaluate(() => {
+    const lab = (window as unknown as { __fsLab: Lab }).__fsLab
+    const at = (x: number, y: number) => lab.put(0, (x - 8) / 16, (y - 12) / 16)
+    at(86 * 16, 96.5 * 16 + 2)
+    const up = lab.run(0, -1, 56)
+    const down = lab.run(0, 1, 56)
+    at(91 * 16, 91 * 16 + 2)
+    const across = lab.run(0, -1, 32)
+    lab.look({ slopeUphill: 'off' })
+    at(86 * 16, 96.5 * 16 + 2)
+    const off = lab.run(0, -1, 56)
+    lab.look({ slopeUphill: 'gentle' })
+    return { up, down, across, off }
+  })
+}
 
 test.describe('desktop', () => {
   test.use({ viewport: { width: 1280, height: 800 } })
-  test('height lab, slopes: every feature under every drawing style', async ({ page }) => {
+  test('height lab, slopes 2a: five presets, matching frames and timing tails', async ({ page }) => {
     test.setTimeout(900_000)
     mkdirSync(OUT, { recursive: true })
     await openLab(page)
-    await setLook(page, { area: 'slopes', slopeStyle: 'shade', slopeShade: true, grid: false })
+    await setLook(page, { area: 'slopes', ...SLOPE_PRESETS.full.look, slopeUphill: 'gentle', grid: false, walkOverlay: false, fog: 'fog', fogStrength: 'medium', zoom: true, haze: true })
     await painted(page)
     const first = (await labState(page)).slopes!
     writeFileSync(`${OUT}/spots.json`, JSON.stringify(first.spots, null, 1))
-    await hud(page, false)
-
-    // Walking into chunks not yet painted: frame times, in shading and in the lift.
     const timing: Record<string, unknown> = {}
-    for (const style of ['shade', 'lift'] as const) {
-      await setLook(page, { slopeStyle: style })
-      await hud(page, false)
-      const spawn = (await labState(page)).slopes!.spots.find((s) => s.name === 'spawn')!
-      await page.evaluate(([x, y]) => (window as unknown as { __fsLab: Lab }).__fsLab.put(0, x, y), [spawn.x, spawn.y] as const)
+    let reference: Awaited<ReturnType<typeof fieldRuns>> | undefined
+    for (const preset of PRESETS) {
+      const before = (await labState(page)).slopes!.at
+      await startFrames(page)
+      await setLook(page, SLOPE_PRESETS[preset].look)
+      expect((await labState(page)).slopes!.at, `${preset}: switch preserves position`).toEqual(before)
       await painted(page)
-      // Away to the east first (along the valley), then north up the pass's foot: new chunks either way.
+      await page.waitForTimeout(250)
+      const switching = await endFrames(page)
+      const st = (await labState(page)).slopes!
+      expect(st.preset).toBe(preset)
+      const spots = new Map(st.spots.map((s) => [s.name, s]))
+      await put(page, spots.get('spawn')!)
+      await painted(page)
       const east = await walkTimed(page, 'ArrowRight', 4000)
       const north = await walkTimed(page, 'ArrowUp', 3000)
-      const st = (await labState(page)).slopes!
-      timing[style] = { east, north, labPaintPerFrame: st.paint, labUpdatePerFrame: st.update, slowFrames: st.slow, pendingAfter: st.pending }
+      const walk = (await labState(page)).slopes!
+      const runs = await fieldRuns(page)
+      for (const r of Object.values(runs)) expect(r.blocked).toBe(false)
+      expect(runs.up.px).toBeCloseTo(56, 5)
+      expect(runs.down.seconds).toBeCloseTo(runs.off.seconds, 6)
+      expect(runs.up.seconds / runs.off.seconds).toBeGreaterThan(1.08)
+      expect(runs.up.seconds / runs.off.seconds).toBeLessThan(1.14)
+      expect(runs.across.seconds / 32).toBeCloseTo(runs.off.seconds / 56, 3)
+      if (reference) for (const key of ['up', 'down', 'across', 'off'] as const) {
+        expect(runs[key].seconds, `${preset}: ${key} field time`).toBeCloseTo(reference[key].seconds, 8)
+        expect(runs[key].to, `${preset}: ${key} destination`).toEqual(reference[key].to)
+      }
+      reference ??= runs
+      timing[preset] = { switching, east, north, runs, labPaintPerFrame: walk.paint, labUploadPerFrame: walk.upload, labUpdatePerFrame: walk.update, slowFrames: walk.slow, pendingAfter: walk.pending }
       writeFileSync(`${OUT}/timing.json`, JSON.stringify(timing, null, 1))
+      for (const name of FEATURES) await shot(page, `${preset}-${name}`, spots.get(name)!)
+      await setLook(page, { fog: 'none' })
+      await shot(page, `${preset}-fog-off-pass-top`, spots.get('pass-top')!)
+      await setLook(page, { fog: 'fog' })
     }
-
-    for (const style of STYLES) {
-      await setLook(page, { slopeStyle: style, slopeShade: true })
-      await hud(page, false)
-      const st = (await labState(page)).slopes!
-      expect(st.style).toBe(style)
-      expect(st.lift).toBe(style === 'lift')
-      const spots = new Map(st.spots.map((s) => [s.name, s]))
-      for (const name of FEATURES) await shot(page, `${style}-${name}`, spots.get(name)!)
+    // Keep round 1's movement regressions: actual movement after both switches.
+    // Repeat the preset row at one fixed location after the comparison tour.
+    // Pixel caches survive scene restarts; uploads still have to be measured.
+    const warm: Record<string, unknown> = {}
+    const home = first.spots.find((s) => s.name === 'spawn')!
+    await put(page, home)
+    await painted(page)
+    for (const preset of PRESETS) {
+      await startFrames(page)
+      await setLook(page, SLOPE_PRESETS[preset].look)
+      await painted(page)
+      await page.waitForTimeout(250)
+      warm[preset] = { frames: await endFrames(page), lab: (await labState(page)).slopes }
     }
-    // Behind the plateau patch in the lift: a silhouette.
-    expect(states['lift-behind-plateau']!.slopes!.silhouette).toBe(true)
-    expect(states['shade-behind-plateau']!.slopes!.silhouette).toBe(false)
-    // The styles without shading, at a few spots.
-    for (const style of ['contours', 'terraces', 'lift'] as const) {
-      await setLook(page, { slopeStyle: style, slopeShade: false })
-      await hud(page, false)
-      const spots = new Map((await labState(page)).slopes!.spots.map((s) => [s.name, s]))
-      for (const name of ['hills', 'pass-mid', 'outcrop-slope']) await shot(page, `${style}-noshade-${name}`, spots.get(name)!)
-    }
-    await setLook(page, { slopeStyle: 'shade', slopeShade: true })
-    await hud(page, false)
-
-    // Switching style never moves the hero, either way; moves work after it.
-    let spots = new Map((await labState(page)).slopes!.spots.map((s) => [s.name, s]))
+    timing.warmSwitchesAtSpawn = warm
+    writeFileSync(`${OUT}/timing.json`, JSON.stringify(timing, null, 1))
+    await setLook(page, SLOPE_PRESETS.baseline.look)
+    const spots = new Map((await labState(page)).slopes!.spots.map((s) => [s.name, s]))
     for (const name of ['pass-mid', 'hills', 'gully']) {
-      await shot(page, `switch-${name}-shade`, spots.get(name)!)
+      await put(page, spots.get(name)!)
       await page.evaluate(() => (window as unknown as { __fsLab: Lab }).__fsLab.step(3, 5))
       const before = (await labState(page)).slopes!.at
-      await setLook(page, { slopeStyle: 'lift' })
-      const lifted = (await labState(page)).slopes!
-      expect(lifted.at, `${name}: shading → lift`).toEqual(before)
+      await setLook(page, SLOPE_PRESETS.full.look)
+      expect((await labState(page)).slopes!.at).toEqual(before)
       for (let i = 0; i < 8; i++) await page.evaluate(() => (window as unknown as { __fsLab: Lab }).__fsLab.step(0, 4))
       const moved = (await labState(page)).slopes!.at
-      expect(moved[1], `${name}: moves after the switch`).toBeGreaterThan(before[1])
-      await setLook(page, { slopeStyle: 'shade' })
-      expect((await labState(page)).slopes!.at, `${name}: lift → shading`).toEqual(moved)
+      expect(moved[1]).toBeGreaterThan(before[1])
+      await setLook(page, SLOPE_PRESETS.baseline.look)
+      expect((await labState(page)).slopes!.at).toEqual(moved)
     }
-
-    // Walking in the lift: up the pass, a few steps at a time; then north into the steep band.
-    await setLook(page, { slopeStyle: 'lift' })
-    await hud(page, false)
-    spots = new Map((await labState(page)).slopes!.spots.map((s) => [s.name, s]))
-    await shot(page, 'lift-climb-0', spots.get('pass-foot')!)
-    for (let k = 1; k <= 5; k++) {
-      for (let i = 0; i < 12; i++) await page.evaluate(() => (window as unknown as { __fsLab: Lab }).__fsLab.step(0, -6))
-      await painted(page)
-      await page.waitForTimeout(300)
-      await save(page, `lift-climb-${k}`)
+    await setLook(page, SLOPE_PRESETS.full.look)
+    await put(page, spots.get('pass-foot')!)
+    const z0 = (await labState(page)).z!
+    for (let i = 0; i < 60; i++) await page.evaluate(() => (window as unknown as { __fsLab: Lab }).__fsLab.step(0, -6))
+    expect((await labState(page)).z!).toBeGreaterThan(z0 + 0.5)
+    for (const preset of ['baseline', 'full'] as const) {
+      await setLook(page, SLOPE_PRESETS[preset].look)
+      await put(page, spots.get('steep-band')!)
+      for (let i = 0; i < 120; i++) await page.evaluate(() => (window as unknown as { __fsLab: Lab }).__fsLab.step(0, -6))
+      const stopped = await save(page, `${preset}-steep-walk-stopped`)
+      expect(stopped.slopes!.tile[1]).toBeGreaterThan(30)
+      expect([1, 2]).toContain(stopped.slopes!.kind)
     }
-    expect(states['lift-climb-5']!.z!).toBeGreaterThan(states['lift-climb-0']!.z! + 0.5)
-    await shot(page, 'lift-steep-walk-0', spots.get('steep-band')!)
-    for (let i = 0; i < 120; i++) await page.evaluate(() => (window as unknown as { __fsLab: Lab }).__fsLab.step(0, -6))
-    await painted(page)
-    const stoppedLift = await save(page, 'lift-steep-walk-1')
-    expect(stoppedLift.slopes!.tile[1]).toBeGreaterThan(30)
-    // Along the steep band's foot, east, in the lift.
-    for (let i = 0; i < 60; i++) await page.evaluate(() => (window as unknown as { __fsLab: Lab }).__fsLab.step(6, 0))
-    await painted(page)
-    const along = await save(page, 'lift-steep-walk-2')
-    expect(along.slopes!.kind === 2 || along.slopes!.kind === 1, 'still on walkable ground').toBe(true)
-
-    // The too-steep band stops a walk north (shading).
-    await setLook(page, { slopeStyle: 'shade' })
-    await hud(page, false)
-    spots = new Map((await labState(page)).slopes!.spots.map((s) => [s.name, s]))
-    await shot(page, 'steep-walk-0', spots.get('steep-band')!)
-    for (let i = 0; i < 120; i++) await page.evaluate(() => (window as unknown as { __fsLab: Lab }).__fsLab.step(0, -6))
-    const stopped = await save(page, 'steep-walk-1')
-    expect(stopped.slopes!.tile[1]).toBeGreaterThan(30)
-
-    // The levels overlay still works here; the HUD shows on one frame.
-    await setLook(page, { grid: true })
-    await shot(page, 'shade-levels-overlay-pass-mid', spots.get('pass-mid')!)
-    await setLook(page, { grid: false })
-    await hud(page, true)
-    await shot(page, 'shade-hud-spawn', spots.get('spawn')!)
-    await expect(page.getByTestId('height-lab-hud')).toContainText('Slopes, hills and passes')
-    writeFileSync(`${OUT}/states.json`, JSON.stringify(states, null, 1))
-    // The hand-made areas still build after it.
+    // Occlusion policy retained; these frames also expose the full-lift cliff joins.
+    await shot(page, 'full-behind-plateau', spots.get('behind-plateau')!)
+    expect((await labState(page)).slopes!.silhouette).toBe(true)
     await setLook(page, { area: 'mountain' })
     expect((await labState(page)).area).toBe('mountain')
   })
@@ -250,13 +212,13 @@ test.describe('desktop', () => {
 
 test.describe('phone', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
-  test('height lab, slopes: a phone frame', async ({ page }) => {
+  test('height lab, slopes 2a: moderate lift phone frame', async ({ page }) => {
     test.setTimeout(240_000)
     mkdirSync(OUT, { recursive: true })
     await openLab(page)
-    await setLook(page, { area: 'slopes', slopeStyle: 'lift', slopeShade: true, grid: false })
+    await setLook(page, { area: 'slopes', ...SLOPE_PRESETS.moderate.look, grid: false, walkOverlay: false })
     const spots = new Map((await labState(page)).slopes!.spots.map((s) => [s.name, s]))
-    await shot(page, 'phone-pass-mid', spots.get('pass-mid')!)
+    await shot(page, 'phone-moderate-pass-mid', spots.get('pass-mid')!)
     await expect(page.getByTestId('height-lab-hud')).toContainText('Slopes, hills and passes')
   })
 })
