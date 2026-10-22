@@ -1,0 +1,521 @@
+{
+  "slopes": {
+    "recipe": "slopes-gen@1",
+    "domainTiles": [
+      -576,
+      -576,
+      575,
+      575
+    ],
+    "heightRangeLevels": [
+      0,
+      15
+    ],
+    "maxWalkableRisePerTile": 0.2498168274268669,
+    "certificate": {
+      "components": 5,
+      "homeTiles": 1291612,
+      "strandedComponents": 0,
+      "strandedTiles": 0,
+      "intentionalComponents": 4,
+      "intentionalWalkableTiles": 208
+    },
+    "kindTiles": {
+      "cliff": 788,
+      "crag": 29417,
+      "slope": 1291820,
+      "steep": 5079
+    },
+    "kindShareByBiome": {
+      "hearthwick-woods": {
+        "cliff": 0.000880677433856931,
+        "crag": 0.02532996047855173,
+        "slope": 0.9694329443814457,
+        "steep": 0.004356417706145619
+      },
+      "tops": {
+        "cliff": 0.0008011844125459996,
+        "crag": 0.022820047279019325,
+        "slope": 0.9721961591889455,
+        "steep": 0.0041826091194891914
+      },
+      "whitequiet": {
+        "cliff": 0,
+        "crag": 0.016950246828967886,
+        "slope": 0.9802958967788075,
+        "steep": 0.0027538563922246393
+      }
+    },
+    "ranges": [
+      {
+        "id": "range:-1:-1",
+        "x": -300,
+        "y": -281,
+        "halfLength": 183,
+        "heightLevels": 8.676,
+        "passX": -320,
+        "spire": [
+          -170,
+          -417
+        ],
+        "outcrop": [
+          -420,
+          -417
+        ],
+        "passSteps": 208,
+        "endSteps": 502,
+        "extraSteps": 294,
+        "passMaxRisePerTile": 0.019918044974971814,
+        "passWaypoints": [
+          [
+            -320,
+            -385
+          ],
+          [
+            -320,
+            -177
+          ]
+        ],
+        "endWaypoints": [
+          [
+            -320,
+            -385
+          ],
+          [
+            -320,
+            -305
+          ],
+          [
+            -445,
+            -305
+          ],
+          [
+            -445,
+            -304
+          ],
+          [
+            -461,
+            -304
+          ],
+          [
+            -461,
+            -303
+          ],
+          [
+            -466,
+            -303
+          ],
+          [
+            -466,
+            -302
+          ],
+          [
+            -467,
+            -302
+          ],
+          [
+            -467,
+            -277
+          ],
+          [
+            -465,
+            -277
+          ],
+          [
+            -465,
+            -276
+          ],
+          [
+            -460,
+            -276
+          ],
+          [
+            -460,
+            -275
+          ],
+          [
+            -388,
+            -275
+          ],
+          [
+            -388,
+            -274
+          ],
+          [
+            -384,
+            -274
+          ],
+          [
+            -384,
+            -257
+          ],
+          [
+            -320,
+            -257
+          ],
+          [
+            -320,
+            -177
+          ]
+        ]
+      },
+      {
+        "id": "range:0:-1",
+        "x": 277,
+        "y": -278,
+        "halfLength": 179,
+        "heightLevels": 9.812,
+        "passX": 274,
+        "spire": [
+          407,
+          -414
+        ],
+        "outcrop": [
+          157,
+          -414
+        ],
+        "passSteps": 208,
+        "endSteps": 528,
+        "extraSteps": 320,
+        "passMaxRisePerTile": 0.02376079113397742,
+        "passWaypoints": [
+          [
+            274,
+            -382
+          ],
+          [
+            274,
+            -174
+          ]
+        ],
+        "endWaypoints": [
+          [
+            274,
+            -382
+          ],
+          [
+            274,
+            -302
+          ],
+          [
+            131,
+            -302
+          ],
+          [
+            131,
+            -301
+          ],
+          [
+            116,
+            -301
+          ],
+          [
+            116,
+            -300
+          ],
+          [
+            114,
+            -300
+          ],
+          [
+            114,
+            -275
+          ],
+          [
+            115,
+            -275
+          ],
+          [
+            115,
+            -273
+          ],
+          [
+            117,
+            -273
+          ],
+          [
+            117,
+            -272
+          ],
+          [
+            181,
+            -272
+          ],
+          [
+            181,
+            -271
+          ],
+          [
+            199,
+            -271
+          ],
+          [
+            199,
+            -270
+          ],
+          [
+            210,
+            -270
+          ],
+          [
+            210,
+            -254
+          ],
+          [
+            274,
+            -254
+          ],
+          [
+            274,
+            -174
+          ]
+        ]
+      },
+      {
+        "id": "range:-1:0",
+        "x": -275,
+        "y": 292,
+        "halfLength": 181,
+        "heightLevels": 9.832,
+        "passX": -256,
+        "spire": [
+          -145,
+          428
+        ],
+        "outcrop": [
+          -395,
+          156
+        ],
+        "passSteps": 208,
+        "endSteps": 492,
+        "extraSteps": 284,
+        "passMaxRisePerTile": 0.019918044974971814,
+        "passWaypoints": [
+          [
+            -256,
+            188
+          ],
+          [
+            -256,
+            396
+          ]
+        ],
+        "endWaypoints": [
+          [
+            -256,
+            188
+          ],
+          [
+            -114,
+            188
+          ],
+          [
+            -114,
+            396
+          ],
+          [
+            -256,
+            396
+          ]
+        ]
+      },
+      {
+        "id": "range:0:0",
+        "x": 287,
+        "y": 286,
+        "halfLength": 179,
+        "heightLevels": 9.411999999999999,
+        "passX": 305,
+        "spire": [
+          417,
+          422
+        ],
+        "outcrop": [
+          167,
+          150
+        ],
+        "passSteps": 208,
+        "endSteps": 498,
+        "extraSteps": 290,
+        "passMaxRisePerTile": 0.019918044974971814,
+        "passWaypoints": [
+          [
+            305,
+            182
+          ],
+          [
+            305,
+            390
+          ]
+        ],
+        "endWaypoints": [
+          [
+            305,
+            182
+          ],
+          [
+            450,
+            182
+          ],
+          [
+            450,
+            390
+          ],
+          [
+            305,
+            390
+          ]
+        ]
+      }
+    ],
+    "tunnelCandidates": [
+      {
+        "range": "range:-1:-1",
+        "north": [
+          -234,
+          -299
+        ],
+        "south": [
+          -234,
+          -251
+        ],
+        "lengthTiles": 48,
+        "blockedTiles": 28
+      },
+      {
+        "range": "range:0:-1",
+        "north": [
+          360,
+          -295
+        ],
+        "south": [
+          360,
+          -247
+        ],
+        "lengthTiles": 48,
+        "blockedTiles": 29
+      },
+      {
+        "range": "range:-1:0",
+        "north": [
+          -170,
+          276
+        ],
+        "south": [
+          -170,
+          324
+        ],
+        "lengthTiles": 48,
+        "blockedTiles": 29
+      },
+      {
+        "range": "range:0:0",
+        "north": [
+          391,
+          270
+        ],
+        "south": [
+          391,
+          318
+        ],
+        "lengthTiles": 48,
+        "blockedTiles": 29
+      }
+    ],
+    "budgets": {
+      "flat": {
+        "chunk": [
+          0,
+          1
+        ],
+        "samples": 80,
+        "generationAndEncodeMs": {
+          "p50": 0.487226,
+          "p95": 0.497557,
+          "max": 0.551717
+        },
+        "heightBytes": 222,
+        "bareWholeBytes": 658,
+        "dressingHeadroomBytes": 5486
+      },
+      "hills": {
+        "chunk": [
+          6,
+          2
+        ],
+        "samples": 80,
+        "generationAndEncodeMs": {
+          "p50": 1.011984,
+          "p95": 1.025595,
+          "max": 1.346759
+        },
+        "heightBytes": 1158,
+        "bareWholeBytes": 1596,
+        "dressingHeadroomBytes": 4548
+      },
+      "mountainside": {
+        "chunk": [
+          15,
+          12
+        ],
+        "samples": 80,
+        "generationAndEncodeMs": {
+          "p50": 0.962053,
+          "p95": 0.975563,
+          "max": 1.014024
+        },
+        "heightBytes": 1158,
+        "bareWholeBytes": 1596,
+        "dressingHeadroomBytes": 4548
+      },
+      "spire": {
+        "chunk": [
+          17,
+          17
+        ],
+        "samples": 80,
+        "generationAndEncodeMs": {
+          "p50": 1.035184,
+          "p95": 1.050394,
+          "max": 1.220847
+        },
+        "heightBytes": 1158,
+        "bareWholeBytes": 1596,
+        "dressingHeadroomBytes": 4548
+      }
+    },
+    "allChunkHeightBytes": {
+      "p50": 1158,
+      "p95": 1158,
+      "max": 1992
+    },
+    "allBareWholeChunkBytes": {
+      "p50": 1596,
+      "p95": 1596,
+      "max": 2430
+    },
+    "geometrySHA256": "7d26eaee6c18e23a7e33bde69236e4ac5256559aed02d385c8dbaa3a87fb2239",
+    "coldFieldMs": 2252.149479,
+    "note": "Finite home-rooted height certificate over all 48x48 chunks, never crop edges. 10x4 px hero fits cardinal tile-centre routes; mounts, cover, water and kept-land migration are outside this experiment. Bare bytes = undressed WorldChunk protobuf plus length-framed lab envelope, not a dressed protocol claim. Warm timing constructs a fresh bounded sampler and encodes; decode/checks excluded. Four-bit coarse corner range is 0..15 plus 8 fractional bits; heights are never clamped."
+  },
+  "content": "",
+  "contentSHA256": "",
+  "view": "atlas",
+  "seed": "slopes-991",
+  "epoch": "t:1795000000:1796209600",
+  "rect": [
+    -24,
+    -24,
+    23,
+    23
+  ],
+  "chunkSize": 24,
+  "chunks": 2304,
+  "generatedChunks": 2304,
+  "fixedChunks": 0,
+  "landShareByChunkCentre": {},
+  "longestAxialLandRunChunks": 0,
+  "unreachableWalkableTiles": 0,
+  "generationMs": 5711.831534,
+  "note": "HEIGHT 0-15 / HILLSHADE. Biome shares count every tile's effective biome. Finite home-rooted height certificate over all 48x48 chunks, never crop edges. 10x4 px hero fits cardinal tile-centre routes; mounts, cover, water and kept-land migration are outside this experiment. Bare bytes = undressed WorldChunk protobuf plus length-framed lab envelope, not a dressed protocol claim. Warm timing constructs a fresh bounded sampler and encodes; decode/checks excluded. Four-bit coarse corner range is 0..15 plus 8 fractional bits; heights are never clamped."
+}

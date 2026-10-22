@@ -1,0 +1,633 @@
+{
+  "slopes": {
+    "recipe": "slopes-gen@1",
+    "domainTiles": [
+      -576,
+      -576,
+      575,
+      575
+    ],
+    "heightRangeLevels": [
+      0,
+      15
+    ],
+    "maxWalkableRisePerTile": 0.25,
+    "certificate": {
+      "components": 5,
+      "homeTiles": 1292119,
+      "strandedComponents": 0,
+      "strandedTiles": 0,
+      "intentionalComponents": 4,
+      "intentionalWalkableTiles": 208
+    },
+    "kindTiles": {
+      "cliff": 795,
+      "crag": 29704,
+      "slope": 1292327,
+      "steep": 4278
+    },
+    "kindShareByBiome": {
+      "hearthwick-woods": {
+        "cliff": 0.00043435308333537447,
+        "crag": 0.02369347082404618,
+        "slope": 0.9726308570308865,
+        "steep": 0.003241319061732024
+      },
+      "tops": {
+        "cliff": 0.0008984175599795815,
+        "crag": 0.022293687255402417,
+        "slope": 0.973224434235154,
+        "steep": 0.0035834609494640123
+      },
+      "whitequiet": {
+        "cliff": 0.0006296795287620975,
+        "crag": 0.02053705723430494,
+        "slope": 0.9758868382721594,
+        "steep": 0.0029464249647735887
+      }
+    },
+    "ranges": [
+      {
+        "id": "range:-1:-1",
+        "x": -293,
+        "y": -278,
+        "halfLength": 184,
+        "heightLevels": 8.58,
+        "passX": -269,
+        "spire": [
+          -163,
+          -414
+        ],
+        "outcrop": [
+          -413,
+          -414
+        ],
+        "passSteps": 208,
+        "endSteps": 496,
+        "extraSteps": 288,
+        "passMaxRisePerTile": 0.022777155839239456,
+        "passWaypoints": [
+          [
+            -269,
+            -382
+          ],
+          [
+            -269,
+            -174
+          ]
+        ],
+        "endWaypoints": [
+          [
+            -269,
+            -382
+          ],
+          [
+            -125,
+            -382
+          ],
+          [
+            -125,
+            -174
+          ],
+          [
+            -269,
+            -174
+          ]
+        ]
+      },
+      {
+        "id": "range:0:-1",
+        "x": 279,
+        "y": -303,
+        "halfLength": 178,
+        "heightLevels": 7.768,
+        "passX": 286,
+        "spire": [
+          409,
+          -439
+        ],
+        "outcrop": [
+          159,
+          -439
+        ],
+        "passSteps": 208,
+        "endSteps": 518,
+        "extraSteps": 310,
+        "passMaxRisePerTile": 0.022777155839239456,
+        "passWaypoints": [
+          [
+            286,
+            -407
+          ],
+          [
+            286,
+            -199
+          ]
+        ],
+        "endWaypoints": [
+          [
+            286,
+            -407
+          ],
+          [
+            441,
+            -407
+          ],
+          [
+            441,
+            -199
+          ],
+          [
+            286,
+            -199
+          ]
+        ]
+      },
+      {
+        "id": "range:-1:0",
+        "x": -289,
+        "y": 291,
+        "halfLength": 183,
+        "heightLevels": 7.5440000000000005,
+        "passX": -276,
+        "spire": [
+          -159,
+          427
+        ],
+        "outcrop": [
+          -409,
+          155
+        ],
+        "passSteps": 208,
+        "endSteps": 508,
+        "extraSteps": 300,
+        "passMaxRisePerTile": 0.021035800027869155,
+        "passWaypoints": [
+          [
+            -276,
+            187
+          ],
+          [
+            -276,
+            395
+          ]
+        ],
+        "endWaypoints": [
+          [
+            -276,
+            187
+          ],
+          [
+            -126,
+            187
+          ],
+          [
+            -126,
+            395
+          ],
+          [
+            -276,
+            395
+          ]
+        ]
+      },
+      {
+        "id": "range:0:0",
+        "x": 277,
+        "y": 292,
+        "halfLength": 182,
+        "heightLevels": 8.344,
+        "passX": 269,
+        "spire": [
+          407,
+          428
+        ],
+        "outcrop": [
+          157,
+          156
+        ],
+        "passSteps": 208,
+        "endSteps": 496,
+        "extraSteps": 288,
+        "passMaxRisePerTile": 0.021035800027869155,
+        "passWaypoints": [
+          [
+            269,
+            188
+          ],
+          [
+            269,
+            396
+          ]
+        ],
+        "endWaypoints": [
+          [
+            269,
+            188
+          ],
+          [
+            269,
+            268
+          ],
+          [
+            205,
+            268
+          ],
+          [
+            205,
+            269
+          ],
+          [
+            155,
+            269
+          ],
+          [
+            155,
+            270
+          ],
+          [
+            153,
+            270
+          ],
+          [
+            153,
+            271
+          ],
+          [
+            151,
+            271
+          ],
+          [
+            151,
+            272
+          ],
+          [
+            150,
+            272
+          ],
+          [
+            150,
+            273
+          ],
+          [
+            148,
+            273
+          ],
+          [
+            148,
+            274
+          ],
+          [
+            146,
+            274
+          ],
+          [
+            146,
+            275
+          ],
+          [
+            145,
+            275
+          ],
+          [
+            145,
+            276
+          ],
+          [
+            143,
+            276
+          ],
+          [
+            143,
+            277
+          ],
+          [
+            142,
+            277
+          ],
+          [
+            142,
+            278
+          ],
+          [
+            140,
+            278
+          ],
+          [
+            140,
+            279
+          ],
+          [
+            139,
+            279
+          ],
+          [
+            139,
+            280
+          ],
+          [
+            138,
+            280
+          ],
+          [
+            138,
+            281
+          ],
+          [
+            137,
+            281
+          ],
+          [
+            137,
+            282
+          ],
+          [
+            136,
+            282
+          ],
+          [
+            136,
+            283
+          ],
+          [
+            135,
+            283
+          ],
+          [
+            135,
+            284
+          ],
+          [
+            134,
+            284
+          ],
+          [
+            134,
+            285
+          ],
+          [
+            133,
+            285
+          ],
+          [
+            133,
+            286
+          ],
+          [
+            132,
+            286
+          ],
+          [
+            132,
+            287
+          ],
+          [
+            131,
+            287
+          ],
+          [
+            131,
+            288
+          ],
+          [
+            130,
+            288
+          ],
+          [
+            130,
+            289
+          ],
+          [
+            129,
+            289
+          ],
+          [
+            129,
+            290
+          ],
+          [
+            128,
+            290
+          ],
+          [
+            128,
+            291
+          ],
+          [
+            127,
+            291
+          ],
+          [
+            127,
+            293
+          ],
+          [
+            126,
+            293
+          ],
+          [
+            126,
+            294
+          ],
+          [
+            125,
+            294
+          ],
+          [
+            125,
+            297
+          ],
+          [
+            148,
+            297
+          ],
+          [
+            148,
+            298
+          ],
+          [
+            199,
+            298
+          ],
+          [
+            199,
+            299
+          ],
+          [
+            203,
+            299
+          ],
+          [
+            203,
+            300
+          ],
+          [
+            205,
+            300
+          ],
+          [
+            205,
+            316
+          ],
+          [
+            269,
+            316
+          ],
+          [
+            269,
+            396
+          ]
+        ]
+      }
+    ],
+    "tunnelCandidates": [
+      {
+        "range": "range:-1:-1",
+        "north": [
+          -183,
+          -293
+        ],
+        "south": [
+          -183,
+          -245
+        ],
+        "lengthTiles": 48,
+        "blockedTiles": 29
+      },
+      {
+        "range": "range:0:-1",
+        "north": [
+          372,
+          -319
+        ],
+        "south": [
+          372,
+          -271
+        ],
+        "lengthTiles": 48,
+        "blockedTiles": 28
+      },
+      {
+        "range": "range:-1:0",
+        "north": [
+          -190,
+          275
+        ],
+        "south": [
+          -190,
+          323
+        ],
+        "lengthTiles": 48,
+        "blockedTiles": 28
+      },
+      {
+        "range": "range:0:0",
+        "north": [
+          355,
+          275
+        ],
+        "south": [
+          355,
+          323
+        ],
+        "lengthTiles": 48,
+        "blockedTiles": 28
+      }
+    ],
+    "budgets": {
+      "flat": {
+        "chunk": [
+          0,
+          1
+        ],
+        "samples": 80,
+        "generationAndEncodeMs": {
+          "p50": 0.486616,
+          "p95": 0.494657,
+          "max": 0.505027
+        },
+        "heightBytes": 222,
+        "bareWholeBytes": 658,
+        "dressingHeadroomBytes": 5486
+      },
+      "hills": {
+        "chunk": [
+          6,
+          2
+        ],
+        "samples": 80,
+        "generationAndEncodeMs": {
+          "p50": 1.007293,
+          "p95": 1.013794,
+          "max": 1.022423
+        },
+        "heightBytes": 1158,
+        "bareWholeBytes": 1596,
+        "dressingHeadroomBytes": 4548
+      },
+      "mountainside": {
+        "chunk": [
+          15,
+          12
+        ],
+        "samples": 80,
+        "generationAndEncodeMs": {
+          "p50": 0.955053,
+          "p95": 0.966703,
+          "max": 0.977663
+        },
+        "heightBytes": 1158,
+        "bareWholeBytes": 1596,
+        "dressingHeadroomBytes": 4548
+      },
+      "spire": {
+        "chunk": [
+          16,
+          17
+        ],
+        "samples": 80,
+        "generationAndEncodeMs": {
+          "p50": 0.995313,
+          "p95": 1.005494,
+          "max": 1.013874
+        },
+        "heightBytes": 1158,
+        "bareWholeBytes": 1596,
+        "dressingHeadroomBytes": 4548
+      }
+    },
+    "allChunkHeightBytes": {
+      "p50": 1158,
+      "p95": 1158,
+      "max": 1980
+    },
+    "allBareWholeChunkBytes": {
+      "p50": 1596,
+      "p95": 1596,
+      "max": 2418
+    },
+    "geometrySHA256": "04591e341cfa95e715d0825552b495d1ef9567bf9fefe87b621f620e0e6c2a3f",
+    "coldFieldMs": 2263.115813,
+    "note": "Finite home-rooted height certificate over all 48x48 chunks, never crop edges. 10x4 px hero fits cardinal tile-centre routes; mounts, cover, water and kept-land migration are outside this experiment. Bare bytes = undressed WorldChunk protobuf plus length-framed lab envelope, not a dressed protocol claim. Warm timing constructs a fresh bounded sampler and encodes; decode/checks excluded. Four-bit coarse corner range is 0..15 plus 8 fractional bits; heights are never clamped."
+  },
+  "content": "",
+  "contentSHA256": "",
+  "view": "region",
+  "seed": "map",
+  "epoch": "t:1795000000:1796209600",
+  "rect": [
+    -24,
+    -24,
+    23,
+    23
+  ],
+  "chunkSize": 24,
+  "chunks": 2304,
+  "generatedChunks": 2304,
+  "fixedChunks": 0,
+  "landShareByChunkCentre": {},
+  "longestAxialLandRunChunks": 0,
+  "unreachableWalkableTiles": 0,
+  "generationMs": 5948.497372,
+  "note": "HEIGHT 0-15 / HILLSHADE. Biome shares count every tile's effective biome. Finite home-rooted height certificate over all 48x48 chunks, never crop edges. 10x4 px hero fits cardinal tile-centre routes; mounts, cover, water and kept-land migration are outside this experiment. Bare bytes = undressed WorldChunk protobuf plus length-framed lab envelope, not a dressed protocol claim. Warm timing constructs a fresh bounded sampler and encodes; decode/checks excluded. Four-bit coarse corner range is 0..15 plus 8 fractional bits; heights are never clamped."
+}
