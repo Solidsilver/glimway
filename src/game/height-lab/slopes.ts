@@ -76,6 +76,8 @@ export type LiftPx = 0 | 24 | 48
 
 /** How the slopes area is drawn (./slopes-paint.ts): every combination walks the same field. */
 export interface SlopesLook {
+  sunlight?: boolean
+  sunStrength?: number
   facing: FacingShade
   contours: ContourDetail
   terraces: boolean
@@ -670,7 +672,7 @@ export function buildSlopes(opts: AreaOptions, look: SlopesLook = styleLook('sha
     if (!lift) {
       // Not where a face took the tile.
       if (surface.kind[p.ty * w + p.tx] === KIND.face) return
-      shown.push({ ...p, z })
+      shown.push({ ...p, z, fieldX: p.tx * TILE_PX + 8, fieldY: (p.ty + 1) * TILE_PX - 0.01 })
       return
     }
     // Not on a cliff's footprint (talus in the lift), nor where it's hidden.
@@ -680,7 +682,7 @@ export function buildSlopes(opts: AreaOptions, look: SlopesLook = styleLook('sha
     if (!sp) return
     // Its foot: the tile's south edge, lifted; never below what shows of it.
     const foot = Math.min(sp.s1, sp.sS)
-    shown.push({ ...p, ty: Math.max(0, Math.round(foot) - 1), z })
+    shown.push({ ...p, ty: Math.max(0, Math.round(foot) - 1), z, fieldX: p.tx * TILE_PX + 8, fieldY: (p.ty + 1) * TILE_PX - 0.01 })
   }
   for (const p of props) place(p, fieldZ(field, p.tx, p.ty, 0.5, 1))
   for (let i = 0; i < field.w * field.h; i++) {
@@ -729,16 +731,19 @@ export function fieldGradient(f: Field, x: number, y: number): [number, number] 
 
 /**
  * How fast someone walks at field point (x, y) px going (ux, uy) (a unit
- * vector): 1 on the flat, downhill and across the slope; uphill a little
- * slower, by the uphill part of the gradient against the walking limit:
- * 1 − UPHILL_CAP · smoothstep(uphill / MAX_WALK_SLOPE). It depends only on
+ * vector): 1 on the flat and across the slope; slower uphill and faster downhill
+ * by independently capped, mirrored smoothsteps against MAX_WALK_SLOPE.
+ * Defaults preserve round 2a: 12% uphill, no downhill gain. It depends only on
  * the gradient and the direction, so turning hill and walker together
  * changes nothing; and only on the field, so it's the same in every style.
  */
-export function uphillFactor(f: Field, x: number, y: number, ux: number, uy: number): { gx: number; gy: number; up: number; k: number } {
+export function uphillFactor(f: Field, x: number, y: number, ux: number, uy: number, uphill = UPHILL_CAP, downhill = 0): { gx: number; gy: number; up: number; k: number } {
   const [gx, gy] = fieldGradient(f, x, y)
-  const up = Math.max(0, gx * ux + gy * uy)
-  return { gx, gy, up, k: 1 - UPHILL_CAP * smoothstep(0, 1, up / MAX_WALK_SLOPE) }
+  const len = Math.hypot(ux, uy)
+  const along = len ? (gx * ux + gy * uy) / len : 0
+  const up = Math.max(0, along)
+  const down = Math.max(0, -along)
+  return { gx, gy, up, k: 1 - clamp(uphill, 0, 0.4) * smoothstep(0, 1, up / MAX_WALK_SLOPE) + clamp(downhill, 0, 0.2) * smoothstep(0, 1, down / MAX_WALK_SLOPE) }
 }
 
 /** The slowdown is looked up again every this many px walked (so it doesn't jump at tile edges or depend on the frame rate). */
@@ -747,21 +752,22 @@ const UPHILL_STEP_PX = 2
 /**
  * Walk the slopes area for dt seconds at `speed` px/s (full speed) going
  * (ux, uy) (a unit vector), sliding along what blocks (./levels.ts move);
- * with `gentle`, slowed uphill (uphillFactor), looked up afresh every
+ * with percentage uphill/downhill caps, looked up afresh every
  * UPHILL_STEP_PX. At most `most` px. What was asked of the walk (px, before
  * anything blocked it), the seconds that took (dt, or less when `most` came
  * first), and the last lookup.
  */
-export function slopeWalk(stack: Stack, f: Field, w: Walker, ux: number, uy: number, speed: number, dt: number, gentle: boolean, most = Infinity): { px: number; used: number; at: ReturnType<typeof uphillFactor> } {
+export function slopeWalk(stack: Stack, f: Field, w: Walker, ux: number, uy: number, speed: number, dt: number, uphill: number | boolean, most = Infinity, downhill = 0): { px: number; used: number; at: ReturnType<typeof uphillFactor> } {
+  const len = Math.hypot(ux, uy)
+  if (len) { ux /= len; uy /= len }
+  const cap = typeof uphill === 'boolean' ? (uphill ? UPHILL_CAP : 0) : uphill / 100
   let left = dt
   let walked = 0
   let used = 0
-  let at = uphillFactor(f, w.x, w.y - w.fh / 2, ux, uy)
-  if (!gentle) at = { ...at, k: 1 }
+  let at = uphillFactor(f, w.x, w.y - w.fh / 2, ux, uy, cap, downhill / 100)
   while (left > 1e-9 && walked < most - 1e-9 && speed > 0) {
-    const h = Math.min(left, UPHILL_STEP_PX / speed)
-    at = uphillFactor(f, w.x, w.y - w.fh / 2, ux, uy)
-    if (!gentle) at = { ...at, k: 1 }
+    const h = Math.min(left, UPHILL_STEP_PX / (speed * 1.2))
+    at = uphillFactor(f, w.x, w.y - w.fh / 2, ux, uy, cap, downhill / 100)
     const full = speed * at.k * h
     const d = Math.min(full, most - walked)
     move(stack, w, ux * d, uy * d)

@@ -42,6 +42,7 @@
  * so fog by height difference fades in small steps; each overlaps the band
  * below it by a pixel, so no seam shows between them.
  */
+import { SUN, facingResponse, sunFacing } from './sun.ts'
 import { TERRAIN } from '../../lib/tile.ts'
 import { wildsGround } from '../../lib/wilds/data.ts'
 import { fnv1a32 } from '../../lib/hash.ts'
@@ -75,17 +76,8 @@ const hexRGB = (s: string): RGB => [parseInt(s.slice(1, 3), 16), parseInt(s.slic
 export const BAND = 0.5
 export const bandOf = (z: number) => Math.floor(z / BAND + 1e-4) * BAND
 
-/** The light, from the north-west and above (x east, y south, z up). */
-const SUN = (() => {
-  const v = [-0.5, -0.5, 0.7]
-  const n = Math.hypot(v[0]!, v[1]!, v[2]!)
-  return v.map((c) => c / n) as [number, number, number]
-})()
 /** How strongly facing shades ("current"): brightness change per unit of the sun's cosine. */
 const SHADE_GAIN = 1.4
-/** Saturate early enough for gentle hills to read through grass detail. The
- * palette endpoints stay fixed, so steeper mountains do not darken further. */
-const RESTRAINED_RESPONSE = 12
 /** A cliff, between neighbouring pixels: a step of more than this (levels). Walkable and steep slopes are under 0.07 a pixel. */
 const DROP = 0.15
 
@@ -246,15 +238,12 @@ export function paintField(area: LabArea, x0: number, y0: number, w: number, h: 
       // The treatments: light, then lines.
       let k = 1
       if (lk.facing !== 'off' && kind !== KIND.crag) {
-        // Physical slope: a level is ROWS_PER_LEVEL tiles high.
-        const nx = -3 * gx
-        const ny = -3 * gy
-        const n = Math.hypot(nx, ny, 1)
-        const lit = (nx * SUN[0] + ny * SUN[1] + SUN[2]) / n
-        if (lk.facing === 'current') k *= Math.max(0.55, Math.min(1.4, 1 + SHADE_GAIN * (lit - SUN[2])))
+        const lit = sunFacing(gx, gy)
+        const strength = lk.sunlight ? (lk.sunStrength ?? 1) : 1
+        if (lk.facing === 'current') k *= Math.max(0.55, Math.min(1.4, 1 + strength * SHADE_GAIN * (lit - SUN[2])))
         else {
           // Restrained: toward a warm light or a cool shade of the pixel's own colour, by a response that saturates.
-          const t = Math.tanh((lit - SUN[2]) * RESTRAINED_RESPONSE)
+          const t = facingResponse(gx, gy) * strength
           if (t > 0) {
             r = mix(r, Math.min(255, r * 1.16), t)
             g = mix(g, Math.min(255, g * 1.14), t)
@@ -411,7 +400,7 @@ function gradPx(f: Field, wx: number, wy: number): [number, number] {
 /** The paint cache's key (./slopes-art.ts) for a chunk of the area as it's drawn: every setting that paints (facing, contours, terraces, lift strength). */
 export function chunkKey(area: LabArea, cx: number, cy: number): string {
   const l = area.slopes!.look
-  return `${l.facing}|${l.contours}|${l.terraces ? 1 : 0}|${l.lift}|${cx},${cy}`
+  return `${l.facing}|${l.contours}|${l.terraces ? 1 : 0}|${l.lift}|${l.sunlight ? l.sunStrength ?? 1 : "legacy"}|${cx},${cy}`
 }
 
 /** A part of the map (tiles, inclusive). */

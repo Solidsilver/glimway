@@ -5,6 +5,61 @@ wants visible height, readable routes and combat, and gentle uphill slowdown.
 This round supplies the five drawing presets; hidden-route/picking, tunnel and
 valley-mist work is deferred to 2b for the surviving styles.
 
+## How to walk 2b
+
+Open **Height lab → Walk the height lab**, then **Area → Slopes, hills and
+passes**. Click **Reset to Shading baseline**. This chooses **Facing shade →
+Restrained**, **Contour detail → Off**, **Small terraces → Off**, **Lift strength →
+None**, **Uphill slowdown: 12%**, **Downhill quickening: 0%**, **Slope gait → On**,
+**Sunlight → On**, and **Sun strength: 100%**. Presets still change only their
+four drawing controls. Old saved **Off** slowdown becomes 0%; **Gentle** becomes
+12%. All cave controls and the other areas stay available.
+
+Start with 12% uphill and 0% downhill. My comparison recommendation is **12%
+uphill / 6% downhill**: at the knoll's roughly 0.2-level slope the directional
+curve gives about 11% less uphill speed and 5% more downhill speed. Compare 0/0
+first, then 12/6, then the deliberately strong 40/20 endpoints. The sliders
+control speed, not time added. Crossing a slope remains ordinary speed; diagonal
+input is normalized. Wren uses the same caps.
+
+Keep **Levels overlay → Off**, **Levels above and below fade to → Fog**, **Fog per
+level → Medium**, **Climbing, the camera → Eases out** fixed, and close the panel.
+Visit the hills (30,88), the knoll's northwest side (82,87) and southeast side
+(90,95), the saddle (72,31), the outcrop cliff foot (103,108), and rocky path
+(53,42). At each stop compare **Sunlight → Off / On**. Off keeps the original
+facing-shaded ground and contact shadows as a reference; On extends that sun to
+sprite tints and soft SE cast shadows. At 100% the ground is shaded once, with
+the same palette as the reference. With sunlight On, **Sun strength** scales the
+ground facing response, sprite tint and cast-shadow opacity together.
+
+Then walk up and down the knoll with **Slope gait → Off / On**. On follows actual
+field speed, including collision, with a roughly one-pixel uphill lean or
+backward downhill lean and an occasional three-pixel scuff near the walking
+limit. Wren gets the same coded gait. This uses the existing walk frames; no new
+art is necessary for this comparison. More convincing knee bends, planted feet
+or an uphill boot push would require drawn uphill/downhill frames later.
+
+Implementation: `sun.ts` supplies one NW direction, the ground-normal facing,
+bounded sprite tint and local-plane shadow ray. Ground and sprites share the
+facing response. Existing cliff lips already follow NW light. The cave light
+pass works in screen space; a second full-screen mask would lose field/sprite
+ownership on lifted views and add upload work. This round therefore uses cached
+ground shading, per-sprite tint and one shared soft shadow texture, preserving
+Wren's base tint. Shadows approximate the local receiving plane and use modest
+caster heights; they do not trace across cliffs or make tree-shaped silhouettes.
+The sun direction is a parameter for a later clock; no moving sun is added.
+
+Questions for the owner:
+
+- Do the sunny/shaded sides make the hero look planted on the knoll and hills?
+- Does 12/6 give enough height feel, or is downhill at 0 more comfortable?
+- Does the small lean help, and do steep-foot scuffs read as effort rather than noise?
+- Are shadows strong enough to anchor trees and boulders while keeping routes readable?
+- Would drawn uphill/downhill feet add enough to justify a later art lane?
+
+Round 2b CI evidence and measured frame tails are added below after inspection.
+The round 2a notes below remain the historical comparison.
+
 ## How to walk 2a
 
 Open the dev panel's **Height lab**, click **Walk the height lab**, then choose

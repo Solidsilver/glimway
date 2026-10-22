@@ -44,7 +44,9 @@ import { type CaveImages, FACES_KEY, FACE_TINT, drawFaces, drawGrid, drawOverlay
 import { KIND, ROWS_PER_LEVEL, TILE_PX, findPath, move, sample, standTile, zAt, type Node, type Walker } from './levels'
 import { CRAG_KEY, bandImages, drawCrags, paintJob, paintedChunk, slopeFaceTint, type PaintJob } from './slopes-art'
 import { chunkKey } from './slopes-paint'
-import { FOG_LEVELS, display, lookName, mapPoint, nearestWalkable, slopeWalk, uphillFactor } from './slopes'
+import { slopeGait } from './slope-gait'
+import { sunShadow, sunTint } from './sun'
+import { fieldGradient, FOG_LEVELS, display, lookName, mapPoint, nearestWalkable, slopeWalk, uphillFactor } from './slopes'
 import { FRIEND_LIGHT, HERO_LIGHT, LIGHT_RES, wayIn } from './light'
 import { caveTint, clearLitScratch, litPixels, pixelSpans, type FillOptions, type Lighting } from './lighting'
 import { SLOPE_KEYS, SLOPE_PRESETS, fogFor, labLook, onLabLook, setLabLook, slopePresetOf, slopeSettings, slopesLook, styleOf, type LabLook } from './look'
@@ -114,6 +116,7 @@ interface SlopesState {
   lift: boolean
   /** The uphill slowdown: on or off, and where the hero last walked: the gradient (levels a tile), its uphill part, the speed multiplier. */
   gentle: boolean
+  sunlight?: { tint: number; shadow: ReturnType<typeof sunShadow>; gait: ReturnType<typeof slopeGait> | null }
   uphill: { gx: number; gy: number; up: number; k: number } | null
   /** The hero's field tile and px (the same in every style), and where they're drawn. */
   tile: [number, number]
@@ -159,6 +162,7 @@ interface Thing {
   /** The slopes area's lift: behind higher ground (./slopes.ts display). The hero is drawn as a silhouette; others not at all. */
   hidden?: boolean
   silhouette?: boolean
+  sun?: { x: number; y: number; height: number; width: number; shadow: Phaser.GameObjects.Image; contact: boolean }
 }
 
 /** Someone who walks the levels: the hero, the remote player, a creature. */
@@ -173,6 +177,9 @@ interface Mover {
   wait: number
   stuck: number
   next: () => Node | null
+  previous?: [number, number]
+  scuffPx?: number
+  gait?: ReturnType<typeof slopeGait>
 }
 
 export class HeightLabScene extends Phaser.Scene {
@@ -314,7 +321,7 @@ export class HeightLabScene extends Phaser.Scene {
         l.skyTiles !== this.look.skyTiles ||
         l.caveStyle !== this.look.caveStyle ||
         (walk && (l.strategy !== this.look.strategy || l.walkOverlay !== this.look.walkOverlay)) ||
-        (slopes && SLOPE_KEYS.some((k) => l[k] !== this.look[k]))
+        (slopes && (SLOPE_KEYS.some((k) => l[k] !== this.look[k]) || l.sunlight !== this.look.sunlight || l.sunStrength !== this.look.sunStrength))
       this.look = l
       this.stillKey = ''
       if (rebuild && !restarting) {
@@ -389,6 +396,7 @@ export class HeightLabScene extends Phaser.Scene {
     }
     const thing = { ...t, twin: tw }
     this.things.push(thing)
+    this.stillKey = ''
     return thing
   }
 
@@ -428,9 +436,53 @@ export class HeightLabScene extends Phaser.Scene {
       const x = p.tx * T + 8
       const y = (p.ty + 1) * T
       const img = this.add.image(x, y, crag ? CRAG_KEY : DECOR_ATLAS, frame).setOrigin(0.5, 1)
-      made.push(this.addThing({ parts: [{ o: img, dz: 0, a: 1 }], layer: SURFACE, x, y, z: p.z ?? this.area.top[p.ty * this.area.stack.w + p.tx]!, seen: 1 }, true))
+      const parts: Thing['parts'] = [{ o: img, dz: 0, a: 1 }]
+      const casts = this.area.slopes
+      const shadow = casts ? this.sunShadowImage(x, y) : null
+      if (shadow) parts.push({ o: shadow, dz: -1, a: 0 })
+      made.push(this.addThing({ parts, layer: SURFACE, x, y, z: p.z ?? this.area.top[p.ty * this.area.stack.w + p.tx]!, seen: 1,
+        ...(this.area.slopes ? { sun: { x: p.fieldX ?? x, y: p.fieldY ?? y, height: img.displayHeight * 0.45, width: Math.min(18, img.displayWidth * 0.5), shadow: shadow!, contact: false } } : {}) }, true))
     }
     return made
+  }
+
+  /** A single soft ellipse texture, shared by every slope caster. */
+  private sunShadowImage(x: number, y: number): Phaser.GameObjects.Image {
+    const key = 'height-lab-sun-shadow'
+    if (!this.textures.exists(key)) {
+      const c = document.createElement('canvas')
+      c.width = 64; c.height = 32
+      const ctx = c.getContext('2d')!
+      ctx.scale(1, 0.5)
+      const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32)
+      g.addColorStop(0, 'rgba(25,27,38,0.8)')
+      g.addColorStop(0.6, 'rgba(25,27,38,0.45)')
+      g.addColorStop(1, 'rgba(25,27,38,0)')
+      ctx.fillStyle = g; ctx.fillRect(0, 0, 64, 64)
+      this.textures.addCanvas(key, c)
+    }
+    return this.add.image(x, y, key)
+  }
+
+  private applySun(t: Thing): number | null {
+    const sl = this.area.slopes
+    const sun = t.sun
+    if (!sl || !sun) return null
+    const on = this.look.sunlight
+    const [gx, gy] = fieldGradient(sl.field, sun.x, sun.y)
+    const part = t.parts[1]!
+    if (on) {
+      const ray = sunShadow(gx, gy, sun.height)
+      // Project the shadow vector with its receiving plane in lifted views too.
+      const dy = ray.dy - sl.k * (gx * ray.dx + gy * ray.dy)
+      sun.shadow.setTexture('height-lab-sun-shadow').setPosition(t.x + ray.dx * 0.45, t.y - 1 + dy * 0.45)
+        .setRotation(Math.atan2(dy, ray.dx)).setDisplaySize(Math.max(8, Math.hypot(ray.dx, dy) + 6), sun.width)
+      part.a = 0.32 * this.look.sunStrength
+      return sunTint(gx, gy, this.look.sunStrength, t.tint ?? 0xffffff)
+    }
+    part.a = sun.contact ? 0.5 : 0
+    if (sun.contact) sun.shadow.setTexture('shadow').setRotation(0).setScale(1).setPosition(t.x, t.y - 1)
+    return t.tint ?? 0xffffff
   }
 
   // ---------------------------------------------------------------- the generated area
@@ -744,14 +796,14 @@ export class HeightLabScene extends Phaser.Scene {
       if (this.anims.exists(frame)) sprite.play(frame)
     }
     if (tint !== null) sprite.setTint(tint)
-    const shadow = this.add.image(x, y - 1, 'shadow')
+    const shadow = this.area.slopes ? this.sunShadowImage(x, y - 1) : this.add.image(x, y - 1, 'shadow')
     const parts: Thing['parts'] = [{ o: sprite, dz: 0, a: 1 }, { o: shadow, dz: -1, a: 0.5 }]
     if (label) {
       const text = this.add.text(x, y - 24, label, { fontFamily: '"Pixelify Sans", monospace', fontSize: '8px', color: '#fff6e0', stroke: '#2a2030', strokeThickness: 2 }).setOrigin(0.5, 1).setResolution(4)
       parts.push({ o: text, dz: 3000, a: 1 })
     }
     // A twin on either layer: movers cross between them.
-    const thing = this.addThing({ parts, layer: node.layer, x, y, z: 0, seen: 1, tint: tint ?? 0xffffff }, true)
+    const thing = this.addThing({ parts, layer: node.layer, x, y, z: 0, seen: 1, tint: tint ?? 0xffffff, ...(this.area.slopes ? { sun: { x, y, height: 9, width: 6, shadow, contact: true } } : {}) }, true)
     const m: Mover = { thing, walker: { x, y, layer: node.layer, hw: 5, fh: 4 }, sprite, anim, speed, path: null, wait: 0, stuck: 0, next }
     this.movers.push(m)
     return m
@@ -819,9 +871,13 @@ export class HeightLabScene extends Phaser.Scene {
     if (this.loading) return
     const t0 = performance.now()
     const dt = Math.min(0.05, deltaMs / 1000)
+    for (const m of this.movers) m.previous = [m.walker.x, m.walker.y]
     this.steerHero(dt)
     for (const m of this.movers) if (m !== this.hero) this.walkOn(m, dt)
-    for (const m of this.movers) this.place(m)
+    for (const m of this.movers) {
+      this.applyGait(m, dt)
+      this.place(m)
+    }
     this.frameUpload = 0
     this.frameParts = 0
     this.stream()
@@ -851,9 +907,9 @@ export class HeightLabScene extends Phaser.Scene {
     if (len > 0.1) {
       const sl = this.area.slopes
       if (sl) {
-        // The slopes area: a little slower going uphill (Uphill slowdown: Gentle), by the field's own slope (./slopes.ts uphillFactor);
+        // Directional speed from the field gradient and the two percentage sliders;
         // a diagonal is as fast as straight.
-        this.uphill = slopeWalk(this.area.stack, sl.field, h.walker, dx / len, dy / len, h.speed * Math.min(1, len), dt, this.look.slopeUphill === 'gentle').at
+        this.uphill = slopeWalk(this.area.stack, sl.field, h.walker, dx / len, dy / len, h.speed * Math.min(1, len), dt, this.look.slopeUphill, Infinity, this.look.slopeDownhill).at
       } else {
         dx /= Math.max(1, len)
         dy /= Math.max(1, len)
@@ -905,7 +961,7 @@ export class HeightLabScene extends Phaser.Scene {
     const before = m.walker.x + m.walker.y
     // In the slopes area, Wren and the rest slow uphill as the hero does.
     const sl = this.area.slopes
-    if (sl) slopeWalk(this.area.stack, sl.field, m.walker, vx / d, vy / d, m.speed, dt, this.look.slopeUphill === 'gentle', d)
+    if (sl) slopeWalk(this.area.stack, sl.field, m.walker, vx / d, vy / d, m.speed, dt, this.look.slopeUphill, d, this.look.slopeDownhill)
     else {
       const s = Math.min(d, m.speed * dt)
       move(this.area.stack, m.walker, (vx / d) * s, (vy / d) * s)
@@ -918,6 +974,28 @@ export class HeightLabScene extends Phaser.Scene {
     }
     this.animate(m, true, Math.abs(vx) >= Math.abs(vy) ? (vx < 0 ? 'left' : 'right') : vy < 0 ? 'up' : 'down')
     if (m.anim !== 'demo' && Math.abs(vx) > 0.2) m.sprite.setFlipX(vx < 0)
+  }
+
+  private applyGait(m: Mover, dt: number): void {
+    const sl = this.area.slopes
+    m.gait = undefined
+    m.sprite.anims.timeScale = 1
+    if (!sl || !this.look.slopeGait || !m.previous || dt <= 0) return
+    const dx = m.walker.x - m.previous[0]
+    const dy = m.walker.y - m.previous[1]
+    const [gx, gy] = fieldGradient(sl.field, m.walker.x, m.walker.y - m.walker.fh / 2)
+    const gait = m.gait = slopeGait(gx, gy, dx / dt, dy / dt, m.speed)
+    m.sprite.anims.timeScale = gait.cadence
+    if (gait.cadence < 0.01 && m.anim === 'demo') m.sprite.anims.stop()
+    m.scuffPx = (m.scuffPx ?? 0) + Math.hypot(dx, dy)
+    if (gait.scuff && m.scuffPx >= 28 && !m.thing.hidden) {
+      m.scuffPx = 0
+      const z = zAt(this.area.stack, m.walker)
+      const foot = display(sl, m.walker.x, m.walker.y - m.walker.fh / 2, z)
+      const dust = this.add.rectangle(foot.x - 2, foot.y + 1, 3, 1, 0xc2b68b, 0.45).setDepth(foot.y + 3)
+      this.tweens.add({ targets: dust, alpha: 0, y: dust.y - 2, x: dust.x - dx * 0.5, duration: 260, onComplete: () => dust.destroy() })
+    }
+    if (!gait.scuff) m.scuffPx = 0
   }
 
   /** A mover's parts follow its walker. */
@@ -936,11 +1014,12 @@ export class HeightLabScene extends Phaser.Scene {
     t.hidden = !!d?.hidden && m !== this.hero
     t.silhouette = !!d?.hidden && m === this.hero
     t.seen = w.layer === CAVE ? sample(this.area.stack.layers[CAVE]!, this.area.stack.layers[CAVE]!.seen, w.x, w.y - 2) : 1
-    m.sprite.setPosition(x, y)
+    if (t.sun) { t.sun.x = w.x; t.sun.y = w.y - w.fh / 2 }
+    m.sprite.setPosition(x + (m.gait?.x ?? 0), y + (m.gait?.y ?? 0))
     t.parts[1]!.o.setPosition(x, y - 1)
     t.parts[2]?.o.setPosition(x, y - 23)
     if (t.twin) {
-      t.twin.setPosition(x, y).setFlipX(m.sprite.flipX)
+      t.twin.setPosition(m.sprite.x, m.sprite.y).setFlipX(m.sprite.flipX)
       t.twin.setFrame(m.sprite.frame.name)
     }
   }
@@ -1033,6 +1112,7 @@ export class HeightLabScene extends Phaser.Scene {
       // In the crossfade the cave's floors are drawn lit, over the light: its people stand over them, lit by
       // a tint of the light they'd have under it.
       const byTint = fade && onCave && !t.glows
+      const sunlight = this.applySun(t)
       const at = byTint ? BAND.dark + 2 : band
       for (const [i, p] of t.parts.entries()) p.o.setDepth((byTint && i > 0 ? band : at) + t.y + p.dz).setAlpha(vis * p.a).setVisible(vis * p.a > 0.01)
       const body = t.parts[0]!.o
@@ -1040,6 +1120,9 @@ export class HeightLabScene extends Phaser.Scene {
         const c = this.lighting.at(CAVE, t.x, t.y - 8)
         body.setTint(caveTint(c, t.tint ?? 0xffffff, t.z - v.z, look.darkness))
         t.tinted = true
+      } else if (sunlight !== null && !(body instanceof Phaser.GameObjects.Text)) {
+        body.setTint(sunlight)
+        t.tinted = false
       } else if (t.tinted && !(body instanceof Phaser.GameObjects.Text)) {
         if (t.tint !== undefined && t.tint !== 0xffffff) body.setTint(t.tint)
         else body.clearTint()
@@ -1244,7 +1327,7 @@ export class HeightLabScene extends Phaser.Scene {
     while (sl && len > 0 && walked < px - 1e-6 && seconds < 60) {
       const x0 = w.x
       const y0 = w.y
-      const r = slopeWalk(this.area.stack, sl.field, w, dx / len, dy / len, h.speed, dt, this.look.slopeUphill === 'gentle', px - walked)
+      const r = slopeWalk(this.area.stack, sl.field, w, dx / len, dy / len, h.speed, dt, this.look.slopeUphill, px - walked, this.look.slopeDownhill)
       const moved = Math.hypot(w.x - x0, w.y - y0)
       seconds += r.used
       walked += moved
@@ -1323,7 +1406,8 @@ export class HeightLabScene extends Phaser.Scene {
       preset: slopePresetOf(this.look),
       style: styleOf(this.look),
       lift: s.lift,
-      gentle: this.look.slopeUphill === 'gentle',
+      gentle: this.look.slopeUphill > 0,
+      sunlight: (() => { const [gx, gy] = fieldGradient(s.field, this.hero.walker.x, this.hero.walker.y - 2); return { tint: sunTint(gx, gy, this.look.sunlight ? this.look.sunStrength : 0), shadow: sunShadow(gx, gy, 9), gait: this.hero.gait ?? null } })(),
       uphill: u ? { gx: u.gx, gy: u.gy, up: u.up, k: u.k } : null,
       tile: [tx, ty],
       at: [this.hero.walker.x, this.hero.walker.y],
@@ -1373,7 +1457,7 @@ export class HeightLabScene extends Phaser.Scene {
       const steep = sl.field.slope[ty * sl.field.w + tx] ?? 0
       const preset = slopePresetOf(this.look)
       const u = this.uphill
-      const up = this.look.slopeUphill === 'gentle' && u && u.k < 0.999 ? ` · uphill ${u.up.toFixed(2)} ×${u.k.toFixed(2)}` : ''
+      const up = this.look.slopeUphill > 0 && u && u.k < 0.999 ? ` · uphill ${u.up.toFixed(2)} ×${u.k.toFixed(2)}` : ''
       this.hud.textContent = `Slopes, hills and passes — ${preset ? SLOPE_PRESETS[preset].name : lookName(sl.look)} · level ${v.z.toFixed(2)} · slope ${steep.toFixed(2)}${up}\n${perf}`
       return
     }

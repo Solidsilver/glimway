@@ -18,7 +18,8 @@
     { key: 'slopeContours', label: 'Contour detail', slopes: true, options: [{ value: 'off', label: 'Off' }, { value: 'sparse', label: 'Sparse' }, { value: 'current', label: 'Current' }] },
     { key: 'slopeTerraces', label: 'Small terraces', slopes: true, options: [{ value: false, label: 'Off' }, { value: true, label: 'On' }] },
     { key: 'slopeLift', label: 'Lift strength', slopes: true, options: [{ value: 0, label: 'None' }, { value: 24, label: 'Moderate (24 px a level)' }, { value: 48, label: 'Full (48 px a level)' }] },
-    { key: 'slopeUphill', label: 'Uphill slowdown', slopes: true, options: [{ value: 'off', label: 'Off' }, { value: 'gentle', label: 'Gentle' }] },
+    { key: 'slopeGait', label: 'Slope gait', slopes: true, options: [{ value: false, label: 'Off' }, { value: true, label: 'On' }] },
+    { key: 'sunlight', label: 'Sunlight', slopes: true, options: [{ value: false, label: 'Off' }, { value: true, label: 'On' }] },
     { key: 'strategy', label: 'Near home, the way up', walk: true, options: [{ value: 'region', label: 'Region plan' }, { value: 'chunk', label: 'Per-chunk repair' }] },
     { key: 'walkOverlay', label: 'Near home, stranded ground and chunk lines', walk: true, options: [{ value: false, label: 'Off' }, { value: true, label: 'On' }] },
     { key: 'fog', label: 'Levels above and below fade to', options: [{ value: 'fog', label: 'Fog' }, { value: 'sky', label: 'Sky' }, { value: 'none', label: 'Nothing' }] },
@@ -47,6 +48,12 @@
   {#if here}
     <button type="button" onclick={() => location.assign(labUrl(false))}>Leave the lab</button>
     {#if look.area === 'slopes'}
+      {#each [{ key: 'slopeUphill', label: 'Uphill slowdown', max: 40 }, { key: 'slopeDownhill', label: 'Downhill quickening', max: 20 }, { key: 'sunStrength', label: 'Sun strength', max: 100 }] as slider}
+        <label class="row">
+          <span class="label">{slider.label}: {Math.round((look[slider.key as 'slopeUphill' | 'slopeDownhill' | 'sunStrength']) * (slider.key === 'sunStrength' ? 100 : 1))}%</span>
+          <input type="range" min="0" max={slider.max} step="1" aria-label={slider.label} value={look[slider.key as 'slopeUphill' | 'slopeDownhill' | 'sunStrength'] * (slider.key === 'sunStrength' ? 100 : 1)} oninput={(e) => setLabLook({ [slider.key]: Number(e.currentTarget.value) / (slider.key === 'sunStrength' ? 100 : 1) })} />
+        </label>
+      {/each}
       <div class="row" role="group" aria-label="Slopes, presets">
         <span class="label">Slopes, presets</span>
         {#each presets as [name, p] (name)}

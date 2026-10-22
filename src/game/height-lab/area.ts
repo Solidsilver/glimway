@@ -72,6 +72,9 @@ export const G = Object.fromEntries(GROUNDS.map((g, i) => [g, i])) as Record<Gro
 
 
 export interface PropSpot {
+  /** Original foot in field pixels, retained when drawing is lifted. */
+  fieldX?: number
+  fieldY?: number
   kind: 'oak' | 'pine' | 'birch' | 'boulder' | 'fern' | 'cairn' | 'standing-stone' | 'thicket' | 'snag' | 'crag'
   tx: number
   ty: number
