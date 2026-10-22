@@ -86,7 +86,9 @@ compared with 4,608 bytes for independent corners on every tile.
 ## Drawing and streaming changes
 
 Restrained shade uses a saturating warm/cool palette shift, retaining grass color
-and sprite contrast. Sparse contours put broken grass, soil and stone accents at
+and sprite contrast. After inspecting the faint hills, the shade response was
+increased from 6 to 12: small gradients get a stronger cue while the warm/cool
+palette endpoints stay fixed. Sparse contours put broken grass, soil and stone accents at
 world-anchored one-level intervals, with light high edges and soft low edges;
 they fade out toward steep rock. Terraces remain visual: collision stays smooth.
 Lift is consistently 0, 24 or 48 pixels per level for ground, feet, props, camera,
@@ -103,7 +105,10 @@ The old “two chunks a frame is fine” claim was wrong: painting, splitting fo
 bands and uploading whole chunks caused long movement frames. Pure painting now
 yields, completed pixels are cached by field/drawing/chunk, and uploads yield by
 band texture, six rows of faces, then props/grid. Upload and paint work share a
-5 ms scheduling budget. This is a scheduling target, not a bound on a whole frame
+5 ms scheduling budget, including entry and preset restarts (the former visible-
+window synchronous bypass is removed). Cold views fill progressively. Paint strips
+are one tile wide/high and fog-band scans yield every sixteen rows. This is a
+scheduling target, not a bound on a whole frame
 or a single indivisible texture upload. Browser tails below are the evidence;
 old Node totals of ~100 ms per chunk do not describe current frame costs.
 

@@ -518,7 +518,7 @@ export class HeightLabScene extends Phaser.Scene {
     const mx = w.x / (C * T) - 0.5
     const my = w.y / (C * T) - 0.5
     want.sort((a, b) => Math.hypot(a[0] - mx, a[1] - my) - Math.hypot(b[0] - mx, b[1] - my))
-    if (this.area.slopes) this.streamSlopes(want, all, { cx0, cy0, cx1, cy1 }, w)
+    if (this.area.slopes) this.streamSlopes(want, { cx0, cy0, cx1, cy1 })
     else for (const [cx, cy] of all ? want : want.slice(0, 2)) this.addPart(cx, cy)
     for (const p of this.parts.values()) p.grid.setVisible(this.look.grid)
   }
@@ -540,39 +540,23 @@ export class HeightLabScene extends Phaser.Scene {
    * The slopes area's chunks: painted ones (these settings, cached) go up a
    * piece at a time (uploads); the rest become jobs, painted a step at a
    * time, then go up the same way, all under PAINT_BUDGET_MS a frame
-   * (pumpPaint). With `all` (entering, a jump), the chunks under the camera
-   * are painted and put up at once so the view isn't empty; the rest follow.
+   * (pumpPaint), including entry, jumps and preset restarts. Never drain a
+   * whole visible window synchronously; cold views fill progressively.
    */
-  private streamSlopes(want: [number, number][], all: boolean, keep: { cx0: number; cy0: number; cx1: number; cy1: number }, mid: { x: number; y: number }): void {
+  private streamSlopes(want: [number, number][], keep: { cx0: number; cy0: number; cx1: number; cy1: number }): void {
     this.jobs = this.jobs.filter((j) => j.cx >= keep.cx0 - 1 && j.cx <= keep.cx1 + 1 && j.cy >= keep.cy0 - 1 && j.cy <= keep.cy1 + 1 && !this.parts.has(`${j.cx},${j.cy}`))
-    let placed = 0
     const order = new Map(want.map(([cx, cy], i) => [`${cx},${cy}`, i]))
     for (const [cx, cy] of want) {
       const key = chunkKey(this.area, cx, cy)
       const done = paintedChunk(key)
       if (done) {
-        if (all && placed < 4) {
-          this.addPart(cx, cy)
-          placed++
-        } else this.queueUpload(cx, cy)
+        this.queueUpload(cx, cy)
         continue
       }
       if (!this.jobs.some((j) => j.key === key)) this.jobs.push(paintJob(this.area, this.partRect(cx, cy), key, cx, cy))
     }
     this.jobs.sort((a, b) => (order.get(`${a.cx},${a.cy}`) ?? 99) - (order.get(`${b.cx},${b.cy}`) ?? 99))
-    if (!all) return
-    // Under the camera (round what it centres on; its own view only updates when it draws): now.
-    const hw = this.scale.width / (2 * this.baseZoom)
-    const hh = this.scale.height / (2 * this.baseZoom)
-    const C = 24 * T
-    for (const j of [...this.jobs]) {
-      if ((j.cx + 1) * C < mid.x - hw || j.cx * C > mid.x + hw || (j.cy + 1) * C < mid.y - hh || j.cy * C > mid.y + hh) continue
-      while (!j.step()) {
-        /* painting */
-      }
-      this.jobs = this.jobs.filter((k) => k !== j)
-      this.addPart(j.cx, j.cy)
-    }
+
   }
 
   /** A painted chunk to put up a piece at a time (pumpPaint), unless it's up or going up. */

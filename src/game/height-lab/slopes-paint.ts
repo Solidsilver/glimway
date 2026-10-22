@@ -83,8 +83,9 @@ const SUN = (() => {
 })()
 /** How strongly facing shades ("current"): brightness change per unit of the sun's cosine. */
 const SHADE_GAIN = 1.4
-/** "Restrained": how fast the palette shift saturates with the sun's cosine (tanh). */
-const RESTRAINED_RESPONSE = 6
+/** Saturate early enough for gentle hills to read through grass detail. The
+ * palette endpoints stay fixed, so steeper mountains do not darken further. */
+const RESTRAINED_RESPONSE = 12
 /** A cliff, between neighbouring pixels: a step of more than this (levels). Walkable and steep slopes are under 0.07 a pixel. */
 const DROP = 0.15
 
@@ -431,8 +432,8 @@ export interface BandPixels {
   px: Uint8ClampedArray
 }
 
-/** Tile rows (flat) or columns (lift) painted per step: a step is about a twelfth of a chunk, a few ms. */
-const STRIP = 2
+/** Tile rows (flat) or columns (lift) per step; narrow strips limit cold-paint tails. */
+const STRIP = 1
 
 /**
  * One part of the slopes area's surface as the view shows it (RGBA, the
@@ -543,13 +544,13 @@ export function paintPart(area: LabArea, part: SlopesPart): { px: Uint8ClampedAr
   }
 }
 
-/** A part cut into half-level images, a band per step (./scene.ts runs it under its time budget). */
+/** Cut half-level images in sixteen-row batches (./scene.ts supplies the time budget). */
 export function* cutBandsSteps(part: SlopesPart, px: Uint8ClampedArray, zp: Float32Array): Generator<void, BandPixels[]> {
   const W = (part.x1 - part.x0 + 1) * T
   const H = (part.y1 - part.y0 + 1) * T
   const bands = new Float32Array(W * H)
   const boxes = new Map<number, { x0: number; y0: number; x1: number; y1: number }>()
-  for (let y = 0; y < H; y++)
+  for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       const z = zp[y * W + x]!
       const band = Number.isNaN(z) || px[(y * W + x) * 4 + 3] === 0 ? Number.NaN : bandOf(z)
@@ -564,6 +565,8 @@ export function* cutBandsSteps(part: SlopesPart, px: Uint8ClampedArray, zp: Floa
         if (y > b.y1) b.y1 = y
       }
     }
+    if ((y + 1) % 16 === 0) yield
+  }
   yield
   const bandPx = (x: number, y: number) => (x < 0 || y < 0 || x >= W || y >= H ? Number.NaN : bands[y * W + x]!)
   const out: BandPixels[] = []
@@ -576,7 +579,7 @@ export function* cutBandsSteps(part: SlopesPart, px: Uint8ClampedArray, zp: Floa
     const w = x1 - x0 + 1
     const h = y1 - y0 + 1
     const cut = new Uint8ClampedArray(w * h * 4)
-    for (let y = y0; y <= y1; y++)
+    for (let y = y0; y <= y1; y++) {
       for (let x = x0; x <= x1; x++) {
         const here = bandPx(x, y)
         let keep = here === band
@@ -592,6 +595,8 @@ export function* cutBandsSteps(part: SlopesPart, px: Uint8ClampedArray, zp: Floa
         cut[to + 2] = px[from + 2]!
         cut[to + 3] = px[from + 3]!
       }
+      if ((y - y0 + 1) % 16 === 0) yield
+    }
     out.push({ band, x: part.x0 * T + x0, y: part.y0 * T + y0, w, h, px: cut })
     yield
   }
