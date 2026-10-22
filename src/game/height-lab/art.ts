@@ -697,7 +697,8 @@ export function drawGrid(g: Phaser.GameObjects.Graphics, l: Layer, area: LabArea
       }
       else if (k === KIND.face || k === KIND.mouth) c = 0xff2020
       else {
-        const z = area.top[i]!
+        // The slopes area's view may be taller than the stack (the lift): its own heights.
+        const z = area.slopes ? Math.floor(area.slopes.z[i] ?? 0) : area.top[i]!
         if (z === 0) a = 0
         c = colors[Math.min(4, Math.max(0, z - 1))]!
       }

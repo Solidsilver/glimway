@@ -41,7 +41,7 @@
  *   rows 123–143  the sea (flat sand at 0, no water yet).
  */
 import { G, hash, lightArea, type AreaOptions, type LabArea, type PropSpot } from './area.ts'
-import { CAVE, DX, DY, KIND, ROWS_PER_LEVEL, SURFACE, newLayer, setClosed, step, type Dir, type Kind, type Node, type Stack } from './levels.ts'
+import { CAVE, DX, DY, KIND, ROWS_PER_LEVEL, SURFACE, newLayer, setClosed, step, type Dir, type Kind, type Layer, type Node, type Stack } from './levels.ts'
 
 export const SLOPES_W = 144
 export const SLOPES_H = 144
@@ -75,7 +75,7 @@ export interface Field {
   /** KIND.flat or slope (walkable), steep, crag, prop (a tree or boulder stands here). */
   kind: Uint8Array
   ground: Uint8Array
-  /** Slope per tile, levels a tile (the corners' gradient). */
+  /** Slope per tile, levels a tile: the steepest corner of its bilinear patch (./slopes.ts steepest). */
   slope: Float32Array
 }
 
@@ -95,9 +95,11 @@ export interface SlopesInfo {
   shade: boolean
   lift: boolean
   field: Field
-  /** Lifted: rows the map is moved down by, so the highest ground still fits (0 flat). */
+  /** Lifted: rows the view is moved down by, so the highest ground still fits (0 flat). */
   pad: number
-  /** Per map tile: the field tile shown there (-1: a face, or nothing), and the ground's height at its middle (NaN: nothing). */
+  /** What's drawn, per view tile: kinds and faces (the collision map itself in the flat styles; the projected view in the lift, field width × (height + pad)). Never walked. */
+  view: Layer
+  /** Per view tile: the field tile shown there (-1: a face, or nothing), and the ground's height at its middle (NaN: nothing). */
   source: Int32Array
   z: Float32Array
   spots: SlopeSpot[]
@@ -218,6 +220,26 @@ const CORNER: [number, number][] = [
   [0, 1]
 ]
 
+/**
+ * The walking rule's measure (shared with the generator lane): the bilinear
+ * patch's squared gradient at the steepest of its four corners, in quantized
+ * units (1/256 level a tile), so the check is integers and no square root:
+ * a tile is walkable only if every corner's gx² + gy² ≤ MAX_WALK_Q².
+ */
+export function steepest(c: Float32Array, o: number): number {
+  const nw = Math.round(c[o]! * Q)
+  const ne = Math.round(c[o + 1]! * Q)
+  const se = Math.round(c[o + 2]! * Q)
+  const sw = Math.round(c[o + 3]! * Q)
+  let most = 0
+  // At each corner: gx along its row (north or south edge), gy along its column (west or east edge).
+  for (const [gx, gy] of [[ne - nw, sw - nw], [ne - nw, se - ne], [se - sw, se - ne], [se - sw, sw - nw]] as const) most = Math.max(most, gx * gx + gy * gy)
+  return most
+}
+
+/** MAX_WALK_SLOPE in quantized units (64: a rise of 64/256 level a tile). */
+export const MAX_WALK_Q = Math.round(MAX_WALK_SLOPE * Q)
+
 /** A field tile's height at (fx, fy) across it (bilinear between its corners). */
 export function fieldZ(f: Field, tx: number, ty: number, fx: number, fy: number): number {
   const i = (ty * f.w + tx) * 4
@@ -265,9 +287,7 @@ export function buildField(): Field {
       for (let c = 0; c < 4; c++) f.corner[i * 4 + c] = q(heightAt(r, tx, ty, tx + CORNER[c]![0], ty + CORNER[c]![1]))
       const o = i * 4
       const k = f.corner
-      const gx = (k[o + 1]! - k[o]! + k[o + 2]! - k[o + 3]!) / 2
-      const gy = (k[o + 3]! - k[o]! + k[o + 2]! - k[o + 1]!) / 2
-      f.slope[i] = Math.hypot(gx, gy)
+      f.slope[i] = Math.sqrt(steepest(k, o)) / Q
     }
   const zMid = (i: number) => (f.corner[i * 4]! + f.corner[i * 4 + 1]! + f.corner[i * 4 + 2]! + f.corner[i * 4 + 3]!) / 4
   for (let ty = 0; ty < h; ty++)
@@ -283,7 +303,7 @@ export function buildField(): Field {
       const crag = r !== 'spire' && (nearSpire || outcropSide || (r === 'land' && ((z > 9.2 && hash(tx >> 1, ty >> 1, 71) < 0.6) || s > 0.8)))
       let kind: number = s <= 0.02 ? KIND.flat : KIND.slope
       if (crag) kind = KIND.crag
-      else if (s > MAX_WALK_SLOPE) kind = KIND.steep
+      else if (steepest(f.corner, i * 4) > MAX_WALK_Q * MAX_WALK_Q) kind = KIND.steep
       f.kind[i] = kind
       let g: number = G.meadow
       if (r === 'sea') g = G.bank
@@ -320,6 +340,7 @@ const SPOTS: SlopeSpot[] = [
   { name: 'gully', tx: 45, ty: 112, note: 'the one way down to the sea' },
   { name: 'sea', tx: 45, ty: 134, note: 'on the sand flats under the cliff' },
   { name: 'plateau', tx: 132, ty: 110, note: 'the plateau patch: whole levels, cliffs, ramps (like the generator)' },
+  { name: 'behind-plateau', tx: 132, ty: 66, note: 'just north of the plateau patch: in the lift, hidden behind it (drawn as a silhouette)' },
   { name: 'around-east', tx: 128, ty: 40, note: 'round the range’s east end: the long way north' }
 ]
 
@@ -425,9 +446,13 @@ export function liftPad(f: Field): number {
 
 // ---------------------------------------------------------------- the maps
 
-const D = 1e-3
-
-/** The flat map: a map tile is a field tile; cliffs take their faces off the land south of them. */
+/**
+ * The collision map, the same in every style: a map tile is a field tile,
+ * and cliffs take their faces off the land south of them (the local face
+ * rule, 3 rows a level). In the flat styles the face is drawn there; in the
+ * lift the face is drawn lifted above it and its footprint is drawn as
+ * talus, closed either way.
+ */
 function flatMap(f: Field, surface: ReturnType<typeof newLayer>, source: Int32Array, zs: Float32Array): void {
   const { w, h } = f
   for (let i = 0; i < w * h; i++) {
@@ -462,89 +487,45 @@ function flatMap(f: Field, surface: ReturnType<typeof newLayer>, source: Int32Ar
     }
 }
 
-/** The lifted map: each map tile shows what the lifted columns put there (./slopes.ts liftColumn). */
-function liftMap(f: Field, surface: ReturnType<typeof newLayer>, source: Int32Array, zs: Float32Array, pad: number): void {
-  const w = surface.w
-  const H = surface.h
+/**
+ * The lifted view (drawing only): each view tile shows what the lifted
+ * columns put at its middle (./slopes.ts liftColumn): field ground, a face,
+ * or nothing. Nobody walks it; the collision map stays the field's.
+ */
+function liftView(f: Field, view: ReturnType<typeof newLayer>, source: Int32Array, zs: Float32Array, pad: number): void {
+  const w = view.w
+  const H = view.h
   for (let tx = 0; tx < w; tx++) {
     const mid = liftColumn(f, tx, 0.5, pad)
-    const west = liftColumn(f, tx, D, pad)
-    const east = liftColumn(f, tx, 1 - D, pad)
-    // An edge is open where it lands on walkable ground: its height there.
-    const edgeZ = (col: Span[], s: number) => {
-      const sp = spanAt(col, s)
-      if (!sp || sp.face || !walkableKind(f.kind[sp.ty * f.w + tx]!)) return Number.NaN
-      return spanGround(sp, s).z
-    }
     for (let sy = 0; sy < H; sy++) {
       const i = sy * w + tx
       const sp = spanAt(mid, sy + 0.5)
       source[i] = -1
       zs[i] = Number.NaN
       if (!sp) {
-        setClosed(surface, tx, sy, KIND.none)
+        setClosed(view, tx, sy, KIND.none)
         continue
       }
       if (sp.face) {
-        setClosed(surface, tx, sy, KIND.face)
+        setClosed(view, tx, sy, KIND.face)
         const rows = Math.max(1, Math.round(sp.s1 - sp.s0))
-        surface.faceTop[i] = sp.zS
-        surface.faceRows[i] = Math.min(127, rows)
-        surface.faceRow[i] = Math.min(rows - 1, Math.max(0, Math.floor(sy + 0.5 - sp.s0)))
-        surface.ground[i] = G['tops-crag']
+        view.faceTop[i] = sp.zS
+        view.faceRows[i] = Math.min(127, rows)
+        view.faceRow[i] = Math.min(rows - 1, Math.max(0, Math.floor(sy + 0.5 - sp.s0)))
+        view.ground[i] = G['tops-crag']
         zs[i] = sp.zBot
         continue
       }
       const j = sp.ty * f.w + tx
       source[i] = j
       zs[i] = spanGround(sp, sy + 0.5).z
-      surface.ground[i] = f.ground[j]!
-      const k = f.kind[j]!
-      if (!walkableKind(k)) {
-        setClosed(surface, tx, sy, k as Kind)
-        continue
-      }
-      surface.kind[i] = k
-      const e = [edgeZ(mid, sy + D), edgeZ(east, sy + 0.5), edgeZ(mid, sy + 1 - D), edgeZ(west, sy + 0.5)]
-      for (let d = 0; d < 4; d++) surface.edge[i * 4 + d] = e[d]!
-      if (e.every((z) => Number.isNaN(z))) setClosed(surface, tx, sy, KIND.steep)
+      view.ground[i] = f.ground[j]!
+      setClosed(view, tx, sy, f.kind[j]! as Kind)
     }
   }
-  // Neighbours on the same ground meet within a hair: make them meet exactly (at 1/256).
-  for (let sy = 0; sy < H; sy++)
-    for (let tx = 0; tx < w; tx++) {
-      const i = sy * w + tx
-      for (const d of [1, 2] as Dir[]) {
-        const x = tx + DX[d]
-        const y = sy + DY[d]
-        if (x >= w || y >= H) continue
-        const j = y * w + x
-        const a = surface.edge[i * 4 + d]!
-        const b = surface.edge[j * 4 + ((d + 2) & 3)]!
-        if (Number.isNaN(a) || Number.isNaN(b)) continue
-        if (Math.abs(a - b) < 0.05) surface.edge[i * 4 + d] = surface.edge[j * 4 + ((d + 2) & 3)] = q((a + b) / 2)
-      }
-    }
 }
 
-/** A field tile in the map (the lifted map: where its middle shows; null where it's hidden). */
-export function toMap(info: SlopesInfo, tx: number, ty: number): { tx: number; ty: number } | null {
-  if (!info.lift) return { tx, ty }
-  const col = liftColumn(info.field, tx, 0.5, info.pad)
-  const sp = col.find((s) => !s.face && s.ty === ty)
-  if (!sp) return null
-  const s = clamp((sp.sN + sp.sS) / 2, sp.s0, sp.s1 - 1e-3)
-  return { tx, ty: Math.floor(s) }
-}
-
-/** The field tile a map tile shows (null: a face or nothing). */
-export function toField(info: SlopesInfo, tx: number, ty: number): { tx: number; ty: number } | null {
-  const j = info.source[ty * info.field.w + tx] ?? -1
-  if (j < 0) return null
-  return { tx: j % info.field.w, ty: Math.floor(j / info.field.w) }
-}
-
-/** The nearest walkable map tile to (tx, ty), by rings. */
+/** The nearest walkable tile to (tx, ty), by rings. */
 export function nearestWalkable(stack: Stack, tx: number, ty: number): Node {
   const l = stack.layers[SURFACE]!
   for (let r = 0; r < Math.max(l.w, l.h); r++)
@@ -556,15 +537,34 @@ export function nearestWalkable(stack: Stack, tx: number, ty: number): Node {
   return { layer: SURFACE, tx, ty }
 }
 
-/** Where a field tile's middle is drawn in the map (hidden or not): the lifted map moves it north 3 rows a level. */
+/** Where a field tile's middle is drawn in the view (hidden or not): the lift moves it north 3 rows a level. */
 export function mapPoint(info: SlopesInfo, tx: number, ty: number): { tx: number; ty: number } {
   return info.lift ? { tx, ty: Math.max(0, Math.round(ty + info.pad - ROWS_PER_LEVEL * fieldZ(info.field, tx, ty, 0.5, 0.5))) } : { tx, ty }
 }
 
-/** A field tile as a map node, on walkable ground near it. */
-export function mapNode(info: SlopesInfo, stack: Stack, tx: number, ty: number): Node {
-  const m = toMap(info, tx, ty) ?? mapPoint(info, tx, ty)
-  return nearestWalkable(stack, m.tx, m.ty)
+/** How much higher the ground drawn at a lifted point may be than the ground under it before it counts as hiding it (levels). */
+export const HIDE_ABOVE = 0.25
+
+/**
+ * Where someone standing at field point (x, y) px at height z is drawn, and
+ * whether they're hidden. Flat styles: where they stand. The lift: 3 rows a
+ * level further north (screen y = y − 48 z + 16 pad). The rule for what's
+ * hidden: they're hidden when the ground the lift draws at that screen point
+ * (the nearest surface, ./slopes.ts liftColumn) isn't theirs, that is a face
+ * or ground more than HIDE_ABOVE levels higher: something nearer and higher
+ * stands in front. The hero is then drawn as a silhouette over everything
+ * (./scene.ts); others aren't drawn.
+ */
+export function display(info: SlopesInfo, x: number, y: number, z: number): { x: number; y: number; hidden: boolean } {
+  if (!info.lift) return { x, y, hidden: false }
+  const T = 16
+  const sy = y - ROWS_PER_LEVEL * T * z + info.pad * T
+  const tx = Math.min(info.field.w - 1, Math.max(0, Math.floor(x / T)))
+  const col = liftColumn(info.field, tx, (x / T - tx), info.pad)
+  // Sampled a hair north of the foot: the foot's own row is the boundary with what's in front.
+  const sp = spanAt(col, sy / T - 0.02)
+  const hidden = !sp || sp.face || spanGround(sp, sy / T - 0.02).z > z + HIDE_ABOVE
+  return { x, y: sy, hidden }
 }
 
 export interface SlopesOptions {
@@ -572,25 +572,41 @@ export interface SlopesOptions {
   shade: boolean
 }
 
-/** The slopes area in a style: the lifted map for the true ¾ lift, the flat one for the rest. */
+/**
+ * The slopes area in a style. Walking and collision are the field's in every
+ * style (the collision map above, in field tiles and px); a style changes
+ * only the drawing: the flat view is the collision map itself, the lift a
+ * projected view (liftView) with a margin on top. Switching style never
+ * moves anyone.
+ */
 export function buildSlopes(opts: AreaOptions, look: SlopesOptions = { style: 'shade', shade: true }): LabArea {
   const field = buildField()
   const props = fieldProps(field)
   const lift = look.style === 'lift'
   const pad = lift ? liftPad(field) : 0
   const w = field.w
-  const h = field.h + pad
+  const h = field.h
   const surface = newLayer('surface', w, h)
   const cave = newLayer('cave', w, h)
   const stack: Stack = { w, h, layers: [surface, cave], portals: new Map() }
-  const source = new Int32Array(w * h).fill(-1)
-  const zs = new Float32Array(w * h).fill(Number.NaN)
-  if (lift) liftMap(field, surface, source, zs, pad)
-  else flatMap(field, surface, source, zs)
+  const flatSource = new Int32Array(w * h).fill(-1)
+  const flatZ = new Float32Array(w * h).fill(Number.NaN)
+  flatMap(field, surface, flatSource, flatZ)
+  // A tree on a tile a cliff's face took goes (its ground is the cliff's footprint).
+  for (let i = 0; i < w * h; i++) if (surface.kind[i] === KIND.face && field.kind[i] === KIND.prop) field.kind[i] = KIND.slope
+  let view = surface
+  let source = flatSource
+  let zs = flatZ
+  if (lift) {
+    view = newLayer('surface', w, h + pad)
+    source = new Int32Array(w * (h + pad)).fill(-1)
+    zs = new Float32Array(w * (h + pad)).fill(Number.NaN)
+    liftView(field, view, source, zs, pad)
+  }
   const top = new Int8Array(w * h)
-  for (let i = 0; i < w * h; i++) top[i] = Number.isNaN(zs[i]!) ? 0 : Math.floor(zs[i]! + 1e-3)
-  const info: SlopesInfo = { style: look.style, shade: look.shade, lift, field, pad, source, z: zs, spots: SPOTS }
-  // Props stand where their tile shows; crags get a rock each, so they read as standing rock in every style.
+  for (let i = 0; i < w * h; i++) top[i] = Number.isNaN(flatZ[i]!) ? 0 : Math.floor(flatZ[i]! + 1e-3)
+  const info: SlopesInfo = { style: look.style, shade: look.shade, lift, field, pad, view, source, z: zs, spots: SPOTS }
+  // Props are drawn where their tile shows (view tiles); crags get a rock each, so they read as standing rock in every style.
   const shown: PropSpot[] = []
   const place = (p: PropSpot, z: number) => {
     if (!lift) {
@@ -599,6 +615,8 @@ export function buildSlopes(opts: AreaOptions, look: SlopesOptions = { style: 's
       shown.push({ ...p, z })
       return
     }
+    // Not on a cliff's footprint (talus in the lift), nor where it's hidden.
+    if (surface.kind[p.ty * w + p.tx] === KIND.face) return
     const col = liftColumn(field, p.tx, 0.5, pad)
     const sp = col.find((s) => !s.face && s.ty === p.ty)
     if (!sp) return
@@ -608,16 +626,13 @@ export function buildSlopes(opts: AreaOptions, look: SlopesOptions = { style: 's
   }
   for (const p of props) place(p, fieldZ(field, p.tx, p.ty, 0.5, 1))
   for (let i = 0; i < field.w * field.h; i++) {
-    if (field.kind[i] !== KIND.crag) continue
+    if (field.kind[i] !== KIND.crag || surface.kind[i] !== KIND.crag) continue
     const tx = i % field.w
     const ty = (i - tx) / field.w
-    if (!lift && surface.kind[i] !== KIND.crag) continue
     place({ kind: 'crag', tx, ty, variant: Math.floor(hash(tx, ty, 65) * 4), blocks: true }, fieldZ(field, tx, ty, 0.5, 1))
   }
-  // Lifted, a prop's tile closes wherever it shows.
-  if (lift) for (let i = 0; i < w * h; i++) if (source[i]! >= 0 && field.kind[source[i]!] === KIND.prop) setClosed(surface, i % w, Math.floor(i / w), KIND.prop)
   const spot = (name: string) => SPOTS.find((s) => s.name === name)!
-  const at = (name: string) => mapNode(info, stack, spot(name).tx, spot(name).ty)
+  const at = (name: string) => nearestWalkable(stack, spot(name).tx, spot(name).ty)
   return {
     ...lightArea(
       {

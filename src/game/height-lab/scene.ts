@@ -42,8 +42,8 @@ import { buildArea } from './areas'
 import { buildWalkArea, loadWalk, resumeAt, walkHere, walkLoaded, type Strategy, type WalkData } from './walk'
 import { type CaveImages, FACES_KEY, FACE_TINT, drawFaces, drawGrid, drawOverlays, facePart, paintCave, paintSurface, type PaintPart } from './art'
 import { KIND, ROWS_PER_LEVEL, TILE_PX, findPath, move, sample, standTile, zAt, type Node, type Walker } from './levels'
-import { CRAG_KEY, drawCrags, paintSlopes, slopeFaceTint } from './slopes-art'
-import { FOG_LEVELS, SLOPE_STYLE_NAME, mapNode, mapPoint, toField } from './slopes'
+import { CRAG_KEY, bandImages, chunkKey, drawCrags, paintJob, paintedChunk, slopeFaceTint, type PaintJob } from './slopes-art'
+import { FOG_LEVELS, SLOPE_STYLE_NAME, display, mapPoint, nearestWalkable } from './slopes'
 import { FRIEND_LIGHT, HERO_LIGHT, LIGHT_RES, wayIn } from './light'
 import { caveTint, clearLitScratch, litPixels, pixelSpans, type FillOptions, type Lighting } from './lighting'
 import { fogFor, labLook, onLabLook, setLabLook, type LabLook } from './look'
@@ -83,8 +83,11 @@ interface Part {
 /** The generated area's window, once fetched (kept across restarts: switching strategy is instant), and where to stand after a switch. */
 let walkData: WalkData | null = null
 let walkResume: { tx: number; ty: number } | null = null
-/** The slopes area: the field tile to stand on after a style switch (the lifted map moves things). */
-let slopesResume: { tx: number; ty: number } | null = null
+/** The slopes area: where the hero stood (field px) when the style switched: they stand there again (every style walks the field). */
+let slopesResume: { x: number; y: number } | null = null
+
+/** The slopes area paints chunks a step at a time; at most this long per frame (one step is always taken). */
+const PAINT_BUDGET_MS = 5
 
 /** The strategies, as the HUD and the panel name them. */
 const STRATEGY_NAME: Record<Strategy, string> = { region: 'Region plan', chunk: 'Per-chunk repair' }
@@ -106,10 +109,18 @@ interface SlopesState {
   style: string
   shade: boolean
   lift: boolean
+  /** The hero's field tile and px (the same in every style), and where they're drawn. */
   tile: [number, number]
-  field: { tx: number; ty: number } | null
+  at: [number, number]
+  shown: [number, number]
+  silhouette: boolean
   kind: number
+  /** What's drawn, in tiles (the lift's view is taller). */
   size: [number, number]
+  /** Chunks still being painted, and the paint and update times per frame (ms). */
+  pending: number
+  paint: { frames: number; p50: number; p95: number; max: number }
+  update: { frames: number; p50: number; p95: number; max: number }
   spots: { name: string; x: number; y: number; fx: number; fy: number; note: string; look: [number, number] | null }[]
   parts: number
 }
@@ -137,6 +148,9 @@ interface Thing {
   /** Its own tint (Wren's), kept under the light's while it's lit by tint (the crossfade). */
   tint?: number
   tinted?: boolean
+  /** The slopes area's lift: behind higher ground (./slopes.ts display). The hero is drawn as a silhouette; others not at all. */
+  hidden?: boolean
+  silhouette?: boolean
 }
 
 /** Someone who walks the levels: the hero, the remote player, a creature. */
@@ -221,6 +235,8 @@ export class HeightLabScene extends Phaser.Scene {
     this.look = labLook()
     this.built = { area: this.look.area, skyTiles: this.look.skyTiles, caveStyle: this.look.caveStyle, strategy: this.look.strategy, walkOverlay: this.look.walkOverlay, slopeStyle: this.look.slopeStyle, slopeShade: this.look.slopeShade }
     this.parts = new Map()
+    this.jobs = []
+    this.paintSteps = []
     this.propsByChunk = null
     this.loading = null
     // The generated area waits for the server's window (a few seconds the first time), the tab never frozen.
@@ -234,7 +250,7 @@ export class HeightLabScene extends Phaser.Scene {
         ? buildWalkArea(walkData!, this.look.strategy, { skyTiles: this.look.skyTiles })
         : buildArea(this.look.area, { skyTiles: this.look.skyTiles }, { style: this.look.slopeStyle, shade: this.look.slopeShade })
     if (this.area.generated && walkResume) this.area.spawn = resumeAt(this.area, walkResume.tx, walkResume.ty)
-    if (this.area.slopes && slopesResume) this.area.spawn = mapNode(this.area.slopes, this.area.stack, slopesResume.tx, slopesResume.ty)
+    const resume = this.area.slopes ? slopesResume : null
     walkResume = null
     slopesResume = null
     drawFaces(this)
@@ -249,16 +265,27 @@ export class HeightLabScene extends Phaser.Scene {
       this.buildCave()
     }
     this.buildMovers()
+    if (resume) {
+      this.hero.walker.x = resume.x
+      this.hero.walker.y = resume.y
+      this.place(this.hero)
+    }
     this.buildOverlays()
-    if (this.streamed()) this.stream(true)
+    // The generated area streams now; the slopes area once the camera is on the hero (it paints what the camera sees first).
+    if (this.area.generated) this.stream(true)
     endBuild()
     this.buildMs = performance.now() - t0
 
     const cam = this.cameras.main
-    cam.setBounds(0, 0, this.area.stack.w * T, this.area.stack.h * T)
+    const shown = this.area.slopes?.view ?? this.area.stack
+    cam.setBounds(0, 0, shown.w * T, shown.h * T)
     cam.startFollow(this.hero.sprite, true, 0.12, 0.12, 0, 8)
     this.fitZoom()
     cam.setZoom(this.baseZoom)
+    if (this.area.slopes) {
+      cam.centerOn(this.hero.thing.x, this.hero.thing.y - 8)
+      this.stream(true)
+    }
     const onResize = () => this.fitZoom()
     this.scale.on('resize', onResize)
 
@@ -287,10 +314,7 @@ export class HeightLabScene extends Phaser.Scene {
           walkResume = { tx, ty }
         }
         // Another style where the hero stands: the same ground, wherever the new map shows it.
-        if (slopes && this.area.slopes) {
-          const [tx, ty] = standTile(this.hero.walker)
-          slopesResume = toField(this.area.slopes, tx, ty)
-        }
+        if (slopes && this.area.slopes) slopesResume = { x: this.hero.walker.x, y: this.hero.walker.y }
         this.scene.restart()
       }
     })
@@ -358,7 +382,8 @@ export class HeightLabScene extends Phaser.Scene {
   }
 
   private buildFaces(part?: Rect): Thing[] {
-    const l = this.area.stack.layers[SURFACE]!
+    // The slopes area's faces are its view's (the lift draws them lifted).
+    const l = this.area.slopes?.view ?? this.area.stack.layers[SURFACE]!
     const isFace = (tx: number, ty: number) => tx >= 0 && tx < l.w && (l.kind[ty * l.w + tx] === KIND.face || l.kind[ty * l.w + tx] === KIND.mouth)
     const r = part ?? { x0: 0, y0: 0, x1: l.w - 1, y1: l.h - 1 }
     const made: Thing[] = []
@@ -462,11 +487,12 @@ export class HeightLabScene extends Phaser.Scene {
   private stream(all = false, at?: { x: number; y: number }): void {
     if (!this.streamed()) return
     const C = 24
-    const cw = Math.ceil(this.area.stack.w / C)
-    const ch = Math.ceil(this.area.stack.h / C)
-    // Round the hero, or round what the camera frames.
+    const shown = this.area.slopes?.view ?? this.area.stack
+    const cw = Math.ceil(shown.w / C)
+    const ch = Math.ceil(shown.h / C)
+    // Round the hero (where they're drawn), or round what the camera frames.
     const cam = this.cameras.main
-    const w = at ?? (this.framed ? { x: cam.midPoint.x, y: cam.midPoint.y } : this.hero.walker)
+    const w = at ?? (this.framed ? { x: cam.midPoint.x, y: cam.midPoint.y } : { x: this.hero.thing.x, y: this.hero.thing.y })
     // Half the view, at the widest the climbing zoom gets, and a chunk more.
     const hx = this.scale.width / (2 * this.baseZoom * 0.75) + C * T
     const hy = this.scale.height / (2 * this.baseZoom * 0.75) + C * T
@@ -480,18 +506,84 @@ export class HeightLabScene extends Phaser.Scene {
     const mx = w.x / (C * T) - 0.5
     const my = w.y / (C * T) - 0.5
     want.sort((a, b) => Math.hypot(a[0] - mx, a[1] - my) - Math.hypot(b[0] - mx, b[1] - my))
-    for (const [cx, cy] of all ? want : want.slice(0, 2)) this.addPart(cx, cy)
+    if (this.area.slopes) this.streamSlopes(want, all, { cx0, cy0, cx1, cy1 }, w)
+    else for (const [cx, cy] of all ? want : want.slice(0, 2)) this.addPart(cx, cy)
     for (const p of this.parts.values()) p.grid.setVisible(this.look.grid)
   }
 
-  private addPart(cx: number, cy: number): void {
+  /** The slopes area's chunks being painted, nearest first. */
+  private jobs: PaintJob[] = []
+  /** The slopes area's paint steps, per frame (ms): for the spec and the notes. */
+  private paintSteps: number[] = []
+
+  /**
+   * The slopes area's chunks: painted ones (this style, cached) go up at
+   * once (two a frame unless `all`); the rest become jobs, painted a step at
+   * a time under PAINT_BUDGET_MS a frame (pumpPaint). With `all` (entering,
+   * a jump), the chunks under the camera are finished at once so the view
+   * isn't empty; the rest follow.
+   */
+  private streamSlopes(want: [number, number][], all: boolean, keep: { cx0: number; cy0: number; cx1: number; cy1: number }, mid: { x: number; y: number }): void {
+    this.jobs = this.jobs.filter((j) => j.cx >= keep.cx0 - 1 && j.cx <= keep.cx1 + 1 && j.cy >= keep.cy0 - 1 && j.cy <= keep.cy1 + 1 && !this.parts.has(`${j.cx},${j.cy}`))
+    let placed = 0
+    const order = new Map(want.map(([cx, cy], i) => [`${cx},${cy}`, i]))
+    for (const [cx, cy] of want) {
+      const key = chunkKey(this.area, cx, cy)
+      const done = paintedChunk(key)
+      if (done) {
+        if (all || placed < 2) {
+          this.addPart(cx, cy)
+          placed++
+        }
+        continue
+      }
+      if (!this.jobs.some((j) => j.key === key)) this.jobs.push(paintJob(this.area, this.partRect(cx, cy), key, cx, cy))
+    }
+    this.jobs.sort((a, b) => (order.get(`${a.cx},${a.cy}`) ?? 99) - (order.get(`${b.cx},${b.cy}`) ?? 99))
+    if (!all) return
+    // Under the camera (round what it centres on; its own view only updates when it draws): now.
+    const hw = this.scale.width / (2 * this.baseZoom)
+    const hh = this.scale.height / (2 * this.baseZoom)
+    const C = 24 * T
+    for (const j of [...this.jobs]) {
+      if ((j.cx + 1) * C < mid.x - hw || j.cx * C > mid.x + hw || (j.cy + 1) * C < mid.y - hh || j.cy * C > mid.y + hh) continue
+      while (!j.step()) {
+        /* painting */
+      }
+      this.jobs = this.jobs.filter((k) => k !== j)
+      this.addPart(j.cx, j.cy)
+    }
+  }
+
+  /** Paint steps for the slopes area's waiting chunks, within the frame's budget (always one). */
+  private pumpPaint(): void {
+    if (!this.jobs.length) return
+    const t0 = performance.now()
+    do {
+      const j = this.jobs[0]!
+      if (j.step()) {
+        this.jobs.shift()
+        this.addPart(j.cx, j.cy)
+      }
+    } while (this.jobs.length && performance.now() - t0 < PAINT_BUDGET_MS)
+    this.paintSteps.push(performance.now() - t0)
+    if (this.paintSteps.length > 600) this.paintSteps.shift()
+  }
+
+  /** A chunk's tiles (in what's drawn: the slopes area's view, else the stack). */
+  private partRect(cx: number, cy: number): PaintPart {
     const C = 24
-    const rect = { x0: cx * C, y0: cy * C, x1: Math.min(this.area.stack.w - 1, cx * C + C - 1), y1: Math.min(this.area.stack.h - 1, cy * C + C - 1) }
-    const key = `hl-walk-${cx}-${cy}`
-    const part: PaintPart = { ...rect, key, overlay: this.look.walkOverlay }
+    const shown = this.area.slopes?.view ?? this.area.stack
+    return { x0: cx * C, y0: cy * C, x1: Math.min(shown.w - 1, cx * C + C - 1), y1: Math.min(shown.h - 1, cy * C + C - 1), key: `hl-walk-${cx}-${cy}`, overlay: this.look.walkOverlay }
+  }
+
+  private addPart(cx: number, cy: number): void {
+    const part = this.partRect(cx, cy)
+    const rect = { x0: part.x0, y0: part.y0, x1: part.x1, y1: part.y1 }
     const images: Phaser.GameObjects.Image[] = []
     const keys: string[] = []
-    for (const li of this.area.slopes ? paintSlopes(this, this.area, part) : paintSurface(this, this.area, part)) {
+    const bands = this.area.slopes ? paintedChunk(chunkKey(this.area, cx, cy)) : null
+    for (const li of bands ? bandImages(this, part.key, bands) : paintSurface(this, this.area, part)) {
       const img = this.add.image(li.x, li.y, li.key).setOrigin(0).setDepth(BAND.ground + li.level)
       this.levelImages.push({ img, level: li.level })
       images.push(img)
@@ -500,7 +592,7 @@ export class HeightLabScene extends Phaser.Scene {
     const props = (this.propsByChunk ??= this.groupProps()).get(`${cx},${cy}`) ?? []
     const things = [...this.buildFaces(rect), ...this.buildProps(props)]
     const grid = this.add.graphics().setDepth(BAND.gridOut).setVisible(this.look.grid)
-    drawGrid(grid, this.area.stack.layers[SURFACE]!, this.area, rect)
+    drawGrid(grid, this.area.slopes?.view ?? this.area.stack.layers[SURFACE]!, this.area, rect)
     this.parts.set(`${cx},${cy}`, { cx, cy, images, keys, things, grid })
     this.stillKey = ''
   }
@@ -654,6 +746,7 @@ export class HeightLabScene extends Phaser.Scene {
     for (const m of this.movers) if (m !== this.hero) this.walkOn(m, dt)
     for (const m of this.movers) this.place(m)
     this.stream()
+    this.pumpPaint()
     this.applyLook(dt)
     const ms = performance.now() - t0
     this.updateMs.push(ms)
@@ -736,17 +829,23 @@ export class HeightLabScene extends Phaser.Scene {
   private place(m: Mover): void {
     const w = m.walker
     const t = m.thing
-    t.x = w.x
-    t.y = w.y
     t.layer = w.layer
     const z = zAt(this.area.stack, w)
     if (!Number.isNaN(z)) t.z = z
+    // Walking is in field px; the slopes area's lift draws them 3 rows a level further north, or hidden behind higher ground.
+    const d = this.area.slopes ? display(this.area.slopes, w.x, w.y - w.fh / 2, t.z) : null
+    const x = w.x
+    const y = d ? d.y + w.fh / 2 : w.y
+    t.x = x
+    t.y = y
+    t.hidden = !!d?.hidden && m !== this.hero
+    t.silhouette = !!d?.hidden && m === this.hero
     t.seen = w.layer === CAVE ? sample(this.area.stack.layers[CAVE]!, this.area.stack.layers[CAVE]!.seen, w.x, w.y - 2) : 1
-    m.sprite.setPosition(w.x, w.y)
-    t.parts[1]!.o.setPosition(w.x, w.y - 1)
-    t.parts[2]?.o.setPosition(w.x, w.y - 23)
+    m.sprite.setPosition(x, y)
+    t.parts[1]!.o.setPosition(x, y - 1)
+    t.parts[2]?.o.setPosition(x, y - 23)
     if (t.twin) {
-      t.twin.setPosition(w.x, w.y).setFlipX(m.sprite.flipX)
+      t.twin.setPosition(x, y).setFlipX(m.sprite.flipX)
       t.twin.setFrame(m.sprite.frame.name)
     }
   }
@@ -835,7 +934,7 @@ export class HeightLabScene extends Phaser.Scene {
       const onCave = t.layer === CAVE
       const band = onCave ? (inCave ? BAND.caveIn : BAND.caveOut) : 0
       // The cave's things come in with its view (crystals popped in at the portal), the hero always shows.
-      const vis = onCave ? (t === this.hero.thing ? 1 : inCave ? Math.max(t.seen, this.caveShownAt(t.x, t.y, v, iris)) : t.seen) : 1
+      const vis = t.hidden ? 0 : onCave ? (t === this.hero.thing ? 1 : inCave ? Math.max(t.seen, this.caveShownAt(t.x, t.y, v, iris)) : t.seen) : 1
       // In the crossfade the cave's floors are drawn lit, over the light: its people stand over them, lit by
       // a tint of the light they'd have under it.
       const byTint = fade && onCave && !t.glows
@@ -861,8 +960,19 @@ export class HeightLabScene extends Phaser.Scene {
           .setAlpha(vis * fog)
           .setVisible(vis * fog > 0.01)
       }
+      // Behind higher ground in the lift: the hero shows as a silhouette over everything (their shadow and fog twin go).
+      if (t.silhouette) {
+        const sil = t.parts[0]!.o as Phaser.GameObjects.Sprite
+        sil.setDepth(BAND.dark - 10).setAlpha(0.7).setTintFill(0x2c2640)
+        t.parts[1]?.o.setVisible(false)
+        t.twin?.setVisible(false)
+        t.tinted = true
+      } else if (t.tinted && t === this.hero.thing && !byTint) {
+        ;(t.parts[0]!.o as Phaser.GameObjects.Sprite).clearTint()
+        t.tinted = false
+      }
     }
-    const hx = this.hero.walker.x
+    const hx = this.hero.thing.x
     this.drawLight(v, iris, fade, wv)
 
     // Climbing: haze at the screen's edges, and the camera eases out.
@@ -882,7 +992,7 @@ export class HeightLabScene extends Phaser.Scene {
     // Where the hero stands on screen, for hold-to-walk (CSS px).
     const r = canvasRatio()
     heroScreen.x = ((hx - wv.x) * cam.zoom) / r
-    heroScreen.y = ((this.hero.walker.y - wv.y) * cam.zoom) / r
+    heroScreen.y = ((this.hero.thing.y - wv.y) * cam.zoom) / r
   }
 
   /**
@@ -1002,7 +1112,7 @@ export class HeightLabScene extends Phaser.Scene {
       this.framed = true
     } else {
       this.follow()
-      cam.centerOn(w.x, w.y - 8)
+      cam.centerOn(this.hero.thing.x, this.hero.thing.y - 8)
     }
     this.stream(true, look ? { x: look[0] * T + 8, y: look[1] * T + 8 } : undefined)
     this.stillKey = ''
@@ -1021,8 +1131,7 @@ export class HeightLabScene extends Phaser.Scene {
     this.follow()
     move(this.area.stack, this.hero.walker, dx, dy)
     this.place(this.hero)
-    const w = this.hero.walker
-    this.cameras.main.centerOn(w.x, w.y - 8)
+    this.cameras.main.centerOn(this.hero.thing.x, this.hero.thing.y - 8)
     this.stillKey = ''
   }
 
@@ -1067,16 +1176,23 @@ export class HeightLabScene extends Phaser.Scene {
     if (!s) return undefined
     const [tx, ty] = standTile(this.hero.walker)
     const l = this.area.stack.layers[SURFACE]!
+    const sorted = [...this.paintSteps].sort((a, b) => a - b)
+    const upd = [...this.updateMs].sort((a, b) => a - b)
     return {
       style: s.style,
       shade: s.shade,
       lift: s.lift,
       tile: [tx, ty],
-      field: toField(s, tx, ty),
+      at: [this.hero.walker.x, this.hero.walker.y],
+      shown: [this.hero.thing.x, this.hero.thing.y],
+      silhouette: !!this.hero.thing.silhouette,
       kind: l.kind[ty * l.w + tx] ?? 0,
-      size: [l.w, l.h],
+      size: [s.view.w, s.view.h],
+      pending: this.jobs.length,
+      paint: { frames: sorted.length, p50: sorted[Math.floor(sorted.length / 2)] ?? 0, p95: sorted[Math.floor(sorted.length * 0.95)] ?? 0, max: sorted.at(-1) ?? 0 },
+      update: { frames: upd.length, p50: upd[Math.floor(upd.length / 2)] ?? 0, p95: upd[Math.floor(upd.length * 0.95)] ?? 0, max: upd.at(-1) ?? 0 },
       spots: s.spots.map((p) => {
-        const n = mapNode(s, this.area.stack, p.tx, p.ty)
+        const n = nearestWalkable(this.area.stack, p.tx, p.ty)
         const look = p.look ? mapPoint(s, p.look[0], p.look[1]) : null
         return { name: p.name, x: n.tx, y: n.ty, fx: p.tx, fy: p.ty, note: p.note, look: look ? ([look.tx, look.ty] as [number, number]) : null }
       }),
@@ -1109,8 +1225,7 @@ export class HeightLabScene extends Phaser.Scene {
     const sl = this.area.slopes
     if (sl) {
       const [tx, ty] = standTile(this.hero.walker)
-      const at = toField(sl, tx, ty)
-      const steep = at ? sl.field.slope[at.ty * sl.field.w + at.tx]! : 0
+      const steep = sl.field.slope[ty * sl.field.w + tx] ?? 0
       this.hud.textContent = `Slopes, hills and passes — ${SLOPE_STYLE_NAME[sl.style]}${sl.style !== 'shade' && sl.shade ? ' + shading' : ''} · level ${v.z.toFixed(2)} · slope ${steep.toFixed(2)}\n${perf}`
       return
     }

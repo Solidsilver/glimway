@@ -1,11 +1,13 @@
 /**
  * Height lab (dev only): the slopes area's textures. The ground's pixels
- * are ./slopes-paint.ts's (the four drawing styles); this makes them level
- * images, and draws the crags' standing rock.
+ * are ./slopes-paint.ts's (the four drawing styles); this paints them as
+ * jobs the scene runs a step at a time under a frame budget, keeps the
+ * results by style, shading and chunk (so a chunk is painted once a style),
+ * makes them level images, and draws the crags' standing rock.
  */
 import Phaser from 'phaser'
 import { addPixels, type LevelImage, type PaintPart } from './art.ts'
-import { BAND, cutBands, paintPart } from './slopes-paint.ts'
+import { BAND, cutBandsSteps, paintPartSteps, type BandPixels } from './slopes-paint.ts'
 
 function hash(x: number, y: number, salt: number): number {
   let h = (x * 374761393 + y * 668265263 + salt * 1442695041) | 0
@@ -13,11 +15,62 @@ function hash(x: number, y: number, salt: number): number {
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296
 }
 
-/** One part of the slopes area's surface (map tiles, inclusive), as level images a half level each. */
-export function paintSlopes(scene: Phaser.Scene, area: Parameters<typeof paintPart>[0], part: PaintPart): LevelImage[] {
-  const { px, z } = paintPart(area, part)
-  return cutBands(part, px, z).map((b) => {
-    const key = `${part.key}-${b.band}`
+type Area = Parameters<typeof paintPartSteps>[0]
+
+/** Painted chunks, by style, shading and chunk (the field never changes): the most recent CACHE_CHUNKS. */
+const CACHE_CHUNKS = 48
+const painted = new Map<string, BandPixels[]>()
+
+/** The cache's key for a chunk of the area in its style. */
+export function chunkKey(area: Area, cx: number, cy: number): string {
+  const s = area.slopes!
+  return `${s.style}|${s.style === 'shade' || s.shade ? 1 : 0}|${cx},${cy}`
+}
+
+/** A chunk already painted in this style (and now the most recent). */
+export function paintedChunk(key: string): BandPixels[] | null {
+  const b = painted.get(key)
+  if (!b) return null
+  painted.delete(key)
+  painted.set(key, b)
+  return b
+}
+
+/** A chunk being painted: `step()` does one strip or band (a few ms) and says when it's done; then `bands` are cached. */
+export interface PaintJob {
+  key: string
+  cx: number
+  cy: number
+  step(): boolean
+  bands: BandPixels[] | null
+}
+
+export function paintJob(area: Area, part: PaintPart, key: string, cx: number, cy: number): PaintJob {
+  const run = (function* (): Generator<void, BandPixels[]> {
+    const { px, z } = yield* paintPartSteps(area, part)
+    return yield* cutBandsSteps(part, px, z)
+  })()
+  const job: PaintJob = {
+    key,
+    cx,
+    cy,
+    bands: null,
+    step() {
+      const r = run.next()
+      if (!r.done) return false
+      job.bands = r.value
+      painted.set(key, r.value)
+      while (painted.size > CACHE_CHUNKS) painted.delete(painted.keys().next().value!)
+      return true
+    }
+  }
+  return job
+}
+
+/** A painted chunk's bands as level images (a half level each). */
+export function bandImages(scene: Phaser.Scene, partKey: string, bands: BandPixels[]): LevelImage[] {
+  return bands.map((b) => {
+    const key = `${partKey}-${b.band}`
     addPixels(scene, key, b.w, b.h, b.px)
     return { key, x: b.x, y: b.y, level: b.band + BAND / 2 }
   })
