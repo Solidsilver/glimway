@@ -57,3 +57,37 @@ Both answers are merged: [terrain-argon.md](responses/terrain-argon.md),
 - **Regions use plain nearest-site distance with a warp** (Sol). Round borders for the smaller
   land cells stay as they are (call 1).
 - **A region pins when a chunk in it is generated** (call 3). Lab previews never pin the real world.
+
+## After walking it: slopes by default (owner, 2026-10-21)
+
+The owner walked the generated slice near home in the height lab
+(`terrain-walk-notes.md`) and found it "a bunch of plateaus with walls/cliffs".
+The picture they want:
+
+- **Mountains that read as mountains:** larger, with semi-smooth sides on the way up and
+  passable paths up through passes.
+- **Hills:** generally gradual up and down.
+- **Rock outcrops:** a climb up one side, a sharp edge on the other.
+- **Cliffs kept for particular things:** the edges of some mountains, jagged edges, and later
+  the sea or large lakes.
+
+**What changes:** walkable slope becomes the default ground, following a smooth height field
+through the exact 1/256 edge heights. Cliffs come only from an intentional crag/scarp field. Ground
+past a steepness limit is "too steep" (scree or bare rock): visibly mountainside, not walkable.
+Passes are saddles under the limit, and the region plan's job becomes "every range has a pass".
+Cliffs and too-steep ground form ribbons, never closed rings, so the walk-home guarantee mostly
+follows. Whole-level plateaus and the A/B access choice are superseded. The spike's exact edges,
+local south-face rule and certificate idea carry over. Mountains need more than levels 0–3, so
+the 2-bit tops in the wire format must widen.
+
+**Next (owner's pick): a slopes round in the height lab first,** in a hand-made area with:
+
+- rolling hills;
+- a smooth-sided mountain with a scree band, a pass and crags;
+- an outcrop;
+- a sea-cliff edge.
+
+The round tries all four drawing styles the owner picked: shading by facing, contour hints,
+small terraces, and a true ¾ lift. The owner walks it and picks. Only then is the generator
+rebuilt around slopes; lane B's fields and biomes stay, and upland becomes the smooth mountain
+height.
