@@ -13,11 +13,13 @@
  *    tile; slopes are drawn where they lie, and a cliff's face takes
  *    ROWS_PER_LEVEL rows a level off the lower land south of it (the local
  *    face rule, as the other areas), so a level still lifts by 3 rows.
- *  - lifted (the true ¾ style): everything is drawn 3 rows a level further
- *    north as it rises (screen row = field row − 3z, plus a margin). A slope
- *    facing you stretches, one facing away squashes (and past 1/3 level a
- *    tile it hides), a cliff opens into its face by the same 3 rows a level,
- *    and nothing walkable hides: the steepness limit is under 1/3.
+ *  - lifted (lift strength 24 or 48 px a level; 48 is round 1's true ¾
+ *    style): everything is drawn k rows a level further north as it rises
+ *    (k = 1.5 or 3; screen row = field row − k z, plus a margin). A slope
+ *    facing you stretches, one facing away squashes (and past 1/k level a
+ *    tile it hides), a cliff opens into its face by k rows a level, and
+ *    nothing walkable hides: the steepness limit is under 1/3. The lifted
+ *    view is drawing only: collision is the flat map's in every setting.
  *
  * Walking: a tile is walkable when its slope is at most MAX_WALK_SLOPE;
  * steeper is "too steep" (KIND.steep: scree, bare rock); crags near the tops
@@ -41,7 +43,7 @@
  *   rows 123–143  the sea (flat sand at 0, no water yet).
  */
 import { G, hash, lightArea, type AreaOptions, type LabArea, type PropSpot } from './area.ts'
-import { CAVE, DX, DY, KIND, ROWS_PER_LEVEL, SURFACE, newLayer, setClosed, step, type Dir, type Kind, type Layer, type Node, type Stack } from './levels.ts'
+import { CAVE, DX, DY, KIND, ROWS_PER_LEVEL, SURFACE, TILE_PX, move, newLayer, setClosed, step, type Dir, type Kind, type Layer, type Node, type Stack, type Walker } from './levels.ts'
 
 export const SLOPES_W = 144
 export const SLOPES_H = 144
@@ -62,9 +64,38 @@ const q = (z: number) => Math.round(z * Q) / Q
 /** Fog by height difference here: a "level" of fog for every FOG_LEVELS levels (the range is 15 tall). */
 export const FOG_LEVELS = 4
 
-/** The drawing styles (./slopes-art.ts). */
+/** Round 1's four drawing styles (now shortcuts to settings, ./look.ts styleSettings). */
 export type SlopeStyle = 'shade' | 'contours' | 'terraces' | 'lift'
-export const SLOPE_STYLE_NAME: Record<SlopeStyle, string> = { shade: 'Shading by facing', contours: 'Contour hints', terraces: 'Small terraces', lift: 'True ¾ lift' }
+
+/** Shading by facing: none, restrained (palette shifts that keep the grass's colour), or round 1's (brightness multiplied). */
+export type FacingShade = 'off' | 'restrained' | 'current'
+/** Contours: none, sparse (broken accents every level), or round 1's (a line every half level). */
+export type ContourDetail = 'off' | 'sparse' | 'current'
+/** Lift strength, px a level: none, moderate, full (round 1's true ¾ lift, ROWS_PER_LEVEL rows). */
+export type LiftPx = 0 | 24 | 48
+
+/** How the slopes area is drawn (./slopes-paint.ts): every combination walks the same field. */
+export interface SlopesLook {
+  facing: FacingShade
+  contours: ContourDetail
+  terraces: boolean
+  lift: LiftPx
+}
+
+/** Round 1's styles as looks (the tests; ./look.ts styleSettings for the panel). */
+export function styleLook(style: SlopeStyle, shade = true): SlopesLook {
+  const facing: FacingShade = style === 'shade' || shade ? 'current' : 'off'
+  return { facing, contours: style === 'contours' ? 'current' : 'off', terraces: style === 'terraces', lift: style === 'lift' ? 48 : 0 }
+}
+
+/** The settings in a few words (the HUD). */
+export function lookName(l: SlopesLook): string {
+  const parts = [l.facing === 'off' ? 'no facing shade' : `${l.facing} shade`]
+  if (l.contours !== 'off') parts.push(`${l.contours} contours`)
+  if (l.terraces) parts.push('terraces')
+  parts.push(l.lift ? `lift ${l.lift} px` : 'no lift')
+  return parts.join(' · ')
+}
 
 /** The ground: per tile its corners, kind and ground. */
 export interface Field {
@@ -91,9 +122,10 @@ export interface SlopeSpot {
 
 /** What the slopes area knows beyond a hand-made one. */
 export interface SlopesInfo {
-  style: SlopeStyle
-  shade: boolean
+  look: SlopesLook
   lift: boolean
+  /** Rows a level the view draws ground further north (lift strength / TILE_PX: 0, 1.5, 3). */
+  k: number
   field: Field
   /** Lifted: rows the view is moved down by, so the highest ground still fits (0 flat). */
   pad: number
@@ -147,11 +179,23 @@ function hills(x: number, y: number): number {
   return 1.8 * h * m
 }
 
+/**
+ * The knoll: a cone in the open valley, the same slope (0.2 level a tile)
+ * every way round, its top rounded. Uphill, downhill and across it are the
+ * same in every direction (the uphill slowdown's runs, ./slopes.ts uphillFactor).
+ */
+export const KNOLL = { x: 86, y: 91, r: 7, rc: 1.5, slope: 0.2 } as const
+function knoll(x: number, y: number): number {
+  const r = Math.hypot(x - KNOLL.x, y - KNOLL.y)
+  if (r >= KNOLL.r) return 0
+  return KNOLL.slope * (r >= KNOLL.rc ? KNOLL.r - r : KNOLL.r - KNOLL.rc / 2 - (r * r) / (2 * KNOLL.rc))
+}
+
 /** The smooth land, before cliffs. */
 function base(x: number, y: number): number {
   const coast = 2 * smoothstep(98, 116, y)
   const roll = 0.25 * Math.sin(x / 13) * Math.sin(y / 11)
-  return low(x, y) + range(x, y) + hills(x, y) + coast + roll
+  return low(x, y) + range(x, y) + hills(x, y) + coast + roll + knoll(x, y)
 }
 
 /** The sea cliff's line: the last land row in each column. */
@@ -318,8 +362,22 @@ export function buildField(): Field {
       else if (ty > 104 && ty <= coastRow(tx)) g = G.moss
       f.ground[i] = g
     }
+  // The rocky path: the walkable strip along the scree at the pass bowl's west side, stone like the scree beside it
+  // (./slopes-paint.ts draws it as laid slabs): what's open has to read by its shape, not its colour.
+  for (let ty = ROCKY.y0; ty <= ROCKY.y1; ty++)
+    for (let tx = ROCKY.x0; tx <= ROCKY.x1; tx++) {
+      const i = ty * w + tx
+      if (!walkableKind(f.kind[i]!)) continue
+      // Two tiles wide: within two tiles of the scree.
+      let steep = false
+      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (Math.abs(dx) + Math.abs(dy) <= 2 && f.kind[(ty + dy) * w + tx + dx] === KIND.steep) steep = true
+      if (steep) f.ground[i] = G['tops-path']
+    }
   return f
 }
+
+/** Where the rocky path runs (tiles, inclusive): beside the scree, from the pass bowl's west side down toward the hills. */
+export const ROCKY = { x0: 44, y0: 36, x1: 60, y1: 48 } as const
 
 // ---------------------------------------------------------------- props and spots
 
@@ -341,7 +399,9 @@ const SPOTS: SlopeSpot[] = [
   { name: 'sea', tx: 45, ty: 134, note: 'on the sand flats under the cliff' },
   { name: 'plateau', tx: 132, ty: 110, note: 'the plateau patch: whole levels, cliffs, ramps (like the generator)' },
   { name: 'behind-plateau', tx: 132, ty: 66, note: 'just north of the plateau patch: in the lift, hidden behind it (drawn as a silhouette)' },
-  { name: 'around-east', tx: 128, ty: 40, note: 'round the range’s east end: the long way north' }
+  { name: 'around-east', tx: 128, ty: 40, note: 'round the range’s east end: the long way north' },
+  { name: 'knoll', tx: 86, ty: 100, note: 'the knoll: a cone, 0.2 level a tile every way round (the uphill runs)', look: [86, 92] },
+  { name: 'rocky-path', tx: 53, ty: 42, note: 'the rocky path beside the scree: walkable stone next to too-steep stone', look: [51, 40] }
 ]
 
 function fieldProps(f: Field): PropSpot[] {
@@ -353,6 +413,8 @@ function fieldProps(f: Field): PropSpot[] {
       const i = ty * f.w + tx
       if (!open(tx, ty) || f.ground[i] === G.path || f.ground[i] === G['tops-path'] || f.ground[i] === G.bank || f.ground[i] === G.trodden) continue
       if (keep.some(([x, y]) => Math.abs(x - tx) <= 2 && Math.abs(y - ty) <= 2)) continue
+      // Nothing on the knoll: its runs go straight up it.
+      if (Math.hypot(tx + 0.5 - KNOLL.x, ty + 0.5 - KNOLL.y) < KNOLL.r + 1) continue
       // Not by a cliff or a closed tile: trees there hide the edge.
       const e = fieldEdges(f, i)
       let ok = true
@@ -406,7 +468,7 @@ export interface Span {
  * where a tile's near edge stands above the land in front, the gap is its
  * face.
  */
-export function liftColumn(f: Field, tx: number, fx: number, pad: number): Span[] {
+export function liftColumn(f: Field, tx: number, fx: number, pad: number, k: number): Span[] {
   const out: Span[] = []
   let horizon = Infinity
   let nearN = 0
@@ -415,8 +477,8 @@ export function liftColumn(f: Field, tx: number, fx: number, pad: number): Span[
     const i = (ty * f.w + tx) * 4
     const zN = c[i]! + (c[i + 1]! - c[i]!) * fx
     const zS = c[i + 3]! + (c[i + 2]! - c[i + 3]!) * fx
-    const sN = ty - ROWS_PER_LEVEL * zN + pad
-    const sS = ty + 1 - ROWS_PER_LEVEL * zS + pad
+    const sN = ty - k * zN + pad
+    const sS = ty + 1 - k * zS + pad
     if (horizon !== Infinity && sS < horizon - 1e-4) out.push({ s0: sS, s1: horizon, face: true, ty, sN, sS, zN, zS, zBot: nearN })
     if (sN < sS && sN < horizon) out.push({ s0: sN, s1: Math.min(sS, horizon), face: false, ty, sN, sS, zN, zS, zBot: zN })
     horizon = Math.min(horizon, sN, sS)
@@ -437,11 +499,11 @@ export function spanGround(sp: Span, s: number): { fy: number; z: number } {
   return { fy, z: sp.zN + (sp.zS - sp.zN) * fy }
 }
 
-/** The margin a lifted map needs on top: the highest ground's lift, and a little. */
-export function liftPad(f: Field): number {
+/** The margin a lifted map needs on top: the highest ground's lift (k rows a level), and a little. */
+export function liftPad(f: Field, k: number): number {
   let zmax = 0
   for (const z of f.corner) zmax = Math.max(zmax, z)
-  return Math.ceil(ROWS_PER_LEVEL * zmax) + 2
+  return Math.ceil(k * zmax) + 2
 }
 
 // ---------------------------------------------------------------- the maps
@@ -492,11 +554,11 @@ function flatMap(f: Field, surface: ReturnType<typeof newLayer>, source: Int32Ar
  * columns put at its middle (./slopes.ts liftColumn): field ground, a face,
  * or nothing. Nobody walks it; the collision map stays the field's.
  */
-function liftView(f: Field, view: ReturnType<typeof newLayer>, source: Int32Array, zs: Float32Array, pad: number): void {
+function liftView(f: Field, view: ReturnType<typeof newLayer>, source: Int32Array, zs: Float32Array, pad: number, k: number): void {
   const w = view.w
   const H = view.h
   for (let tx = 0; tx < w; tx++) {
-    const mid = liftColumn(f, tx, 0.5, pad)
+    const mid = liftColumn(f, tx, 0.5, pad, k)
     for (let sy = 0; sy < H; sy++) {
       const i = sy * w + tx
       const sp = spanAt(mid, sy + 0.5)
@@ -537,9 +599,9 @@ export function nearestWalkable(stack: Stack, tx: number, ty: number): Node {
   return { layer: SURFACE, tx, ty }
 }
 
-/** Where a field tile's middle is drawn in the view (hidden or not): the lift moves it north 3 rows a level. */
+/** Where a field tile's middle is drawn in the view (hidden or not): the lift moves it north k rows a level. */
 export function mapPoint(info: SlopesInfo, tx: number, ty: number): { tx: number; ty: number } {
-  return info.lift ? { tx, ty: Math.max(0, Math.round(ty + info.pad - ROWS_PER_LEVEL * fieldZ(info.field, tx, ty, 0.5, 0.5))) } : { tx, ty }
+  return info.lift ? { tx, ty: Math.max(0, Math.round(ty + info.pad - info.k * fieldZ(info.field, tx, ty, 0.5, 0.5))) } : { tx, ty }
 }
 
 /** How much higher the ground drawn at a lifted point may be than the ground under it before it counts as hiding it (levels). */
@@ -547,8 +609,8 @@ export const HIDE_ABOVE = 0.25
 
 /**
  * Where someone standing at field point (x, y) px at height z is drawn, and
- * whether they're hidden. Flat styles: where they stand. The lift: 3 rows a
- * level further north (screen y = y − 48 z + 16 pad). The rule for what's
+ * whether they're hidden. No lift: where they stand. Lifted: k rows a
+ * level further north (screen y = y − 16 k z + 16 pad; 16 k is the lift strength). The rule for what's
  * hidden: they're hidden when the ground the lift draws at that screen point
  * (the nearest surface, ./slopes.ts liftColumn) isn't theirs, that is a face
  * or ground more than HIDE_ABOVE levels higher: something nearer and higher
@@ -558,32 +620,28 @@ export const HIDE_ABOVE = 0.25
 export function display(info: SlopesInfo, x: number, y: number, z: number): { x: number; y: number; hidden: boolean } {
   if (!info.lift) return { x, y, hidden: false }
   const T = 16
-  const sy = y - ROWS_PER_LEVEL * T * z + info.pad * T
+  const sy = y - info.k * T * z + info.pad * T
   const tx = Math.min(info.field.w - 1, Math.max(0, Math.floor(x / T)))
-  const col = liftColumn(info.field, tx, (x / T - tx), info.pad)
+  const col = liftColumn(info.field, tx, x / T - tx, info.pad, info.k)
   // Sampled a hair north of the foot: the foot's own row is the boundary with what's in front.
   const sp = spanAt(col, sy / T - 0.02)
   const hidden = !sp || sp.face || spanGround(sp, sy / T - 0.02).z > z + HIDE_ABOVE
   return { x, y: sy, hidden }
 }
 
-export interface SlopesOptions {
-  style: SlopeStyle
-  shade: boolean
-}
-
 /**
- * The slopes area in a style. Walking and collision are the field's in every
- * style (the collision map above, in field tiles and px); a style changes
- * only the drawing: the flat view is the collision map itself, the lift a
- * projected view (liftView) with a margin on top. Switching style never
+ * The slopes area drawn one way. Walking and collision are the field's in
+ * every setting (the collision map above, in field tiles and px); a setting
+ * changes only the drawing: unlifted, the view is the collision map itself;
+ * lifted, a projected view (liftView) with a margin on top. Switching never
  * moves anyone.
  */
-export function buildSlopes(opts: AreaOptions, look: SlopesOptions = { style: 'shade', shade: true }): LabArea {
+export function buildSlopes(opts: AreaOptions, look: SlopesLook = styleLook('shade')): LabArea {
   const field = buildField()
   const props = fieldProps(field)
-  const lift = look.style === 'lift'
-  const pad = lift ? liftPad(field) : 0
+  const lift = look.lift > 0
+  const k = look.lift / TILE_PX
+  const pad = lift ? liftPad(field, k) : 0
   const w = field.w
   const h = field.h
   const surface = newLayer('surface', w, h)
@@ -601,11 +659,11 @@ export function buildSlopes(opts: AreaOptions, look: SlopesOptions = { style: 's
     view = newLayer('surface', w, h + pad)
     source = new Int32Array(w * (h + pad)).fill(-1)
     zs = new Float32Array(w * (h + pad)).fill(Number.NaN)
-    liftView(field, view, source, zs, pad)
+    liftView(field, view, source, zs, pad, k)
   }
   const top = new Int8Array(w * h)
   for (let i = 0; i < w * h; i++) top[i] = Number.isNaN(flatZ[i]!) ? 0 : Math.floor(flatZ[i]! + 1e-3)
-  const info: SlopesInfo = { style: look.style, shade: look.shade, lift, field, pad, view, source, z: zs, spots: SPOTS }
+  const info: SlopesInfo = { look, lift, k, field, pad, view, source, z: zs, spots: SPOTS }
   // Props are drawn where their tile shows (view tiles); crags get a rock each, so they read as standing rock in every style.
   const shown: PropSpot[] = []
   const place = (p: PropSpot, z: number) => {
@@ -617,7 +675,7 @@ export function buildSlopes(opts: AreaOptions, look: SlopesOptions = { style: 's
     }
     // Not on a cliff's footprint (talus in the lift), nor where it's hidden.
     if (surface.kind[p.ty * w + p.tx] === KIND.face) return
-    const col = liftColumn(field, p.tx, 0.5, pad)
+    const col = liftColumn(field, p.tx, 0.5, pad, k)
     const sp = col.find((s) => !s.face && s.ty === p.ty)
     if (!sp) return
     // Its foot: the tile's south edge, lifted; never below what shows of it.
@@ -651,6 +709,67 @@ export function buildSlopes(opts: AreaOptions, look: SlopesOptions = { style: 's
     ),
     slopes: info
   }
+}
+
+// ---------------------------------------------------------------- walking uphill
+
+/** The gentle uphill slowdown at its most: 12% slower straight up the steepest walkable ground (slopes-lab-recommendations.md §6). */
+export const UPHILL_CAP = 0.12
+
+/** The slope's gradient (levels a tile, east and south: it points uphill) at field point (x, y) px: its tile's bilinear patch there. */
+export function fieldGradient(f: Field, x: number, y: number): [number, number] {
+  const tx = Math.min(f.w - 1, Math.max(0, Math.floor(x / TILE_PX)))
+  const ty = Math.min(f.h - 1, Math.max(0, Math.floor(y / TILE_PX)))
+  const fx = Math.min(1, Math.max(0, x / TILE_PX - tx))
+  const fy = Math.min(1, Math.max(0, y / TILE_PX - ty))
+  const c = f.corner
+  const i = (ty * f.w + tx) * 4
+  return [(c[i + 1]! - c[i]!) * (1 - fy) + (c[i + 2]! - c[i + 3]!) * fy, (c[i + 3]! - c[i]!) * (1 - fx) + (c[i + 2]! - c[i + 1]!) * fx]
+}
+
+/**
+ * How fast someone walks at field point (x, y) px going (ux, uy) (a unit
+ * vector): 1 on the flat, downhill and across the slope; uphill a little
+ * slower, by the uphill part of the gradient against the walking limit:
+ * 1 − UPHILL_CAP · smoothstep(uphill / MAX_WALK_SLOPE). It depends only on
+ * the gradient and the direction, so turning hill and walker together
+ * changes nothing; and only on the field, so it's the same in every style.
+ */
+export function uphillFactor(f: Field, x: number, y: number, ux: number, uy: number): { gx: number; gy: number; up: number; k: number } {
+  const [gx, gy] = fieldGradient(f, x, y)
+  const up = Math.max(0, gx * ux + gy * uy)
+  return { gx, gy, up, k: 1 - UPHILL_CAP * smoothstep(0, 1, up / MAX_WALK_SLOPE) }
+}
+
+/** The slowdown is looked up again every this many px walked (so it doesn't jump at tile edges or depend on the frame rate). */
+const UPHILL_STEP_PX = 2
+
+/**
+ * Walk the slopes area for dt seconds at `speed` px/s (full speed) going
+ * (ux, uy) (a unit vector), sliding along what blocks (./levels.ts move);
+ * with `gentle`, slowed uphill (uphillFactor), looked up afresh every
+ * UPHILL_STEP_PX. At most `most` px. What was asked of the walk (px, before
+ * anything blocked it), the seconds that took (dt, or less when `most` came
+ * first), and the last lookup.
+ */
+export function slopeWalk(stack: Stack, f: Field, w: Walker, ux: number, uy: number, speed: number, dt: number, gentle: boolean, most = Infinity): { px: number; used: number; at: ReturnType<typeof uphillFactor> } {
+  let left = dt
+  let walked = 0
+  let used = 0
+  let at = uphillFactor(f, w.x, w.y - w.fh / 2, ux, uy)
+  if (!gentle) at = { ...at, k: 1 }
+  while (left > 1e-9 && walked < most - 1e-9 && speed > 0) {
+    const h = Math.min(left, UPHILL_STEP_PX / speed)
+    at = uphillFactor(f, w.x, w.y - w.fh / 2, ux, uy)
+    if (!gentle) at = { ...at, k: 1 }
+    const full = speed * at.k * h
+    const d = Math.min(full, most - walked)
+    move(stack, w, ux * d, uy * d)
+    walked += d
+    used += d < full ? d / (speed * at.k) : h
+    left -= h
+  }
+  return { px: walked, used, at }
 }
 
 /** For the tests: every map tile reachable from a node. */

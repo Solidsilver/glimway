@@ -1,8 +1,8 @@
 /**
  * Height lab (dev only): the slopes area's textures. The ground's pixels
- * are ./slopes-paint.ts's (the four drawing styles); this paints them as
+ * are ./slopes-paint.ts's (the drawing treatments); this paints them as
  * jobs the scene runs a step at a time under a frame budget, keeps the
- * results by style, shading and chunk (so a chunk is painted once a style),
+ * results by settings and chunk (so a chunk is painted once a setting),
  * makes them level images, and draws the crags' standing rock.
  */
 import Phaser from 'phaser'
@@ -17,17 +17,12 @@ function hash(x: number, y: number, salt: number): number {
 
 type Area = Parameters<typeof paintPartSteps>[0]
 
-/** Painted chunks, by style, shading and chunk (the field never changes): the most recent CACHE_CHUNKS. */
+
+/** Painted chunks, by the settings that paint and the chunk (the field never changes): the most recent CACHE_CHUNKS. */
 const CACHE_CHUNKS = 48
 const painted = new Map<string, BandPixels[]>()
 
-/** The cache's key for a chunk of the area in its style. */
-export function chunkKey(area: Area, cx: number, cy: number): string {
-  const s = area.slopes!
-  return `${s.style}|${s.style === 'shade' || s.shade ? 1 : 0}|${cx},${cy}`
-}
-
-/** A chunk already painted in this style (and now the most recent). */
+/** A chunk already painted in these settings (and now the most recent). */
 export function paintedChunk(key: string): BandPixels[] | null {
   const b = painted.get(key)
   if (!b) return null
@@ -114,7 +109,12 @@ export function drawCrags(scene: Phaser.Scene): void {
   for (let v = 0; v < n; v++) tex.add(`crag-${v}`, 0, v * (fw + 2) + 1, 1, fw, fh)
 }
 
-/** Face tints by the height they rise to, for a range this tall. */
+/**
+ * Face tints by the height they rise to, for a range this tall (unlifted;
+ * the lift paints its faces, ./slopes-paint.ts faceTint). A south face is in
+ * the north-west light's shade: darker than the ground on top of it (round
+ * 1's were brighter, lit as from the south).
+ */
 export function slopeFaceTint(z: number): number {
-  return z < 2.5 ? 0xf0dcc0 : z < 5 ? 0xd8d0c4 : z < 9 ? 0xc0c4ce : 0xdcdfe6
+  return z < 2.5 ? 0xccb89c : z < 5 ? 0xb8b0a4 : z < 9 ? 0xa2a6b0 : 0xbcc0c8
 }

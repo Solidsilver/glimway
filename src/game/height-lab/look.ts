@@ -1,10 +1,12 @@
 /**
  * Height lab (dev only): the transitions to compare, switched from the dev
  * panel (./LabSection.svelte) while walking the lab. Kept for the tab
- * (sessionStorage), so a reload keeps the choice.
+ * (sessionStorage), so a reload keeps the choice; what's read back is
+ * checked field by field (migrateLook), so settings saved by an older lab
+ * still load.
  */
 import type { AreaName } from './area.ts'
-import type { SlopeStyle } from './slopes.ts'
+import type { ContourDetail, FacingShade, LiftPx, SlopeStyle, SlopesLook } from './slopes.ts'
 import type { WayIn } from './light.ts'
 
 export interface LabLook {
@@ -36,19 +38,142 @@ export interface LabLook {
   strategy: 'region' | 'chunk'
   /** The generated area: stranded floor magenta, chunk lines (switching repaints). */
   walkOverlay: boolean
-  /** The slopes area: how slopes are drawn (./slopes-art.ts; switching repaints, the lift rebuilds the map where you stand). */
-  slopeStyle: SlopeStyle
-  /** The slopes area: shading by facing on top of the contour, terrace or lift style. */
-  slopeShade: boolean
+  /** The slopes area: shading by facing, none, restrained (palette shifts) or the round-1 strength (./slopes-paint.ts; switching repaints). */
+  slopeFacing: FacingShade
+  /** The slopes area: contour lines, none, sparse (broken, every level) or the round-1 half-level lines. */
+  slopeContours: ContourDetail
+  /** The slopes area: the slope drawn as small terraces. */
+  slopeTerraces: boolean
+  /** The slopes area: how far the ground is drawn north as it rises, px a level (0: not at all; 48: the round-1 true ¾ lift). */
+  slopeLift: LiftPx
+  /** The slopes area: walking uphill slows you a little (./slopes.ts uphillFactor); off, full speed everywhere. */
+  slopeUphill: 'off' | 'gentle'
+}
+
+/** The slopes area's drawing settings (the ones that repaint). */
+export const SLOPE_KEYS = ['slopeFacing', 'slopeContours', 'slopeTerraces', 'slopeLift'] as const
+export type SlopeLook = Pick<LabLook, (typeof SLOPE_KEYS)[number]>
+
+/** The comparison presets (slopes-lab-recommendations.md §3): drawing only; fog, zoom, haze and the uphill slowdown stay as they are. */
+export type SlopePreset = 'baseline' | 'sparse' | 'terraces' | 'moderate' | 'full'
+export const SLOPE_PRESETS: Record<SlopePreset, { name: string; look: SlopeLook }> = {
+  baseline: { name: 'Shading baseline', look: { slopeFacing: 'restrained', slopeContours: 'off', slopeTerraces: false, slopeLift: 0 } },
+  sparse: { name: 'Sparse contours', look: { slopeFacing: 'restrained', slopeContours: 'sparse', slopeTerraces: false, slopeLift: 0 } },
+  terraces: { name: 'Small terraces', look: { slopeFacing: 'restrained', slopeContours: 'off', slopeTerraces: true, slopeLift: 0 } },
+  moderate: { name: 'Moderate lift', look: { slopeFacing: 'restrained', slopeContours: 'off', slopeTerraces: false, slopeLift: 24 } },
+  full: { name: 'Full lift reference', look: { slopeFacing: 'current', slopeContours: 'off', slopeTerraces: false, slopeLift: 48 } }
+}
+
+/** The preset the slopes settings are exactly, if any. */
+export function slopePresetOf(l: SlopeLook): SlopePreset | null {
+  for (const [name, p] of Object.entries(SLOPE_PRESETS) as [SlopePreset, (typeof SLOPE_PRESETS)[SlopePreset]][]) if (SLOPE_KEYS.every((k) => p.look[k] === l[k])) return name
+  return null
+}
+
+/** "Reset": the Shading baseline, the uphill slowdown gentle (the recommended starting combination, slopes-lab-recommendations.md §1). */
+export const SLOPE_RESET: Partial<LabLook> = { ...SLOPE_PRESETS.baseline.look, slopeUphill: 'gentle' }
+
+/** Just the slopes area's drawing settings. */
+export function slopeSettings(l: SlopeLook): SlopeLook {
+  return { slopeFacing: l.slopeFacing, slopeContours: l.slopeContours, slopeTerraces: l.slopeTerraces, slopeLift: l.slopeLift }
+}
+
+/** The slopes settings as the drawing code takes them (./slopes.ts buildSlopes). */
+export function slopesLook(l: SlopeLook): SlopesLook {
+  return { facing: l.slopeFacing, contours: l.slopeContours, terraces: l.slopeTerraces, lift: l.slopeLift }
+}
+
+/**
+ * Round 1's four styles, as settings (the "Slopes, drawn as" row picks one):
+ * each the one treatment, facing shade kept (shading by facing turns it on).
+ */
+export function styleSettings(style: SlopeStyle, l: SlopeLook): SlopeLook {
+  const facing = l.slopeFacing
+  if (style === 'shade') return { slopeFacing: facing === 'off' ? 'current' : facing, slopeContours: 'off', slopeTerraces: false, slopeLift: 0 }
+  if (style === 'contours') return { slopeFacing: facing, slopeContours: 'current', slopeTerraces: false, slopeLift: 0 }
+  if (style === 'terraces') return { slopeFacing: facing, slopeContours: 'off', slopeTerraces: true, slopeLift: 0 }
+  return { slopeFacing: facing, slopeContours: 'off', slopeTerraces: false, slopeLift: 48 }
+}
+
+/** Which of round 1's styles the settings are, if one (the row's pressed button). */
+export function styleOf(l: SlopeLook): SlopeStyle | null {
+  for (const s of ['shade', 'contours', 'terraces', 'lift'] as const) {
+    const t = styleSettings(s, l)
+    if (SLOPE_KEYS.every((k) => t[k] === l[k])) return s
+  }
+  return null
 }
 
 const KEY = 'glimway:height-lab-look'
-const DEFAULT: LabLook = { area: 'shoulder', fog: 'fog', fogStrength: 'medium', darkness: 0.6, caveStyle: 'mixed', zoom: true, haze: true, cave: 'lantern', skyTiles: 6, crossfade: 3, way: 'blend', grid: false, strategy: 'region', walkOverlay: false, slopeStyle: 'shade', slopeShade: true }
+const DEFAULT: LabLook = {
+  area: 'shoulder',
+  fog: 'fog',
+  fogStrength: 'medium',
+  darkness: 0.6,
+  caveStyle: 'mixed',
+  zoom: true,
+  haze: true,
+  cave: 'lantern',
+  skyTiles: 6,
+  crossfade: 3,
+  way: 'blend',
+  grid: false,
+  strategy: 'region',
+  walkOverlay: false,
+  ...SLOPE_PRESETS.baseline.look,
+  slopeUphill: 'gentle'
+}
+
+/** Each setting's allowed values (a range for the sliders). */
+const ALLOWED: { [K in keyof LabLook]: readonly LabLook[K][] | { min: number; max: number } } = {
+  area: ['shoulder', 'mountain', 'walk', 'slopes'],
+  fog: ['fog', 'sky', 'none'],
+  fogStrength: ['light', 'medium', 'strong'],
+  darkness: { min: 0, max: 0.9 },
+  caveStyle: ['mixed', 'built', 'rough'],
+  zoom: [true, false],
+  haze: [true, false],
+  cave: ['lantern', 'wide', 'dim'],
+  skyTiles: [3, 6, 10],
+  crossfade: { min: 1, max: 4 },
+  way: ['blend', 'eased', 'stages', 'iris'],
+  grid: [true, false],
+  strategy: ['region', 'chunk'],
+  walkOverlay: [true, false],
+  slopeFacing: ['off', 'restrained', 'current'],
+  slopeContours: ['off', 'sparse', 'current'],
+  slopeTerraces: [true, false],
+  slopeLift: [0, 24, 48],
+  slopeUphill: ['off', 'gentle']
+}
+
+/**
+ * Settings read back from storage, whatever wrote them: every known value
+ * checked (anything else is the default). Round 1 saved the slopes area as
+ * `slopeStyle` + `slopeShade`; those become the settings that draw the same.
+ */
+export function migrateLook(raw: unknown): LabLook {
+  const out: LabLook = { ...DEFAULT }
+  if (!raw || typeof raw !== 'object') return out
+  const r = raw as Record<string, unknown>
+  const o = out as unknown as Record<string, unknown>
+  for (const k of Object.keys(ALLOWED) as (keyof LabLook)[]) {
+    const v = r[k]
+    const a = ALLOWED[k]
+    if (Array.isArray(a) ? a.includes(v as never) : typeof v === 'number' && Number.isFinite(v) && v >= (a as { min: number }).min && v <= (a as { max: number }).max) o[k] = v
+  }
+  const old = r.slopeStyle
+  if ((old === 'shade' || old === 'contours' || old === 'terraces' || old === 'lift') && !SLOPE_KEYS.some((k) => k in r)) {
+    const facing = old === 'shade' || r.slopeShade !== false ? 'current' : 'off'
+    Object.assign(out, styleSettings(old, { ...out, slopeFacing: facing }))
+  }
+  return out
+}
 
 function read(): LabLook {
   try {
     const raw = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(KEY) : null
-    return raw ? { ...DEFAULT, ...(JSON.parse(raw) as Partial<LabLook>) } : { ...DEFAULT }
+    return raw ? migrateLook(JSON.parse(raw)) : { ...DEFAULT }
   } catch {
     return { ...DEFAULT }
   }

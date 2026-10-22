@@ -46,16 +46,28 @@ async function painted(page: Page): Promise<void> {
   await expect.poll(async () => (await labState(page)).slopes?.pending ?? 0, { timeout: 60_000 }).toBe(0)
 }
 
-async function setLook(page: Page, look: Look): Promise<void> {
-  await page.evaluate((l) => (window as unknown as { __fsLab: Lab }).__fsLab.look(l), look)
-  const rebuilds: (keyof Look)[] = ['area', 'slopeStyle', 'slopeShade']
+/**
+ * Round 1's styles as round 2a's settings (src/game/height-lab/look.ts styleSettings). Round 2a still has to
+ * move this spec onto the presets (.agent/HANDOFF.md).
+ */
+function settings(look: Look): Record<string, unknown> {
+  const { slopeStyle, slopeShade, ...rest } = look
+  if (!slopeStyle) return rest
+  const facing = slopeStyle === 'shade' || slopeShade !== false ? 'current' : 'off'
+  return { ...rest, slopeFacing: facing, slopeContours: slopeStyle === 'contours' ? 'current' : 'off', slopeTerraces: slopeStyle === 'terraces', slopeLift: slopeStyle === 'lift' ? 48 : 0 }
+}
+
+async function setLook(page: Page, given: Look): Promise<void> {
+  const look = settings(given)
+  await page.evaluate((l) => (window as unknown as { __fsLab: Lab }).__fsLab.look(l as Look), look)
+  const rebuilds = ['area', 'slopeFacing', 'slopeContours', 'slopeTerraces', 'slopeLift']
   try {
     await expect
       .poll(
         async () => {
           const st = await page.evaluate(() => (window as unknown as { __fsLab?: Lab }).__fsLab?.state())
           if (!st) return 'none'
-          const done = (Object.keys(look) as (keyof Look)[]).every((k) => (rebuilds.includes(k) ? st.built[k] : st.look[k]) === look[k])
+          const done = Object.keys(look).every((k) => ((rebuilds.includes(k) ? st.built : st.look) as Record<string, unknown>)[k] === look[k])
           return done && (st.built.area !== 'slopes' || st.slopes) ? 'ready' : 'waiting'
         },
         { timeout: 60_000 }
