@@ -18,7 +18,8 @@ func TestSlopesCountry(t *testing.T) {
 			c := p.Certificate(12, 30)
 			kinds := [4]int{}
 			maxHeight := uint16(0)
-			for _, tile := range p.Tiles {
+			for i := range p.Ground {
+				tile := p.Tile(i)
 				kinds[tile.Kind]++
 				if tile.Kind == SlopeGround && SlopeGradientSquared(tile.Corners) > SlopeWalkLimit*SlopeWalkLimit {
 					t.Fatal("walkable tile exceeds the shared gradient limit")
@@ -40,7 +41,7 @@ func TestSlopesCountry(t *testing.T) {
 			if c.Home < 0 || c.StrandedTiles > 0 {
 				t.Errorf("unintended enclosures: %d components, %d tiles", c.StrandedComponents, c.StrandedTiles)
 				n := 0
-				for i, tile := range p.Tiles {
+				for i, tile := range p.Ground {
 					if tile.Kind == SlopeGround && c.Labels[i] != c.Home && !tile.Unreachable {
 						if n < 12 {
 							t.Logf("stranded %d,%d %v", p.X+i%p.W, p.Y+i/p.W, tile)
@@ -63,13 +64,13 @@ func TestSlopesCountry(t *testing.T) {
 				for y := a[1]; y <= b[1]; y++ {
 					for x := r.PassX - 1; x <= r.PassX+1; x++ {
 						i := p.Index(x, y)
-						if p.Tiles[i].Kind != SlopeGround || c.Labels[i] != c.Home {
+						if p.Ground[i].Kind != SlopeGround || c.Labels[i] != c.Home {
 							t.Fatal("pass is not three tiles wide and home-connected", r.ID, x, y)
 						}
 					}
 				}
 				spire := p.Index(r.Spire[0], r.Spire[1])
-				if spire < 0 || !p.Tiles[spire].Unreachable || c.Labels[spire] == c.Home {
+				if spire < 0 || !p.Ground[spire].Unreachable || c.Labels[spire] == c.Home {
 					t.Errorf("spire must be unreachable: %s", r.ID)
 				}
 			}
@@ -90,6 +91,15 @@ func slopeTestChunk(seed string, cx, cy int, reverse bool) []SlopeTile {
 	return tiles
 }
 
+func slopeTestSurface(t *testing.T, seed string, cx, cy int) *SlopeSurface {
+	t.Helper()
+	s, err := NewSlopeSampler(seed).Surface(context.Background(), cx*24, cy*24, 24, 24)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return s
+}
+
 func TestSlopesDeterminismNegativeCoordinatesAndSeams(t *testing.T) {
 	coords := [][2]int{{-25, -25}, {-24, -24}, {-13, -12}, {-1, -1}, {0, 0}, {6, 2}, {11, 12}, {16, 17}, {23, 23}, {24, 24}, {-173, 229}}
 	order := rand.New(rand.NewPCG(71, 991)).Perm(len(coords))
@@ -100,22 +110,31 @@ func TestSlopesDeterminismNegativeCoordinatesAndSeams(t *testing.T) {
 		if !slices.Equal(a, b) {
 			t.Fatal("sample order changes geometry", xy)
 		}
-		raw, err := EncodeSlopeChunk(a)
+		surface := slopeTestSurface(t, "map", xy[0], xy[1])
+		raw, err := EncodeSlopeChunk(surface)
 		if err != nil {
 			t.Fatal(err)
 		}
 		decoded, err := DecodeSlopeChunk(raw)
-		if err != nil || !slices.Equal(a, decoded) {
+		if err != nil {
 			t.Fatal("encoded geometry changed", xy, err)
+		}
+		for i, tile := range a {
+			if tile != decoded.Tile(i) {
+				t.Fatal("shared grid changed resolved geometry", xy, i)
+			}
+		}
+		if !slices.Equal(surface.Corners, decoded.Corners) {
+			t.Fatal("canonical Uint16 grid changed")
 		}
 		east := slopeTestChunk("map", xy[0]+1, xy[1], true)
 		south := slopeTestChunk("map", xy[0], xy[1]+1, false)
 		for i := 0; i < 24; i++ {
-			l, r := decoded[i*24+23].Corners, east[i*24].Corners
+			l, r := decoded.Tile(i*24+23).Corners, east[i*24].Corners
 			if l[1] != r[0] || l[2] != r[3] {
 				t.Fatal("E/W seam", xy, i)
 			}
-			u, d := decoded[23*24+i].Corners, south[i].Corners
+			u, d := decoded.Tile(23*24+i).Corners, south[i].Corners
 			if u[3] != d[0] || u[2] != d[1] {
 				t.Fatal("N/S seam", xy, i)
 			}
@@ -131,7 +150,7 @@ func TestSlopesDeterminismNegativeCoordinatesAndSeams(t *testing.T) {
 		for cx := 6; cx <= 7; cx++ {
 			tiles := slopeTestChunk("map", cx, cy, true)
 			for i, tile := range tiles {
-				if tile != p.Tiles[p.Index(cx*24+i%24, cy*24+i/24)] {
+				if tile != p.Tile(p.Index(cx*24+i%24, cy*24+i/24)) {
 					t.Fatal("chunk clipping changed a scarp face")
 				}
 			}
@@ -140,8 +159,8 @@ func TestSlopesDeterminismNegativeCoordinatesAndSeams(t *testing.T) {
 }
 
 func TestSlopesCodecRejectsCorruption(t *testing.T) {
-	tiles := slopeTestChunk("map", 6, -19, false)
-	raw, err := EncodeSlopeChunk(tiles)
+	surface := slopeTestSurface(t, "map", 6, -19)
+	raw, err := EncodeSlopeChunk(surface)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -158,21 +177,58 @@ func TestSlopesCodecRejectsCorruption(t *testing.T) {
 	if _, err := DecodeSlopeChunk(append(bytes.Clone(raw), 0)); err == nil {
 		t.Fatal("accepted trailing bytes")
 	}
-	bad = bytes.Clone(raw)
-	bad[4+937] |= 0xf0
+	padding := &SlopeSurface{W: 3, H: 1, Corners: make([]uint16, 8), Ground: make([]SlopeGroundData, 3)}
+	bad, err = EncodeSlopeChunk(padding)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bad[8] |= 0xc0
 	if _, err := DecodeSlopeChunk(bad); err == nil {
 		t.Fatal("accepted nonzero padding")
 	}
-	cracked := slices.Clone(tiles)
-	cracked[0].Corners[1]++
-	if _, err := EncodeSlopeChunk(cracked); err == nil {
-		t.Fatal("encoded a corner crack")
+	surface.Overrides = []SlopeCornerOverride{{Tile: 0, Corners: [4]uint16{256, 256, 256, 256}}}
+	if _, err := EncodeSlopeChunk(surface); err == nil {
+		t.Fatal("encoded an unflagged override")
 	}
-	for i := range tiles {
-		tiles[i] = SlopeTile{Corners: [4]uint16{4096, 4096, 4096, 4096}}
+	surface.Overrides = nil
+	clear(surface.Ground)
+	for i := range surface.Corners {
+		surface.Corners[i] = 65535
 	}
-	if _, err := EncodeSlopeChunk(tiles); err == nil {
-		t.Fatal("silently clamped wider heights")
+	wide, err := EncodeSlopeChunk(surface)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := DecodeSlopeChunk(wide)
+	if err != nil || decoded.Corners[0] != 65535 {
+		t.Fatal("Uint16 range was clipped", err)
+	}
+}
+
+func TestSlopesFourCornerGradientContract(t *testing.T) {
+	for _, tc := range []struct {
+		corners  [4]uint16
+		walkable bool
+	}{
+		{[4]uint16{0, 64, 64, 0}, true}, {[4]uint16{0, 65, 65, 0}, false},
+		{[4]uint16{0, 40, 80, 40}, true}, {[4]uint16{0, 46, 92, 46}, false},
+		{[4]uint16{0, 0, 64, 0}, false}, {[4]uint16{65535, 65535, 65535, 65535}, true},
+		{[4]uint16{0, 65535, 65535, 65535}, false},
+	} {
+		for rotation := 0; rotation < 4; rotation++ {
+			c := tc.corners
+			for n := 0; n < rotation; n++ {
+				c = [4]uint16{c[1], c[2], c[3], c[0]}
+			}
+			if got := SlopeGradientSquared(c) <= 64*64; got != tc.walkable {
+				t.Fatal("all-corner integer contract", c, got)
+			}
+		}
+	}
+	// The saddle-like patch passes a centre-gradient check (32,32), but
+	// the SE corner is (64,64). No square root or centre sample may admit it.
+	if SlopeGradientSquared([4]uint16{0, 0, 64, 0}) != 8192 {
+		t.Fatal("centre-gradient trap accepted")
 	}
 }
 

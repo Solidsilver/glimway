@@ -1,5 +1,9 @@
 {
   "slopes": {
+    "canonicalGridBytes": 2658818,
+    "wireLayout": "SL2: Uint16 shared grid, sparse four-corner overrides, explicit cliff and N/E/S/W discontinuity planes",
+    "overrideRecords": 0,
+    "discontinuityTileEdges": 450,
     "recipe": "slopes-gen@1",
     "domainTiles": [
       -576,
@@ -542,13 +546,13 @@
         ],
         "samples": 80,
         "generationAndEncodeMs": {
-          "p50": 0.487277,
-          "p95": 0.496277,
-          "max": 0.605988
+          "p50": 0.234974,
+          "p95": 0.241164,
+          "max": 0.291355
         },
-        "heightBytes": 222,
-        "bareWholeBytes": 658,
-        "dressingHeadroomBytes": 5486
+        "heightBytes": 155,
+        "bareWholeBytes": 591,
+        "dressingHeadroomBytes": 5553
       },
       "hills": {
         "chunk": [
@@ -557,13 +561,13 @@
         ],
         "samples": 80,
         "generationAndEncodeMs": {
-          "p50": 1.009444,
-          "p95": 1.022773,
-          "max": 1.104485
+          "p50": 0.435118,
+          "p95": 0.449187,
+          "max": 0.515959
         },
-        "heightBytes": 1158,
-        "bareWholeBytes": 1596,
-        "dressingHeadroomBytes": 4548
+        "heightBytes": 1403,
+        "bareWholeBytes": 1841,
+        "dressingHeadroomBytes": 4303
       },
       "mountainside": {
         "chunk": [
@@ -572,13 +576,28 @@
         ],
         "samples": 80,
         "generationAndEncodeMs": {
-          "p50": 0.954843,
-          "p95": 0.964143,
-          "max": 1.036714
+          "p50": 0.409757,
+          "p95": 0.429528,
+          "max": 0.554859
         },
-        "heightBytes": 1158,
-        "bareWholeBytes": 1596,
-        "dressingHeadroomBytes": 4548
+        "heightBytes": 1403,
+        "bareWholeBytes": 1841,
+        "dressingHeadroomBytes": 4303
+      },
+      "override-probe": {
+        "chunk": [
+          0,
+          1
+        ],
+        "samples": 80,
+        "generationAndEncodeMs": {
+          "p50": 0.233024,
+          "p95": 0.239374,
+          "max": 0.244045
+        },
+        "heightBytes": 525,
+        "bareWholeBytes": 961,
+        "dressingHeadroomBytes": 5183
       },
       "spire": {
         "chunk": [
@@ -587,28 +606,28 @@
         ],
         "samples": 80,
         "generationAndEncodeMs": {
-          "p50": 0.996964,
-          "p95": 1.203007,
-          "max": 1.281307
+          "p50": 0.429067,
+          "p95": 0.441107,
+          "max": 0.516459
         },
-        "heightBytes": 1158,
-        "bareWholeBytes": 1596,
-        "dressingHeadroomBytes": 4548
+        "heightBytes": 1475,
+        "bareWholeBytes": 1913,
+        "dressingHeadroomBytes": 4231
       }
     },
     "allChunkHeightBytes": {
-      "p50": 1158,
-      "p95": 1158,
-      "max": 1980
+      "p50": 1403,
+      "p95": 1403,
+      "max": 2441
     },
     "allBareWholeChunkBytes": {
-      "p50": 1596,
-      "p95": 1596,
-      "max": 2418
+      "p50": 1841,
+      "p95": 1841,
+      "max": 2879
     },
-    "geometrySHA256": "04591e341cfa95e715d0825552b495d1ef9567bf9fefe87b621f620e0e6c2a3f",
-    "coldFieldMs": 2148.283361,
-    "note": "Finite home-rooted height certificate over all 48x48 chunks, never crop edges. 10x4 px hero fits cardinal tile-centre routes; mounts, cover, water and kept-land migration are outside this experiment. Bare bytes = undressed WorldChunk protobuf plus length-framed lab envelope, not a dressed protocol claim. Warm timing constructs a fresh bounded sampler and encodes; decode/checks excluded. Four-bit coarse corner range is 0..15 plus 8 fractional bits; heights are never clamped."
+    "geometrySHA256": "98c250d33537f6bc0b23446e1166771c9fa95be908ef5e9fec0b1e07e3cf2570",
+    "coldFieldMs": 919.523512,
+    "note": "Finite home-rooted field-coordinate certificate over 48x48 chunks; crop edges never imply access. Collision resolves the Uint16 grid plus tile overrides and edge flags, independently of projection and cover. Starting generated range 0..15 levels; no clipping. Bare bytes include the undressed WorldChunk protobuf and framed SL2 envelope; dressing is unmeasured. Warm = fresh sampler + shared-grid generation + encode; decode/checks excluded. Override-probe is a synthetic raised tile on flat ground, not generated country."
   },
   "content": "",
   "contentSHA256": "",
@@ -628,6 +647,6 @@
   "landShareByChunkCentre": {},
   "longestAxialLandRunChunks": 0,
   "unreachableWalkableTiles": 0,
-  "generationMs": 5710.283345,
-  "note": "PASS GOLD / END DETOUR CYAN. Biome shares count every tile's effective biome. Finite home-rooted height certificate over all 48x48 chunks, never crop edges. 10x4 px hero fits cardinal tile-centre routes; mounts, cover, water and kept-land migration are outside this experiment. Bare bytes = undressed WorldChunk protobuf plus length-framed lab envelope, not a dressed protocol claim. Warm timing constructs a fresh bounded sampler and encodes; decode/checks excluded. Four-bit coarse corner range is 0..15 plus 8 fractional bits; heights are never clamped."
+  "generationMs": 5313.220891,
+  "note": "PASS GOLD / END DETOUR CYAN. Biome shares count every tile's effective biome. Finite home-rooted field-coordinate certificate over 48x48 chunks; crop edges never imply access. Collision resolves the Uint16 grid plus tile overrides and edge flags, independently of projection and cover. Starting generated range 0..15 levels; no clipping. Bare bytes include the undressed WorldChunk protobuf and framed SL2 envelope; dressing is unmeasured. Warm = fresh sampler + shared-grid generation + encode; decode/checks excluded. Override-probe is a synthetic raised tile on flat ground, not generated country."
 }

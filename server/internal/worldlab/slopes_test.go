@@ -18,6 +18,9 @@ func TestSlopesLabBudgetsAndWorker(t *testing.T) {
 		t.Fatal(err)
 	}
 	m := r.Stats.Slopes
+	if m.WireLayout == "" || m.DiscontinuityEdges == 0 || m.OverrideRecords != 0 {
+		t.Fatal("missing canonical layout metadata or scarp flags")
+	}
 	if len(r.PNG) == 0 || m == nil || m.Certificate.StrandedTiles != 0 || len(m.Ranges) != 4 || len(m.Tunnels) != 4 {
 		t.Fatal("missing certificate, views or candidates")
 	}
@@ -35,6 +38,9 @@ func TestSlopesLabBudgetsAndWorker(t *testing.T) {
 		if b.DressingHeadroom < 3000 {
 			t.Error("insufficient dressing headroom", name)
 		}
+	}
+	if m.Budgets["override-probe"].HeightBytes <= m.Budgets["flat"].HeightBytes {
+		t.Fatal("override layout cost was not measured")
 	}
 	for biome, kinds := range m.BiomeKinds {
 		sum := 0.

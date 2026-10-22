@@ -43,34 +43,33 @@ type SlopeBudget struct {
 	DressingHeadroom int                 `json:"dressingHeadroomBytes"`
 }
 type SlopeMetrics struct {
-	Recipe         string                        `json:"recipe"`
-	Domain         [4]int                        `json:"domainTiles"`
-	HeightRange    [2]float64                    `json:"heightRangeLevels"`
-	MaxRise        float64                       `json:"maxWalkableRisePerTile"`
-	Certificate    wilds.SlopeCertificate        `json:"certificate"`
-	Kinds          map[string]int                `json:"kindTiles"`
-	BiomeKinds     map[string]map[string]float64 `json:"kindShareByBiome"`
-	Ranges         []SlopeRangeMetrics           `json:"ranges"`
-	Tunnels        []SlopeTunnel                 `json:"tunnelCandidates"`
-	Budgets        map[string]SlopeBudget        `json:"budgets"`
-	AllHeightBytes TerrainDistribution           `json:"allChunkHeightBytes"`
-	AllWholeBytes  TerrainDistribution           `json:"allBareWholeChunkBytes"`
-	GeometrySHA256 string                        `json:"geometrySHA256"`
-	ColdMS         float64                       `json:"coldFieldMs"`
-	Note           string                        `json:"note"`
+	CanonicalGridBytes int                           `json:"canonicalGridBytes"`
+	WireLayout         string                        `json:"wireLayout"`
+	OverrideRecords    int                           `json:"overrideRecords"`
+	DiscontinuityEdges int                           `json:"discontinuityTileEdges"`
+	Recipe             string                        `json:"recipe"`
+	Domain             [4]int                        `json:"domainTiles"`
+	HeightRange        [2]float64                    `json:"heightRangeLevels"`
+	MaxRise            float64                       `json:"maxWalkableRisePerTile"`
+	Certificate        wilds.SlopeCertificate        `json:"certificate"`
+	Kinds              map[string]int                `json:"kindTiles"`
+	BiomeKinds         map[string]map[string]float64 `json:"kindShareByBiome"`
+	Ranges             []SlopeRangeMetrics           `json:"ranges"`
+	Tunnels            []SlopeTunnel                 `json:"tunnelCandidates"`
+	Budgets            map[string]SlopeBudget        `json:"budgets"`
+	AllHeightBytes     TerrainDistribution           `json:"allChunkHeightBytes"`
+	AllWholeBytes      TerrainDistribution           `json:"allBareWholeChunkBytes"`
+	GeometrySHA256     string                        `json:"geometrySHA256"`
+	ColdMS             float64                       `json:"coldFieldMs"`
+	Note               string                        `json:"note"`
 }
 
-func slopeChunk(p *wilds.SlopePlan, cx, cy int) []wilds.SlopeTile {
-	t := make([]wilds.SlopeTile, 576)
-	for y := 0; y < 24; y++ {
-		i := p.Index(cx*24, cy*24+y)
-		copy(t[y*24:(y+1)*24], p.Tiles[i:i+24])
-	}
-	return t
+func slopeChunk(p *wilds.SlopePlan, cx, cy int) (*wilds.SlopeSurface, error) {
+	return p.SlopeSurface.Clip(cx*24-p.X, cy*24-p.Y, 24, 24)
 }
-func slopeBareBytes(tiles []wilds.SlopeTile, cx, cy int, raw []byte) int {
+func slopeBareBytes(surface *wilds.SlopeSurface, cx, cy int, raw []byte) int {
 	c := wilds.Chunk{CX: cx, CY: cy, Size: 24, GeneratorVersion: 3, Ground: make([]wilds.Ground, 576), Solid: make([]bool, 576), Land: "slopes-lab"}
-	for i, t := range tiles {
+	for i, t := range surface.Ground {
 		c.Solid[i] = t.Kind != wilds.SlopeGround
 	}
 	return proto.Size(wilds.ToProto(c, DefaultEpoch)) + len(raw) + 4
@@ -81,7 +80,10 @@ func slopeMeasure(ctx context.Context, seed string) (*wilds.SlopePlan, *SlopeMet
 	if err != nil {
 		return nil, nil, err
 	}
-	m := &SlopeMetrics{Recipe: wilds.SlopeRecipe, Domain: [4]int{-576, -576, 575, 575}, ColdMS: float64(time.Since(start).Nanoseconds()) / 1e6, Kinds: map[string]int{}, BiomeKinds: map[string]map[string]float64{}, Budgets: map[string]SlopeBudget{}, HeightRange: [2]float64{1000, 0}, Note: "Finite home-rooted height certificate over all 48x48 chunks, never crop edges. 10x4 px hero fits cardinal tile-centre routes; mounts, cover, water and kept-land migration are outside this experiment. Bare bytes = undressed WorldChunk protobuf plus length-framed lab envelope, not a dressed protocol claim. Warm timing constructs a fresh bounded sampler and encodes; decode/checks excluded. Four-bit coarse corner range is 0..15 plus 8 fractional bits; heights are never clamped."}
+	m := &SlopeMetrics{Recipe: wilds.SlopeRecipe, Domain: [4]int{-576, -576, 575, 575}, ColdMS: float64(time.Since(start).Nanoseconds()) / 1e6, Kinds: map[string]int{}, BiomeKinds: map[string]map[string]float64{}, Budgets: map[string]SlopeBudget{}, HeightRange: [2]float64{1000, 0}}
+	m.CanonicalGridBytes = len(p.Corners) * 2
+	m.WireLayout = "SL2: Uint16 shared grid, sparse four-corner overrides, explicit cliff and N/E/S/W discontinuity planes"
+	m.Note = "Finite home-rooted field-coordinate certificate over 48x48 chunks; crop edges never imply access. Collision resolves the Uint16 grid plus tile overrides and edge flags, independently of projection and cover. Starting generated range 0..15 levels; no clipping. Bare bytes include the undressed WorldChunk protobuf and framed SL2 envelope; dressing is unmeasured. Warm = fresh sampler + shared-grid generation + encode; decode/checks excluded. Override-probe is a synthetic raised tile on flat ground, not generated country."
 	m.Certificate = p.Certificate(12, 30)
 	if m.Certificate.StrandedTiles > 0 {
 		return nil, nil, fmt.Errorf("slope certificate: %d unintended stranded tiles", m.Certificate.StrandedTiles)
@@ -100,7 +102,7 @@ func slopeMeasure(ctx context.Context, seed string) (*wilds.SlopePlan, *SlopeMet
 		rm.PassWaypoints = slopeRouteWaypoints(pass)
 		rm.EndWaypoints = slopeRouteWaypoints(end)
 		for _, pt := range pass {
-			g := math.Sqrt(float64(wilds.SlopeGradientSquared(p.Tiles[p.Index(pt[0], pt[1])].Corners))) / 256
+			g := math.Sqrt(float64(wilds.SlopeGradientSquared(p.Tile(p.Index(pt[0], pt[1])).Corners))) / 256
 			rm.PassMaxGradient = math.Max(rm.PassMaxGradient, g)
 		}
 		m.Ranges = append(m.Ranges, rm)
@@ -110,7 +112,7 @@ func slopeMeasure(ctx context.Context, seed string) (*wilds.SlopePlan, *SlopeMet
 		y := r.Y + int(math.Round(9*math.Sin(float64(x-r.X)/87)))
 		tc := SlopeTunnel{Range: r.ID, North: [2]int{x, y - 24}, South: [2]int{x, y + 24}, Length: 48}
 		for yy := y - 24; yy <= y+24; yy++ {
-			if p.Tiles[p.Index(x, yy)].Kind != wilds.SlopeGround {
+			if p.Ground[p.Index(x, yy)].Kind != wilds.SlopeGround {
 				tc.BlockedTiles++
 			}
 		}
@@ -128,8 +130,11 @@ func slopeMeasure(ctx context.Context, seed string) (*wilds.SlopePlan, *SlopeMet
 			return nil, nil, err
 		}
 		for cx := -24; cx < 24; cx++ {
-			tiles := slopeChunk(p, cx, cy)
-			raw, err := wilds.EncodeSlopeChunk(tiles)
+			surface, err := slopeChunk(p, cx, cy)
+			if err != nil {
+				return nil, nil, err
+			}
+			raw, err := wilds.EncodeSlopeChunk(surface)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -137,21 +142,28 @@ func slopeMeasure(ctx context.Context, seed string) (*wilds.SlopePlan, *SlopeMet
 			if err != nil {
 				return nil, nil, err
 			}
-			for i, t := range tiles {
-				if t != decoded[i] {
+			for i := range surface.Ground {
+				t := surface.Tile(i)
+				if t != decoded.Tile(i) {
 					return nil, nil, fmt.Errorf("codec changed geometry")
 				}
+				for d := 0; d < 4; d++ {
+					if t.Discontinuity&(1<<d) != 0 {
+						m.DiscontinuityEdges++
+					}
+				}
 			}
+			m.OverrideRecords += len(surface.Overrides)
 			hash.Write(raw)
 			sizes = append(sizes, float64(len(raw)))
-			wholeSizes = append(wholeSizes, float64(slopeBareBytes(tiles, cx, cy, raw)))
+			wholeSizes = append(wholeSizes, float64(slopeBareBytes(surface, cx, cy, raw)))
 			for yy := 0; yy < 24; yy++ {
 				for xx := 0; xx < 24; xx++ {
 					biome := wilds.BiomeAt(seed, cx*24+xx, cy*24+yy, nil).EffectiveBiome
 					if biomeCounts[biome] == nil {
 						biomeCounts[biome] = map[string]int{}
 					}
-					t := tiles[yy*24+xx]
+					t := surface.Tile(yy*24 + xx)
 					k := t.Kind.String()
 					m.Kinds[k]++
 					biomeCounts[biome][k]++
@@ -178,22 +190,27 @@ func slopeMeasure(ctx context.Context, seed string) (*wilds.SlopePlan, *SlopeMet
 	m.AllWholeBytes = terrainDistribution(wholeSizes)
 	m.GeometrySHA256 = hex.EncodeToString(hash.Sum(nil))
 	r := p.Ranges[3]
-	fixtures := map[string][2]int{"flat": {0, 1}, "hills": {6, 2}, "mountainside": {floorSlope(r.X+90, 24), floorSlope(r.Y+12, 24)}, "spire": {floorSlope(r.Spire[0], 24), floorSlope(r.Spire[1], 24)}}
+	fixtures := map[string][2]int{"flat": {0, 1}, "hills": {6, 2}, "mountainside": {floorSlope(r.X+90, 24), floorSlope(r.Y+12, 24)}, "spire": {floorSlope(r.Spire[0], 24), floorSlope(r.Spire[1], 24)}, "override-probe": {0, 1}}
 	for name, xy := range fixtures {
 		var times []float64
 		var raw []byte
-		var tiles []wilds.SlopeTile
+		var surface *wilds.SlopeSurface
 		for i := 0; i < 81; i++ {
 			at := time.Now()
 			s := wilds.NewSlopeSampler(seed)
-			tiles = make([]wilds.SlopeTile, 576)
-			for y := 0; y < 24; y++ {
-				for x := 0; x < 24; x++ {
-					tiles[y*24+x] = s.Tile(xy[0]*24+x, xy[1]*24+y)
-				}
-			}
 			var err error
-			raw, err = wilds.EncodeSlopeChunk(tiles)
+			surface, err = s.Surface(ctx, xy[0]*24, xy[1]*24, 24, 24)
+			if err != nil {
+				return nil, nil, err
+			}
+			if name == "override-probe" {
+				surface.Overrides = []wilds.SlopeCornerOverride{{Tile: 0, Corners: [4]uint16{256, 256, 256, 256}}}
+				surface.Ground[0].Unreachable = true
+				surface.Ground[0].Discontinuity = 15
+				surface.Ground[1].Discontinuity = 1 << 3
+				surface.Ground[24].Discontinuity = 1 << 0
+			}
+			raw, err = wilds.EncodeSlopeChunk(surface)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -201,7 +218,7 @@ func slopeMeasure(ctx context.Context, seed string) (*wilds.SlopePlan, *SlopeMet
 				times = append(times, float64(time.Since(at).Nanoseconds())/1e6)
 			}
 		}
-		whole := slopeBareBytes(tiles, xy[0], xy[1], raw)
+		whole := slopeBareBytes(surface, xy[0], xy[1], raw)
 		m.Budgets[name] = SlopeBudget{Chunk: xy, Samples: 80, WarmMS: terrainDistribution(times), HeightBytes: len(raw), BareWholeBytes: whole, DressingHeadroom: 6144 - whole}
 	}
 	return p, m, nil
@@ -239,7 +256,7 @@ func slopeRouteWaypoints(route [][2]int) [][2]int {
 var slopeColours = [4]color.RGBA{{116, 168, 100, 255}, {190, 137, 75, 255}, {113, 97, 119, 255}, {46, 40, 53, 255}}
 
 func slopeHeightColour(t wilds.SlopeTile) color.RGBA {
-	z := float64(t.Corners[0]+t.Corners[1]+t.Corners[2]+t.Corners[3]) / 1024
+	z := (float64(t.Corners[0]) + float64(t.Corners[1]) + float64(t.Corners[2]) + float64(t.Corners[3])) / 1024
 	stops := []struct {
 		z float64
 		c color.RGBA
@@ -280,7 +297,7 @@ func renderSlopes(ctx context.Context, o Options) (Result, error) {
 		for xx := 0; xx < w; xx++ {
 			x, y := o.Rect[0]*24+xx*step+step/2, o.Rect[1]*24+yy*step+step/2
 			i := p.Index(x, y)
-			t := p.Tiles[i]
+			t := p.Tile(i)
 			col := slopeHeightColour(t)
 			if o.Slopes == "kinds" {
 				col = slopeColours[t.Kind]

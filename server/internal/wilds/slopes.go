@@ -28,12 +28,19 @@ const (
 
 func (k SlopeKind) String() string { return [...]string{"slope", "steep", "crag", "cliff"}[k] }
 
-type SlopeTile struct {
-	Corners             [4]uint16 // NW, NE, SE, SW; absolute 1/256 level
+// SlopeGroundData is terrain metadata only. Cover is a separate system.
+type SlopeGroundData struct {
 	Kind                SlopeKind
-	Unreachable         bool // deliberate spire footprint; never inferred from connectivity
+	Unreachable         bool  // deliberate spire footprint; never inferred from connectivity
+	Discontinuity       uint8 // closed N/E/S/W field edges; bits 0..3
 	FaceRow, FaceRows   uint8
 	FaceTop, FaceBottom uint16
+}
+
+// SlopeTile is a resolved view, never the stored continuous field.
+type SlopeTile struct {
+	Corners [4]uint16 // NW, NE, SE, SW; absolute 1/256 level
+	SlopeGroundData
 }
 
 // SlopeRange owns one bounded E-W range, its saddle, and nearby rock features.
@@ -170,12 +177,15 @@ func (s *SlopeSampler) Corner(x, y int) uint16 {
 
 // SlopeGradientSquared bounds the Euclidean gradient of the bilinear tile
 // at all four corners. It also bounds every interior point of that patch.
-func SlopeGradientSquared(c [4]uint16) int {
-	a, b, d, e := int(c[0]), int(c[1]), int(c[2]), int(c[3])
+func SlopeGradientSquared(c [4]uint16) int64 {
+	a, b, d, e := int64(c[0]), int64(c[1]), int64(c[2]), int64(c[3])
 	return max((b-a)*(b-a)+(e-a)*(e-a), (b-a)*(b-a)+(d-b)*(d-b), (d-e)*(d-e)+(d-b)*(d-b), (d-e)*(d-e)+(e-a)*(e-a))
 }
 func (s *SlopeSampler) Tile(x, y int) SlopeTile {
-	t := SlopeTile{Corners: [4]uint16{s.Corner(x, y), s.Corner(x+1, y), s.Corner(x+1, y+1), s.Corner(x, y+1)}}
+	return s.tile(x, y, [4]uint16{s.Corner(x, y), s.Corner(x+1, y), s.Corner(x+1, y+1), s.Corner(x, y+1)})
+}
+func (s *SlopeSampler) tile(x, y int, corners [4]uint16) SlopeTile {
+	t := SlopeTile{Corners: corners}
 	_, crest, spire := s.shape(x, y)
 	t.Unreachable = spire
 	if SlopeGradientSquared(t.Corners) > SlopeWalkLimit*SlopeWalkLimit {
@@ -189,9 +199,19 @@ func (s *SlopeSampler) Tile(x, y int) SlopeTile {
 	// continuous slopes never acquire faces at whole-level contours. A higher
 	// intervening surface interrupts the face, as in the spike's local rule.
 	row := y - r.Outcrop[1]
-	if row >= 0 && row < 6 && abs(x-r.Outcrop[0]) < 38 {
+	if row >= -1 && row < 6 && abs(x-r.Outcrop[0]) < 38 {
 		hi, lo := s.Corner(x, r.Outcrop[1]-1), s.Corner(x, r.Outcrop[1])
-		t = ResolveSlopeSouthFace(t, row, hi, lo)
+		if hi > lo {
+			if row == -1 {
+				t.Discontinuity |= 1 << 2
+			}
+			if row == 0 {
+				t.Discontinuity |= 1 << 0
+			}
+		}
+		if row >= 0 {
+			t = ResolveSlopeSouthFace(t, row, hi, lo)
+		}
 	}
 	return t
 }
@@ -216,25 +236,20 @@ func ResolveSlopeSouthFace(t SlopeTile, row int, top, bottom uint16) SlopeTile {
 }
 
 type SlopePlan struct {
-	X, Y, W, H int
-	Tiles      []SlopeTile
-	Ranges     []SlopeRange
+	X, Y int
+	*SlopeSurface
+	Ranges []SlopeRange
 }
 
 func NewSlopePlan(ctx context.Context, seed string, x, y, w, h int) (*SlopePlan, error) {
 	if w <= 0 || h <= 0 || w > 2400000/h {
 		return nil, fmt.Errorf("slope plan needs 1..2400000 tiles")
 	}
-	s := NewSlopeSampler(seed)
-	p := &SlopePlan{X: x, Y: y, W: w, H: h, Tiles: make([]SlopeTile, w*h)}
-	for yy := 0; yy < h; yy++ {
-		if err := ctx.Err(); err != nil {
-			return nil, err
-		}
-		for xx := 0; xx < w; xx++ {
-			p.Tiles[yy*w+xx] = s.Tile(x+xx, y+yy)
-		}
+	surface, err := NewSlopeSampler(seed).Surface(ctx, x, y, w, h)
+	if err != nil {
+		return nil, err
 	}
+	p := &SlopePlan{X: x, Y: y, SlopeSurface: surface}
 	for oy := floorDiv(y, SlopeOwnerTiles); oy <= floorDiv(y+h-1, SlopeOwnerTiles); oy++ {
 		for ox := floorDiv(x, SlopeOwnerTiles); ox <= floorDiv(x+w-1, SlopeOwnerTiles); ox++ {
 			p.Ranges = append(p.Ranges, SlopeRangeAt(seed, ox, oy))
@@ -249,14 +264,14 @@ func (p *SlopePlan) Index(x, y int) int {
 	return (y-p.Y)*p.W + x - p.X
 }
 func (p *SlopePlan) Step(i, d int) int {
-	if i < 0 || i >= len(p.Tiles) || d < 0 || d > 3 || p.Tiles[i].Kind != SlopeGround {
+	if d < 0 || d > 3 || !p.Walkable(i) {
 		return -1
 	}
 	j := p.Index(p.X+i%p.W+terrainDX[d], p.Y+i/p.W+terrainDY[d])
-	if j < 0 || p.Tiles[j].Kind != SlopeGround {
+	if !p.Walkable(j) || p.Ground[i].Discontinuity&(1<<d) != 0 || p.Ground[j].Discontinuity&(1<<((d+2)%4)) != 0 {
 		return -1
 	}
-	a, b := p.Tiles[i].Corners, p.Tiles[j].Corners
+	a, b := p.Tile(i).Corners, p.Tile(j).Corners
 	match := [4]bool{a[0] == b[3] && a[1] == b[2], a[1] == b[0] && a[2] == b[3], a[3] == b[0] && a[2] == b[1], a[0] == b[1] && a[3] == b[2]}
 	if !match[d] {
 		return -1
@@ -276,15 +291,15 @@ type SlopeCertificate struct {
 }
 
 func (p *SlopePlan) Certificate(hx, hy int) SlopeCertificate {
-	c := SlopeCertificate{Labels: make([]int, len(p.Tiles)), Home: -1}
+	c := SlopeCertificate{Labels: make([]int, len(p.Ground)), Home: -1}
 	for i := range c.Labels {
 		c.Labels[i] = -1
 	}
 	sizes := []int{}
 	deliberate := []bool{}
-	q := make([]int, 0, len(p.Tiles))
-	for i, t := range p.Tiles {
-		if t.Kind != SlopeGround || c.Labels[i] >= 0 {
+	q := make([]int, 0, len(p.Ground))
+	for i := range p.Ground {
+		if !p.Walkable(i) || c.Labels[i] >= 0 {
 			continue
 		}
 		id := len(sizes)
@@ -292,7 +307,7 @@ func (p *SlopePlan) Certificate(hx, hy int) SlopeCertificate {
 		c.Labels[i] = id
 		intent := true
 		for head := 0; head < len(q); head++ {
-			intent = intent && p.Tiles[q[head]].Unreachable
+			intent = intent && p.Ground[q[head]].Unreachable
 			for d := 0; d < 4; d++ {
 				j := p.Step(q[head], d)
 				if j >= 0 && c.Labels[j] < 0 {
@@ -326,10 +341,10 @@ func (p *SlopePlan) Certificate(hx, hy int) SlopeCertificate {
 // genuine end detour with the saddle closed, against the same endpoints.
 func (p *SlopePlan) Route(a, b [2]int, forbidden func(int, int) bool) [][2]int {
 	start, end := p.Index(a[0], a[1]), p.Index(b[0], b[1])
-	if start < 0 || end < 0 || p.Tiles[start].Kind != SlopeGround || p.Tiles[end].Kind != SlopeGround {
+	if !p.Walkable(start) || !p.Walkable(end) {
 		return nil
 	}
-	prev := make([]int32, len(p.Tiles))
+	prev := make([]int32, len(p.Ground))
 	for i := range prev {
 		prev[i] = -1
 	}
