@@ -119,6 +119,7 @@ interface SlopesState {
   size: [number, number]
   /** Chunks still being painted, and the paint and update times per frame (ms). */
   pending: number
+  slow: { ms: number; paint: number; upload: number; parts: number }[]
   paint: { frames: number; p50: number; p95: number; max: number }
   update: { frames: number; p50: number; p95: number; max: number }
   spots: { name: string; x: number; y: number; fx: number; fy: number; note: string; look: [number, number] | null }[]
@@ -237,6 +238,7 @@ export class HeightLabScene extends Phaser.Scene {
     this.parts = new Map()
     this.jobs = []
     this.paintSteps = []
+    this.slow = []
     this.propsByChunk = null
     this.loading = null
     // The generated area waits for the server's window (a few seconds the first time), the tab never frozen.
@@ -515,6 +517,10 @@ export class HeightLabScene extends Phaser.Scene {
   private jobs: PaintJob[] = []
   /** The slopes area's paint steps, per frame (ms): for the spec and the notes. */
   private paintSteps: number[] = []
+  /** The slopes area's slowest frames (update ms over 20), with what took the time: paint steps, chunk uploads (images, faces, props), the rest. */
+  private slow: { ms: number; paint: number; upload: number; parts: number }[] = []
+  private frameUpload = 0
+  private frameParts = 0
 
   /**
    * The slopes area's chunks: painted ones (this style, cached) go up at
@@ -556,18 +562,23 @@ export class HeightLabScene extends Phaser.Scene {
   }
 
   /** Paint steps for the slopes area's waiting chunks, within the frame's budget (always one). */
-  private pumpPaint(): void {
-    if (!this.jobs.length) return
+  private pumpPaint(): number {
+    if (!this.jobs.length) return 0
     const t0 = performance.now()
+    let upload = 0
     do {
       const j = this.jobs[0]!
       if (j.step()) {
         this.jobs.shift()
+        const u0 = performance.now()
         this.addPart(j.cx, j.cy)
+        upload += performance.now() - u0
       }
     } while (this.jobs.length && performance.now() - t0 < PAINT_BUDGET_MS)
-    this.paintSteps.push(performance.now() - t0)
+    const ms = performance.now() - t0 - upload
+    this.paintSteps.push(ms)
     if (this.paintSteps.length > 600) this.paintSteps.shift()
+    return ms
   }
 
   /** A chunk's tiles (in what's drawn: the slopes area's view, else the stack). */
@@ -578,6 +589,13 @@ export class HeightLabScene extends Phaser.Scene {
   }
 
   private addPart(cx: number, cy: number): void {
+    const t0 = performance.now()
+    this.addPartNow(cx, cy)
+    this.frameUpload += performance.now() - t0
+    this.frameParts++
+  }
+
+  private addPartNow(cx: number, cy: number): void {
     const part = this.partRect(cx, cy)
     const rect = { x0: part.x0, y0: part.y0, x1: part.x1, y1: part.y1 }
     const images: Phaser.GameObjects.Image[] = []
@@ -745,10 +763,16 @@ export class HeightLabScene extends Phaser.Scene {
     this.steerHero(dt)
     for (const m of this.movers) if (m !== this.hero) this.walkOn(m, dt)
     for (const m of this.movers) this.place(m)
+    this.frameUpload = 0
+    this.frameParts = 0
     this.stream()
-    this.pumpPaint()
+    const paint = this.pumpPaint()
     this.applyLook(dt)
     const ms = performance.now() - t0
+    if (this.area.slopes && ms > 20) {
+      this.slow.push({ ms: Math.round(ms * 10) / 10, paint: Math.round(paint * 10) / 10, upload: Math.round(this.frameUpload * 10) / 10, parts: this.frameParts })
+      if (this.slow.length > 40) this.slow.shift()
+    }
     this.updateMs.push(ms)
     if (this.updateMs.length > 120) this.updateMs.shift()
     this.updateHud()
@@ -1189,6 +1213,7 @@ export class HeightLabScene extends Phaser.Scene {
       kind: l.kind[ty * l.w + tx] ?? 0,
       size: [s.view.w, s.view.h],
       pending: this.jobs.length,
+      slow: this.slow,
       paint: { frames: sorted.length, p50: sorted[Math.floor(sorted.length / 2)] ?? 0, p95: sorted[Math.floor(sorted.length * 0.95)] ?? 0, max: sorted.at(-1) ?? 0 },
       update: { frames: upd.length, p50: upd[Math.floor(upd.length / 2)] ?? 0, p95: upd[Math.floor(upd.length * 0.95)] ?? 0, max: upd.at(-1) ?? 0 },
       spots: s.spots.map((p) => {

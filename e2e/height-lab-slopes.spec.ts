@@ -26,7 +26,8 @@ type Style = 'shade' | 'contours' | 'terraces' | 'lift'
 type Look = { area?: 'shoulder' | 'mountain' | 'walk' | 'slopes'; slopeStyle?: Style; slopeShade?: boolean; grid?: boolean }
 type Spot = { name: string; x: number; y: number; fx: number; fy: number; note: string; look: [number, number] | null }
 type Times = { frames: number; p50: number; p95: number; max: number }
-type Slopes = { style: Style; shade: boolean; lift: boolean; tile: [number, number]; at: [number, number]; shown: [number, number]; silhouette: boolean; kind: number; size: [number, number]; pending: number; paint: Times; update: Times; spots: Spot[] }
+type Slow = { ms: number; paint: number; upload: number; parts: number }
+type Slopes = { style: Style; shade: boolean; lift: boolean; tile: [number, number]; at: [number, number]; shown: [number, number]; silhouette: boolean; kind: number; size: [number, number]; pending: number; slow: Slow[]; paint: Times; update: Times; spots: Spot[] }
 type LabState = { area: string; look: Look; built: Look; z?: number; layer?: number; slopes?: Slopes }
 type Lab = { put: (layer: number, tx: number, ty: number, look?: [number, number]) => void; step: (dx: number, dy: number) => void; look: (l: Look) => void; state: () => LabState }
 
@@ -147,7 +148,7 @@ test.describe('desktop', () => {
       const east = await walkTimed(page, 'ArrowRight', 4000)
       const north = await walkTimed(page, 'ArrowUp', 3000)
       const st = (await labState(page)).slopes!
-      timing[style] = { east, north, labPaintPerFrame: st.paint, labUpdatePerFrame: st.update, pendingAfter: st.pending }
+      timing[style] = { east, north, labPaintPerFrame: st.paint, labUpdatePerFrame: st.update, slowFrames: st.slow, pendingAfter: st.pending }
       writeFileSync(`${OUT}/timing.json`, JSON.stringify(timing, null, 1))
     }
 
