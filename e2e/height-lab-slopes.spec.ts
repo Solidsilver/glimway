@@ -11,6 +11,7 @@ const FEATURES = ['hills', 'pass-top', 'pass-north', 'outcrop-cliff', 'steep-ban
 const PRESETS = Object.keys(SLOPE_PRESETS) as SlopePreset[]
 type Look = Partial<LabLook>
 type Spot = { name: string; x: number; y: number; fx: number; fy: number; look: [number, number] | null }
+type FrameWindow = { __frames: number[]; __framesId?: number; __longTasks: { start: number; ms: number }[]; __longTaskObserver?: PerformanceObserver }
 type Times = { frames: number; p50: number; p95: number; max: number }
 type Slopes = { preset: SlopePreset; at: [number, number]; tile: [number, number]; silhouette: boolean; kind: number; pending: number; slow: unknown[]; paint: Times; upload: Times; update: Times; spots: Spot[] }
 type LabState = { area: string; look: LabLook; built: Look; z?: number; slopes?: Slopes }
@@ -65,8 +66,16 @@ async function shot(page: Page, name: string, spot: Spot) {
 /** rAF recording lives outside Phaser so a scene restart cannot reset it. */
 async function startFrames(page: Page) {
   await page.evaluate(() => {
-    const w = window as unknown as { __frames: number[]; __framesId?: number }
+    const w = window as unknown as FrameWindow
     w.__frames = []
+    w.__longTaskObserver?.disconnect()
+    w.__longTasks = []
+    if (PerformanceObserver.supportedEntryTypes.includes('longtask')) {
+      w.__longTaskObserver = new PerformanceObserver((list) => {
+        w.__longTasks.push(...list.getEntries().map((e) => ({ start: e.startTime, ms: e.duration })))
+      })
+      w.__longTaskObserver.observe({ type: 'longtask' })
+    }
     const id = w.__framesId = (w.__framesId ?? 0) + 1
     let last = performance.now()
     const tick = (t: number) => {
@@ -80,13 +89,16 @@ async function startFrames(page: Page) {
   await page.waitForTimeout(50)
 }
 async function endFrames(page: Page) {
-  const raw = await page.evaluate(() => {
-    const w = window as unknown as { __frames: number[]; __framesId?: number }
+  const { raw, longTasks } = await page.evaluate(() => {
+    const w = window as unknown as FrameWindow
     w.__framesId = (w.__framesId ?? 0) + 1
-    return w.__frames.slice(1)
+    const pending = w.__longTaskObserver?.takeRecords() ?? []
+    w.__longTasks.push(...pending.map((e) => ({ start: e.startTime, ms: e.duration })))
+    w.__longTaskObserver?.disconnect()
+    return { raw: w.__frames.slice(1), longTasks: w.__longTasks }
   })
   const s = [...raw].sort((a, b) => a - b)
-  return { frames: s.length, p50: s[s.length >> 1] ?? 0, p95: s[Math.floor(s.length * 0.95)] ?? 0, p99: s[Math.floor(s.length * 0.99)] ?? 0, max: s.at(-1) ?? 0, over33: s.filter((x) => x > 33).length, over50: s.filter((x) => x > 50).length, raw }
+  return { frames: s.length, p50: s[s.length >> 1] ?? 0, p95: s[Math.floor(s.length * 0.95)] ?? 0, p99: s[Math.floor(s.length * 0.99)] ?? 0, max: s.at(-1) ?? 0, over33: s.filter((x) => x > 33).length, over50: s.filter((x) => x > 50).length, raw, longTasks }
 }
 async function walkTimed(page: Page, key: string, ms: number) {
   await startFrames(page)

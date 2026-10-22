@@ -629,7 +629,7 @@ export class HeightLabScene extends Phaser.Scene {
   /**
    * A chunk going up (ground images, faces, props, the levels overlay), a
    * piece a step: the slopes area's a band image at a time, then its faces
-   * six rows at a time, then its props. It counts as built from the first
+   * one row at a time, then eight props or four grid rows. It counts as built from the first
    * step (so it isn't asked for again); dropping it stops it.
    */
   private *partSteps(cx: number, cy: number): Generator<void, void> {
@@ -652,15 +652,25 @@ export class HeightLabScene extends Phaser.Scene {
         yield
       }
     else for (const li of paintSurface(this, this.area, part)) add(li)
-    for (let y = rect.y0; y <= rect.y1; y += 6) {
-      p.things.push(...this.buildFaces({ ...rect, y0: y, y1: Math.min(rect.y1, y + 5) }))
+    const faceRows = this.area.slopes ? 1 : 6
+    for (let y = rect.y0; y <= rect.y1; y += faceRows) {
+      p.things.push(...this.buildFaces({ ...rect, y0: y, y1: Math.min(rect.y1, y + faceRows - 1) }))
       this.stillKey = ''
       if (this.area.slopes && !this.area.slopes.lift) yield
     }
     const props = (this.propsByChunk ??= this.groupProps()).get(`${cx},${cy}`) ?? []
-    p.things.push(...this.buildProps(props))
-    drawGrid(p.grid, this.area.slopes?.view ?? this.area.stack.layers[SURFACE]!, this.area, rect)
-    this.stillKey = ''
+    const batch = this.area.slopes ? 8 : Math.max(1, props.length)
+    for (let i = 0; i < props.length; i += batch) {
+      p.things.push(...this.buildProps(props.slice(i, i + batch)))
+      this.stillKey = ''
+      if (this.area.slopes) yield
+    }
+    const gridRows = this.area.slopes ? 4 : rect.y1 - rect.y0 + 1
+    for (let y = rect.y0; y <= rect.y1; y += gridRows) {
+      drawGrid(p.grid, this.area.slopes?.view ?? this.area.stack.layers[SURFACE]!, this.area, { ...rect, y0: y, y1: Math.min(rect.y1, y + gridRows - 1) })
+      this.stillKey = ''
+      if (this.area.slopes) yield
+    }
   }
 
   private dropPart(key: string): void {

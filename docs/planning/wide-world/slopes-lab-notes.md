@@ -107,7 +107,7 @@ companion/target visibility and picking are 2b questions.
 The old “two chunks a frame is fine” claim was wrong: painting, splitting fog
 bands and uploading whole chunks caused long movement frames. Pure painting now
 yields, completed pixels are cached by field/drawing/chunk, and uploads yield by
-band texture, six rows of faces, then props/grid. Upload and paint work share a
+band texture, one row of faces, eight props, or four grid rows. Upload and paint work share a
 5 ms scheduling budget, including entry and preset restarts (the former visible-
 window synchronous bypass is removed). Cold views fill progressively. Paint strips
 are one tile wide/high and fog-band scans yield every sixteen rows. This is a
@@ -115,13 +115,31 @@ scheduling target, not a bound on a whole frame
 or a single indivisible texture upload. Browser tails below are the evidence;
 old Node totals of ~100 ms per chunk do not describe current frame costs.
 
+## Per-preset observations
+
+| Preset | What reads | Remaining question |
+|---|---|---|
+| Shading baseline | Quiet ground; warm and cool facing changes give broad hill shape, and the saddle's open route stands out between grey shoulders. | The gentle hills still compete with grass mottling. Is aspect shading alone sufficient while moving? |
+| Sparse contours | Broken high/low accents locate the hills and the saddle's rise without the terraces' dense stripes. | Are fragments enough to identify the high side, and do any still suggest built edging? |
+| Small terraces | The most explicit small-rise cues: lips and risers make the hills and uphill approach easy to trace. | They imply steps on a smooth surface, and dense bands remain conspicuous on scree. |
+| Moderate lift | Less compression and smaller walls than full lift; the pass stays open and props meet the same ground. | The reserved talus below the outcrop is deeper than the face. Does this read as a deliberate apron? |
+| Full lift reference | Tall mountains and the saddle's enclosing shoulders are unmistakable; the back-of-plateau silhouette still works. | Strong compression, stretched scree and tall talus make the blocked boundary more dominant; small hills still need facing cues. |
+
+The rocky path tests access independently of material hue: laid slab shapes sit
+beside the scree's downhill streaks. Its stair-stepped footprint remains visible.
+The fog-off saddle keeps the opening readable in every preset. The phone frame
+shows the moderate-lift halfway approach; it proves framing, not a mobile frame
+budget. Tall north-facing field-boundary views can expose the finite lab's outer
+edge, which is not an unpainted interior chunk.
+
 ## Evidence and owner questions
 
 The CI-only `e2e/height-lab-slopes.spec.ts` captures six matching spots under each
 preset, a fog-off saddle under each, and a moderate-lift phone frame, all with
 HUD and overlays hidden. JSON beside each PNG records field position, height,
 kind and settings. `timing.json` records raw rAF intervals and p50/p95/p99/max,
-counts over 33/50 ms, paint/upload/update distributions and slow-frame attribution.
+counts over 33/50 ms, browser long tasks where supported, paint/upload/update
+distributions and slow-frame attribution.
 It compares exact uphill/downhill/cross-slope knoll runs across all five presets,
 including an uphill Off reference. These simulated field-time runs check movement
 policy; the separate real-key walks measure browser frame pacing.
