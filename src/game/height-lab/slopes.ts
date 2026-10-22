@@ -64,7 +64,6 @@ export const FOG_LEVELS = 4
 
 /** The drawing styles (./slopes-art.ts). */
 export type SlopeStyle = 'shade' | 'contours' | 'terraces' | 'lift'
-export const SLOPE_STYLES: SlopeStyle[] = ['shade', 'contours', 'terraces', 'lift']
 export const SLOPE_STYLE_NAME: Record<SlopeStyle, string> = { shade: 'Shading by facing', contours: 'Contour hints', terraces: 'Small terraces', lift: 'True ¾ lift' }
 
 /** The ground: per tile its corners, kind and ground. */
