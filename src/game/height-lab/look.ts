@@ -4,6 +4,7 @@
  * (sessionStorage), so a reload keeps the choice.
  */
 import type { AreaName } from './area.ts'
+import type { SlopeStyle } from './slopes.ts'
 import type { WayIn } from './light.ts'
 
 export interface LabLook {
@@ -35,10 +36,14 @@ export interface LabLook {
   strategy: 'region' | 'chunk'
   /** The generated area: stranded floor magenta, chunk lines (switching repaints). */
   walkOverlay: boolean
+  /** The slopes area: how slopes are drawn (./slopes-art.ts; switching repaints, the lift rebuilds the map where you stand). */
+  slopeStyle: SlopeStyle
+  /** The slopes area: shading by facing on top of the contour, terrace or lift style. */
+  slopeShade: boolean
 }
 
 const KEY = 'glimway:height-lab-look'
-const DEFAULT: LabLook = { area: 'shoulder', fog: 'fog', fogStrength: 'medium', darkness: 0.6, caveStyle: 'mixed', zoom: true, haze: true, cave: 'lantern', skyTiles: 6, crossfade: 3, way: 'blend', grid: false, strategy: 'region', walkOverlay: false }
+const DEFAULT: LabLook = { area: 'shoulder', fog: 'fog', fogStrength: 'medium', darkness: 0.6, caveStyle: 'mixed', zoom: true, haze: true, cave: 'lantern', skyTiles: 6, crossfade: 3, way: 'blend', grid: false, strategy: 'region', walkOverlay: false, slopeStyle: 'shade', slopeShade: true }
 
 function read(): LabLook {
   try {

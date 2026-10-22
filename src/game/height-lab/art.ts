@@ -55,7 +55,7 @@ export function groundLevel(area: LabArea, i: number): number {
 }
 
 /** Canvas texture from RGBA pixels. */
-function addPixels(scene: Phaser.Scene, key: string, w: number, h: number, px: Uint8ClampedArray, linear = false): void {
+export function addPixels(scene: Phaser.Scene, key: string, w: number, h: number, px: Uint8ClampedArray, linear = false): void {
   if (scene.textures.exists(key)) scene.textures.remove(key)
   const canvas = document.createElement('canvas')
   canvas.width = w

@@ -41,7 +41,9 @@ import { CAVE, SURFACE, areaLighting, type LabArea } from './area'
 import { buildArea } from './areas'
 import { buildWalkArea, loadWalk, resumeAt, walkHere, walkLoaded, type Strategy, type WalkData } from './walk'
 import { type CaveImages, FACES_KEY, FACE_TINT, drawFaces, drawGrid, drawOverlays, facePart, paintCave, paintSurface, type PaintPart } from './art'
-import { KIND, TILE_PX, findPath, move, sample, standTile, zAt, type Node, type Walker } from './levels'
+import { KIND, ROWS_PER_LEVEL, TILE_PX, findPath, move, sample, standTile, zAt, type Node, type Walker } from './levels'
+import { CRAG_KEY, drawCrags, paintSlopes, slopeFaceTint } from './slopes-art'
+import { FOG_LEVELS, SLOPE_STYLE_NAME, mapNode, toField } from './slopes'
 import { FRIEND_LIGHT, HERO_LIGHT, LIGHT_RES, wayIn } from './light'
 import { caveTint, clearLitScratch, litPixels, pixelSpans, type FillOptions, type Lighting } from './lighting'
 import { fogFor, labLook, onLabLook, setLabLook, type LabLook } from './look'
@@ -58,7 +60,7 @@ const CAVE_DARK = 0x07060b
 type Shown = Phaser.GameObjects.Image | Phaser.GameObjects.Sprite | Phaser.GameObjects.Text
 
 /** What a scene was built with (the switches that rebuild it). */
-type Built = Pick<LabLook, 'area' | 'skyTiles' | 'caveStyle' | 'strategy' | 'walkOverlay'>
+type Built = Pick<LabLook, 'area' | 'skyTiles' | 'caveStyle' | 'strategy' | 'walkOverlay' | 'slopeStyle' | 'slopeShade'>
 
 /** Tiles, inclusive. */
 interface Rect {
@@ -81,6 +83,8 @@ interface Part {
 /** The generated area's window, once fetched (kept across restarts: switching strategy is instant), and where to stand after a switch. */
 let walkData: WalkData | null = null
 let walkResume: { tx: number; ty: number } | null = null
+/** The slopes area: the field tile to stand on after a style switch (the lifted map moves things). */
+let slopesResume: { tx: number; ty: number } | null = null
 
 /** The strategies, as the HUD and the panel name them. */
 const STRATEGY_NAME: Record<Strategy, string> = { region: 'Region plan', chunk: 'Per-chunk repair' }
@@ -95,6 +99,19 @@ interface GeneratedState {
   summary: Record<Strategy, { ramps: number; strandedTiles: number; strandedComponents: number; anchors: string; heldExits: string; solveMs: number }>
   parts: number
   things: number
+}
+
+/** The slopes area in the spec's state. */
+interface SlopesState {
+  style: string
+  shade: boolean
+  lift: boolean
+  tile: [number, number]
+  field: { tx: number; ty: number } | null
+  kind: number
+  size: [number, number]
+  spots: { name: string; x: number; y: number; fx: number; fy: number; note: string }[]
+  parts: number
 }
 
 /** A 1×1 clear texture. */
@@ -140,7 +157,7 @@ export class HeightLabScene extends Phaser.Scene {
   private area!: LabArea
   private look: LabLook = labLook()
   /** What this scene was built with (the switches that rebuild it), for the screenshot spec. */
-  private built: Built = { area: 'shoulder', skyTiles: 6, caveStyle: 'mixed', strategy: 'region', walkOverlay: false }
+  private built: Built = { area: 'shoulder', skyTiles: 6, caveStyle: 'mixed', strategy: 'region', walkOverlay: false, slopeStyle: 'shade', slopeShade: true }
   private things: Thing[] = []
   private movers: Mover[] = []
   private hero!: Mover
@@ -202,7 +219,7 @@ export class HeightLabScene extends Phaser.Scene {
     this.updateMs = []
     this.lightMs = []
     this.look = labLook()
-    this.built = { area: this.look.area, skyTiles: this.look.skyTiles, caveStyle: this.look.caveStyle, strategy: this.look.strategy, walkOverlay: this.look.walkOverlay }
+    this.built = { area: this.look.area, skyTiles: this.look.skyTiles, caveStyle: this.look.caveStyle, strategy: this.look.strategy, walkOverlay: this.look.walkOverlay, slopeStyle: this.look.slopeStyle, slopeShade: this.look.slopeShade }
     this.parts = new Map()
     this.propsByChunk = null
     this.loading = null
@@ -212,13 +229,19 @@ export class HeightLabScene extends Phaser.Scene {
       return
     }
     const endBuild = perfSpan('lab:build')
-    this.area = this.look.area === 'walk' ? buildWalkArea(walkData!, this.look.strategy, { skyTiles: this.look.skyTiles }) : buildArea(this.look.area, { skyTiles: this.look.skyTiles })
+    this.area =
+      this.look.area === 'walk'
+        ? buildWalkArea(walkData!, this.look.strategy, { skyTiles: this.look.skyTiles })
+        : buildArea(this.look.area, { skyTiles: this.look.skyTiles }, { style: this.look.slopeStyle, shade: this.look.slopeShade })
     if (this.area.generated && walkResume) this.area.spawn = resumeAt(this.area, walkResume.tx, walkResume.ty)
+    if (this.area.slopes && slopesResume) this.area.spawn = mapNode(this.area.slopes, this.area.stack, slopesResume.tx, slopesResume.ty)
     walkResume = null
+    slopesResume = null
     drawFaces(this)
     drawOverlays(this)
+    drawCrags(this)
     ensureTangleAtlas(this, DECOR_ATLAS)
-    if (this.area.generated) this.buildWalkCave()
+    if (this.streamed()) this.buildWalkCave()
     else {
       this.buildGround()
       this.buildFaces()
@@ -227,7 +250,7 @@ export class HeightLabScene extends Phaser.Scene {
     }
     this.buildMovers()
     this.buildOverlays()
-    if (this.area.generated) this.stream(true)
+    if (this.streamed()) this.stream(true)
     endBuild()
     this.buildMs = performance.now() - t0
 
@@ -247,7 +270,13 @@ export class HeightLabScene extends Phaser.Scene {
     let restarting = false
     const stopLook = onLabLook((l) => {
       const walk = l.area === 'walk' && this.look.area === 'walk'
-      const rebuild = l.area !== this.look.area || l.skyTiles !== this.look.skyTiles || l.caveStyle !== this.look.caveStyle || (walk && (l.strategy !== this.look.strategy || l.walkOverlay !== this.look.walkOverlay))
+      const slopes = l.area === 'slopes' && this.look.area === 'slopes'
+      const rebuild =
+        l.area !== this.look.area ||
+        l.skyTiles !== this.look.skyTiles ||
+        l.caveStyle !== this.look.caveStyle ||
+        (walk && (l.strategy !== this.look.strategy || l.walkOverlay !== this.look.walkOverlay)) ||
+        (slopes && (l.slopeStyle !== this.look.slopeStyle || l.slopeShade !== this.look.slopeShade))
       this.look = l
       this.stillKey = ''
       if (rebuild && !restarting) {
@@ -256,6 +285,11 @@ export class HeightLabScene extends Phaser.Scene {
         if (walk) {
           const [tx, ty] = standTile(this.hero.walker)
           walkResume = { tx, ty }
+        }
+        // Another style where the hero stands: the same ground, wherever the new map shows it.
+        if (slopes && this.area.slopes) {
+          const [tx, ty] = standTile(this.hero.walker)
+          slopesResume = toField(this.area.slopes, tx, ty)
         }
         this.scene.restart()
       }
@@ -284,6 +318,11 @@ export class HeightLabScene extends Phaser.Scene {
     labHook(this)
     cam.fadeIn(400, 12, 12, 20)
     bus.emit(EV.worldShown)
+  }
+
+  /** Built a chunk at a time round the hero (the generated area, the slopes area): too big to draw at once. */
+  private streamed(): boolean {
+    return !!(this.area.generated || this.area.slopes)
   }
 
   private fitZoom(): void {
@@ -333,9 +372,10 @@ export class HeightLabScene extends Phaser.Scene {
         const end = isFace(tx + 1, ty) ? (isFace(tx - 1, ty) ? '' : '-w') : '-e'
         const v = (tx * 7 + ty * 3) & 3
         const frame = mouth ? (tx === mouth.x0 ? 'lintel-w' : 'lintel-e') : `face-${facePart(row, rows)}-${v}${end}`
-        const img = this.add.image(tx * T, ty * T, FACES_KEY, frame).setOrigin(0).setTint(FACE_TINT[l.faceTop[i]!] ?? 0xffffff)
-        // Drawn by its own row's foot, so someone on a trail leg below it stands in front.
-        const z = l.faceTop[i]! - (row + 0.5) / rows
+        const tint = this.area.slopes ? slopeFaceTint(l.faceTop[i]!) : (FACE_TINT[l.faceTop[i]!] ?? 0xffffff)
+        const img = this.add.image(tx * T, ty * T, FACES_KEY, frame).setOrigin(0).setTint(tint)
+        // Drawn by its own row's foot, so someone on a trail leg below it stands in front. (Slopes' faces are many levels tall.)
+        const z = l.faceTop[i]! - (row + 0.5) / (this.area.slopes ? ROWS_PER_LEVEL : rows)
         made.push(this.addThing({ parts: [{ o: img, dz: 0, a: 1 }], layer: SURFACE, x: img.x + 8, y: (ty + 1) * T, z, seen: 1 }, true))
       }
     return made
@@ -345,12 +385,13 @@ export class HeightLabScene extends Phaser.Scene {
     const tex = this.textures.get(DECOR_ATLAS)
     const made: Thing[] = []
     for (const p of props) {
-      const frame = tangleFrame(p.kind, p.variant)
-      if (!tex.has(frame)) continue
+      const crag = p.kind === 'crag'
+      const frame = p.kind === 'crag' ? `crag-${p.variant & 3}` : tangleFrame(p.kind, p.variant)
+      if (!crag && !tex.has(frame)) continue
       const x = p.tx * T + 8
       const y = (p.ty + 1) * T
-      const img = this.add.image(x, y, DECOR_ATLAS, frame).setOrigin(0.5, 1)
-      made.push(this.addThing({ parts: [{ o: img, dz: 0, a: 1 }], layer: SURFACE, x, y, z: this.area.top[p.ty * this.area.stack.w + p.tx]!, seen: 1 }, true))
+      const img = this.add.image(x, y, crag ? CRAG_KEY : DECOR_ATLAS, frame).setOrigin(0.5, 1)
+      made.push(this.addThing({ parts: [{ o: img, dz: 0, a: 1 }], layer: SURFACE, x, y, z: p.z ?? this.area.top[p.ty * this.area.stack.w + p.tx]!, seen: 1 }, true))
     }
     return made
   }
@@ -419,11 +460,10 @@ export class HeightLabScene extends Phaser.Scene {
    * `all` (the first frame, or a jump).
    */
   private stream(all = false): void {
-    const g = this.area.generated
-    if (!g) return
+    if (!this.streamed()) return
     const C = 24
-    const cw = g.chunks[2]
-    const ch = g.chunks[3]
+    const cw = Math.ceil(this.area.stack.w / C)
+    const ch = Math.ceil(this.area.stack.h / C)
     const w = this.hero.walker
     // Half the view, at the widest the climbing zoom gets, and a chunk more.
     const hx = this.scale.width / (2 * this.baseZoom * 0.75) + C * T
@@ -444,12 +484,12 @@ export class HeightLabScene extends Phaser.Scene {
 
   private addPart(cx: number, cy: number): void {
     const C = 24
-    const rect = { x0: cx * C, y0: cy * C, x1: cx * C + C - 1, y1: cy * C + C - 1 }
+    const rect = { x0: cx * C, y0: cy * C, x1: Math.min(this.area.stack.w - 1, cx * C + C - 1), y1: Math.min(this.area.stack.h - 1, cy * C + C - 1) }
     const key = `hl-walk-${cx}-${cy}`
     const part: PaintPart = { ...rect, key, overlay: this.look.walkOverlay }
     const images: Phaser.GameObjects.Image[] = []
     const keys: string[] = []
-    for (const li of paintSurface(this, this.area, part)) {
+    for (const li of this.area.slopes ? paintSlopes(this, this.area, part) : paintSurface(this, this.area, part)) {
       const img = this.add.image(li.x, li.y, li.key).setOrigin(0).setDepth(BAND.ground + li.level)
       this.levelImages.push({ img, level: li.level })
       images.push(img)
@@ -747,7 +787,9 @@ export class HeightLabScene extends Phaser.Scene {
   }
 
   private fogOf(viewZ: number, z: number): number {
-    return this.look.fog === 'none' ? 0 : fogFor(z - viewZ, this.look.fogStrength)
+    if (this.look.fog === 'none') return 0
+    // The slopes area is 15 levels tall: fog by height difference, a level's worth every FOG_LEVELS levels.
+    return fogFor(this.area.slopes ? (z - viewZ) / FOG_LEVELS : z - viewZ, this.look.fogStrength)
   }
 
   private applyLook(dt: number): void {
@@ -822,16 +864,17 @@ export class HeightLabScene extends Phaser.Scene {
     this.drawLight(v, iris, fade, wv)
 
     // Climbing: haze at the screen's edges, and the camera eases out.
-    const high = (1 - v.cave) * Math.max(0, Math.min(1, v.z / 2))
+    const high = (1 - v.cave) * Math.max(0, Math.min(1, v.z / (this.area.slopes ? 12 : 2)))
     const hazeColor = look.fog === 'none' ? FOG_COLOR.fog : fogColor
     this.haze
       .setVisible(look.haze && high > 0.01)
       .setTint(hazeColor)
       // Near home, levels 2–3 are ordinary upland, not a summit: a lighter haze, or the Tops are all grey.
-      .setAlpha(high * (this.area.generated ? 0.2 : 0.6))
+      .setAlpha(high * (this.area.generated ? 0.2 : this.area.slopes ? 0.35 : 0.6))
       .setPosition(wv.centerX, wv.centerY)
       .setDisplaySize(wv.width * 1.25, wv.height * 1.25)
-    const target = this.baseZoom * (look.zoom ? 1 - 0.07 * Math.min(3, Math.max(0, v.z)) * (1 - v.cave) : 1)
+    const climb = this.area.slopes ? v.z / 4 : v.z
+    const target = this.baseZoom * (look.zoom ? 1 - 0.07 * Math.min(3, Math.max(0, climb)) * (1 - v.cave) : 1)
     if (Math.abs(cam.zoom - target) > 0.001) cam.setZoom(cam.zoom + (target - cam.zoom) * Math.min(1, dt * 3))
 
     // Where the hero stands on screen, for hold-to-walk (CSS px).
@@ -982,11 +1025,13 @@ export class HeightLabScene extends Phaser.Scene {
     iris: number
     crossfade: boolean
     generated?: GeneratedState
+    slopes?: SlopesState
   } {
     const v = this.view()
     const avg = this.lightMs.reduce((a, b) => a + b, 0) / Math.max(1, this.lightMs.length)
     const generated = this.generatedState()
-    return { area: this.built.area, look: this.look, built: this.built, ...v, light: this.lightAtHero(), lightMs: avg, corners: this.corners(), uncapped: this.lighting.stats.uncapped, iris: this.lastIris?.r ?? 0, crossfade: !!this.crossfade?.visible, ...(generated ? { generated } : {}) }
+    const slopes = this.slopesState()
+    return { area: this.built.area, look: this.look, built: this.built, ...v, light: this.lightAtHero(), lightMs: avg, corners: this.corners(), uncapped: this.lighting.stats.uncapped, iris: this.lastIris?.r ?? 0, crossfade: !!this.crossfade?.visible, ...(generated ? { generated } : {}), ...(slopes ? { slopes } : {}) }
   }
 
   /** The generated area, for the spec: the strategy, where the hero is, the named spots, both strategies' numbers. */
@@ -995,6 +1040,28 @@ export class HeightLabScene extends Phaser.Scene {
     if (!g) return undefined
     const [tx, ty] = standTile(this.hero.walker)
     return { ready: true, strategy: g.strategy, tile: [tx, ty], here: walkHere(this.area, tx, ty), spots: g.spots, summary: g.summary, parts: this.parts.size, things: this.things.length }
+  }
+
+  /** The slopes area, for the spec: the style, where the hero is (map and field tile), the spots in this map's tiles. */
+  private slopesState(): SlopesState | undefined {
+    const s = this.area.slopes
+    if (!s) return undefined
+    const [tx, ty] = standTile(this.hero.walker)
+    const l = this.area.stack.layers[SURFACE]!
+    return {
+      style: s.style,
+      shade: s.shade,
+      lift: s.lift,
+      tile: [tx, ty],
+      field: toField(s, tx, ty),
+      kind: l.kind[ty * l.w + tx] ?? 0,
+      size: [l.w, l.h],
+      spots: s.spots.map((p) => {
+        const n = mapNode(s, this.area.stack, p.tx, p.ty)
+        return { name: p.name, x: n.tx, y: n.ty, fx: p.tx, fy: p.ty, note: p.note }
+      }),
+      parts: this.parts.size
+    }
   }
 
   /** Still fetching the generated area's window (the spec waits on this). */
@@ -1017,6 +1084,14 @@ export class HeightLabScene extends Phaser.Scene {
       const h = walkHere(this.area, tx, ty)
       const where = h ? `${h.biome} · ${h.region} · level ${v.z.toFixed(2)}${h.stranded ? ' · stranded' : ''}` : `level ${v.z.toFixed(2)}`
       this.hud.textContent = `Near home — ${STRATEGY_NAME[g.strategy]} · ${where}\n${perf}`
+      return
+    }
+    const sl = this.area.slopes
+    if (sl) {
+      const [tx, ty] = standTile(this.hero.walker)
+      const at = toField(sl, tx, ty)
+      const steep = at ? sl.field.slope[at.ty * sl.field.w + at.tx]! : 0
+      this.hud.textContent = `Slopes, hills and passes — ${SLOPE_STYLE_NAME[sl.style]}${sl.style !== 'shade' && sl.shade ? ' + shading' : ''} · level ${v.z.toFixed(2)} · slope ${steep.toFixed(2)}\n${perf}`
       return
     }
     const here = v.layer === CAVE ? this.lightAtHero() : 1
