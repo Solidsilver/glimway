@@ -246,7 +246,9 @@ test.describe('slopes 2b', () => {
     const spots = new Map((await labState(page)).slopes!.spots.map((s) => [s.name, s]))
     const sunny: Spot = { name: 'knoll-sunny', x: 82, y: 87, fx: 82, fy: 87, look: null }
     const shaded: Spot = { name: 'knoll-shaded', x: 90, y: 95, fx: 90, fy: 95, look: null }
-    const features = [spots.get('hills')!, sunny, shaded, spots.get('pass-top')!, spots.get('outcrop-cliff')!, spots.get('rocky-path')!]
+    // The gentle approach keeps the hero and cast shadow central; the cliff-foot
+    // reference camera puts the feet against the bottom edge of the frame.
+    const features = [spots.get('hills')!, sunny, shaded, spots.get('pass-top')!, spots.get('outcrop-slope')!, spots.get('rocky-path')!]
     const timing: Record<string, unknown> = {}
     for (const sunlight of [false, true]) {
       await startFrames(page)
