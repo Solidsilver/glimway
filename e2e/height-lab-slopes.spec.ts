@@ -20,10 +20,10 @@ const OUT = '.e2e-artifacts/height-lab/slopes'
 
 type Style = 'shade' | 'contours' | 'terraces' | 'lift'
 type Look = { area?: 'shoulder' | 'mountain' | 'walk' | 'slopes'; slopeStyle?: Style; slopeShade?: boolean; grid?: boolean }
-type Spot = { name: string; x: number; y: number; fx: number; fy: number; note: string }
+type Spot = { name: string; x: number; y: number; fx: number; fy: number; note: string; look: [number, number] | null }
 type Slopes = { style: Style; shade: boolean; lift: boolean; tile: [number, number]; field: { tx: number; ty: number } | null; kind: number; size: [number, number]; spots: Spot[]; parts: number }
 type LabState = { area: string; look: Look; built: Look; z?: number; layer?: number; slopes?: Slopes }
-type Lab = { put: (layer: number, tx: number, ty: number) => void; step: (dx: number, dy: number) => void; look: (l: Look) => void; state: () => LabState }
+type Lab = { put: (layer: number, tx: number, ty: number, look?: [number, number]) => void; step: (dx: number, dy: number) => void; look: (l: Look) => void; state: () => LabState }
 
 const labState = (page: Page) => page.evaluate(() => (window as unknown as { __fsLab: Lab }).__fsLab.state())
 
@@ -68,7 +68,8 @@ async function hud(page: Page, shown: boolean): Promise<void> {
 }
 
 async function shot(page: Page, name: string, spot: Spot): Promise<LabState> {
-  await page.evaluate(([x, y]) => (window as unknown as { __fsLab: Lab }).__fsLab.put(0, x, y), [spot.x, spot.y] as const)
+  // Framed on the feature where it isn't where you stand (the lift moves tall things far north).
+  await page.evaluate(([x, y, look]) => (window as unknown as { __fsLab: Lab }).__fsLab.put(0, x, y, look ?? undefined), [spot.x, spot.y, spot.look] as const)
   await page.waitForTimeout(900)
   const st = await labState(page)
   states[name] = st

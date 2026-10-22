@@ -85,6 +85,8 @@ export interface SlopeSpot {
   tx: number
   ty: number
   note: string
+  /** A field tile to frame the view on (the feature), when it isn't where you stand. */
+  look?: [number, number]
 }
 
 /** What the slopes area knows beyond a hand-made one. */
@@ -289,10 +291,10 @@ export function buildField(): Field {
       else if (r === 'spire') g = G['wq-stone']
       else if (kind === KIND.crag) g = G['tops-crag']
       else if (kind === KIND.steep) g = G['tops-scree']
-      else if (r === 'outcrop') g = G.trodden
+      else if (r === 'outcrop') g = G.meadow
       else if (r === 'plateau' || r === 'ramp') g = r === 'ramp' ? G.trodden : G.moss
-      else if (ridge > 0.6 && Math.abs(tx + 0.5 - PASS_X) < 1.6 && ty < 76 && ty > 12) g = G['tops-path']
-      else if (ridge > 0.6) g = z > 8 ? G['wq-stone'] : z > 5.5 ? G['tops-turf'] : G['tops-moor']
+      else if (ridge > 0.6 && Math.abs(tx + 0.5 - PASS_X) < 1.6 && ty < 76 && ty > 12) g = G.path
+      else if (ridge > 0.6) g = z > 8 ? G['wq-stone'] : z > 5.5 ? G.trodden : G.meadow
       else if (ty > 104 && ty <= coastRow(tx)) g = G.moss
       f.ground[i] = g
     }
@@ -308,13 +310,13 @@ const SPOTS: SlopeSpot[] = [
   { name: 'pass-mid', tx: 72, ty: 48, note: 'halfway up: the too-steep band closes in on both sides' },
   { name: 'pass-top', tx: 72, ty: 31, note: 'the saddle, about level 6; shoulders too steep either side' },
   { name: 'pass-north', tx: 72, ty: 10, note: 'down the far side to the upland' },
-  { name: 'steep-band', tx: 56, ty: 46, note: 'below the scree band on the range’s south side, looking north' },
-  { name: 'crags', tx: 90, ty: 40, note: 'under the crags near the eastern peaks' },
-  { name: 'spire', tx: 40, ty: 52, note: 'below the spire (level 15): its face, crags round its foot; no way up' },
+  { name: 'steep-band', tx: 56, ty: 46, note: 'below the scree band on the range’s south side, looking north', look: [56, 40] },
+  { name: 'crags', tx: 90, ty: 40, note: 'under the crags near the eastern peaks', look: [92, 31] },
+  { name: 'spire', tx: 40, ty: 52, note: 'below the spire (level 15): its face, crags round its foot; no way up', look: [40, 40] },
   { name: 'outcrop-slope', tx: 103, ty: 82, note: 'the outcrop’s gentle side: walk south up onto it' },
   { name: 'outcrop-top', tx: 103, ty: 95, note: 'the outcrop’s edge, about 3 levels over the valley' },
-  { name: 'outcrop-cliff', tx: 103, ty: 108, note: 'below the outcrop’s cliff, looking north at its face' },
-  { name: 'sea-cliff', tx: 30, ty: 118, note: 'the sea cliff’s top, the sand flats below' },
+  { name: 'outcrop-cliff', tx: 103, ty: 108, note: 'below the outcrop’s cliff, looking north at its face', look: [103, 100] },
+  { name: 'sea-cliff', tx: 30, ty: 118, note: 'the sea cliff’s top, the sand flats below', look: [30, 123] },
   { name: 'gully', tx: 45, ty: 112, note: 'the one way down to the sea' },
   { name: 'sea', tx: 45, ty: 134, note: 'on the sand flats under the cliff' },
   { name: 'plateau', tx: 132, ty: 110, note: 'the plateau patch: whole levels, cliffs, ramps (like the generator)' },
@@ -554,9 +556,14 @@ export function nearestWalkable(stack: Stack, tx: number, ty: number): Node {
   return { layer: SURFACE, tx, ty }
 }
 
+/** Where a field tile's middle is drawn in the map (hidden or not): the lifted map moves it north 3 rows a level. */
+export function mapPoint(info: SlopesInfo, tx: number, ty: number): { tx: number; ty: number } {
+  return info.lift ? { tx, ty: Math.max(0, Math.round(ty + info.pad - ROWS_PER_LEVEL * fieldZ(info.field, tx, ty, 0.5, 0.5))) } : { tx, ty }
+}
+
 /** A field tile as a map node, on walkable ground near it. */
 export function mapNode(info: SlopesInfo, stack: Stack, tx: number, ty: number): Node {
-  const m = toMap(info, tx, ty) ?? { tx, ty: info.lift ? Math.max(0, Math.round(ty + info.pad - ROWS_PER_LEVEL * fieldZ(info.field, tx, ty, 0.5, 0.5))) : ty }
+  const m = toMap(info, tx, ty) ?? mapPoint(info, tx, ty)
   return nearestWalkable(stack, m.tx, m.ty)
 }
 
@@ -587,6 +594,8 @@ export function buildSlopes(opts: AreaOptions, look: SlopesOptions = { style: 's
   const shown: PropSpot[] = []
   const place = (p: PropSpot, z: number) => {
     if (!lift) {
+      // Not where a face took the tile.
+      if (surface.kind[p.ty * w + p.tx] === KIND.face) return
       shown.push({ ...p, z })
       return
     }

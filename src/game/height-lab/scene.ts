@@ -43,7 +43,7 @@ import { buildWalkArea, loadWalk, resumeAt, walkHere, walkLoaded, type Strategy,
 import { type CaveImages, FACES_KEY, FACE_TINT, drawFaces, drawGrid, drawOverlays, facePart, paintCave, paintSurface, type PaintPart } from './art'
 import { KIND, ROWS_PER_LEVEL, TILE_PX, findPath, move, sample, standTile, zAt, type Node, type Walker } from './levels'
 import { CRAG_KEY, drawCrags, paintSlopes, slopeFaceTint } from './slopes-art'
-import { FOG_LEVELS, SLOPE_STYLE_NAME, mapNode, toField } from './slopes'
+import { FOG_LEVELS, SLOPE_STYLE_NAME, mapNode, mapPoint, toField } from './slopes'
 import { FRIEND_LIGHT, HERO_LIGHT, LIGHT_RES, wayIn } from './light'
 import { caveTint, clearLitScratch, litPixels, pixelSpans, type FillOptions, type Lighting } from './lighting'
 import { fogFor, labLook, onLabLook, setLabLook, type LabLook } from './look'
@@ -110,7 +110,7 @@ interface SlopesState {
   field: { tx: number; ty: number } | null
   kind: number
   size: [number, number]
-  spots: { name: string; x: number; y: number; fx: number; fy: number; note: string }[]
+  spots: { name: string; x: number; y: number; fx: number; fy: number; note: string; look: [number, number] | null }[]
   parts: number
 }
 
@@ -459,12 +459,14 @@ export class HeightLabScene extends Phaser.Scene {
    * all at once. At most two new chunks a frame, nearest first, unless
    * `all` (the first frame, or a jump).
    */
-  private stream(all = false): void {
+  private stream(all = false, at?: { x: number; y: number }): void {
     if (!this.streamed()) return
     const C = 24
     const cw = Math.ceil(this.area.stack.w / C)
     const ch = Math.ceil(this.area.stack.h / C)
-    const w = this.hero.walker
+    // Round the hero, or round what the camera frames.
+    const cam = this.cameras.main
+    const w = at ?? (this.framed ? { x: cam.midPoint.x, y: cam.midPoint.y } : this.hero.walker)
     // Half the view, at the widest the climbing zoom gets, and a chunk more.
     const hx = this.scale.width / (2 * this.baseZoom * 0.75) + C * T
     const hy = this.scale.height / (2 * this.baseZoom * 0.75) + C * T
@@ -986,20 +988,37 @@ export class HeightLabScene extends Phaser.Scene {
     return { shown: pts.map(([x, y]) => this.lightView.at(x, y)), own: pts.map(([x, y]) => this.lighting.level(CAVE, x, y)) }
   }
 
-  /** For the screenshot spec (dev only): put the hero on a tile, the camera with them. */
-  put(layer: number, tx: number, ty: number): void {
+  /** For the screenshot spec (dev only): put the hero on a tile, the camera with them, or framing another tile (a feature) until the next step. */
+  put(layer: number, tx: number, ty: number, look?: [number, number]): void {
     const w = this.hero.walker
     w.layer = layer
     w.x = tx * T + 8
     w.y = ty * T + 12
     this.place(this.hero)
-    this.stream(true)
-    this.cameras.main.centerOn(w.x, w.y - 8)
+    const cam = this.cameras.main
+    if (look) {
+      cam.stopFollow()
+      cam.centerOn(look[0] * T + 8, look[1] * T + 8)
+      this.framed = true
+    } else {
+      this.follow()
+      cam.centerOn(w.x, w.y - 8)
+    }
+    this.stream(true, look ? { x: look[0] * T + 8, y: look[1] * T + 8 } : undefined)
     this.stillKey = ''
+  }
+
+  /** The camera back on the hero after framing a feature. */
+  private framed = false
+  private follow(): void {
+    if (!this.framed) return
+    this.framed = false
+    this.cameras.main.startFollow(this.hero.sprite, true, 0.12, 0.12, 0, 8)
   }
 
   /** Collision-respecting small steps for the wall-hugging screenshot walk. */
   stepHero(dx: number, dy: number): void {
+    this.follow()
     move(this.area.stack, this.hero.walker, dx, dy)
     this.place(this.hero)
     const w = this.hero.walker
@@ -1058,7 +1077,8 @@ export class HeightLabScene extends Phaser.Scene {
       size: [l.w, l.h],
       spots: s.spots.map((p) => {
         const n = mapNode(s, this.area.stack, p.tx, p.ty)
-        return { name: p.name, x: n.tx, y: n.ty, fx: p.tx, fy: p.ty, note: p.note }
+        const look = p.look ? mapPoint(s, p.look[0], p.look[1]) : null
+        return { name: p.name, x: n.tx, y: n.ty, fx: p.tx, fy: p.ty, note: p.note, look: look ? ([look.tx, look.ty] as [number, number]) : null }
       }),
       parts: this.parts.size
     }
@@ -1189,8 +1209,8 @@ function labHook(scene: HeightLabScene | null): void {
     return
   }
   w.__fsLab = {
-    put: (layer: number, tx: number, ty: number) => {
-      if (!scene.loadingState()) scene.put(layer, tx, ty)
+    put: (layer: number, tx: number, ty: number, look?: [number, number]) => {
+      if (!scene.loadingState()) scene.put(layer, tx, ty, look)
     },
     step: (dx: number, dy: number) => {
       if (!scene.loadingState()) scene.stepHero(dx, dy)
