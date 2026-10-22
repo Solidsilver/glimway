@@ -39,6 +39,7 @@ its architecture. This folder holds two kinds of document:
 |---|---|
 | [roadmap.md](roadmap.md) | The release order from 0.12 on, the rules every release keeps, the three land tiers, what's parked |
 | [planning/](planning/direction-overview.md) | The 2026-10-16 planning round: the brief, four agents' answers and the merged plan |
+| [Slopes lab recommendations](planning/wide-world/slopes-lab-recommendations.md) | Proposed comparisons for terrain shading, lift, visibility, gentle uphill slowdown, and valley atmosphere |
 | [expansion-design.md](expansion-design.md) | Onboarding, homesteads, shared worlds, the Wilds (approved design, with an implementation status) |
 | [hands-on-design.md](hands-on-design.md) | Homesteads, items and things to touch (extends the expansion design) |
 | [items/](items/overview.md) | Items: [overview](items/overview.md), [catalogue](items/catalogue.md), [crafting and repair](items/crafting-and-repair.md) |
