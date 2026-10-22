@@ -690,6 +690,11 @@ export function drawGrid(g: Phaser.GameObjects.Graphics, l: Layer, area: LabArea
       let a = 0.18
       if (lvl) c = k === KIND.rock ? 0x301040 : k === KIND.face ? 0xff2020 : caveColors[Math.min(4, Math.max(0, Math.round(-lvl[i]!)))]!
       else if (k === KIND.slope) c = 0x40ff60
+      else if (k === KIND.steep || k === KIND.crag) {
+        // Too steep (orange) and crags (violet): the slopes area's closed kinds.
+        c = k === KIND.steep ? 0xff9020 : 0xb050ff
+        a = 0.3
+      }
       else if (k === KIND.face || k === KIND.mouth) c = 0xff2020
       else {
         const z = area.top[i]!

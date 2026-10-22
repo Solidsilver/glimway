@@ -4,8 +4,11 @@
  * pixels (./slopes-art.ts makes them textures), so a node script can render
  * previews.
  *
- *  - shading by facing: ground facing the sun (from the south-west, as the
- *    cliffs' sunny faces) brighter, ground facing away darker;
+ *  - shading by facing: ground facing the light (from the north-west, the
+ *    top left of the screen, as relief maps light it) brighter, ground
+ *    facing away darker. Lit from the south (as the cliffs' sunny faces
+ *    are), relief read inverted in the first frames: the outcrop looked
+ *    like a pit;
  *  - contour hints: a faint grass edge every half level, dark on the low
  *    side and light on the high side, a little stronger every two levels;
  *  - small terraces: the slope as shallow steps of a fifth of a level, each
@@ -52,14 +55,14 @@ const hexRGB = (s: string): RGB => [parseInt(s.slice(1, 3), 16), parseInt(s.slic
 export const BAND = 0.5
 export const bandOf = (z: number) => Math.floor(z / BAND + 1e-4) * BAND
 
-/** The sun, from the south-west and above (x east, y south, z up). */
+/** The light, from the north-west and above (x east, y south, z up). */
 const SUN = (() => {
-  const v = [-0.45, 0.55, 0.7]
+  const v = [-0.5, -0.5, 0.7]
   const n = Math.hypot(v[0]!, v[1]!, v[2]!)
   return v.map((c) => c / n) as [number, number, number]
 })()
 /** How strongly facing shades: brightness change per unit of the sun's cosine. */
-const SHADE_GAIN = 1.6
+const SHADE_GAIN = 1.4
 
 /** Contours every CONTOUR levels, stronger every CONTOUR_MAJOR of them; terraces TERRACE levels high. */
 export const CONTOUR = 0.5
@@ -101,8 +104,8 @@ export function paintField(area: LabArea, x0: number, y0: number, w: number, h: 
   const dry = hexRGB('#d8c890')
   const stone = hexRGB('#a8a296')
   const snow = hexRGB('#eef2f8')
-  const scree = hexRGB('#9a8f80')
-  const bare = hexRGB('#87837d')
+  const scree = hexRGB('#aa9f8e')
+  const bare = hexRGB('#96928b')
   const sand = hexRGB('#c4c2b2')
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++) {
@@ -142,20 +145,24 @@ export function paintField(area: LabArea, x0: number, y0: number, w: number, h: 
       }
       if (kind === KIND.steep) {
         // Scree down the fall line (broken streaks of uneven length); bare rock where it's steeper still.
+        // Its own stone, not the painter's: grey-brown grit, patchy.
         const rock = slope > 0.55
-        tint(rock ? bare : scree, rock ? 0.85 : 0.78)
-        tint([150, 146, 140], (hash(wx >> 1, wy >> 1, 30) - 0.5) * 0.5 + 0.1)
+        const base = (rock ? bare : scree).map((ch) => ch * (0.92 + hash(wx >> 3, wy >> 3, 31) * 0.16 + (hash(wx, wy, 32) - 0.5) * 0.12)) as RGB
+        r = base[0]
+        g = base[1]
+        b = base[2]
         const dx = gx / (slope || 1)
         const dy = gy / (slope || 1)
         const along = wx * dx + wy * dy
         const across = -wx * dy + wy * dx
+        // Short dashes down the fall line, on a world grid so they don't swirl with it.
         const lane = Math.floor(across / 2)
-        const run = Math.floor((along + hash(lane, 0, 29) * 40) / (6 + hash(lane, 1, 29) * 10))
-        const streak = hash(lane, run, 22)
-        if (streak < 0.22) tint([58, 54, 50], rock ? 0.4 : 0.3)
-        else if (streak > 0.88) tint([214, 208, 196], 0.22)
-        if (hash(wx, wy, 23) < 0.03) tint([226, 220, 206], 0.6)
-        else if (hash(wx, wy - 1, 23) < 0.03) tint([40, 36, 34], 0.45)
+        const dash = hash(lane, Math.floor(along / 5), 22)
+        if (dash < 0.1) tint([58, 54, 50], rock ? 0.35 : 0.25)
+        else if (dash > 0.93) tint([214, 208, 196], 0.18)
+        // Loose stones, a shadow under each.
+        if (hash(wx >> 1, wy >> 1, 23) < 0.05 && (wx & 1) === 0 && (wy & 1) === 0) tint([228, 222, 208], 0.55)
+        else if (hash(wx >> 1, (wy - 1) >> 1, 23) < 0.05 && (wx & 1) === 0 && (wy & 1) === 1) tint([40, 36, 34], 0.4)
         // A rim of loose stones where the walkable ground ends.
         const fx = wx & 15
         const fy = wy & 15
@@ -188,7 +195,7 @@ export function paintField(area: LabArea, x0: number, y0: number, w: number, h: 
         const ny = -3 * gy
         const n = Math.hypot(nx, ny, 1)
         const lit = (nx * SUN[0] + ny * SUN[1] + SUN[2]) / n
-        k *= Math.max(0.42, Math.min(1.45, 1 + SHADE_GAIN * (lit - SUN[2])))
+        k *= Math.max(0.55, Math.min(1.4, 1 + SHADE_GAIN * (lit - SUN[2])))
       }
       const step = (lo: number, hi: number) => Math.abs(hi - lo) < 0.15
       if (style === 'contours' && kind !== KIND.crag) {
