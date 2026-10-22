@@ -42,11 +42,12 @@ import { buildArea } from './areas'
 import { buildWalkArea, loadWalk, resumeAt, walkHere, walkLoaded, type Strategy, type WalkData } from './walk'
 import { type CaveImages, FACES_KEY, FACE_TINT, drawFaces, drawGrid, drawOverlays, facePart, paintCave, paintSurface, type PaintPart } from './art'
 import { KIND, ROWS_PER_LEVEL, TILE_PX, findPath, move, sample, standTile, zAt, type Node, type Walker } from './levels'
-import { CRAG_KEY, bandImages, chunkKey, drawCrags, paintJob, paintedChunk, slopeFaceTint, type PaintJob } from './slopes-art'
-import { FOG_LEVELS, SLOPE_STYLE_NAME, display, mapPoint, nearestWalkable } from './slopes'
+import { CRAG_KEY, bandImages, drawCrags, paintJob, paintedChunk, slopeFaceTint, type PaintJob } from './slopes-art'
+import { chunkKey } from './slopes-paint'
+import { FOG_LEVELS, display, lookName, mapPoint, nearestWalkable, slopeWalk, uphillFactor } from './slopes'
 import { FRIEND_LIGHT, HERO_LIGHT, LIGHT_RES, wayIn } from './light'
 import { caveTint, clearLitScratch, litPixels, pixelSpans, type FillOptions, type Lighting } from './lighting'
-import { fogFor, labLook, onLabLook, setLabLook, type LabLook } from './look'
+import { SLOPE_KEYS, SLOPE_PRESETS, fogFor, labLook, onLabLook, setLabLook, slopePresetOf, slopeSettings, slopesLook, styleOf, type LabLook } from './look'
 
 const T = TILE_PX
 const DECOR_ATLAS = 'wilds-decor-outer-Carting'
@@ -60,7 +61,7 @@ const CAVE_DARK = 0x07060b
 type Shown = Phaser.GameObjects.Image | Phaser.GameObjects.Sprite | Phaser.GameObjects.Text
 
 /** What a scene was built with (the switches that rebuild it). */
-type Built = Pick<LabLook, 'area' | 'skyTiles' | 'caveStyle' | 'strategy' | 'walkOverlay' | 'slopeStyle' | 'slopeShade'>
+type Built = Pick<LabLook, 'area' | 'skyTiles' | 'caveStyle' | 'strategy' | 'walkOverlay' | (typeof SLOPE_KEYS)[number]>
 
 /** Tiles, inclusive. */
 interface Rect {
@@ -106,9 +107,14 @@ interface GeneratedState {
 
 /** The slopes area in the spec's state. */
 interface SlopesState {
-  style: string
-  shade: boolean
+  /** How it's drawn: the settings, the preset they are (if one), round 1's style they are (if one). */
+  look: { facing: string; contours: string; terraces: boolean; lift: number }
+  preset: string | null
+  style: string | null
   lift: boolean
+  /** The uphill slowdown: on or off, and where the hero last walked: the gradient (levels a tile), its uphill part, the speed multiplier. */
+  gentle: boolean
+  uphill: { gx: number; gy: number; up: number; k: number } | null
   /** The hero's field tile and px (the same in every style), and where they're drawn. */
   tile: [number, number]
   at: [number, number]
@@ -121,6 +127,7 @@ interface SlopesState {
   pending: number
   slow: { ms: number; paint: number; upload: number; parts: number }[]
   paint: { frames: number; p50: number; p95: number; max: number }
+  upload: { frames: number; p50: number; p95: number; max: number }
   update: { frames: number; p50: number; p95: number; max: number }
   spots: { name: string; x: number; y: number; fx: number; fy: number; note: string; look: [number, number] | null }[]
   parts: number
@@ -172,7 +179,7 @@ export class HeightLabScene extends Phaser.Scene {
   private area!: LabArea
   private look: LabLook = labLook()
   /** What this scene was built with (the switches that rebuild it), for the screenshot spec. */
-  private built: Built = { area: 'shoulder', skyTiles: 6, caveStyle: 'mixed', strategy: 'region', walkOverlay: false, slopeStyle: 'shade', slopeShade: true }
+  private built: Built = { area: 'shoulder', skyTiles: 6, caveStyle: 'mixed', strategy: 'region', walkOverlay: false, ...SLOPE_PRESETS.baseline.look }
   private things: Thing[] = []
   private movers: Mover[] = []
   private hero!: Mover
@@ -234,10 +241,12 @@ export class HeightLabScene extends Phaser.Scene {
     this.updateMs = []
     this.lightMs = []
     this.look = labLook()
-    this.built = { area: this.look.area, skyTiles: this.look.skyTiles, caveStyle: this.look.caveStyle, strategy: this.look.strategy, walkOverlay: this.look.walkOverlay, slopeStyle: this.look.slopeStyle, slopeShade: this.look.slopeShade }
+    this.built = { area: this.look.area, skyTiles: this.look.skyTiles, caveStyle: this.look.caveStyle, strategy: this.look.strategy, walkOverlay: this.look.walkOverlay, ...slopeSettings(this.look) }
     this.parts = new Map()
     this.jobs = []
+    this.uploads = []
     this.paintSteps = []
+    this.uploadSteps = []
     this.slow = []
     this.propsByChunk = null
     this.loading = null
@@ -250,7 +259,7 @@ export class HeightLabScene extends Phaser.Scene {
     this.area =
       this.look.area === 'walk'
         ? buildWalkArea(walkData!, this.look.strategy, { skyTiles: this.look.skyTiles })
-        : buildArea(this.look.area, { skyTiles: this.look.skyTiles }, { style: this.look.slopeStyle, shade: this.look.slopeShade })
+        : buildArea(this.look.area, { skyTiles: this.look.skyTiles }, slopesLook(this.look))
     if (this.area.generated && walkResume) this.area.spawn = resumeAt(this.area, walkResume.tx, walkResume.ty)
     const resume = this.area.slopes ? slopesResume : null
     walkResume = null
@@ -305,7 +314,7 @@ export class HeightLabScene extends Phaser.Scene {
         l.skyTiles !== this.look.skyTiles ||
         l.caveStyle !== this.look.caveStyle ||
         (walk && (l.strategy !== this.look.strategy || l.walkOverlay !== this.look.walkOverlay)) ||
-        (slopes && (l.slopeStyle !== this.look.slopeStyle || l.slopeShade !== this.look.slopeShade))
+        (slopes && SLOPE_KEYS.some((k) => l[k] !== this.look[k]))
       this.look = l
       this.stillKey = ''
       if (rebuild && !restarting) {
@@ -315,7 +324,7 @@ export class HeightLabScene extends Phaser.Scene {
           const [tx, ty] = standTile(this.hero.walker)
           walkResume = { tx, ty }
         }
-        // Another style where the hero stands: the same ground, wherever the new map shows it.
+        // Drawn another way where the hero stands: the same ground, wherever the new view shows it.
         if (slopes && this.area.slopes) slopesResume = { x: this.hero.walker.x, y: this.hero.walker.y }
         this.scene.restart()
       }
@@ -384,7 +393,8 @@ export class HeightLabScene extends Phaser.Scene {
   }
 
   private buildFaces(part?: Rect): Thing[] {
-    // The slopes area's faces are its view's (the lift draws them lifted).
+    // Lifted, the slopes area's faces are painted with the ground (./slopes-paint.ts), pixel by pixel.
+    if (this.area.slopes?.lift) return []
     const l = this.area.slopes?.view ?? this.area.stack.layers[SURFACE]!
     const isFace = (tx: number, ty: number) => tx >= 0 && tx < l.w && (l.kind[ty * l.w + tx] === KIND.face || l.kind[ty * l.w + tx] === KIND.mouth)
     const r = part ?? { x0: 0, y0: 0, x1: l.w - 1, y1: l.h - 1 }
@@ -508,7 +518,7 @@ export class HeightLabScene extends Phaser.Scene {
     const mx = w.x / (C * T) - 0.5
     const my = w.y / (C * T) - 0.5
     want.sort((a, b) => Math.hypot(a[0] - mx, a[1] - my) - Math.hypot(b[0] - mx, b[1] - my))
-    if (this.area.slopes) this.streamSlopes(want, all, { cx0, cy0, cx1, cy1 }, w)
+    if (this.area.slopes) this.streamSlopes(want, { cx0, cy0, cx1, cy1 })
     else for (const [cx, cy] of all ? want : want.slice(0, 2)) this.addPart(cx, cy)
     for (const p of this.parts.values()) p.grid.setVisible(this.look.grid)
   }
@@ -517,68 +527,83 @@ export class HeightLabScene extends Phaser.Scene {
   private jobs: PaintJob[] = []
   /** The slopes area's paint steps, per frame (ms): for the spec and the notes. */
   private paintSteps: number[] = []
+  /** The slopes area's chunks going up a piece at a time (a band image, a few rows of faces, the props), by "cx,cy". */
+  private uploads: { key: string; it: Generator<void, void> }[] = []
+  /** The slopes area's upload steps, per frame (ms). */
+  private uploadSteps: number[] = []
   /** The slopes area's slowest frames (update ms over 20), with what took the time: paint steps, chunk uploads (images, faces, props), the rest. */
   private slow: { ms: number; paint: number; upload: number; parts: number }[] = []
   private frameUpload = 0
   private frameParts = 0
 
   /**
-   * The slopes area's chunks: painted ones (this style, cached) go up at
-   * once (two a frame unless `all`); the rest become jobs, painted a step at
-   * a time under PAINT_BUDGET_MS a frame (pumpPaint). With `all` (entering,
-   * a jump), the chunks under the camera are finished at once so the view
-   * isn't empty; the rest follow.
+   * The slopes area's chunks: painted ones (these settings, cached) go up a
+   * piece at a time (uploads); the rest become jobs, painted a step at a
+   * time, then go up the same way, all under PAINT_BUDGET_MS a frame
+   * (pumpPaint), including entry, jumps and preset restarts. Never drain a
+   * whole visible window synchronously; cold views fill progressively.
    */
-  private streamSlopes(want: [number, number][], all: boolean, keep: { cx0: number; cy0: number; cx1: number; cy1: number }, mid: { x: number; y: number }): void {
+  private streamSlopes(want: [number, number][], keep: { cx0: number; cy0: number; cx1: number; cy1: number }): void {
     this.jobs = this.jobs.filter((j) => j.cx >= keep.cx0 - 1 && j.cx <= keep.cx1 + 1 && j.cy >= keep.cy0 - 1 && j.cy <= keep.cy1 + 1 && !this.parts.has(`${j.cx},${j.cy}`))
-    let placed = 0
     const order = new Map(want.map(([cx, cy], i) => [`${cx},${cy}`, i]))
     for (const [cx, cy] of want) {
       const key = chunkKey(this.area, cx, cy)
       const done = paintedChunk(key)
       if (done) {
-        if (all || placed < 2) {
-          this.addPart(cx, cy)
-          placed++
-        }
+        this.queueUpload(cx, cy)
         continue
       }
       if (!this.jobs.some((j) => j.key === key)) this.jobs.push(paintJob(this.area, this.partRect(cx, cy), key, cx, cy))
     }
     this.jobs.sort((a, b) => (order.get(`${a.cx},${a.cy}`) ?? 99) - (order.get(`${b.cx},${b.cy}`) ?? 99))
-    if (!all) return
-    // Under the camera (round what it centres on; its own view only updates when it draws): now.
-    const hw = this.scale.width / (2 * this.baseZoom)
-    const hh = this.scale.height / (2 * this.baseZoom)
-    const C = 24 * T
-    for (const j of [...this.jobs]) {
-      if ((j.cx + 1) * C < mid.x - hw || j.cx * C > mid.x + hw || (j.cy + 1) * C < mid.y - hh || j.cy * C > mid.y + hh) continue
-      while (!j.step()) {
-        /* painting */
-      }
-      this.jobs = this.jobs.filter((k) => k !== j)
-      this.addPart(j.cx, j.cy)
-    }
+
   }
 
-  /** Paint steps for the slopes area's waiting chunks, within the frame's budget (always one). */
+  /** A painted chunk to put up a piece at a time (pumpPaint), unless it's up or going up. */
+  private queueUpload(cx: number, cy: number): void {
+    const key = `${cx},${cy}`
+    if (this.parts.has(key) || this.uploads.some((u) => u.key === key)) return
+    this.uploads.push({ key, it: this.partSteps(cx, cy) })
+  }
+
+  /**
+   * The slopes area's waiting work within the frame's budget (at least one
+   * step): first pieces of chunks going up (a band image, some faces, the
+   * props), nearest first, then paint steps; a chunk painted joins the
+   * uploads. The paint ms (uploads are counted in frameUpload).
+   */
   private pumpPaint(): number {
-    if (!this.jobs.length) return 0
+    if (!this.jobs.length && !this.uploads.length) return 0
     const t0 = performance.now()
     let upload = 0
+    let painted = 0
     do {
+      if (this.uploads.length) {
+        const u0 = performance.now()
+        const u = this.uploads[0]!
+        if (u.it.next().done) this.uploads.shift()
+        const ms = performance.now() - u0
+        upload += ms
+        this.frameUpload += ms
+        continue
+      }
+      const p0 = performance.now()
       const j = this.jobs[0]!
       if (j.step()) {
         this.jobs.shift()
-        const u0 = performance.now()
-        this.addPart(j.cx, j.cy)
-        upload += performance.now() - u0
+        this.queueUpload(j.cx, j.cy)
       }
-    } while (this.jobs.length && performance.now() - t0 < PAINT_BUDGET_MS)
-    const ms = performance.now() - t0 - upload
-    this.paintSteps.push(ms)
-    if (this.paintSteps.length > 600) this.paintSteps.shift()
-    return ms
+      painted += performance.now() - p0
+    } while ((this.jobs.length || this.uploads.length) && performance.now() - t0 < PAINT_BUDGET_MS)
+    if (painted > 0) {
+      this.paintSteps.push(painted)
+      if (this.paintSteps.length > 600) this.paintSteps.shift()
+    }
+    if (upload > 0) {
+      this.uploadSteps.push(upload)
+      if (this.uploadSteps.length > 600) this.uploadSteps.shift()
+    }
+    return painted
   }
 
   /** A chunk's tiles (in what's drawn: the slopes area's view, else the stack). */
@@ -588,37 +613,71 @@ export class HeightLabScene extends Phaser.Scene {
     return { x0: cx * C, y0: cy * C, x1: Math.min(shown.w - 1, cx * C + C - 1), y1: Math.min(shown.h - 1, cy * C + C - 1), key: `hl-walk-${cx}-${cy}`, overlay: this.look.walkOverlay }
   }
 
+  /** A chunk up at once (the generated area; the slopes area's under the camera on entering or a jump). */
   private addPart(cx: number, cy: number): void {
     const t0 = performance.now()
-    this.addPartNow(cx, cy)
+    const key = `${cx},${cy}`
+    this.uploads = this.uploads.filter((u) => u.key !== key)
+    if (this.parts.has(key)) this.dropPart(key)
+    const it = this.partSteps(cx, cy)
+    while (!it.next().done) {
+      /* putting it up */
+    }
     this.frameUpload += performance.now() - t0
-    this.frameParts++
   }
 
-  private addPartNow(cx: number, cy: number): void {
+  /**
+   * A chunk going up (ground images, faces, props, the levels overlay), a
+   * piece a step: the slopes area's a band image at a time, then its faces
+   * one row at a time, then eight props or four grid rows. It counts as built from the first
+   * step (so it isn't asked for again); dropping it stops it.
+   */
+  private *partSteps(cx: number, cy: number): Generator<void, void> {
     const part = this.partRect(cx, cy)
     const rect = { x0: part.x0, y0: part.y0, x1: part.x1, y1: part.y1 }
-    const images: Phaser.GameObjects.Image[] = []
-    const keys: string[] = []
+    const p: Part = { cx, cy, images: [], keys: [], things: [], grid: this.add.graphics().setDepth(BAND.gridOut).setVisible(this.look.grid) }
+    this.parts.set(`${cx},${cy}`, p)
+    this.frameParts++
     const bands = this.area.slopes ? paintedChunk(chunkKey(this.area, cx, cy)) : null
-    for (const li of bands ? bandImages(this, part.key, bands) : paintSurface(this, this.area, part)) {
+    const add = (li: { key: string; x: number; y: number; level: number }) => {
       const img = this.add.image(li.x, li.y, li.key).setOrigin(0).setDepth(BAND.ground + li.level)
       this.levelImages.push({ img, level: li.level })
-      images.push(img)
-      keys.push(li.key)
+      p.images.push(img)
+      p.keys.push(li.key)
+    }
+    if (bands)
+      for (const b of bands) {
+        for (const li of bandImages(this, part.key, [b])) add(li)
+        this.stillKey = ''
+        yield
+      }
+    else for (const li of paintSurface(this, this.area, part)) add(li)
+    const faceRows = this.area.slopes ? 1 : 6
+    for (let y = rect.y0; y <= rect.y1; y += faceRows) {
+      p.things.push(...this.buildFaces({ ...rect, y0: y, y1: Math.min(rect.y1, y + faceRows - 1) }))
+      this.stillKey = ''
+      if (this.area.slopes && !this.area.slopes.lift) yield
     }
     const props = (this.propsByChunk ??= this.groupProps()).get(`${cx},${cy}`) ?? []
-    const things = [...this.buildFaces(rect), ...this.buildProps(props)]
-    const grid = this.add.graphics().setDepth(BAND.gridOut).setVisible(this.look.grid)
-    drawGrid(grid, this.area.slopes?.view ?? this.area.stack.layers[SURFACE]!, this.area, rect)
-    this.parts.set(`${cx},${cy}`, { cx, cy, images, keys, things, grid })
-    this.stillKey = ''
+    const batch = this.area.slopes ? 8 : Math.max(1, props.length)
+    for (let i = 0; i < props.length; i += batch) {
+      p.things.push(...this.buildProps(props.slice(i, i + batch)))
+      this.stillKey = ''
+      if (this.area.slopes) yield
+    }
+    const gridRows = this.area.slopes ? 4 : rect.y1 - rect.y0 + 1
+    for (let y = rect.y0; y <= rect.y1; y += gridRows) {
+      drawGrid(p.grid, this.area.slopes?.view ?? this.area.stack.layers[SURFACE]!, this.area, { ...rect, y0: y, y1: Math.min(rect.y1, y + gridRows - 1) })
+      this.stillKey = ''
+      if (this.area.slopes) yield
+    }
   }
 
   private dropPart(key: string): void {
     const p = this.parts.get(key)
     if (!p) return
     this.parts.delete(key)
+    this.uploads = this.uploads.filter((u) => u.key !== key)
     const gone = new Set(p.things)
     for (const t of p.things) {
       for (const part of t.parts) part.o.destroy()
@@ -790,13 +849,20 @@ export class HeightLabScene extends Phaser.Scene {
     if (uiBlocked()) dx = dy = 0
     const len = Math.hypot(dx, dy)
     if (len > 0.1) {
-      dx /= Math.max(1, len)
-      dy /= Math.max(1, len)
-      const [tx, ty] = standTile(h.walker)
-      const l = this.area.stack.layers[h.walker.layer]!
-      // A little slower on a slope.
-      const slow = l.kind[ty * l.w + tx] === KIND.slope ? 0.8 : 1
-      move(this.area.stack, h.walker, dx * h.speed * slow * dt, dy * h.speed * slow * dt)
+      const sl = this.area.slopes
+      if (sl) {
+        // The slopes area: a little slower going uphill (Uphill slowdown: Gentle), by the field's own slope (./slopes.ts uphillFactor);
+        // a diagonal is as fast as straight.
+        this.uphill = slopeWalk(this.area.stack, sl.field, h.walker, dx / len, dy / len, h.speed * Math.min(1, len), dt, this.look.slopeUphill === 'gentle').at
+      } else {
+        dx /= Math.max(1, len)
+        dy /= Math.max(1, len)
+        const [tx, ty] = standTile(h.walker)
+        const l = this.area.stack.layers[h.walker.layer]!
+        // A little slower on a slope (the hand-made areas' ramps).
+        const slow = l.kind[ty * l.w + tx] === KIND.slope ? 0.8 : 1
+        move(this.area.stack, h.walker, dx * h.speed * slow * dt, dy * h.speed * slow * dt)
+      }
       this.facing = Math.abs(dx) >= Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : dy < 0 ? 'up' : 'down'
       this.animate(h, true)
     } else this.animate(h, false)
@@ -836,9 +902,14 @@ export class HeightLabScene extends Phaser.Scene {
       if (!m.path.length) m.wait = m.anim === 'demo' ? 1.6 : 1 + Math.random() * 2.5
       return
     }
-    const s = Math.min(d, m.speed * dt)
     const before = m.walker.x + m.walker.y
-    move(this.area.stack, m.walker, (vx / d) * s, (vy / d) * s)
+    // In the slopes area, Wren and the rest slow uphill as the hero does.
+    const sl = this.area.slopes
+    if (sl) slopeWalk(this.area.stack, sl.field, m.walker, vx / d, vy / d, m.speed, dt, this.look.slopeUphill === 'gentle', d)
+    else {
+      const s = Math.min(d, m.speed * dt)
+      move(this.area.stack, m.walker, (vx / d) * s, (vy / d) * s)
+    }
     if (Math.abs(m.walker.x + m.walker.y - before) < 0.01) m.stuck += dt
     else m.stuck = 0
     if (m.stuck > 0.6) {
@@ -1150,6 +1221,48 @@ export class HeightLabScene extends Phaser.Scene {
     this.cameras.main.startFollow(this.hero.sprite, true, 0.12, 0.12, 0, 8)
   }
 
+  /** The slopes area: the uphill slowdown where the hero last walked (gradient, uphill part, speed multiplier). */
+  private uphill: ReturnType<typeof uphillFactor> | null = null
+
+  /**
+   * For the spec (dev only): walk the hero (dx, dy) for `px` field px as
+   * steering does, a frame of `dt` at a time (field time, not the page's),
+   * so a run's time is the same whatever the frame rate or drawing. How long
+   * it took, how far it got, and the speed multipliers on the way.
+   */
+  runHero(dx: number, dy: number, px: number, dt = 1 / 60): { seconds: number; px: number; kMin: number; kMax: number; blocked: boolean; from: [number, number]; to: [number, number] } {
+    const sl = this.area.slopes
+    const h = this.hero
+    const w = h.walker
+    const len = Math.hypot(dx, dy)
+    const from: [number, number] = [w.x, w.y]
+    let seconds = 0
+    let walked = 0
+    let kMin = 1
+    let kMax = 0
+    let blocked = false
+    while (sl && len > 0 && walked < px - 1e-6 && seconds < 60) {
+      const x0 = w.x
+      const y0 = w.y
+      const r = slopeWalk(this.area.stack, sl.field, w, dx / len, dy / len, h.speed, dt, this.look.slopeUphill === 'gentle', px - walked)
+      const moved = Math.hypot(w.x - x0, w.y - y0)
+      seconds += r.used
+      walked += moved
+      kMin = Math.min(kMin, r.at.k)
+      kMax = Math.max(kMax, r.at.k)
+      this.uphill = r.at
+      if (moved < r.px * 0.5) {
+        blocked = true
+        break
+      }
+    }
+    this.follow()
+    this.place(h)
+    this.cameras.main.centerOn(h.thing.x, h.thing.y - 8)
+    this.stillKey = ''
+    return { seconds, px: walked, kMin, kMax, blocked, from, to: [w.x, w.y] }
+  }
+
   /** Collision-respecting small steps for the wall-hugging screenshot walk. */
   stepHero(dx: number, dy: number): void {
     this.follow()
@@ -1200,22 +1313,29 @@ export class HeightLabScene extends Phaser.Scene {
     if (!s) return undefined
     const [tx, ty] = standTile(this.hero.walker)
     const l = this.area.stack.layers[SURFACE]!
-    const sorted = [...this.paintSteps].sort((a, b) => a - b)
-    const upd = [...this.updateMs].sort((a, b) => a - b)
+    const pct = (xs: number[]) => {
+      const v = [...xs].sort((a, b) => a - b)
+      return { frames: v.length, p50: v[Math.floor(v.length / 2)] ?? 0, p95: v[Math.floor(v.length * 0.95)] ?? 0, max: v.at(-1) ?? 0 }
+    }
+    const u = this.uphill
     return {
-      style: s.style,
-      shade: s.shade,
+      look: { ...s.look },
+      preset: slopePresetOf(this.look),
+      style: styleOf(this.look),
       lift: s.lift,
+      gentle: this.look.slopeUphill === 'gentle',
+      uphill: u ? { gx: u.gx, gy: u.gy, up: u.up, k: u.k } : null,
       tile: [tx, ty],
       at: [this.hero.walker.x, this.hero.walker.y],
       shown: [this.hero.thing.x, this.hero.thing.y],
       silhouette: !!this.hero.thing.silhouette,
       kind: l.kind[ty * l.w + tx] ?? 0,
       size: [s.view.w, s.view.h],
-      pending: this.jobs.length,
+      pending: this.jobs.length + this.uploads.length,
       slow: this.slow,
-      paint: { frames: sorted.length, p50: sorted[Math.floor(sorted.length / 2)] ?? 0, p95: sorted[Math.floor(sorted.length * 0.95)] ?? 0, max: sorted.at(-1) ?? 0 },
-      update: { frames: upd.length, p50: upd[Math.floor(upd.length / 2)] ?? 0, p95: upd[Math.floor(upd.length * 0.95)] ?? 0, max: upd.at(-1) ?? 0 },
+      paint: pct(this.paintSteps),
+      upload: pct(this.uploadSteps),
+      update: pct(this.updateMs),
       spots: s.spots.map((p) => {
         const n = nearestWalkable(this.area.stack, p.tx, p.ty)
         const look = p.look ? mapPoint(s, p.look[0], p.look[1]) : null
@@ -1251,7 +1371,10 @@ export class HeightLabScene extends Phaser.Scene {
     if (sl) {
       const [tx, ty] = standTile(this.hero.walker)
       const steep = sl.field.slope[ty * sl.field.w + tx] ?? 0
-      this.hud.textContent = `Slopes, hills and passes — ${SLOPE_STYLE_NAME[sl.style]}${sl.style !== 'shade' && sl.shade ? ' + shading' : ''} · level ${v.z.toFixed(2)} · slope ${steep.toFixed(2)}\n${perf}`
+      const preset = slopePresetOf(this.look)
+      const u = this.uphill
+      const up = this.look.slopeUphill === 'gentle' && u && u.k < 0.999 ? ` · uphill ${u.up.toFixed(2)} ×${u.k.toFixed(2)}` : ''
+      this.hud.textContent = `Slopes, hills and passes — ${preset ? SLOPE_PRESETS[preset].name : lookName(sl.look)} · level ${v.z.toFixed(2)} · slope ${steep.toFixed(2)}${up}\n${perf}`
       return
     }
     const here = v.layer === CAVE ? this.lightAtHero() : 1
@@ -1355,6 +1478,7 @@ function labHook(scene: HeightLabScene | null): void {
     step: (dx: number, dy: number) => {
       if (!scene.loadingState()) scene.stepHero(dx, dy)
     },
+    run: (dx: number, dy: number, px: number, dt?: number) => (scene.loadingState() ? null : scene.runHero(dx, dy, px, dt)),
     look: (change: Partial<LabLook>) => setLabLook(change),
     state: () => scene.loadingState() ?? scene.state()
   }

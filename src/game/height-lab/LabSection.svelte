@@ -1,6 +1,7 @@
 <script lang="ts">
   import Icon from '../../ui/Icon.svelte'
-  import { inLab, labLook, labUrl, onLabLook, setLabLook, type LabLook } from './look'
+  import { SLOPE_PRESETS, SLOPE_RESET, inLab, labLook, labUrl, onLabLook, setLabLook, slopePresetOf, styleOf, styleSettings, type LabLook, type SlopePreset } from './look'
+  import type { SlopeStyle } from './slopes'
 
   // The height lab's corner of the dev panel (src/ui/dev/DevPanel.svelte):
   // open the lab (the page again with ?lab=height), leave it, and switch
@@ -13,8 +14,11 @@
 
   const choices: { key: keyof LabLook; label: string; walk?: boolean; slopes?: boolean; options: { value: LabLook[keyof LabLook]; label: string }[] }[] = [
     { key: 'area', label: 'Area', options: [{ value: 'shoulder', label: 'Plateau and shoulder' }, { value: 'mountain', label: 'Mountain and deep cave' }, { value: 'walk', label: 'Near home (generated)' }, { value: 'slopes', label: 'Slopes, hills and passes' }] },
-    { key: 'slopeStyle', label: 'Slopes, drawn as', slopes: true, options: [{ value: 'shade', label: 'Shading by facing' }, { value: 'contours', label: 'Contour hints' }, { value: 'terraces', label: 'Small terraces' }, { value: 'lift', label: 'True ¾ lift' }] },
-    { key: 'slopeShade', label: 'Slopes, with shading (on contours, terraces, lift)', slopes: true, options: [{ value: true, label: 'On' }, { value: false, label: 'Off' }] },
+    { key: 'slopeFacing', label: 'Facing shade', slopes: true, options: [{ value: 'off', label: 'Off' }, { value: 'restrained', label: 'Restrained' }, { value: 'current', label: 'Current' }] },
+    { key: 'slopeContours', label: 'Contour detail', slopes: true, options: [{ value: 'off', label: 'Off' }, { value: 'sparse', label: 'Sparse' }, { value: 'current', label: 'Current' }] },
+    { key: 'slopeTerraces', label: 'Small terraces', slopes: true, options: [{ value: false, label: 'Off' }, { value: true, label: 'On' }] },
+    { key: 'slopeLift', label: 'Lift strength', slopes: true, options: [{ value: 0, label: 'None' }, { value: 24, label: 'Moderate (24 px a level)' }, { value: 48, label: 'Full (48 px a level)' }] },
+    { key: 'slopeUphill', label: 'Uphill slowdown', slopes: true, options: [{ value: 'off', label: 'Off' }, { value: 'gentle', label: 'Gentle' }] },
     { key: 'strategy', label: 'Near home, the way up', walk: true, options: [{ value: 'region', label: 'Region plan' }, { value: 'chunk', label: 'Per-chunk repair' }] },
     { key: 'walkOverlay', label: 'Near home, stranded ground and chunk lines', walk: true, options: [{ value: false, label: 'Off' }, { value: true, label: 'On' }] },
     { key: 'fog', label: 'Levels above and below fade to', options: [{ value: 'fog', label: 'Fog' }, { value: 'sky', label: 'Sky' }, { value: 'none', label: 'Nothing' }] },
@@ -27,6 +31,14 @@
     { key: 'way', label: 'Into a cave, the way in', options: [{ value: 'blend', label: 'Even (round 4)' }, { value: 'eased', label: 'Longer, eased' }, { value: 'stages', label: 'Dark first, then the cave' }, { value: 'iris', label: 'Iris from the mouth' }] },
     { key: 'grid', label: 'Levels overlay', options: [{ value: false, label: 'Off' }, { value: true, label: 'On' }] }
   ]
+  // The slopes area: the comparison presets (drawing only), and round 1's four styles as shortcuts.
+  const presets = Object.entries(SLOPE_PRESETS) as [SlopePreset, (typeof SLOPE_PRESETS)[SlopePreset]][]
+  const styles: { value: SlopeStyle; label: string }[] = [
+    { value: 'shade', label: 'Shading by facing' },
+    { value: 'contours', label: 'Contour hints' },
+    { value: 'terraces', label: 'Small terraces' },
+    { value: 'lift', label: 'True ¾ lift' }
+  ]
 </script>
 
 <section class="lab" class:bare data-testid="height-lab-controls">
@@ -34,6 +46,21 @@
   <p class="what">Hand-made areas with real levels and caves: a valley, plateau and shoulder; a mountain with a saddle and a deep cave. And near home, generated: the real fields' heights round Town under either way up (the server works it out; nothing is saved). And slopes, hills and passes: smooth ground, a tall range with a pass, an outcrop and a sea cliff, in four drawing styles.</p>
   {#if here}
     <button type="button" onclick={() => location.assign(labUrl(false))}>Leave the lab</button>
+    {#if look.area === 'slopes'}
+      <div class="row" role="group" aria-label="Slopes, presets">
+        <span class="label">Slopes, presets</span>
+        {#each presets as [name, p] (name)}
+          <button type="button" class="small" aria-pressed={slopePresetOf(look) === name} onclick={() => setLabLook({ ...p.look })}>{p.name}</button>
+        {/each}
+        <button type="button" class="small" onclick={() => setLabLook({ ...SLOPE_RESET })}>Reset to Shading baseline</button>
+      </div>
+      <div class="row" role="group" aria-label="Slopes, drawn as">
+        <span class="label">Slopes, drawn as (round 1’s styles)</span>
+        {#each styles as st (st.value)}
+          <button type="button" class="small" aria-pressed={styleOf(look) === st.value} onclick={() => setLabLook(styleSettings(st.value, look))}>{st.label}</button>
+        {/each}
+      </div>
+    {/if}
     {#each choices.filter((c) => (!c.walk || look.area === 'walk') && (!c.slopes || look.area === 'slopes')) as c (c.key)}
       <div class="row" role="group" aria-label={c.label}>
         <span class="label">{c.label}</span>

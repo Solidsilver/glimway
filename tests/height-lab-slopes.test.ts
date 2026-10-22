@@ -23,6 +23,7 @@ import {
   steepest,
   reach,
   regionOf,
+  styleLook,
   walkableKind
 } from '../src/game/height-lab/slopes.ts';
 
@@ -32,8 +33,8 @@ import {
  */
 
 const field = buildField();
-const flat = buildSlopes(DEFAULT_AREA_OPTIONS, { style: 'shade', shade: true });
-const lifted = buildSlopes(DEFAULT_AREA_OPTIONS, { style: 'lift', shade: true });
+const flat = buildSlopes(DEFAULT_AREA_OPTIONS, styleLook('shade'));
+const lifted = buildSlopes(DEFAULT_AREA_OPTIONS, styleLook('lift'));
 const { w, h } = field;
 const spot = (name: string) => flat.slopes!.spots.find((s) => s.name === name)!;
 const node = (area: typeof flat, name: string): Node => nearestWalkable(area.stack, spot(name).tx, spot(name).ty);
@@ -223,7 +224,7 @@ test('every south drop makes ROWS_PER_LEVEL rows of face a level (flat map)', ()
 test('the lifted map: a cliff opens into 3 rows of face a level, ground rises north 3 rows a level', () => {
   const pad = lifted.slopes!.pad;
   // The outcrop's face, in its column.
-  const col = liftColumn(field, 103, 0.5, pad);
+  const col = liftColumn(field, 103, 0.5, pad, ROWS_PER_LEVEL);
   const face = col.find((s) => s.face && s.ty === OUTCROP.y1)!;
   assert.ok(face, 'the outcrop face shows');
   assert.ok(Math.abs(face.s1 - face.s0 - (face.zS - face.zBot) * ROWS_PER_LEVEL) < 0.05, 'its rows: 3 a level');
@@ -338,7 +339,7 @@ test('finding 2: in the lift, the ground drawn where the hero is drawn is the gr
             continue;
           }
           // Drawn: the lifted column there shows ground within HIDE_ABOVE of theirs, and that ground is walkable field.
-          const col = liftColumn(field, Math.floor(wk.x / T), wk.x / T - Math.floor(wk.x / T), info.pad);
+          const col = liftColumn(field, Math.floor(wk.x / T), wk.x / T - Math.floor(wk.x / T), info.pad, info.k);
           const sp = col.find((c) => d.y / T - 0.02 >= c.s0 && d.y / T - 0.02 < c.s1)!;
           assert.ok(sp && !sp.face, `ground drawn at ${wk.x},${wk.y}`);
           const zs = sp.zN + (sp.zS - sp.zN) * Math.max(0, Math.min(1, (d.y / T - 0.02 - sp.sN) / (sp.sS - sp.sN)));
@@ -397,6 +398,6 @@ test('finding 4: a chunk paints in small steps that add up to painting it in one
     stepped.push(...c.value);
     assert.deepEqual(stepped.map((b) => [b.band, b.x, b.y, b.w, b.h]), bands.map((b) => [b.band, b.x, b.y, b.w, b.h]));
     const sorted = [...times].sort((a, b) => a - b);
-    console.log(`${area.slopes!.style}: ${times.length} steps, median ${sorted[sorted.length >> 1]!.toFixed(1)} ms, max ${sorted.at(-1)!.toFixed(1)} ms`);
+    console.log(`${area.slopes!.look.lift ? "lift" : "flat"}: ${times.length} steps, median ${sorted[sorted.length >> 1]!.toFixed(1)} ms, max ${sorted.at(-1)!.toFixed(1)} ms`);
   }
 });
