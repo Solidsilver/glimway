@@ -15,8 +15,8 @@ function hash(x: number, y: number, salt: number): number {
 
 /** One part of the slopes area's surface (map tiles, inclusive), as level images a half level each. */
 export function paintSlopes(scene: Phaser.Scene, area: Parameters<typeof paintPart>[0], part: PaintPart): LevelImage[] {
-  const px = paintPart(area, part)
-  return cutBands(area, part, px).map((b) => {
+  const { px, z } = paintPart(area, part)
+  return cutBands(part, px, z).map((b) => {
     const key = `${part.key}-${b.band}`
     addPixels(scene, key, b.w, b.h, b.px)
     return { key, x: b.x, y: b.y, level: b.band + BAND / 2 }

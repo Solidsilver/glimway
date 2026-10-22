@@ -22,9 +22,10 @@
  * (../wilds/ground-paint.ts), higher land drier, then stonier, then snowy;
  * too-steep ground is scree (streaks down the fall line, loose stones) or
  * bare rock; crags are broken rock (a standing rock is drawn on each by the
- * scene). The level images are cut by half levels, so fog by height
- * difference fades in small steps; each overlaps the band below it by a
- * pixel, so no seam shows between them.
+ * scene). The level images are cut by half levels, pixel by pixel along the
+ * ground's own height (cut by tile, they showed as blocks on steep ground),
+ * so fog by height difference fades in small steps; each overlaps the band
+ * below it by a pixel, so no seam shows between them.
  */
 import { TERRAIN } from '../../lib/tile.ts'
 import { wildsGround } from '../../lib/wilds/data.ts'
@@ -72,8 +73,8 @@ export const TERRACE = 0.2
 /** The painter's terrain for each of the slopes area's grounds (its own tints are this file's). */
 const SPECIAL: Partial<Record<string, keyof typeof TERRAIN>> = { 'tops-scree': 'stone_b', 'tops-crag': 'stone_a', 'wq-stone': 'stone_a', 'tops-path': 'path_a' }
 
-/** The field's ground, painted and shaded, over a rectangle of field pixels: RGBA. */
-export function paintField(area: LabArea, x0: number, y0: number, w: number, h: number): Uint8ClampedArray {
+/** The field's ground, painted and shaded, over a rectangle of field pixels: RGBA, and each pixel's height. */
+export function paintField(area: LabArea, x0: number, y0: number, w: number, h: number): { px: Uint8ClampedArray; z: Float32Array } {
   const info = area.slopes!
   const f = info.field
   const look = wildsLook('outer', 'Carting')
@@ -236,7 +237,9 @@ export function paintField(area: LabArea, x0: number, y0: number, w: number, h: 
       px[o + 2] = b * k
       px[o + 3] = 255
     }
-  return px
+  const zs = new Float32Array(w * h)
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) zs[y * w + x] = zAt(x, y)
+  return { px, z: zs }
 }
 
 /** A field pixel's height, from its tile's corners. */
@@ -281,8 +284,8 @@ export interface BandPixels {
   px: Uint8ClampedArray
 }
 
-/** One part of the slopes area's surface as the map shows it (RGBA, the part's size). */
-export function paintPart(area: LabArea, part: SlopesPart): Uint8ClampedArray {
+/** One part of the slopes area's surface as the map shows it (RGBA, the part's size), and each pixel's height (NaN: nothing). */
+export function paintPart(area: LabArea, part: SlopesPart): { px: Uint8ClampedArray; z: Float32Array } {
   const info = area.slopes!
   const f = info.field
   const l = area.stack.layers[SURFACE]!
@@ -291,8 +294,19 @@ export function paintPart(area: LabArea, part: SlopesPart): Uint8ClampedArray {
   const ox = part.x0 * T
   const oy = part.y0 * T
   const px = new Uint8ClampedArray(W * H * 4)
-  if (!info.lift) px.set(paintField(area, ox, oy, W, H))
-  else {
+  const zp = new Float32Array(W * H).fill(Number.NaN)
+  if (!info.lift) {
+    const g = paintField(area, ox, oy, W, H)
+    px.set(g.px)
+    zp.set(g.z)
+    // Under a face, the land in front's height (the face's own art covers it).
+    for (let ty = part.y0; ty <= part.y1; ty++)
+      for (let tx = part.x0; tx <= part.x1; tx++) {
+        if (l.kind[ty * l.w + tx] !== KIND.face) continue
+        const z = info.z[ty * l.w + tx]!
+        for (let y = 0; y < T; y++) zp.fill(z, ((ty - part.y0) * T + y) * W + (tx - part.x0) * T, ((ty - part.y0) * T + y) * W + (tx - part.x0) * T + T)
+      }
+  } else {
     // The field rows this part shows (and two more each way).
     let gy0 = f.h
     let gy1 = -1
@@ -308,7 +322,8 @@ export function paintPart(area: LabArea, part: SlopesPart): Uint8ClampedArray {
       gy0 = Math.max(0, gy0 - 2)
       gy1 = Math.min(f.h - 1, gy1 + 2)
       const gh = (gy1 - gy0 + 1) * T
-      const ground = paintField(area, ox, gy0 * T, W, gh)
+      const painted = paintField(area, ox, gy0 * T, W, gh)
+      const ground = painted.px
       for (let x = 0; x < W; x++) {
         const wx = ox + x
         const col: Span[] = liftColumn(f, wx >> 4, ((wx & 15) + 0.5) / T, info.pad)
@@ -327,6 +342,7 @@ export function paintPart(area: LabArea, part: SlopesPart): Uint8ClampedArray {
             px[o + 1] = c * 0.98
             px[o + 2] = c * 0.95
             px[o + 3] = 255
+            zp[y * W + x] = sp.zBot
             continue
           }
           const gy = Math.floor((sp.ty + spanGround(sp, s).fy) * T) - gy0 * T
@@ -335,40 +351,44 @@ export function paintPart(area: LabArea, part: SlopesPart): Uint8ClampedArray {
           px[o + 1] = ground[from + 1]!
           px[o + 2] = ground[from + 2]!
           px[o + 3] = 255
+          zp[y * W + x] = painted.z[from / 4]!
         }
       }
     }
   }
   edges(area, px, W, part)
-  return px
+  return { px, z: zp }
 }
 
-/** A part cut into half-level images; each takes a pixel more where it meets a lower band (no seams). */
-export function cutBands(area: LabArea, part: SlopesPart, px: Uint8ClampedArray): BandPixels[] {
-  const info = area.slopes!
-  const l = area.stack.layers[SURFACE]!
-  const pw = part.x1 - part.x0 + 1
-  const ph = part.y1 - part.y0 + 1
-  const W = pw * T
-  const bandAt = new Float32Array(pw * ph).fill(Number.NaN)
+/** A part cut into half-level images by each pixel's height; each takes a pixel more where it meets a lower band (no seams). */
+export function cutBands(part: SlopesPart, px: Uint8ClampedArray, zp: Float32Array): BandPixels[] {
+  const W = (part.x1 - part.x0 + 1) * T
+  const H = (part.y1 - part.y0 + 1) * T
+  const bands = new Float32Array(W * H)
   const boxes = new Map<number, { x0: number; y0: number; x1: number; y1: number }>()
-  for (let ty = part.y0; ty <= part.y1; ty++)
-    for (let tx = part.x0; tx <= part.x1; tx++) {
-      const z = info.z[ty * l.w + tx]!
-      if (Number.isNaN(z)) continue
-      const band = bandOf(z)
-      bandAt[(ty - part.y0) * pw + tx - part.x0] = band
-      const b = boxes.get(band) ?? { x0: tx, y0: ty, x1: tx, y1: ty }
-      boxes.set(band, { x0: Math.min(b.x0, tx), y0: Math.min(b.y0, ty), x1: Math.max(b.x1, tx), y1: Math.max(b.y1, ty) })
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < W; x++) {
+      const z = zp[y * W + x]!
+      const band = Number.isNaN(z) || px[(y * W + x) * 4 + 3] === 0 ? Number.NaN : bandOf(z)
+      bands[y * W + x] = band
+      if (Number.isNaN(band)) continue
+      const b = boxes.get(band)
+      if (!b) boxes.set(band, { x0: x, y0: y, x1: x, y1: y })
+      else {
+        if (x < b.x0) b.x0 = x
+        if (x > b.x1) b.x1 = x
+        if (y < b.y0) b.y0 = y
+        if (y > b.y1) b.y1 = y
+      }
     }
-  const bandPx = (x: number, y: number) => (x < 0 || y < 0 || x >= W || y >= ph * T ? Number.NaN : bandAt[(y >> 4) * pw + (x >> 4)]!)
+  const bandPx = (x: number, y: number) => (x < 0 || y < 0 || x >= W || y >= H ? Number.NaN : bands[y * W + x]!)
   const out: BandPixels[] = []
   for (const [band, b] of [...boxes].sort((a, c) => a[0] - c[0])) {
-    // A pixel past the tiles' box each way, inside the part.
-    const x0 = Math.max(0, (b.x0 - part.x0) * T - 1)
-    const y0 = Math.max(0, (b.y0 - part.y0) * T - 1)
-    const x1 = Math.min(W - 1, (b.x1 - part.x0 + 1) * T)
-    const y1 = Math.min(ph * T - 1, (b.y1 - part.y0 + 1) * T)
+    // A pixel past the band's box each way, inside the part.
+    const x0 = Math.max(0, b.x0 - 1)
+    const y0 = Math.max(0, b.y0 - 1)
+    const x1 = Math.min(W - 1, b.x1 + 1)
+    const y1 = Math.min(H - 1, b.y1 + 1)
     const w = x1 - x0 + 1
     const h = y1 - y0 + 1
     const cut = new Uint8ClampedArray(w * h * 4)
