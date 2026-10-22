@@ -1,0 +1,540 @@
+{
+  "slopes": {
+    "canonicalGridBytes": 2658818,
+    "wireLayout": "SL2: Uint16 shared grid, sparse four-corner overrides, explicit cliff and N/E/S/W discontinuity planes",
+    "overrideRecords": 0,
+    "discontinuityTileEdges": 444,
+    "recipe": "slopes-gen@1",
+    "domainTiles": [
+      -576,
+      -576,
+      575,
+      575
+    ],
+    "heightRangeLevels": [
+      0,
+      15
+    ],
+    "maxWalkableRisePerTile": 0.2498168274268669,
+    "certificate": {
+      "components": 5,
+      "homeTiles": 1291612,
+      "strandedComponents": 0,
+      "strandedTiles": 0,
+      "intentionalComponents": 4,
+      "intentionalWalkableTiles": 208
+    },
+    "kindTiles": {
+      "cliff": 788,
+      "crag": 29417,
+      "slope": 1291820,
+      "steep": 5079
+    },
+    "kindShareByBiome": {
+      "hearthwick-woods": {
+        "cliff": 0.000880677433856931,
+        "crag": 0.02532996047855173,
+        "slope": 0.9694329443814457,
+        "steep": 0.004356417706145619
+      },
+      "tops": {
+        "cliff": 0.0008011844125459996,
+        "crag": 0.022820047279019325,
+        "slope": 0.9721961591889455,
+        "steep": 0.0041826091194891914
+      },
+      "whitequiet": {
+        "cliff": 0,
+        "crag": 0.016950246828967886,
+        "slope": 0.9802958967788075,
+        "steep": 0.0027538563922246393
+      }
+    },
+    "ranges": [
+      {
+        "id": "range:-1:-1",
+        "x": -300,
+        "y": -281,
+        "halfLength": 183,
+        "heightLevels": 8.676,
+        "passX": -320,
+        "spire": [
+          -170,
+          -417
+        ],
+        "outcrop": [
+          -420,
+          -417
+        ],
+        "passSteps": 208,
+        "endSteps": 502,
+        "extraSteps": 294,
+        "passMaxRisePerTile": 0.019918044974971814,
+        "passWaypoints": [
+          [
+            -320,
+            -385
+          ],
+          [
+            -320,
+            -177
+          ]
+        ],
+        "endWaypoints": [
+          [
+            -320,
+            -385
+          ],
+          [
+            -320,
+            -305
+          ],
+          [
+            -445,
+            -305
+          ],
+          [
+            -445,
+            -304
+          ],
+          [
+            -461,
+            -304
+          ],
+          [
+            -461,
+            -303
+          ],
+          [
+            -466,
+            -303
+          ],
+          [
+            -466,
+            -302
+          ],
+          [
+            -467,
+            -302
+          ],
+          [
+            -467,
+            -277
+          ],
+          [
+            -465,
+            -277
+          ],
+          [
+            -465,
+            -276
+          ],
+          [
+            -460,
+            -276
+          ],
+          [
+            -460,
+            -275
+          ],
+          [
+            -388,
+            -275
+          ],
+          [
+            -388,
+            -274
+          ],
+          [
+            -384,
+            -274
+          ],
+          [
+            -384,
+            -257
+          ],
+          [
+            -320,
+            -257
+          ],
+          [
+            -320,
+            -177
+          ]
+        ]
+      },
+      {
+        "id": "range:0:-1",
+        "x": 277,
+        "y": -278,
+        "halfLength": 179,
+        "heightLevels": 9.812,
+        "passX": 274,
+        "spire": [
+          407,
+          -414
+        ],
+        "outcrop": [
+          157,
+          -414
+        ],
+        "passSteps": 208,
+        "endSteps": 528,
+        "extraSteps": 320,
+        "passMaxRisePerTile": 0.02376079113397742,
+        "passWaypoints": [
+          [
+            274,
+            -382
+          ],
+          [
+            274,
+            -174
+          ]
+        ],
+        "endWaypoints": [
+          [
+            274,
+            -382
+          ],
+          [
+            274,
+            -302
+          ],
+          [
+            131,
+            -302
+          ],
+          [
+            131,
+            -301
+          ],
+          [
+            116,
+            -301
+          ],
+          [
+            116,
+            -300
+          ],
+          [
+            114,
+            -300
+          ],
+          [
+            114,
+            -275
+          ],
+          [
+            115,
+            -275
+          ],
+          [
+            115,
+            -273
+          ],
+          [
+            117,
+            -273
+          ],
+          [
+            117,
+            -272
+          ],
+          [
+            181,
+            -272
+          ],
+          [
+            181,
+            -271
+          ],
+          [
+            199,
+            -271
+          ],
+          [
+            199,
+            -270
+          ],
+          [
+            210,
+            -270
+          ],
+          [
+            210,
+            -254
+          ],
+          [
+            274,
+            -254
+          ],
+          [
+            274,
+            -174
+          ]
+        ]
+      },
+      {
+        "id": "range:-1:0",
+        "x": -275,
+        "y": 292,
+        "halfLength": 181,
+        "heightLevels": 9.832,
+        "passX": -256,
+        "spire": [
+          -145,
+          428
+        ],
+        "outcrop": [
+          -395,
+          156
+        ],
+        "passSteps": 208,
+        "endSteps": 492,
+        "extraSteps": 284,
+        "passMaxRisePerTile": 0.019918044974971814,
+        "passWaypoints": [
+          [
+            -256,
+            188
+          ],
+          [
+            -256,
+            396
+          ]
+        ],
+        "endWaypoints": [
+          [
+            -256,
+            188
+          ],
+          [
+            -114,
+            188
+          ],
+          [
+            -114,
+            396
+          ],
+          [
+            -256,
+            396
+          ]
+        ]
+      },
+      {
+        "id": "range:0:0",
+        "x": 287,
+        "y": 286,
+        "halfLength": 179,
+        "heightLevels": 9.411999999999999,
+        "passX": 305,
+        "spire": [
+          417,
+          422
+        ],
+        "outcrop": [
+          167,
+          150
+        ],
+        "passSteps": 208,
+        "endSteps": 498,
+        "extraSteps": 290,
+        "passMaxRisePerTile": 0.019918044974971814,
+        "passWaypoints": [
+          [
+            305,
+            182
+          ],
+          [
+            305,
+            390
+          ]
+        ],
+        "endWaypoints": [
+          [
+            305,
+            182
+          ],
+          [
+            450,
+            182
+          ],
+          [
+            450,
+            390
+          ],
+          [
+            305,
+            390
+          ]
+        ]
+      }
+    ],
+    "tunnelCandidates": [
+      {
+        "range": "range:-1:-1",
+        "north": [
+          -234,
+          -299
+        ],
+        "south": [
+          -234,
+          -251
+        ],
+        "lengthTiles": 48,
+        "blockedTiles": 28
+      },
+      {
+        "range": "range:0:-1",
+        "north": [
+          360,
+          -295
+        ],
+        "south": [
+          360,
+          -247
+        ],
+        "lengthTiles": 48,
+        "blockedTiles": 29
+      },
+      {
+        "range": "range:-1:0",
+        "north": [
+          -170,
+          276
+        ],
+        "south": [
+          -170,
+          324
+        ],
+        "lengthTiles": 48,
+        "blockedTiles": 29
+      },
+      {
+        "range": "range:0:0",
+        "north": [
+          391,
+          270
+        ],
+        "south": [
+          391,
+          318
+        ],
+        "lengthTiles": 48,
+        "blockedTiles": 29
+      }
+    ],
+    "budgets": {
+      "flat": {
+        "chunk": [
+          0,
+          1
+        ],
+        "samples": 80,
+        "generationAndEncodeMs": {
+          "p50": 0.257825,
+          "p95": 0.265645,
+          "max": 0.273065
+        },
+        "heightBytes": 155,
+        "bareWholeBytes": 591,
+        "dressingHeadroomBytes": 5553
+      },
+      "hills": {
+        "chunk": [
+          6,
+          2
+        ],
+        "samples": 80,
+        "generationAndEncodeMs": {
+          "p50": 0.483418,
+          "p95": 0.491988,
+          "max": 0.526269
+        },
+        "heightBytes": 1403,
+        "bareWholeBytes": 1841,
+        "dressingHeadroomBytes": 4303
+      },
+      "mountainside": {
+        "chunk": [
+          15,
+          12
+        ],
+        "samples": 80,
+        "generationAndEncodeMs": {
+          "p50": 0.462828,
+          "p95": 0.492549,
+          "max": 0.61617
+        },
+        "heightBytes": 1403,
+        "bareWholeBytes": 1841,
+        "dressingHeadroomBytes": 4303
+      },
+      "override-probe": {
+        "chunk": [
+          0,
+          1
+        ],
+        "samples": 80,
+        "generationAndEncodeMs": {
+          "p50": 0.259504,
+          "p95": 0.266865,
+          "max": 0.330555
+        },
+        "heightBytes": 525,
+        "bareWholeBytes": 961,
+        "dressingHeadroomBytes": 5183
+      },
+      "spire": {
+        "chunk": [
+          17,
+          17
+        ],
+        "samples": 80,
+        "generationAndEncodeMs": {
+          "p50": 0.488398,
+          "p95": 0.499269,
+          "max": 0.620631
+        },
+        "heightBytes": 1475,
+        "bareWholeBytes": 1913,
+        "dressingHeadroomBytes": 4231
+      }
+    },
+    "allChunkHeightBytes": {
+      "p50": 1403,
+      "p95": 1403,
+      "max": 2453
+    },
+    "allBareWholeChunkBytes": {
+      "p50": 1841,
+      "p95": 1841,
+      "max": 2891
+    },
+    "geometrySHA256": "294579bc3a620b6fc716a5b81d465d801135c1c002362d5db66957d899c48a14",
+    "coldFieldMs": 988.491057,
+    "note": "Finite home-rooted field-coordinate certificate over 48x48 chunks; crop edges never imply access. Collision resolves the Uint16 grid plus tile overrides and edge flags, independently of projection and cover. Starting generated range 0..15 levels; no clipping. Bare bytes include the undressed WorldChunk protobuf and framed SL2 envelope; dressing is unmeasured. Warm = fresh sampler + shared-grid generation + encode; decode/checks excluded. Override-probe is a synthetic raised tile on flat ground, not generated country."
+  },
+  "content": "",
+  "contentSHA256": "",
+  "view": "atlas",
+  "seed": "slopes-991",
+  "epoch": "t:1795000000:1796209600",
+  "rect": [
+    -24,
+    -24,
+    23,
+    23
+  ],
+  "chunkSize": 24,
+  "chunks": 2304,
+  "generatedChunks": 2304,
+  "fixedChunks": 0,
+  "landShareByChunkCentre": {},
+  "longestAxialLandRunChunks": 0,
+  "unreachableWalkableTiles": 0,
+  "generationMs": 5203.058834,
+  "note": "HEIGHT 0-15 / HILLSHADE. Biome shares count every tile's effective biome. Finite home-rooted field-coordinate certificate over 48x48 chunks; crop edges never imply access. Collision resolves the Uint16 grid plus tile overrides and edge flags, independently of projection and cover. Starting generated range 0..15 levels; no clipping. Bare bytes include the undressed WorldChunk protobuf and framed SL2 envelope; dressing is unmeasured. Warm = fresh sampler + shared-grid generation + encode; decode/checks excluded. Override-probe is a synthetic raised tile on flat ground, not generated country."
+}
