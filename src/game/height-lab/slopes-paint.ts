@@ -362,9 +362,8 @@ export function* paintPartSteps(area: LabArea, part: SlopesPart): Generator<void
       for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
         const at = ((ty - part.y0) * T + y) * W + (tx - part.x0) * T + x
         const z = l.faceTop[i]! - (l.faceRow[i]! + (y + 0.5) / T) / 3
-        const tint = faceTint(l.faceTop[i]!)
-        const material = 152 + (hash(tx * T + x, ty * T + y, 25) - 0.5) * 18
-        for (let c = 0; c < 3; c++) px[at * 4 + c] = material * tint[c]!
+        const color = cliffMaterial(tx * T + x, z, l.faceTop[i]!)
+        for (let c = 0; c < 3; c++) px[at * 4 + c] = color[c]!
         px[at * 4 + 3] = 255
         zp[at] = z
       }
@@ -407,16 +406,8 @@ export function* paintPartSteps(area: LabArea, part: SlopesPart): Generator<void
             // Unlit cliff material: level strata and occasional cracks.
             const down = (s - sp.s0) / Math.max(1e-6, sp.s1 - sp.s0)
             const zf = sp.zS - down * (sp.zS - sp.zBot)
-            const hz = zf * info.k * T
-            const strata = hz - Math.floor(hz / 6) * 6
-            let cc = 152 + (hash(wx, Math.floor(hz), 25) - 0.5) * 14
-            if (strata < 1) cc += 12
-            else if (strata < 2) cc -= 22
-            if (hash(wx, Math.floor(hz / 14), 26) < 0.025) cc -= 26
-            const tint = faceTint(sp.zS)
-            px[o] = cc * tint[0]
-            px[o + 1] = cc * tint[1]
-            px[o + 2] = cc * tint[2]
+            const color = cliffMaterial(wx, zf, sp.zS)
+            for (let c = 0; c < 3; c++) px[o + c] = color[c]!
             px[o + 3] = 255
             zp[y * W + px0] = zf
             continue
@@ -516,4 +507,22 @@ export function cutBands(part: SlopesPart, px: Uint8ClampedArray, zp: Float32Arr
 /** A lifted face's colour by the height it rises to (warm low down, greyer and cooler high up), as ./slopes-art.ts slopeFaceTint. */
 function faceTint(z: number): RGB {
   return z < 2.5 ? [1.06, 0.98, 0.88] : z < 5 ? [1, 0.96, 0.92] : z < 9 ? [0.94, 0.95, 1] : [1.02, 1.03, 1.07]
+}
+
+/** Unlit rock strata and mineral seams, in world height coordinates. These
+ * are material marks, without a lit rim or a shaded side, shared by flat
+ * and lifted faces. Coarse grain keeps tall faces from becoming blank slabs. */
+function cliffMaterial(x: number, z: number, top: number): RGB {
+  const height = z * 48
+  const seamY = height + 1.8 * Math.sin(x / 23) + 0.6 * Math.sin(x / 7)
+  const band = Math.floor(seamY / 8)
+  const phase = seamY - band * 8
+  const patch = hash(Math.floor(x / 17), Math.floor(height / 13), 71)
+  let value = 152 + (hash(Math.floor(x / 3), Math.floor(height / 3), 72) - 0.5) * 15 + (patch - .5) * 22
+  // A dark mineral joint, with no directional highlight beside it.
+  if (phase < .8 && hash(Math.floor(x / 19), band, 73) < .8) value *= .77
+  const joint = (x + Math.floor(height / 19) * 3 + 100000) % 23
+  if (joint < 1 && hash(Math.floor(x / 23), Math.floor(height / 29), 74) < .6) value *= .73
+  value += (hash(x, Math.floor(height), 75) - .5) * 9
+  return faceTint(top).map(c => c * value) as RGB
 }
