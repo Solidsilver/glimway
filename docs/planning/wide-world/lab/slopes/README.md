@@ -1,4 +1,9 @@
-# Slopes 2a evidence
+# Slopes lab evidence
+
+[Round 2b: sunlight and feel](2b/README.md) contains the matching sunlight pairs,
+phone frame, numeric speed runs and measured frame tails.
+
+## Round 2a
 
 Source: [CI run 39834935093](https://github.com/Solidsilver/glimway/actions/runs/39834935093),
 commit `044da89c`. All 39 slopes frames were inspected with the lab HUD and overlays

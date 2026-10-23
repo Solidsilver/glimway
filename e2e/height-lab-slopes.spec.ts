@@ -31,7 +31,7 @@ async function painted(page: Page) {
 }
 async function setLook(page: Page, look: Look) {
   await page.evaluate((l) => (window as unknown as { __fsLab: Lab }).__fsLab.look(l), look)
-  const rebuilds = ['area', 'slopeFacing', 'slopeContours', 'slopeTerraces', 'slopeLift']
+  const rebuilds = ['area', 'slopeFacing', 'slopeContours', 'slopeTerraces', 'slopeLift', 'sunlight', 'sunStrength']
   await expect.poll(async () => {
     const st = await page.evaluate(() => (window as unknown as { __fsLab?: Lab }).__fsLab?.state())
     if (!st) return false
@@ -117,10 +117,10 @@ async function fieldRuns(page: Page) {
     const down = lab.run(0, 1, 56)
     at(91 * 16, 91 * 16 + 2)
     const across = lab.run(0, -1, 32)
-    lab.look({ slopeUphill: 'off' })
+    lab.look({ slopeUphill: 0 })
     at(86 * 16, 96.5 * 16 + 2)
     const off = lab.run(0, -1, 56)
-    lab.look({ slopeUphill: 'gentle' })
+    lab.look({ slopeUphill: 12 })
     return { up, down, across, off }
   })
 }
@@ -131,7 +131,7 @@ test.describe('desktop', () => {
     test.setTimeout(900_000)
     mkdirSync(OUT, { recursive: true })
     await openLab(page)
-    await setLook(page, { area: 'slopes', ...SLOPE_PRESETS.full.look, slopeUphill: 'gentle', grid: false, walkOverlay: false, fog: 'fog', fogStrength: 'medium', zoom: true, haze: true })
+    await setLook(page, { area: 'slopes', ...SLOPE_PRESETS.full.look, slopeUphill: 12, slopeDownhill: 0, sunlight: false, grid: false, walkOverlay: false, fog: 'fog', fogStrength: 'medium', zoom: true, haze: true })
     await painted(page)
     const first = (await labState(page)).slopes!
     writeFileSync(`${OUT}/spots.json`, JSON.stringify(first.spots, null, 1))
@@ -233,5 +233,95 @@ test.describe('phone', () => {
     const spots = new Map((await labState(page)).slopes!.spots.map((s) => [s.name, s]))
     await shot(page, 'phone-moderate-pass-mid', spots.get('pass-mid')!)
     await expect(page.getByTestId('height-lab-hud')).toContainText('Slopes, hills and passes')
+  })
+})
+
+test.describe('slopes 2b', () => {
+  test.use({ viewport: { width: 1280, height: 800 } })
+  test('height lab, slopes 2b: sun pairs, speed sliders, gait and frame tails', async ({ page }) => {
+    test.setTimeout(900_000)
+    mkdirSync(OUT, { recursive: true })
+    await openLab(page)
+    await setLook(page, { area: 'slopes', ...SLOPE_PRESETS.baseline.look, slopeUphill: 12, slopeDownhill: 0, slopeGait: true, sunlight: false, sunStrength: 1, grid: false, walkOverlay: false, fog: 'fog', fogStrength: 'medium', zoom: true, haze: true })
+    const spots = new Map((await labState(page)).slopes!.spots.map((s) => [s.name, s]))
+    const sunny: Spot = { name: 'knoll-sunny', x: 82, y: 87, fx: 82, fy: 87, look: null }
+    const shaded: Spot = { name: 'knoll-shaded', x: 90, y: 95, fx: 90, fy: 95, look: null }
+    // The gentle approach keeps the hero and cast shadow central; the cliff-foot
+    // reference camera puts the feet against the bottom edge of the frame.
+    const features = [spots.get('hills')!, sunny, shaded, spots.get('pass-top')!, spots.get('outcrop-slope')!, spots.get('rocky-path')!]
+    const timing: Record<string, unknown> = {}
+    for (const sunlight of [false, true]) {
+      await startFrames(page)
+      await setLook(page, { sunlight })
+      await painted(page)
+      const switching = await endFrames(page)
+      const states: Record<string, LabState> = {}
+      for (const spot of features) states[spot.name] = await shot(page, `2b-${sunlight ? 'on' : 'off'}-${spot.name}`, spot)
+      await put(page, spots.get('spawn')!)
+      await painted(page)
+      const east = await walkTimed(page, 'ArrowRight', 4000)
+      const north = await walkTimed(page, 'ArrowUp', 3000)
+      timing[sunlight ? 'on' : 'off'] = { switching, east, north, states, lab: (await labState(page)).slopes }
+      writeFileSync(`${OUT}/2b-timing.json`, JSON.stringify(timing, null, 1))
+    }
+    // All drawing presets and both sun states retain the same field travel.
+    const runs: Record<string, unknown> = {}
+    const refs = new Map<string, { up: Run; down: Run; across: Run }>()
+    for (const preset of PRESETS) {
+      await setLook(page, SLOPE_PRESETS[preset].look)
+      for (const [uphill, downhill] of [[0, 0], [12, 0], [24, 6], [40, 20]]) {
+        await setLook(page, { slopeUphill: uphill, slopeDownhill: downhill })
+        const sample = await page.evaluate(() => {
+          const lab = (window as unknown as { __fsLab: Lab }).__fsLab
+          const at = (x: number, y: number) => lab.put(0, (x - 8) / 16, (y - 12) / 16)
+          at(86 * 16, 96.5 * 16 + 2)
+          const up = lab.run(0, -1, 56)
+          const down = lab.run(0, 1, 56)
+          at(91 * 16, 91 * 16 + 2)
+          const across = lab.run(0, -1, 32)
+          return { up, down, across }
+        })
+        for (const r of Object.values(sample)) expect(r.blocked).toBe(false)
+        const key = `${uphill}/${downhill}`
+        const ref = refs.get(key)
+        if (ref) for (const dir of ['up', 'down', 'across'] as const) expect(sample[dir].seconds).toBeCloseTo(ref[dir].seconds, 8)
+        refs.set(key, sample)
+        runs[`${preset}-${key}`] = sample
+      }
+    }
+    expect(refs.get('40/20')!.up.seconds).toBeGreaterThan(refs.get('12/0')!.up.seconds)
+    expect(refs.get('40/20')!.down.seconds).toBeLessThan(refs.get('12/0')!.down.seconds)
+    timing.runs = runs
+    await setLook(page, { ...SLOPE_PRESETS.baseline.look, slopeUphill: 40, slopeDownhill: 20 })
+    // Read actual moving gait before releasing each real key; blocked and idle
+    // movement cannot invent a cadence. Browser frame samples above use real keys too.
+    const gait: unknown[] = []
+    for (const [ty, key] of [[96.5, 'ArrowUp'], [93, 'ArrowDown']] as const) {
+      await page.evaluate((y) => (window as unknown as { __fsLab: Lab }).__fsLab.put(0, 85.5, y - 0.625), ty)
+      await painted(page)
+      await page.keyboard.down(key)
+      await page.waitForTimeout(350)
+      const st = await labState(page)
+      gait.push(st)
+      const g = (st.slopes as Slopes & { sunlight: { gait: { cadence: number } } }).sunlight.gait
+      expect(g.cadence).toBeGreaterThan(0)
+      if (key === 'ArrowUp') expect(g.cadence).toBeLessThan(0.8)
+      else expect(g.cadence).toBeGreaterThan(1.1)
+      await page.keyboard.up(key)
+    }
+    timing.gait = gait
+    writeFileSync(`${OUT}/2b-timing.json`, JSON.stringify(timing, null, 1))
+  })
+})
+
+test.describe('slopes 2b phone', () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
+  test('height lab, slopes 2b: sunlight phone frame', async ({ page }) => {
+    test.setTimeout(240_000)
+    mkdirSync(OUT, { recursive: true })
+    await openLab(page)
+    await setLook(page, { area: 'slopes', ...SLOPE_PRESETS.baseline.look, sunlight: true, sunStrength: 1, slopeGait: true, slopeUphill: 12, slopeDownhill: 0, grid: false, walkOverlay: false })
+    const spots = new Map((await labState(page)).slopes!.spots.map((s) => [s.name, s]))
+    await shot(page, '2b-phone-on-hills', spots.get('hills')!)
   })
 })

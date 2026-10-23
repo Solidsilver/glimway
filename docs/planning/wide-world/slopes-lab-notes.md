@@ -1,9 +1,147 @@
-# Slopes lab, round 2a (exp/slopes-lab)
+# Slopes lab, round 2b: shading plus feel (exp/slopes-2b)
 
-2026-10-22. A dev-only comparison on the same hand-made 144×144 field. The owner
-wants visible height, readable routes and combat, and gentle uphill slowdown.
-This round supplies the five drawing presets; hidden-route/picking, tunnel and
-valley-mist work is deferred to 2b for the surviving styles.
+2026-10-22. A dev-only comparison on the same hand-made 144×144 field. Round 2b
+adds speed sliders, coded slope gait and sunlight to the owner’s preferred
+shading-by-facing view. The five drawing presets remain available. Hidden-ground
+picking and the tunnel inside the lift are dropped from this round; caves reopen
+with the terrain work. The older 2a comparison is retained below.
+
+## How to walk 2b
+
+Open **Height lab → Walk the height lab**, then **Area → Slopes, hills and
+passes**. Click **Reset to Shading baseline**. This chooses **Facing shade →
+Restrained**, **Contour detail → Off**, **Small terraces → Off**, **Lift strength →
+None**, **Uphill slowdown: 12%**, **Downhill quickening: 0%**, **Slope gait → On**,
+**Sunlight → On**, and **Sun strength: 100%**. Presets still change only their
+four drawing controls. Old saved **Off** slowdown becomes 0%; **Gentle** becomes
+12%. All cave controls and the other areas stay available.
+
+Start with 12% uphill and 0% downhill. My comparison recommendation is **12%
+uphill / 6% downhill**: at the knoll's roughly 0.2-level slope the directional
+curve gives about 11% less uphill speed and 5% more downhill speed. Compare 0/0
+first, then 12/6, then the deliberately strong 40/20 endpoints. The sliders
+control speed, not time added. Crossing a slope remains ordinary speed; diagonal
+input is normalized. Wren uses the same caps.
+
+Keep **Levels overlay → Off**, **Levels above and below fade to → Fog**, **Fog per
+level → Medium**, **Climbing, the camera → Eases out** fixed, and close the panel.
+Visit the hills (30,88), the knoll's northwest side (82,87) and southeast side
+(90,95), the saddle (72,31), the outcrop’s gentle approach (103,82), and rocky path
+(53,42). At each stop compare **Sunlight → Off / On**. Off keeps the original
+facing-shaded ground and contact shadows as a reference; On extends that sun to
+sprite tints and soft SE cast shadows. At 100% the ground is shaded once, with
+the same palette as the reference. With sunlight On, **Sun strength** scales the
+ground facing response, sprite tint and cast-shadow opacity together.
+
+Then walk up and down the knoll with **Slope gait → Off / On**. On follows actual
+field speed, including collision, with a roughly one-pixel uphill lean or
+backward downhill lean and an occasional three-pixel scuff near the walking
+limit. Wren gets the same coded gait. This uses the existing walk frames; no new
+art is necessary for this comparison. More convincing knee bends, planted feet
+or an uphill boot push would require drawn uphill/downhill frames later.
+
+Implementation: `sun.ts` supplies one NW direction, the ground-normal facing,
+bounded sprite tint and local-plane shadow ray. Ground and sprites share the
+facing response. Existing cliff lips already follow NW light. The cave light
+pass works in screen space; sharing that mask would need extra handling for
+overlapping lifted surfaces and add upload work. This round therefore uses cached
+ground shading, per-sprite tint and one shared soft shadow texture, preserving
+Wren's base tint. Shadows approximate the local receiving plane and use modest
+caster heights; they do not trace across cliffs or make tree-shaped silhouettes.
+The sun direction is a parameter for a later clock; no moving sun is added.
+
+Questions for the owner:
+
+- Do the sunny/shaded sides make the hero look planted on the knoll and hills?
+- Does 12/6 give enough height feel, or is downhill at 0 more comfortable?
+- Does the small lean help, and do steep-foot scuffs read as effort rather than noise?
+- Are shadows strong enough to anchor trees and boulders while keeping routes readable?
+- Would drawn uphill/downhill feet add enough to justify a later art lane?
+
+### Measured browser tails and travel (2b)
+
+[First pass, run 39868180623](https://github.com/Solidsilver/glimway/actions/runs/39868180623),
+code `58a7473d`: **13 passed, 0 flaky, 0 failed, 0 helper retries**. Full repository
+verification and smoke are green too. No Playwright or Vite was run on this host.
+The first GPU attempt failed before tests because the host’s container manifest
+referenced removed firmware. The owner refreshed it; the retry passed container
+and NVIDIA renderer checks.
+
+Desktop is 1280×800 on the CI GPU runner. The first-pass real-key walks combine
+4 s east and 3 s north, with identical 12% uphill / 0% downhill controls and
+slope gait On. Values are milliseconds; raw samples are retained in
+[timing-first-pass.json](lab/slopes/2b/timing-first-pass.json).
+
+| Sunlight | Walk p95 / p99 / max | Switch p99 / max | Upload p95 / max | Long tasks during walking |
+|---|---|---|---|---|
+| Off | 16.8 / 33.3 / 50.0 | 16.8 / 33.3 | 10.8 / 16.1 | One, 62 ms |
+| On | 16.7 / 16.8 / 33.4 | 16.8 / 83.3 | 11.1 / 13.7 | None |
+
+One sample does not show that sunlight is faster. The order is Off then On,
+with scene restarts, a shared runner, progressive painting and cache reuse;
+the 83.3 ms On switch shows that the whole-frame tail can still exceed the
+5 ms scheduling target. Upload/paint samples are scene-lifetime distributions
+through the walking sample, rather than isolated walking costs. The last 120
+scene updates had p95/max 8.1/9.6 ms Off and 8.5/9.6 ms On. Phone frame costs
+and long-duration/many-caster budgets remain unmeasured.
+
+The corrected-capture repeat, [run 39871217203](https://github.com/Solidsilver/glimway/actions/runs/39871217203),
+code `5d551760`, again passed all 13 browser tests with no flakes or helper retries.
+Its raw data is in [timing.json](lab/slopes/2b/timing.json):
+
+| Sunlight, repeated sample | Walk p95 / p99 / max | Switch p99 / max | Upload p95 / max | Long tasks during walking |
+|---|---|---|---|---|
+| Off | 16.8 / 33.2 / 1933.2 | 16.8 / 16.8 | 10.9 / 15.0 | One, 1944 ms |
+| On | 16.7 / 16.8 / 33.3 | 16.8 / 83.4 | 12.3 / 15.3 | None |
+
+**Unresolved tail:** the Off eastward walk had a 1.93 s rAF gap and a matching
+1.944 s browser main-thread task. The scene’s >20 ms update log contains only a
+41.8 ms entry (0 ms paint, 5.1 ms upload), so that instrumentation does not locate
+the large stall. Unlike the earlier unassigned 2a rAF gap, the long-task observer
+now confirms a main-thread stall, but it does not identify its cause. It cannot
+be assigned to sunlight or the GPU from this evidence. The On run stayed at
+33.3 ms or below; neither pass establishes a stall-free or mobile frame budget.
+
+The deterministic field-time runs matched across **all five presets**, for
+every slider pair. These measure movement policy; the separate real-key walks
+above measure browser pacing.
+
+| Uphill / downhill sliders | Up 56 px | Down 56 px | Near-across 32 px |
+|---|---|---|---|
+| 0% / 0% | 0.509091 s | 0.509091 s | 0.290909 s |
+| 12% / 0% | 0.571785 s | 0.509091 s | 0.290970 s |
+| 24% / 6% | 0.652089 s | 0.482639 s | 0.290031 s |
+| 40% / 20% | 0.802346 s | 0.430483 s | 0.287829 s |
+
+The near-across run is straight on a curved knoll, so it includes a small
+downhill component. Exactly perpendicular movement on a plane stays ordinary
+speed at every slider value, as the Node tests verify. Actual-key gait samples
+at 40/20 measured cadence 0.636× uphill and 1.182× downhill, with small signed
+leans and scuffs enabled at those slopes. The pure tests also cover rotation,
+normalized diagonals, saved settings, tint bounds and shadow rays.
+
+### Visual review (2b)
+
+All 52 slope frames from the first pass were inspected, including the 13 new
+sunlight frames at full size and a close view of the shaded-side feet. The
+sunny-side hero keeps its warm contrast; the shaded-side sprite takes a bounded
+cooler tint. The hero’s model shadow is 5.48 px on the sunny knoll and 21.10 px
+on its shaded side, both cast southeast. In the images it stays soft and quiet,
+with a readable contact at the feet. Trees and boulders gain the same directional
+anchor. The saddle and rocky strip stay readable; the phone frame keeps the
+hero’s feet clear of the controls. Ground facing still does most of the broad
+relief work; this is a modest improvement to sprite grounding, not a complete
+new slope silhouette.
+
+The first outcrop pair framed the cliff and put the hero against the bottom
+edge, which made foot contact hard to judge. The capture was moved to the
+outcrop’s gentle approach, inspected at full size, and now keeps the feet and
+shadow central. All 52 slope frames in the corrected run were inspected too.
+The retained 2a cliff-foot reference remains available. The 13 selected originals,
+matching state JSON and integrity hashes are indexed in
+[the 2b evidence](lab/slopes/2b/README.md).
+
+The round 2a notes below remain the historical comparison.
 
 ## How to walk 2a
 

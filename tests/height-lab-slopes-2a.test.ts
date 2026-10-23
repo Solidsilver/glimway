@@ -245,7 +245,7 @@ test('presets: the five, as documented; a preset is recognised; reset is the Sha
   assert.deepEqual(SLOPE_PRESETS.full.look, { slopeFacing: 'current', slopeContours: 'off', slopeTerraces: false, slopeLift: 48 });
   for (const [name, p] of Object.entries(SLOPE_PRESETS)) assert.equal(slopePresetOf(p.look), name);
   assert.equal(slopePresetOf({ ...b, slopeContours: 'current' }), null);
-  assert.equal(SLOPE_RESET.slopeUphill, 'gentle');
+  assert.equal(SLOPE_RESET.slopeUphill, 12);
   assert.equal(slopePresetOf(SLOPE_RESET as SlopeLook), 'baseline');
   // Presets change only the drawing.
   for (const p of Object.values(SLOPE_PRESETS)) assert.deepEqual(Object.keys(p.look).sort(), [...SLOPE_KEYS].sort());
@@ -257,8 +257,8 @@ test('presets: the five, as documented; a preset is recognised; reset is the Sha
 test('saved settings migrate: round 1’s style and shading become the settings that draw the same; anything unknown is the default', () => {
   const d = migrateLook(null);
   assert.equal(slopePresetOf(d), 'baseline');
-  assert.equal(d.slopeUphill, 'gentle');
-  const old = (slopeStyle: string, slopeShade: boolean) => slopesLook(migrateLook({ area: 'slopes', fog: 'sky', slopeStyle, slopeShade }));
+  assert.equal(d.slopeUphill, 12);
+  const old = (slopeStyle: string, slopeShade: boolean) => ((l) => ({ facing: l.facing, contours: l.contours, terraces: l.terraces, lift: l.lift }))(slopesLook(migrateLook({ area: 'slopes', fog: 'sky', slopeStyle, slopeShade })));
   assert.deepEqual(old('shade', false), { facing: 'current', contours: 'off', terraces: false, lift: 0 }, 'shading by facing was always shaded');
   assert.deepEqual(old('contours', true), { facing: 'current', contours: 'current', terraces: false, lift: 0 });
   assert.deepEqual(old('contours', false), { facing: 'off', contours: 'current', terraces: false, lift: 0 });

@@ -46,11 +46,19 @@ export interface LabLook {
   slopeTerraces: boolean
   /** The slopes area: how far the ground is drawn north as it rises, px a level (0: not at all; 48: the round-1 true ¾ lift). */
   slopeLift: LiftPx
-  /** The slopes area: walking uphill slows you a little (./slopes.ts uphillFactor); off, full speed everywhere. */
-  slopeUphill: 'off' | 'gentle'
+  /** Speed cut at the walking limit, percent, 0–40; directional smoothstep. */
+  slopeUphill: number
+  /** Speed gain at the downhill walking limit, percent, 0–20. */
+  slopeDownhill: number
+  /** Actual-speed cadence, a small directional lean and occasional steep-foot scuffs. */
+  slopeGait: boolean
+  /** Extend facing light onto sprites and their cast shadows. */
+  sunlight: boolean
+  /** Sun intensity, 0–1; facing shade remains the reference when sunlight is off. */
+  sunStrength: number
 }
 
-/** The slopes area's drawing settings (the ones that repaint). */
+/** Preset drawing controls. Sunlight/strength also repaint, but presets preserve them. */
 export const SLOPE_KEYS = ['slopeFacing', 'slopeContours', 'slopeTerraces', 'slopeLift'] as const
 export type SlopeLook = Pick<LabLook, (typeof SLOPE_KEYS)[number]>
 
@@ -70,17 +78,17 @@ export function slopePresetOf(l: SlopeLook): SlopePreset | null {
   return null
 }
 
-/** "Reset": the Shading baseline, the uphill slowdown gentle (the recommended starting combination, slopes-lab-recommendations.md §1). */
-export const SLOPE_RESET: Partial<LabLook> = { ...SLOPE_PRESETS.baseline.look, slopeUphill: 'gentle' }
+/** "Reset": the Shading baseline, 12% uphill, no downhill gain, gait and sunlight on. */
+export const SLOPE_RESET: Partial<LabLook> = { ...SLOPE_PRESETS.baseline.look, slopeUphill: 12, slopeDownhill: 0, slopeGait: true, sunlight: true, sunStrength: 1 }
 
 /** Just the slopes area's drawing settings. */
-export function slopeSettings(l: SlopeLook): SlopeLook {
-  return { slopeFacing: l.slopeFacing, slopeContours: l.slopeContours, slopeTerraces: l.slopeTerraces, slopeLift: l.slopeLift }
+export function slopeSettings(l: SlopeLook & Partial<Pick<LabLook, 'sunlight' | 'sunStrength'>>): SlopeLook & Partial<Pick<LabLook, 'sunlight' | 'sunStrength'>> {
+  return { sunlight: l.sunlight, sunStrength: l.sunStrength, slopeFacing: l.slopeFacing, slopeContours: l.slopeContours, slopeTerraces: l.slopeTerraces, slopeLift: l.slopeLift }
 }
 
 /** The slopes settings as the drawing code takes them (./slopes.ts buildSlopes). */
-export function slopesLook(l: SlopeLook): SlopesLook {
-  return { facing: l.slopeFacing, contours: l.slopeContours, terraces: l.slopeTerraces, lift: l.slopeLift }
+export function slopesLook(l: SlopeLook & Partial<Pick<LabLook, 'sunlight' | 'sunStrength'>>): SlopesLook {
+  return { sunlight: l.sunlight, sunStrength: l.sunStrength, facing: l.slopeFacing, contours: l.slopeContours, terraces: l.slopeTerraces, lift: l.slopeLift }
 }
 
 /**
@@ -121,7 +129,7 @@ const DEFAULT: LabLook = {
   strategy: 'region',
   walkOverlay: false,
   ...SLOPE_PRESETS.baseline.look,
-  slopeUphill: 'gentle'
+  slopeUphill: 12, slopeDownhill: 0, slopeGait: true, sunlight: true, sunStrength: 1
 }
 
 /** Each setting's allowed values (a range for the sliders). */
@@ -144,7 +152,11 @@ const ALLOWED: { [K in keyof LabLook]: readonly LabLook[K][] | { min: number; ma
   slopeContours: ['off', 'sparse', 'current'],
   slopeTerraces: [true, false],
   slopeLift: [0, 24, 48],
-  slopeUphill: ['off', 'gentle']
+  slopeUphill: { min: 0, max: 40 },
+  slopeDownhill: { min: 0, max: 20 },
+  slopeGait: [false, true],
+  sunlight: [false, true],
+  sunStrength: { min: 0, max: 1 }
 }
 
 /**
@@ -162,6 +174,8 @@ export function migrateLook(raw: unknown): LabLook {
     const a = ALLOWED[k]
     if (Array.isArray(a) ? a.includes(v as never) : typeof v === 'number' && Number.isFinite(v) && v >= (a as { min: number }).min && v <= (a as { max: number }).max) o[k] = v
   }
+  if (r.slopeUphill === 'off') out.slopeUphill = 0
+  if (r.slopeUphill === 'gentle') out.slopeUphill = 12
   const old = r.slopeStyle
   if ((old === 'shade' || old === 'contours' || old === 'terraces' || old === 'lift') && !SLOPE_KEYS.some((k) => k in r)) {
     const facing = old === 'shade' || r.slopeShade !== false ? 'current' : 'off'
