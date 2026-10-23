@@ -479,7 +479,7 @@ export class HeightLabScene extends Phaser.Scene {
     const [gx, gy] = fieldGradient(sl.field, sun.x, sun.y)
     const ray = sunShadow(gx, gy, sun.height, this.daySun.direction)
     const dy = ray.dy - sl.k * (gx * ray.dx + gy * ray.dy)
-    sun.shadow.project(t.parts[0]!.o as Phaser.GameObjects.Image, ray.dx, dy, t.x, t.y)
+    sun.shadow.project(t.parts[0]!.o as Phaser.GameObjects.Image, ray.dx, dy)
     part.a = shadowOpacity(at.visible, this.look.sunStrength, this.daySun.daylight)
     return lightTint(at.rgb, t.tint ?? 0xffffff)
   }

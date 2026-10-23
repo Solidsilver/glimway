@@ -66,3 +66,14 @@ export function silhouetteTransform(width: number, height: number, dx: number, d
 export function shadowOpacity(visible: number, strength: number, daylight = 1): number {
   return 0.46 * clamp(visible) * clamp(strength, 0, 2) / Math.max(1, strength * 0.75) * clamp(daylight)
 }
+
+/** Visible silhouette bounds, excluding transparent atlas padding. The last
+ * occupied row is the real foot, rather than the frame's bottom edge. */
+export function silhouetteBounds(px: Uint8ClampedArray, width: number, height: number): { x: number; y: number; w: number; h: number } {
+  let left = width, right = -1, top = height, bottom = -1
+  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+    if (px[(y * width + x) * 4 + 3]! < 20) continue
+    left = Math.min(left, x); right = Math.max(right, x); top = Math.min(top, y); bottom = Math.max(bottom, y)
+  }
+  return right < left ? { x: 0, y: 0, w: 1, h: 1 } : { x: left, y: top, w: right - left + 1, h: bottom - top + 1 }
+}

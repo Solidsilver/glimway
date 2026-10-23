@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { AMBIENT, NIGHT, clockSun, lightTint, shadowOpacity, silhouetteTransform, sunAt, sunFacing, sunShadow, surfaceLight, type SunDirection } from '../src/game/height-lab/sun.ts';
+import { AMBIENT, NIGHT, clockSun, lightTint, shadowOpacity, silhouetteBounds, silhouetteTransform, sunAt, sunFacing, sunShadow, surfaceLight, type SunDirection } from '../src/game/height-lab/sun.ts';
 import { SUN_REACH, buildSunMap, sampleSunMap, terrainVisibility } from '../src/game/height-lab/sun-map.ts';
 import { buildSlopes, uphillFactor, type Field } from '../src/game/height-lab/slopes.ts';
 import { DEFAULT_AREA_OPTIONS } from '../src/game/height-lab/area.ts';
@@ -93,4 +93,13 @@ test('2c recomputing light preserves exact albedo and its cache key; shared chun
   assert.equal(chunkKey(area, 3, 2), key);
   const next = drain(buildSunMap(area.slopes!, 75 * 16, 46 * 16, 32, 64, sunAt(.1), 1));
   assert.deepEqual(sampleSunMap(morning, 75 * 16, 47 * 16), sampleSunMap(next, 75 * 16, 47 * 16));
+});
+
+test('2c visible feet exclude transparent sprite padding before the shadow is projected', () => {
+  const px = new Uint8ClampedArray(12 * 20 * 4);
+  for (let y = 3; y < 16; y++) for (let x = 4; x < 9; x++) px[(y * 12 + x) * 4 + 3] = 255;
+  assert.deepEqual(silhouetteBounds(px, 12, 20), { x: 4, y: 3, w: 5, h: 13 });
+  const foot = silhouetteBounds(px, 12, 20);
+  near(foot.y + foot.h - 20, -4); // foot is four pixels above the atlas edge
+  assert.deepEqual(silhouetteBounds(new Uint8ClampedArray(16), 2, 2), { x: 0, y: 0, w: 1, h: 1 });
 });
