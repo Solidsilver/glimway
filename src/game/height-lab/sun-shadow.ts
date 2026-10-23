@@ -31,7 +31,7 @@ export interface ShadowProxy { kind: CasterKind; slices: ShadowSlice[]; contact:
 
 /** How tall a ¾ drawing's rows really stand. A boulder's upper rows are
  * mostly its top seen from above; a tree's rows are nearly all height. */
-const HEIGHT_SCALE: Record<CasterKind, number> = { tree: 0.9, rock: 0.55, body: 0.85, plant: 0.6 }
+const HEIGHT_SCALE: Record<CasterKind, number> = { tree: 0.9, rock: 0.8, body: 0.85, plant: 0.6 }
 
 /** Opaque extent of each row, bottom row first; null for empty rows. */
 export function rowProfile(px: Uint8ClampedArray, w: number, h: number): { rows: ({ l: number; r: number } | null)[]; pad: number } {
@@ -79,10 +79,11 @@ function lathe(kind: CasterKind, px: Uint8ClampedArray, w: number, h: number): S
   const smooth = half.map((_, i) => [half[i - 1] ?? half[i]!, half[i]!, half[i + 1] ?? half[i]!].sort((a, b) => a - b)[1]!)
   const lowRows = Math.max(1, Math.round(filled.length * (kind === 'rock' ? 0.6 : 0.15)))
   const baseR = Math.max(...smooth.slice(0, lowRows))
-  const rx = kind === 'rock' ? baseR + 0.5 : Math.max(2.5, baseR + 1.5)
+  // A rock's contact peeks a pixel or two past its sides and front, as drawn rocks sit.
+  const rx = kind === 'rock' ? baseR + 1.5 : Math.max(2.5, baseR + 1.5)
   const ry = rx * GROUND_ASPECT
-  // Rocks stand on a disc whose front edge is the visible bottom.
-  const foot = { x: footX - w / 2, y: -pad - (kind === 'rock' ? baseR * GROUND_ASPECT : 1) }
+  // Rocks stand on a disc just behind their visible bottom (their bulge overhangs it).
+  const foot = { x: footX - w / 2, y: -pad - (kind === 'rock' ? baseR * GROUND_ASPECT * 0.6 : 1) }
   const step = Math.max(1, Math.round(filled.length / 12))
   const slices: ShadowSlice[] = []
   for (let i = 0; i < filled.length; i += step) {

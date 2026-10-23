@@ -370,7 +370,8 @@ test.describe('slopes 2c', () => {
     await setLook(page, { sunTime: .9 })
     frames['spire-evening'] = await shot(page, '2c-spire-evening', spots.get('spire')!)
     const terrainShade = { name: 'terrain-shade', x: 69, y: 34, fx: 69, fy: 34, look: null }
-    for (const [name, time] of [['morning', .1], ['evening', .9]] as const) {
+    // 2d's arc is lower at 7.2 h, so this spot's morning sun comes at 8.4 h.
+    for (const [name, time] of [['morning', .2], ['evening', .9]] as const) {
       await setLook(page, { sunTime: time })
       frames[`terrain-shade-${name}`] = await shot(page, `2c-terrain-shade-${name}`, terrainShade)
     }
