@@ -1,0 +1,33 @@
+{
+  "run": "39895401202",
+  "sha": "c35f8e92",
+  "files": {
+    "2c-evidence.json": "5feb61a6d70e432c2d5d066cae39419d50bb17056c71d11cca878117baa625b5",
+    "2c-hills-evening.json": "3a36876f2a065a94e2857bc0dd05f3d31fc0f6d776da1553932045feec107db4",
+    "2c-hills-evening.png": "8a7d558a54a9b3e51a71c87354fa9781a630f1c9a03e274d9e18b390b4a73e82",
+    "2c-hills-morning.json": "2955dbc37c44a8bdd399caeddee5b39049d2b09d1fc647444d0d326abaca65c9",
+    "2c-hills-morning.png": "e2656a9e20f54e3c0f5388b06ac31aa070c7a5f87c3fc820aa92abe003275ca0",
+    "2c-knoll-shaded-noon.json": "7ccd42425a4ad1015c888c93458087d8bd27825313b2bc95eca188e90e12ead6",
+    "2c-knoll-shaded-noon.png": "6b54b11e08daec708c226e7626bbed7af5cc7a2bdee10781d20702b21ea14a21",
+    "2c-knoll-sunny-noon.json": "f79bf3189ef1f6bc4d310129c0b9c28b2705e7714bc24fea19eb9d85bd283baf",
+    "2c-knoll-sunny-noon.png": "0a6356d00e3094457ba270cb31d217155be817c38a8db6f897d64942de28aa73",
+    "2c-outcrop-slope-evening.json": "edea8da3e9d5b5b9fe6b4a059fa42b62e6e4c65db54495a30e91fc72de85a639",
+    "2c-outcrop-slope-evening.png": "1a08d512a3128e36942889900108c1b34205d069941feb44261c508f804c5011",
+    "2c-outcrop-slope-morning.json": "ca02bd79f187828b89ca69b9da52bef6847baafa3f94cb9ffc201789df185d04",
+    "2c-outcrop-slope-morning.png": "e610ecc66d0c567785ba63fbcd93b865459d22ad081e3218ad1ccba1fc12ceb6",
+    "2c-owner-evening.json": "17058b75c8d3f468318287f2de7c429dcd3376e7c980dd62528f808cba8586d8",
+    "2c-owner-evening.png": "1fe4e02d493fd00d49c5faf52acd10c2ee370f7c1969ed267d28a18483f8cf19",
+    "2c-owner-morning.json": "9920576b1760514c58de813ab9fbbeb234d2c8107ef8afb45676b96e503ec690",
+    "2c-owner-morning.png": "15fe3ff44a09c70f048716808c0650ea55a53e11bd93ba8793be91a4e3516991",
+    "2c-owner-noon.json": "9ad7f44aed5add99ea183d68a5dcb2c3fc48c5e1b02fbc6e0f6bbd296e3a4e52",
+    "2c-owner-noon.png": "4cf152ade97f167fa828a3c55a639f85ad7718c6c00a80a8349952b2e86339ef",
+    "2c-phone-owner-morning.json": "50be97109b701d968708463e7910e19de9e047393aafc51781f8a7b506bbe6df",
+    "2c-phone-owner-morning.png": "7a02f041191a81a8e62209fc62e7aed009d2de32a26cf33c4a702a6e9e55057c",
+    "2c-spire-evening.json": "4fafa56bc564011ec24db16a33c08279e3f40e7c4862e85978cf064f85b39a42",
+    "2c-spire-evening.png": "99ee6002390153e8df383461463ef2acdc7ec67d32dff400ceb09fd5676abf25",
+    "2c-terrain-shade-evening.json": "376f5dac907c8a3304e755dc6f5cc326cb10462cfeb487569453cece3dc7775b",
+    "2c-terrain-shade-evening.png": "d38cc26990c4b3f47c2d7e1ad3cbc9684b6b9874caf52a98b5aa90df5c7f3188",
+    "2c-terrain-shade-morning.json": "9e9243113937a94f9b13f7506b79d16aa84d50e3c05ba214b8d0eb1abcda7ae4",
+    "2c-terrain-shade-morning.png": "d916cbc59eea9e74351d2727d55bdc6d34d643d43e3e3f4a2e653347eae2ad67"
+  }
+}

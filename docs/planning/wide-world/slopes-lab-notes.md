@@ -62,11 +62,67 @@ Questions for the owner:
 
 ### Evidence and performance (2c)
 
-Node verification covers linear speeds, migration, Lambert/ambient, wall
-shadow direction and length, alpha projection, shadow fading, the tilted arc,
-shared chunk samples, and albedo independence. CI captures matching frames and
-slider performance; measured results and selected originals are recorded after
-the foreground CI and visual review below.
+[Final source run 39895401202](https://github.com/Solidsilver/glimway/actions/runs/39895401202),
+code `c35f8e92`: **15 browser tests passed, 0 flaky, 0 failed, 0 helper retries**
+in 5.4 minutes. The suite includes the retained cave, generated-area and five
+slope-preset regressions. Frontend checks and all 2,868 Node tests pass. Node
+coverage includes linear speeds and migration; bilinear Lambert and ambient;
+wall shadow direction/length; alpha projection and visible-foot bounds;
+terrain-shadow fading; the tilted arc; shared chunk samples; and independent
+albedo caching. Full repository verification also runs on CI.
+
+The 13 new matching originals, state JSON, raw timing data and hashes are in
+[the 2c evidence index](lab/slopes/2c/README.md). All 13 were inspected at full
+size for cast direction, visible foot contact and fixed dark strips. Morning
+casts go west, noon casts are short and southward, and evening casts go east.
+The knoll and hills keep readable feet; the old west-side contact strip is
+absent in the comparison views. The terrain-shade pair at 69,34 has visibility
+**1 in morning / 0 in evening**; own-shadow alpha is **0.46 / 0**. The spire
+frame shows the long terrain shade and shaded cliff material; it frames the
+feature, with the hero near the lower edge. The phone frame keeps feet clear
+of touch controls. The local-plane silhouette does not wrap across distant
+cliffs; 8 px terrain samples soften the cast boundary.
+
+Desktop is 1280×800 on the CI NVIDIA runner. **Time of day** was scrubbed through
+41 positions, dawn to dusk, 80 ms apart. The retained sample is 242 browser rAF
+intervals: **p50 16.7 ms, p95 16.8 ms, p99 16.8 ms, maximum 33.4 ms**, one
+interval over 33 ms, none over 50 ms, and **no long tasks**. Scrubbing is smooth
+in this measured desktop sample. Mobile scrubbing and long sessions remain
+unmeasured; the phone evidence is a still frame.
+
+| Light recompute scope | Completed chunks | Median | p95 | Maximum |
+|---|---:|---:|---:|---:|
+| Whole capture | 303 | 5.5 ms | 7.4 ms | 9.9 ms |
+| Scrubbing only | 125 | 5.9 ms | 7.5 ms | 8.9 ms |
+
+These are per-chunk CPU work plus texture-upload submission, summed over the
+progressive steps, excluding time waiting between frames; they are not GPU
+timer measurements or whole-frame costs. Jobs run nearest first under a 3 ms
+frame budget. Distant chunks can catch up after a fast scrub. The albedo paint
+counter stays **39 → 39** through the scrub, with identical hero position.
+Sprite masks are shared by atlas frame and cached once; the sun changes only
+their GPU transforms. An earlier per-caster canvas version had 250 ms scrub
+p95; that was fixed before these retained frames. Transparent atlas padding
+was also excluded so the projected foot meets the sprite's visible foot.
+
+CI field times (56 px at 110 px/s):
+
+| Uphill / downhill | Uphill | Downhill |
+|---|---:|---:|
+| 0% / 0% | 0.509091 s | 0.509091 s |
+| 40% / 6% | 0.757281 s | 0.485246 s |
+| 60% / 6% | 1.001552 s | 0.485246 s |
+| 80% / 20% | 1.477760 s | 0.437460 s |
+
+The retained five-preset runs match field time for every slider pair; the
+Node plane tests check exact across-slope speed, monotonicity and rotation.
+The recommendation remains **60% uphill / 6% downhill**.
+
+Host audit: Playwright and the browser server ran only in CI. One early local
+`npm run verify` also invoked its Vite production-build step, contrary to the
+brief's host restriction; this was reported immediately, and no later local
+Vite or browser work was run. Subsequent local checks used the individual
+Node, TypeScript and Svelte commands in `nice -n 10 nix develop`.
 
 ---
 
