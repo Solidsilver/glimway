@@ -116,3 +116,19 @@ height.
   by the facing of the ground they stand on. A sun that moves with the clock comes later.
 - Round 2b is now this: "shading plus feel". Hidden ground, picking and the tunnel inside the
   lift are dropped. The tunnel comes back with the caves work.
+
+## After walking slopes 2b (owner, 2026-10-22)
+
+- **More uphill slowdown.** Even 40% isn't very noticeable: the smoothstep curve gives a
+  typical 0.10 slope only about a third of the cap (the owner saw ×0.86). Move to a curve that
+  rises linearly with slope, and extend the uphill slider to 80%. The downhill range (0–20%)
+  feels right.
+- **Shadows help, but they're weak and the wrong shape.** The player shadow is always long and
+  skinny; the owner likes that it adapts to the hill. Shadows should follow the caster's shape.
+- **Lighting must be consistent.** Ground facing, cliff and rim shadows, and sprite shadows
+  don't share one sun (for example, a dark strip on the west side of a wall under a north-west
+  sun). The owner wants one consistent lighting system, "not as crazy as caves". A sprite's
+  own shadow should fade when it already stands in terrain shadow.
+- **Time of day for the sun:** a real arc, tilted. The sun rises in the east, sets in the west,
+  and stays a little north so hills keep their shape at noon. Morning and evening shadows run
+  long and warm. At night, the existing lamp and cave lighting take over.
