@@ -732,7 +732,7 @@ export function fieldGradient(f: Field, x: number, y: number): [number, number] 
 /**
  * How fast someone walks at field point (x, y) px going (ux, uy) (a unit
  * vector): 1 on the flat and across the slope; slower uphill and faster downhill
- * by independently capped, mirrored smoothsteps against MAX_WALK_SLOPE.
+ * by independently capped linear responses against MAX_WALK_SLOPE.
  * Defaults preserve round 2a: 12% uphill, no downhill gain. It depends only on
  * the gradient and the direction, so turning hill and walker together
  * changes nothing; and only on the field, so it's the same in every style.
@@ -743,7 +743,7 @@ export function uphillFactor(f: Field, x: number, y: number, ux: number, uy: num
   const along = len ? (gx * ux + gy * uy) / len : 0
   const up = Math.max(0, along)
   const down = Math.max(0, -along)
-  return { gx, gy, up, k: 1 - clamp(uphill, 0, 0.4) * smoothstep(0, 1, up / MAX_WALK_SLOPE) + clamp(downhill, 0, 0.2) * smoothstep(0, 1, down / MAX_WALK_SLOPE) }
+  return { gx, gy, up, k: 1 - clamp(uphill, 0, 0.8) * clamp(up / MAX_WALK_SLOPE, 0, 1) + clamp(downhill, 0, 0.2) * clamp(down / MAX_WALK_SLOPE, 0, 1) }
 }
 
 /** The slowdown is looked up again every this many px walked (so it doesn't jump at tile edges or depend on the frame rate). */

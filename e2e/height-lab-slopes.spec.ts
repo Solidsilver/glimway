@@ -31,7 +31,7 @@ async function painted(page: Page) {
 }
 async function setLook(page: Page, look: Look) {
   await page.evaluate((l) => (window as unknown as { __fsLab: Lab }).__fsLab.look(l), look)
-  const rebuilds = ['area', 'slopeFacing', 'slopeContours', 'slopeTerraces', 'slopeLift', 'sunlight', 'sunStrength']
+  const rebuilds = ['area', 'slopeFacing', 'slopeContours', 'slopeTerraces', 'slopeLift']
   await expect.poll(async () => {
     const st = await page.evaluate(() => (window as unknown as { __fsLab?: Lab }).__fsLab?.state())
     if (!st) return false
@@ -49,6 +49,7 @@ async function put(page: Page, spot: Spot) {
 }
 async function save(page: Page, name: string) {
   await painted(page)
+  await sunReady(page)
   await hudOff(page)
   await page.waitForTimeout(500)
   const st = await labState(page)
@@ -269,7 +270,7 @@ test.describe('slopes 2b', () => {
     const refs = new Map<string, { up: Run; down: Run; across: Run }>()
     for (const preset of PRESETS) {
       await setLook(page, SLOPE_PRESETS[preset].look)
-      for (const [uphill, downhill] of [[0, 0], [12, 0], [24, 6], [40, 20]]) {
+      for (const [uphill, downhill] of [[0, 0], [12, 0], [24, 6], [40, 20], [60, 6], [80, 20]]) {
         await setLook(page, { slopeUphill: uphill, slopeDownhill: downhill })
         const sample = await page.evaluate(() => {
           const lab = (window as unknown as { __fsLab: Lab }).__fsLab
@@ -323,5 +324,110 @@ test.describe('slopes 2b phone', () => {
     await setLook(page, { area: 'slopes', ...SLOPE_PRESETS.baseline.look, sunlight: true, sunStrength: 1, slopeGait: true, slopeUphill: 12, slopeDownhill: 0, grid: false, walkOverlay: false })
     const spots = new Map((await labState(page)).slopes!.spots.map((s) => [s.name, s]))
     await shot(page, '2b-phone-on-hills', spots.get('hills')!)
+  })
+})
+
+// Round 2c: same camera positions through the sun arc; no local Vite/Playwright.
+type SunSlopes = Slopes & {
+  sunMap: { pending: number; revision: string; costs: number[]; albedoPaints: number }
+  sunlight: { direction: number[]; time: number; daylight: number; visibility: number; opacity: number; shadow: { dx: number; dy: number; length: number } }
+}
+const sunState = async (page: Page) => (await labState(page)).slopes as SunSlopes
+async function sunReady(page: Page) {
+  await expect.poll(async () => (await sunState(page))?.sunMap?.pending ?? 0, { timeout: 60_000 }).toBe(0)
+}
+async function speedRuns(page: Page) {
+  return page.evaluate(() => {
+    const lab = (window as unknown as { __fsLab: Lab }).__fsLab
+    lab.put(0, 85.5, 96.5 - .625)
+    const up = lab.run(0, -1, 56)
+    const down = lab.run(0, 1, 56)
+    return { up, down }
+  })
+}
+
+test.describe('slopes 2c', () => {
+  test.use({ viewport: { width: 1280, height: 800 } })
+  test('height lab, slopes 2c: one sun arc, matching frames, lazy light and linear speed', async ({ page }) => {
+    test.setTimeout(600_000)
+    mkdirSync(OUT, { recursive: true })
+    await openLab(page)
+    await setLook(page, { area: 'slopes', ...SLOPE_PRESETS.baseline.look, slopeUphill: 60, slopeDownhill: 6, sunlight: true, sunStrength: 1, sunTime: .5, sunClock: false, grid: false, walkOverlay: false, fog: 'fog', fogStrength: 'medium', zoom: true, haze: true })
+    const spots = new Map((await labState(page)).slopes!.spots.map(s => [s.name, s]))
+    const owner = { ...spots.get('pass-mid')!, look: null }
+    const frames: Record<string, LabState> = {}
+    const facing: Record<string, SunSlopes['sunlight']> = {}
+    for (const [name, time] of [['morning', .1], ['noon', .5], ['evening', .9]] as const) {
+      await setLook(page, { sunTime: time })
+      frames[`owner-${name}`] = await shot(page, `2c-owner-${name}`, owner)
+      facing[name] = (await sunState(page)).sunlight
+      if (name !== 'noon') for (const feature of ['hills', 'outcrop-slope']) frames[`${feature}-${name}`] = await shot(page, `2c-${feature}-${name}`, spots.get(feature)!)
+    }
+    await setLook(page, { sunTime: .5 })
+    for (const [name, x, y] of [['sunny', 86, 87], ['shaded', 86, 96]] as const) {
+      frames[`knoll-${name}-noon`] = await shot(page, `2c-knoll-${name}-noon`, { name, x, y, fx: x, fy: y, look: null })
+    }
+    await setLook(page, { sunTime: .9 })
+    frames['spire-evening'] = await shot(page, '2c-spire-evening', spots.get('spire')!)
+    const terrainShade = { name: 'terrain-shade', x: 69, y: 34, fx: 69, fy: 34, look: null }
+    for (const [name, time] of [['morning', .1], ['evening', .9]] as const) {
+      await setLook(page, { sunTime: time })
+      frames[`terrain-shade-${name}`] = await shot(page, `2c-terrain-shade-${name}`, terrainShade)
+    }
+    const shade = frames['terrain-shade-evening'].slopes as SunSlopes
+    expect(shade.sunlight.visibility).toBeLessThan(.15)
+    expect(shade.sunlight.opacity).toBeLessThan(.07)
+    expect((frames['terrain-shade-morning'].slopes as SunSlopes).sunlight.visibility).toBeGreaterThan(.85)
+    await put(page, owner)
+    await painted(page); await sunReady(page)
+    expect(facing.morning.direction[0]).toBeGreaterThan(0)
+    expect(facing.evening.direction[0]).toBeLessThan(0)
+    for (const s of Object.values(facing)) expect(s.shadow.dx * s.direction[0] + s.shadow.dy * s.direction[1]).toBeLessThan(0)
+    // Scrub repeatedly while stationary. Texture paint count must stay fixed.
+    const before = await sunState(page)
+    await startFrames(page)
+    for (let i = 0; i <= 40; i++) {
+      await setLook(page, { sunTime: i / 40 })
+      await page.waitForTimeout(80)
+    }
+    const scrubbing = await endFrames(page)
+    await sunReady(page)
+    const after = await sunState(page)
+    expect(after.sunMap.albedoPaints).toBe(before.sunMap.albedoPaints)
+    expect(after.at).toEqual(before.at)
+    const runs: Record<string, unknown> = {}
+    for (const [up, down] of [[0, 0], [40, 6], [60, 6], [80, 20]]) {
+      await setLook(page, { slopeUphill: up, slopeDownhill: down })
+      const result = await speedRuns(page)
+      expect(result.up.blocked).toBe(false); expect(result.down.blocked).toBe(false)
+      runs[`${up}/${down}`] = result
+    }
+    // Existing clock hook supplies the same game clock as the dev offset.
+    const setClock = (hour: number | null) => page.evaluate((h) => {
+      const lab = (window as unknown as { __fsLab: Lab & { clock: (u: number | null) => void } }).__fsLab
+      lab.clock(h === null ? null : 1_800_000_000 - 1_800_000_000 % 86400 + h * 3600)
+    }, hour)
+    await setLook(page, { sunClock: true })
+    await setClock(0); await page.waitForTimeout(100); await sunReady(page)
+    expect((await sunState(page)).sunlight.daylight).toBe(0)
+    await setClock(12); await page.waitForTimeout(100); await sunReady(page)
+    expect((await sunState(page)).sunlight.time).toBeCloseTo(.5, 2)
+    expect((await sunState(page)).sunlight.daylight).toBe(1)
+    await setClock(null)
+    await setLook(page, { sunClock: false, sunTime: .5 })
+    writeFileSync(`${OUT}/2c-evidence.json`, JSON.stringify({ frames, facing, scrubbing, lightCostsPerChunk: after.sunMap.costs, runs, before: before.sunMap, after: after.sunMap }, null, 1))
+    expect(scrubbing.p95, 'time scrubbing frame p95').toBeLessThan(50)
+  })
+})
+
+test.describe('slopes 2c phone', () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
+  test('height lab, slopes 2c: one sun phone frame', async ({ page }) => {
+    test.setTimeout(240_000)
+    mkdirSync(OUT, { recursive: true })
+    await openLab(page)
+    await setLook(page, { area: 'slopes', ...SLOPE_PRESETS.baseline.look, sunlight: true, sunStrength: 1, sunTime: .1, sunClock: false, slopeUphill: 60, slopeDownhill: 6, grid: false, walkOverlay: false })
+    const spots = new Map((await labState(page)).slopes!.spots.map(s => [s.name, s]))
+    await shot(page, '2c-phone-owner-morning', { ...spots.get('pass-mid')!, look: null })
   })
 })

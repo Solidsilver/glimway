@@ -29,8 +29,8 @@ test('2b sliders migrate Off/Gentle, retain numeric values, and reject invalid s
   const l = migrateLook({ slopeUphill: 40, slopeDownhill: 20, sunlight: false, slopeGait: false, sunStrength: 0.6 });
   assert.equal(l.slopeUphill, 40); assert.equal(l.slopeDownhill, 20);
   assert.equal(l.sunlight, false); assert.equal(l.slopeGait, false); assert.equal(l.sunStrength, 0.6);
-  const d = migrateLook({ slopeUphill: 41, slopeDownhill: -1, sunStrength: NaN });
-  assert.equal(d.slopeUphill, 12); assert.equal(d.slopeDownhill, 0); assert.equal(d.sunStrength, 1);
+  const d = migrateLook({ slopeUphill: 81, slopeDownhill: -1, sunStrength: NaN });
+  assert.equal(d.slopeUphill, 60); assert.equal(d.slopeDownhill, 6); assert.equal(d.sunStrength, 1);
 });
 
 test('2b speed is monotonic in each slider, normalized and rotation invariant; across stays unchanged', () => {
@@ -39,23 +39,23 @@ test('2b speed is monotonic in each slider, normalized and rotation invariant; a
     const ux = Math.cos(a), uy = Math.sin(a);
     const { f } = plane(0.2 * ux, 0.2 * uy);
     let previousUp = 1, previousDown = 1;
-    for (let cap = 0; cap <= 40; cap++) {
+    for (let cap = 0; cap <= 80; cap++) {
       const up = uphillFactor(f, 160, 160, ux, uy, cap / 100, 0.2).k;
       assert.ok(up <= previousUp + 1e-6); previousUp = up;
-      near(up, 1 - cap / 100 * 0.896);
+      near(up, 1 - cap / 100 * 0.8);
       near(uphillFactor(f, 160, 160, ux * 5, uy * 5, cap / 100, 0.2).k, up);
       near(uphillFactor(f, 160, 160, -uy, ux, cap / 100, 0.2).k, 1);
     }
     for (let cap = 0; cap <= 20; cap++) {
       const down = uphillFactor(f, 160, 160, -ux, -uy, 0.4, cap / 100).k;
       assert.ok(down >= previousDown - 1e-6); previousDown = down;
-      near(down, 1 + cap / 100 * 0.896);
+      near(down, 1 + cap / 100 * 0.8);
     }
   }
 });
 
 test('2b numeric speed caps give the same travel time in every drawing style and with sunlight on/off', () => {
-  for (const [up, down] of [[0, 0], [12, 6], [40, 20]]) {
+  for (const [up, down] of [[0, 0], [12, 6], [40, 20], [60, 6], [80, 20]]) {
     let reference: number[] | undefined;
     for (const preset of Object.values(SLOPE_PRESETS)) for (const sunlight of [false, true]) {
       const area = buildSlopes(DEFAULT_AREA_OPTIONS, slopesLook({ ...preset.look, sunlight, sunStrength: 0.7 }));
@@ -93,28 +93,22 @@ test('2b shadows point SE, lengthen away from the sun and shorten toward it, and
   assert.ok(shaded.length > flat.length && flat.length > sunny.length);
   near(sunShadow(0, 0, 20).length, flat.length * 2);
   near(sunShadow(0, 0, 0).length, 0);
-  assert.ok(sunShadow(-2, -2, 10).length < 50);
+  assert.ok(sunShadow(-2, -2, 10).length < 100);
   assert.ok(sunShadow(0, 0, 10, [0.5, 0, 0.8]).dx < 0);
 });
 
-test('2b sprite tint shares ground facing, preserves base colour and remains bounded on steep slopes', () => {
+test('sun tint is Lambert plus a bounded cool fill, preserving each sprite base colour', () => {
   near(sunFacing(0, 0), SUN[2]);
   assert.ok(sunFacing(0.14, 0.14) > sunFacing(-0.14, -0.14));
-  const light = sunTint(0.14, 0.14), dark = sunTint(-0.14, -0.14);
-  assert.ok((light >>> 16) > (dark >>> 16));
-  assert.equal(sunTint(-0.2, -0.2, 0, 0xaabbcc), 0xaabbcc);
-  assert.equal(sunTint(0, 0, 1, 0xccaaff), 0xccaaff);
-  for (const g of [-5, -0.2, 0, 0.2, 5]) {
-    const c = sunTint(g, g);
-    assert.ok((c >>> 16) >= 204 && ((c >>> 8) & 255) >= 214 && (c & 255) >= 234);
-  }
+  assert.ok((sunTint(0.14, 0.14) >>> 16) > (sunTint(-0.14, -0.14) >>> 16));
+  const tint = sunTint(-0.2, -0.2, 1, 0xaabbcc);
+  assert.ok((tint >>> 16) <= 0xaa && ((tint >>> 8) & 255) <= 0xbb && (tint & 255) <= 0xcc);
 });
 
-test('2b sunlight strength changes ground pixels and cache identity, without double shading at full strength', () => {
+test('sun controls leave ground albedo and cache identity unchanged', () => {
   const make = (sunlight: boolean, sunStrength: number) => buildSlopes(DEFAULT_AREA_OPTIONS, { facing: 'restrained', contours: 'off', terraces: false, lift: 0, sunlight, sunStrength });
-  const legacy = make(false, 1), full = make(true, 1), zero = make(true, 0);
+  const off = make(false, 1), full = make(true, 2), zero = make(true, 0);
   const px = (a: typeof full) => paintField(a, 81 * 16, 87 * 16, 16, 16).px;
-  assert.deepEqual(px(legacy), px(full));
-  assert.notDeepEqual(px(full), px(zero));
-  assert.notEqual(chunkKey(full, 0, 0), chunkKey(zero, 0, 0));
+  assert.deepEqual(px(off), px(full)); assert.deepEqual(px(full), px(zero));
+  assert.equal(chunkKey(full, 0, 0), chunkKey(zero, 0, 0));
 });

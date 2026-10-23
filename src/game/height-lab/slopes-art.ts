@@ -92,10 +92,10 @@ export function drawCrags(scene: Phaser.Scene): void {
     for (let x = 1; x < fw - 1; x++)
       for (let y = 0; y < fh; y++) {
         if (y < top[x]!) continue
-        const lit = x < 7 ? 1.15 : x > 10 ? 0.72 : 0.95
-        const rim = y === top[x] ? 1.35 : 1
+        const lit = 1
+        const rim = 1
         const crack = (x === 5 + v || x === 11 - v) && hash(v, y >> 2, 27) < 0.5 ? 0.6 : 1
-        const foot = y > fh - 4 ? 0.75 : 1
+        const foot = 1
         const c = (112 + hash(x, y + v * 31, 28) * 26) * lit * rim * crack * foot
         const i = ((y + 1) * W + ox + x) * 4
         px[i] = c
@@ -109,12 +109,23 @@ export function drawCrags(scene: Phaser.Scene): void {
   for (let v = 0; v < n; v++) tex.add(`crag-${v}`, 0, v * (fw + 2) + 1, 1, fw, fh)
 }
 
-/**
- * Face tints by the height they rise to, for a range this tall (unlifted;
- * the lift paints its faces, ./slopes-paint.ts faceTint). A south face is in
- * the north-west light's shade: darker than the ground on top of it (round
- * 1's were brighter, lit as from the south).
- */
-export function slopeFaceTint(z: number): number {
-  return z < 2.5 ? 0xccb89c : z < 5 ? 0xb8b0a4 : z < 9 ? 0xa2a6b0 : 0xbcc0c8
+/** A lab-only copy: discard the old atlas's translucent contact shadows.
+ * The shared atlas and normal game's props remain exactly as authored. */
+export function slopeDecorAtlas(scene: Phaser.Scene, sourceKey: string): string {
+  const key = `${sourceKey}-sun-albedo`
+  if (scene.textures.exists(key)) return key
+  const source = scene.textures.get(sourceKey)
+  const image = source.getSourceImage() as HTMLCanvasElement
+  const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })!
+  ctx.drawImage(image, 0, 0)
+  const data = ctx.getImageData(0, 0, canvas.width, canvas.height)
+  for (let i = 3; i < data.data.length; i += 4) if (data.data[i]! < 200) data.data[i] = 0
+  ctx.putImageData(data, 0, 0)
+  const atlas = scene.textures.addCanvas(key, canvas)!
+  for (const name of source.getFrameNames()) {
+    const frame = source.get(name)
+    atlas.add(name, 0, frame.cutX, frame.cutY, frame.cutWidth, frame.cutHeight)
+  }
+  return key
 }

@@ -81,12 +81,12 @@ test('uphill slowdown: full speed on the flat, downhill and across the slope; at
   assert.equal(at(0, 1), 1, 'across');
   assert.equal(at(0, -1), 1, 'across, the other way');
   assert.equal(uphillFactor(plane(() => 2).f, 20 * T, 20 * T, 1, 0).k, 1, 'the flat');
-  // Up 0.2 a tile: t = 0.8, smoothstep 0.896.
-  assert.ok(Math.abs(at(1, 0) - (1 - UPHILL_CAP * 0.896)) < 1e-6, `up 0.2: ${at(1, 0)}`);
+  // Up 0.2 a tile: linear t = 0.8.
+  assert.ok(Math.abs(at(1, 0) - (1 - UPHILL_CAP * 0.8)) < 1e-6, `up 0.2: ${at(1, 0)}`);
   const limit = plane((x) => MAX_WALK_SLOPE * x).f;
   assert.ok(Math.abs(uphillFactor(limit, 20 * T, 20 * T, 1, 0).k - (1 - UPHILL_CAP)) < 1e-9, 'straight up the limit: the cap');
-  // Gentle hills barely slow: up 0.05 a tile is under 1.5% slower.
-  assert.ok(uphillFactor(plane((x) => 0.05 * x).f, 20 * T, 20 * T, 1, 0).k > 0.985);
+  // Gentle legacy cap: up 0.05 a tile is 2.4% slower.
+  assert.ok(uphillFactor(plane((x) => 0.05 * x).f, 20 * T, 20 * T, 1, 0).k > 0.975);
   // Half uphill (45° across a 0.2 slope): between.
   const k45 = at(Math.SQRT1_2, Math.SQRT1_2);
   assert.ok(k45 > at(1, 0) && k45 < 1, `45° across: ${k45}`);
@@ -235,7 +235,7 @@ test('lift strengths: a weaker lift hides no more walkable ground than the full 
   assert.ok(full > 0, 'behind the plateau patch, the full lift hides some');
 });
 
-test('presets: the five, as documented; a preset is recognised; reset is the Shading baseline with gentle slowdown', () => {
+test('presets: the five, as documented; a preset is recognised; reset is the Shading baseline with the recommended slowdown', () => {
   assert.deepEqual(Object.values(SLOPE_PRESETS).map((p) => p.name), ['Shading baseline', 'Sparse contours', 'Small terraces', 'Moderate lift', 'Full lift reference']);
   const b = SLOPE_PRESETS.baseline.look;
   assert.deepEqual(b, { slopeFacing: 'restrained', slopeContours: 'off', slopeTerraces: false, slopeLift: 0 });
@@ -245,7 +245,7 @@ test('presets: the five, as documented; a preset is recognised; reset is the Sha
   assert.deepEqual(SLOPE_PRESETS.full.look, { slopeFacing: 'current', slopeContours: 'off', slopeTerraces: false, slopeLift: 48 });
   for (const [name, p] of Object.entries(SLOPE_PRESETS)) assert.equal(slopePresetOf(p.look), name);
   assert.equal(slopePresetOf({ ...b, slopeContours: 'current' }), null);
-  assert.equal(SLOPE_RESET.slopeUphill, 12);
+  assert.equal(SLOPE_RESET.slopeUphill, 60);
   assert.equal(slopePresetOf(SLOPE_RESET as SlopeLook), 'baseline');
   // Presets change only the drawing.
   for (const p of Object.values(SLOPE_PRESETS)) assert.deepEqual(Object.keys(p.look).sort(), [...SLOPE_KEYS].sort());
@@ -257,7 +257,7 @@ test('presets: the five, as documented; a preset is recognised; reset is the Sha
 test('saved settings migrate: round 1’s style and shading become the settings that draw the same; anything unknown is the default', () => {
   const d = migrateLook(null);
   assert.equal(slopePresetOf(d), 'baseline');
-  assert.equal(d.slopeUphill, 12);
+  assert.equal(d.slopeUphill, 60);
   const old = (slopeStyle: string, slopeShade: boolean) => ((l) => ({ facing: l.facing, contours: l.contours, terraces: l.terraces, lift: l.lift }))(slopesLook(migrateLook({ area: 'slopes', fog: 'sky', slopeStyle, slopeShade })));
   assert.deepEqual(old('shade', false), { facing: 'current', contours: 'off', terraces: false, lift: 0 }, 'shading by facing was always shaded');
   assert.deepEqual(old('contours', true), { facing: 'current', contours: 'current', terraces: false, lift: 0 });
@@ -286,41 +286,13 @@ test('saved settings migrate: round 1’s style and shading become the settings 
   assert.deepEqual(migrateLook([1, 2]), d);
 });
 
-test('the paint cache tells every drawing setting apart', () => {
+test('albedo cache depends on material drawing controls, never facing or sun controls', () => {
   const keys = new Set(LOOKS.map((look) => chunkKey({ slopes: { look } } as Parameters<typeof chunkKey>[0], 2, 3)));
-  assert.equal(keys.size, LOOKS.length);
-});
-
-test('restrained facing shade shifts the palette: no darker than 0.7 or brighter than 1.2 of unshaded, and grass stays green', () => {
-  const at = (facing: SlopesLook['facing']) => {
-    const a = buildSlopes(DEFAULT_AREA_OPTIONS, { facing, contours: 'off', terraces: false, lift: 0 });
-    // The knoll and the valley round it, and the pass's lower slopes.
-    return [paintField(a, (KNOLL.x - 9) * T, (KNOLL.y - 9) * T, 18 * T, 18 * T).px, paintField(a, 60 * T, 50 * T, 24 * T, 20 * T).px];
-  };
-  const off = at('off');
-  const on = at('restrained');
-  const cur = at('current');
-  let lo = Infinity;
-  let hi = 0;
-  let curLo = Infinity;
-  let green = 0;
-  let greenKept = 0;
-  for (let p = 0; p < off.length; p++)
-    for (let i = 0; i < off[p]!.length; i += 4) {
-      const lum = (px: Uint8ClampedArray) => 0.3 * px[i]! + 0.59 * px[i + 1]! + 0.11 * px[i + 2]!;
-      const r = lum(on[p]!) / Math.max(1, lum(off[p]!));
-      lo = Math.min(lo, r);
-      hi = Math.max(hi, r);
-      curLo = Math.min(curLo, lum(cur[p]!) / Math.max(1, lum(off[p]!)));
-      if (off[p]![i + 1]! > off[p]![i]! + 8 && off[p]![i + 1]! > off[p]![i + 2]! + 8) {
-        green++;
-        if (on[p]![i + 1]! > on[p]![i]! && on[p]![i + 1]! > on[p]![i + 2]!) greenKept++;
-      }
-    }
-  assert.ok(lo >= 0.69, `darkest ${lo.toFixed(3)}`);
-  assert.ok(hi <= 1.2, `brightest ${hi.toFixed(3)}`);
-  assert.ok(curLo < lo, `current goes darker (${curLo.toFixed(3)})`);
-  assert.ok(green > 1000 && greenKept / green > 0.995, `green kept: ${greenKept}/${green}`);
+  assert.equal(keys.size, LOOKS.length / 3);
+  const make = (facing: SlopesLook['facing']) => buildSlopes(DEFAULT_AREA_OPTIONS, { facing, contours: 'off', terraces: false, lift: 0 });
+  const pixels = (facing: SlopesLook['facing']) => paintField(make(facing), 81 * T, 87 * T, 16, 16).px;
+  assert.deepEqual(pixels('off'), pixels('restrained'));
+  assert.deepEqual(pixels('off'), pixels('current'));
 });
 
 test('sparse contours are fixed to the world: a pixel paints the same whichever part it is painted in', () => {

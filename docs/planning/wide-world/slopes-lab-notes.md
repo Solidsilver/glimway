@@ -1,3 +1,131 @@
+# Slopes lab, round 2c: one sun (exp/slopes-sun)
+
+2026-10-22. Dev-only, on the same hand-made field. The 2b and 2a notes below
+are historical; their fixed NW light and smoothstep speeds are superseded here.
+
+## How to walk 2c
+
+Open **Height lab → Walk the height lab**, then **Area → Slopes, hills and
+passes**. Choose **Reset to Shading baseline**, then **Slopes, drawn as (round
+1’s styles) → Shading by facing**. Reset now selects **Facing shade →
+Restrained**, **Contour detail → Off**, **Small terraces → Off**, **Lift strength
+→ None**, **Uphill slowdown: 60%**, **Downhill quickening: 6%**, **Slope gait →
+On**, **Sunlight → On**, **Sun strength: 100%**, **Time of day: 12.0 h**, and
+**Sun follows the game clock** unchecked. Existing numeric saved speeds are
+preserved; old Off/Gentle become 0/12. Reset chooses the new recommendation.
+
+The uphill range is **0–80%**, downhill **0–20%**, and sun strength **0–200%**.
+The directional speed response is linear: at the owner's typical 0.10 uphill
+component, 40/60/80% caps give ×0.84/×0.76/×0.68. Across the slope stays ×1.
+Start with **60% uphill / 6% downhill**, compare **0% / 0%**, then **40% / 6%**,
+and try **80% / 20%** as the strong endpoint. On the knoll's 56 px uphill run,
+Node field times are 0.509091 s at 0%, 0.757295 s at 40%, 1.001386 s at 60%,
+and 1.478355 s at 80%. The 60/6 downhill run is 0.485304 s. These are simulated
+field travel times at 110 px/s, not browser frame measurements.
+
+Keep **Levels overlay → Off**, **Levels above and below fade to → Fog**,
+**Fog per level → Medium**, and close the dev panel to judge the picture.
+At the owner's path between walls (about 72,48), move **Time of day** through
+**7.2 h**, **12.0 h**, and **16.8 h**. The sun rises east, tilts north at noon,
+and sets west; morning/evening light is warmer. Shadows go west in the morning,
+south at noon and east in the evening. Revisit the knoll's north and south
+sides (86,87 and 86,96), hills (30,88), outcrop approach (103,82), and spire
+(view toward 40,40 from 40,52). At evening the spire casts a long terrain shadow.
+Compare your own shadow in that shade with its shape in open sun.
+
+**Sun follows the game clock** disables the manual slider and reads the
+existing UTC game/server clock (06:00 dawn, 12:00 noon, 18:00 dusk). The existing
+dev clock advances it; follow its reload instruction after advancing the server.
+At night this area uses dim blue ambient. The lamp and cave lighting rework
+remains out of scope. All paused cave controls and other lab areas remain.
+
+The light layer uses 8 px texels per 24-tile chunk, Lambert normals from the
+bilinear field, cool ambient, and half-tile terrain rays bounded to a 64-tile
+halo. Ground albedo is cached independently of facing, sun strength and time.
+Moving the sun invalidates only light jobs; nearest chunks update first under
+a 3 ms frame budget, in four-row steps. Sprites sample that light map at their
+feet. Their alpha masks are flattened and sheared with the same sun ray,
+anchored at the foot, shortened/lengthened by the receiving slope, and faded
+by terrain visibility. The old ground rims, contact strips, old face-atlas
+lighting, and translucent contact shadows in the lab's prop atlas are gone.
+The normal game's atlas is untouched. Silhouettes approximate a local plane;
+they do not wrap across a distant cliff. Terrain shadows are bounded and the
+low-resolution map softens their edge.
+
+Questions for the owner:
+
+- Is 60/6 enough uphill effort on the pass, while across-slope travel stays comfortable?
+- Do all morning/noon/evening shadows agree, with the old west-side strip gone?
+- Do the hero, Wren, trees and boulders feel planted, and does the silhouette shape help?
+- Is the northward noon tilt enough to read the hills? Is dawn/dusk too warm or dark?
+- Does fading a sprite's shadow in terrain shade read naturally?
+
+### Evidence and performance (2c)
+
+[Final source run 39895401202](https://github.com/Solidsilver/glimway/actions/runs/39895401202),
+code `c35f8e92`: **15 browser tests passed, 0 flaky, 0 failed, 0 helper retries**
+in 5.4 minutes. The suite includes the retained cave, generated-area and five
+slope-preset regressions. Frontend checks and all 2,868 Node tests pass. Node
+coverage includes linear speeds and migration; bilinear Lambert and ambient;
+wall shadow direction/length; alpha projection and visible-foot bounds;
+terrain-shadow fading; the tilted arc; shared chunk samples; and independent
+albedo caching. Full repository verification also runs on CI.
+
+The 13 new matching originals, state JSON, raw timing data and hashes are in
+[the 2c evidence index](lab/slopes/2c/README.md). All 13 were inspected at full
+size for cast direction, visible foot contact and fixed dark strips. Morning
+casts go west, noon casts are short and southward, and evening casts go east.
+The knoll and hills keep readable feet; the old west-side contact strip is
+absent in the comparison views. The terrain-shade pair at 69,34 has visibility
+**1 in morning / 0 in evening**; own-shadow alpha is **0.46 / 0**. The spire
+frame shows the long terrain shade and shaded cliff material; it frames the
+feature, with the hero near the lower edge. The phone frame keeps feet clear
+of touch controls. The local-plane silhouette does not wrap across distant
+cliffs; 8 px terrain samples soften the cast boundary.
+
+Desktop is 1280×800 on the CI NVIDIA runner. **Time of day** was scrubbed through
+41 positions, dawn to dusk, 80 ms apart. The retained sample is 242 browser rAF
+intervals: **p50 16.7 ms, p95 16.8 ms, p99 16.8 ms, maximum 33.4 ms**, one
+interval over 33 ms, none over 50 ms, and **no long tasks**. Scrubbing is smooth
+in this measured desktop sample. Mobile scrubbing and long sessions remain
+unmeasured; the phone evidence is a still frame.
+
+| Light recompute scope | Completed chunks | Median | p95 | Maximum |
+|---|---:|---:|---:|---:|
+| Whole capture | 303 | 5.5 ms | 7.4 ms | 9.9 ms |
+| Scrubbing only | 125 | 5.9 ms | 7.5 ms | 8.9 ms |
+
+These are per-chunk CPU work plus texture-upload submission, summed over the
+progressive steps, excluding time waiting between frames; they are not GPU
+timer measurements or whole-frame costs. Jobs run nearest first under a 3 ms
+frame budget. Distant chunks can catch up after a fast scrub. The albedo paint
+counter stays **39 → 39** through the scrub, with identical hero position.
+Sprite masks are shared by atlas frame and cached once; the sun changes only
+their GPU transforms. An earlier per-caster canvas version had 250 ms scrub
+p95; that was fixed before these retained frames. Transparent atlas padding
+was also excluded so the projected foot meets the sprite's visible foot.
+
+CI field times (56 px at 110 px/s):
+
+| Uphill / downhill | Uphill | Downhill |
+|---|---:|---:|
+| 0% / 0% | 0.509091 s | 0.509091 s |
+| 40% / 6% | 0.757281 s | 0.485246 s |
+| 60% / 6% | 1.001552 s | 0.485246 s |
+| 80% / 20% | 1.477760 s | 0.437460 s |
+
+The retained five-preset runs match field time for every slider pair; the
+Node plane tests check exact across-slope speed, monotonicity and rotation.
+The recommendation remains **60% uphill / 6% downhill**.
+
+Host audit: Playwright and the browser server ran only in CI. One early local
+`npm run verify` also invoked its Vite production-build step, contrary to the
+brief's host restriction; this was reported immediately, and no later local
+Vite or browser work was run. Subsequent local checks used the individual
+Node, TypeScript and Svelte commands in `nice -n 10 nix develop`.
+
+---
+
 # Slopes lab, round 2b: shading plus feel (exp/slopes-2b)
 
 2026-10-22. A dev-only comparison on the same hand-made 144×144 field. Round 2b
