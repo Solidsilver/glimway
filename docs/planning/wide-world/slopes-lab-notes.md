@@ -53,6 +53,34 @@ darker value, and directional casts fade with terrain visibility. These local
 proxies do not wrap around distant cliffs. The phone capture establishes
 framing only; it does not establish mobile performance.
 
+### Evidence and review (2d)
+
+[Source CI run 39911879693](https://github.com/Solidsilver/glimway/actions/runs/39911879693),
+code `a6a28250`, passed the GPU E2E suite: **17 passed, 0 flaky, 0 failed**.
+All 2,878 local Node tests pass, including a raster regression for a rounded
+noon body shadow on flat and sloping ground; all typechecks and Svelte checks
+are clean. Playwright and Vite ran only in CI.
+
+All 20 originals and 19 crops from this run were inspected at full size,
+after inspecting the same 39 from the handoff run 39909944507. Originals,
+matching state JSON and hashes are in [the 2d evidence index](lab/slopes/2d/README.md).
+
+| Frames | Contact / noon progression / art judgment |
+|---|---|
+| Meadow, all nine times | Pine trunks and birch bases connect to their casts; the boulder has a small shadow emerging beneath its front. Each noon step moves a short shadow gently through south. Rounded proxy masses and pixel edges replace the recognisable sheared sprite drawing. |
+| Meadow silhouette references, 11.6 / 16.8 h | The old flat tree outlines and long evening strips remain visible for comparison; both use the new sun path. |
+| Hills meadow, 9.6 / 12.0 / 16.8 h | Bases stay planted across the rolling ground. The noon hero contact is rounder and shorter; evening casts stretch consistently and overlapping shadows retain one darkness. |
+| Knoll, sunny / shaded-facing at noon | The hero's previous narrow rectangle is now a shorter rounded taper with a dithered rim. Both sides retain foot contact and respond to the receiving slope. These are facing-shade comparisons, not full terrain occlusion. |
+| Terrain shade, 7.2 / 16.8 h | Hero terrain visibility and directional opacity are zero in both state samples. Visually, only a faint foot contact remains; tree casts also fade. |
+| Spire, 16.8 h | Long terrain shade reads across the mountain. The original frames the feature with the hero at its lower edge; its centre crop cannot judge the hero's contact. |
+| Phone meadow, 9.6 h | Hero, rock and trunks remain grounded and legible at portrait size; touch controls leave the relevant feet clear. |
+
+Desktop time scrubbing through 41 sun positions recorded 237 rAF intervals:
+**p50/p95 16.7 ms, p99/max 16.8 ms**, none over 33 or 50 ms. Raw intervals and
+chunk costs remain in [2d-evidence.json](lab/slopes/2d/2d-evidence.json).
+This short desktop sample and one phone still do not measure mobile pacing
+or guarantee a worst-case world-streaming budget.
+
 ## Slopes lab, round 2c: one sun (exp/slopes-sun)
 
 2026-10-22. Dev-only, on the same hand-made field. The 2b and 2a notes below
