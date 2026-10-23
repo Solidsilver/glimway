@@ -46,8 +46,9 @@ import { CRAG_KEY, bandImages, drawCrags, paintJob, paintedChunk, slopeDecorAtla
 import { chunkKey } from './slopes-paint'
 import { slopeGait } from './slope-gait'
 import { clockSun, sunAt, sunShadow, lightTint, shadowOpacity, type DaySun } from './sun'
-import { fieldLight, sampleSunMap } from './sun-map'
-import { SunChunk, SilhouetteShadow } from './sun-view'
+import { fieldLight, sampleSunMap, sampleVisibility, terrainVisibility } from './sun-map'
+import { castProxy, dither, overShadow, shadeMultiply, shadowDarkness, shadowRay, type Caster, type CasterKind, type ShadowProxy } from './sun-shadow'
+import { SunChunk, SilhouetteShadow, MoverShadow, frameProxy } from './sun-view'
 import { serverNow, setGameNow } from '../clock'
 import { fieldGradient, fieldZ, FOG_LEVELS, display, lookName, mapPoint, nearestWalkable, slopeWalk, uphillFactor } from './slopes'
 import { FRIEND_LIGHT, HERO_LIGHT, LIGHT_RES, wayIn } from './light'
@@ -120,7 +121,10 @@ interface SlopesState {
   lift: boolean
   /** The uphill slowdown: on or off, and where the hero last walked: the gradient (levels a tile), its uphill part, the speed multiplier. */
   gentle: boolean
-  sunlight?: { tint: number; shadow: ReturnType<typeof sunShadow>; gait: ReturnType<typeof slopeGait> | null; direction: readonly number[]; time: number; daylight: number; visibility: number; opacity: number }
+  sunlight?: { tint: number; shadow: ReturnType<typeof sunShadow>; gait: ReturnType<typeof slopeGait> | null; direction: readonly number[]; time: number; daylight: number; visibility: number; opacity: number
+    /** 2d: the shadow mode, the hero's ray (ground px a unit of height), the still shadow at their feet, their cast's box and footprint, and still casters nearby. */
+    mode: string; ray: readonly number[]; under: number; cast: { x0: number; y0: number; w: number; h: number; foot: number[] }
+    casters: { x: number; y: number; kind: string; foot: number[]; height: number; v: readonly number[]; visible: number }[] }
   sunMap: { pending: number; revision: string; chunks: number; costs: number[]; albedoPaints: number }
   uphill: { gx: number; gy: number; up: number; k: number } | null
   /** The hero's field tile and px (the same in every style), and where they're drawn. */
@@ -167,8 +171,13 @@ interface Thing {
   /** The slopes area's lift: behind higher ground (./slopes.ts display). The hero is drawn as a silhouette; others not at all. */
   hidden?: boolean
   silhouette?: boolean
-  sun?: { x: number; y: number; height: number; shadow: SilhouetteShadow }
+  sun?: { x: number; y: number; height: number; shadow: SilhouetteShadow; kind: CasterKind; cast?: MoverShadow; proxy?: ShadowProxy }
 }
+
+/** What each lab prop stands on and casts as (slopes 2d). */
+const CASTER_KIND: Record<string, CasterKind> = { oak: 'tree', pine: 'tree', birch: 'tree', boulder: 'rock', crag: 'rock', fern: 'plant' }
+/** A still caster's fixed part: its frame's foot (display px), field point and slope. */
+interface StillCaster { x: number; y: number; fx: number; fy: number; gx: number; gy: number; z: number; proxy: ShadowProxy }
 
 /** Someone who walks the levels: the hero, the remote player, a creature. */
 interface Mover {
@@ -231,6 +240,10 @@ export class HeightLabScene extends Phaser.Scene {
   private daySun: DaySun = sunAt(0.5)
   private sunRevision = ''
   private sunCosts: number[] = []
+  /** Still casters by chunk ("cx,cy"), and their sun-dependent part for the current revision. */
+  private stillCasters: Map<string, StillCaster[]> | null = null
+  private castersLit = new Map<StillCaster, Caster>()
+  private castersRevision = ''
   private albedoPaints = 0
   private facing = 'down'
   /** The generated area's built chunks (./walk.ts), by "cx,cy" (the area's own chunks). */
@@ -268,6 +281,9 @@ export class HeightLabScene extends Phaser.Scene {
     this.sunCosts = []
     this.albedoPaints = 0
     this.propsByChunk = null
+    this.stillCasters = null
+    this.castersLit.clear()
+    this.castersRevision = ''
     this.loading = null
     // The generated area waits for the server's window (a few seconds the first time), the tab never frozen.
     if (this.look.area === 'walk' && !walkData) {
@@ -351,7 +367,7 @@ export class HeightLabScene extends Phaser.Scene {
     this.buildHud()
     onSceneEnd(this, () => {
       stopLook()
-      for (const m of this.movers) m.thing.sun?.shadow.destroy()
+      for (const m of this.movers) { m.thing.sun?.shadow.destroy(); m.thing.sun?.cast?.destroy() }
       this.scale.off('resize', onResize)
       this.hud?.remove()
       this.hud = null
@@ -455,7 +471,7 @@ export class HeightLabScene extends Phaser.Scene {
       const shadow = casts ? new SilhouetteShadow(this, x, y) : null
       if (shadow) parts.push({ o: shadow.image, dz: -1, a: 0 })
       made.push(this.addThing({ parts, layer: SURFACE, x, y, z: p.z ?? this.area.top[p.ty * this.area.stack.w + p.tx]!, seen: 1,
-        ...(this.area.slopes ? { sun: { x: p.fieldX ?? x, y: p.fieldY ?? y, height: img.displayHeight * 0.65, shadow: shadow! } } : {}) }, true))
+        ...(this.area.slopes ? { sun: { x: p.fieldX ?? x, y: p.fieldY ?? y, height: img.displayHeight * 0.65, shadow: shadow!, kind: CASTER_KIND[p.kind] ?? 'plant' } } : {}) }, true))
     }
     return made
   }
@@ -474,14 +490,82 @@ export class HeightLabScene extends Phaser.Scene {
     const sl = this.area.slopes, sun = t.sun
     if (!sl || !sun) return null
     const part = t.parts[1]!
-    if (!this.look.sunlight) { part.a = 0; return t.tint ?? 0xffffff }
+    if (!this.look.sunlight) { part.a = 0; sun.cast?.hide(); return t.tint ?? 0xffffff }
     const at = this.sunAtFeet(t)
     const [gx, gy] = fieldGradient(sl.field, sun.x, sun.y)
+    if (this.look.spriteShadows === 'proxy') {
+      part.a = 0
+      if (!sun.cast) return lightTint(at.rgb, t.tint ?? 0xffffff)
+      // Walkers: their own capsule now, and the still shadows they stand in.
+      const under = this.stillDarkAt(t.x, t.y - 1)
+      this.castMover(t, gx, gy, at.visible)
+      const m = shadeMultiply(under)
+      return lightTint([at.rgb[0] * m[0], at.rgb[1] * m[1], at.rgb[2] * m[2]], t.tint ?? 0xffffff)
+    }
+    sun.cast?.hide()
     const ray = sunShadow(gx, gy, sun.height, this.daySun.direction)
     const dy = ray.dy - sl.k * (gx * ray.dx + gy * ray.dy)
     sun.shadow.project(t.parts[0]!.o as Phaser.GameObjects.Image, ray.dx, dy)
     part.a = shadowOpacity(at.visible, this.look.sunStrength, this.daySun.daylight)
     return lightTint(at.rgb, t.tint ?? 0xffffff)
+  }
+
+  /** Still shadow darkness at a display pixel, from its chunk's layer. */
+  private stillDarkAt(x: number, y: number): number {
+    return this.parts.get(`${Math.floor(x / (24 * T))},${Math.floor(y / (24 * T))}`)?.sunlight?.darkAt(x, y) ?? 0
+  }
+
+  /** A walker's capsule shadow. Each pixel is dithered by its own terrain
+   * light, and only darkens past the still shadow already there. */
+  private castMover(t: Thing, gx: number, gy: number, visible: number): void {
+    const sun = t.sun!
+    const v = shadowRay(gx, gy, this.daySun.direction, this.area.slopes!.k)
+    const cast = castProxy(sun.proxy!, t.x, t.y, v)
+    const part = this.parts.get(`${Math.floor(t.x / (24 * T))},${Math.floor(t.y / (24 * T))}`)
+    const map = part?.sunlight?.map ?? null
+    const stamp = `${cast.x0},${cast.y0},${cast.w},${cast.h},${this.sunRevision},${visible.toFixed(2)},${part?.sunlight?.dark ? 1 : 0}`
+    const { sunStrength } = this.look, { daylight } = this.daySun
+    sun.cast!.draw(stamp, cast.x0, cast.y0, cast.w, cast.h, (wx, wy) => {
+      const j = (wy - cast.y0) * cast.w + (wx - cast.x0)
+      if (!cast.dir[j] && !cast.contact[j]) return null
+      const vis = map ? (sampleVisibility(map, wx + 0.5, wy + 0.5) >= dither(wx, wy) ? 1 : 0) : 1
+      const d = overShadow(this.stillDarkAt(wx, wy), shadowDarkness(cast.dir[j]!, cast.contact[j]!, visible, vis, sunStrength, daylight))
+      return d > 0 ? shadeMultiply(d) : null
+    })
+  }
+
+  /** Still casters that can reach chunk (cx, cy), lit for this revision. */
+  private castersNear(cx: number, cy: number, revision: string): Caster[] {
+    const sl = this.area.slopes!
+    if (!this.stillCasters) {
+      this.stillCasters = new Map()
+      const decor = slopeDecorAtlas(this, DECOR_ATLAS), tex = this.textures.get(decor)
+      for (const p of this.area.props) {
+        const frame = p.kind === 'crag' ? `crag-${p.variant & 3}` : tangleFrame(p.kind, p.variant), crag = p.kind === 'crag'
+        if (!crag && !tex.has(frame)) continue
+        const fx = p.fieldX ?? p.tx * T + 8, fy = (p.fieldY ?? (p.ty + 1) * T) - 2
+        const tx = Math.max(0, Math.min(sl.field.w - 1, Math.floor(fx / T))), ty = Math.max(0, Math.min(sl.field.h - 1, Math.floor(fy / T)))
+        const [gx, gy] = fieldGradient(sl.field, fx, fy)
+        const c: StillCaster = { x: p.tx * T + 8, y: (p.ty + 1) * T, fx, fy, gx, gy, z: fieldZ(sl.field, tx, ty, fx / T - tx, fy / T - ty),
+          proxy: frameProxy(this, crag ? CRAG_KEY : decor, frame, CASTER_KIND[p.kind] ?? 'plant') }
+        const key = `${Math.floor(p.tx / 24)},${Math.floor(p.ty / 24)}`
+        const list = this.stillCasters.get(key)
+        if (list) list.push(c); else this.stillCasters.set(key, [c])
+      }
+    }
+    if (revision !== this.castersRevision) { this.castersLit.clear(); this.castersRevision = revision }
+    const out: Caster[] = []
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++)
+      for (const c of this.stillCasters.get(`${cx + dx},${cy + dy}`) ?? []) {
+        let lit = this.castersLit.get(c)
+        if (!lit) {
+          const visible = this.daySun.daylight > 0 ? terrainVisibility(sl.field, c.fx, c.fy, c.z, this.daySun.direction) : 0
+          lit = { x: c.x, y: c.y, proxy: c.proxy, flip: false, v: shadowRay(c.gx, c.gy, this.daySun.direction, sl.k), visible }
+          this.castersLit.set(c, lit)
+        }
+        out.push(lit)
+      }
+    return out
   }
 
   /** Only light is invalidated. New revisions cancel unfinished light work,
@@ -491,7 +575,7 @@ export class HeightLabScene extends Phaser.Scene {
     if (!sl) return
     const day = this.look.sunClock ? clockSun(serverNow()) : sunAt(this.look.sunTime)
     // Clock lighting updates roughly every 43 seconds; the manual slider has .01 steps.
-    const revision = `${this.look.sunlight}:${this.look.sunStrength}:${day.time.toFixed(3)}:${day.daylight.toFixed(2)}:${this.look.slopeFacing}`
+    const revision = `${this.look.sunlight}:${this.look.sunStrength}:${day.time.toFixed(3)}:${day.daylight.toFixed(2)}:${this.look.slopeFacing}:${this.look.spriteShadows}`
     this.daySun = day
     this.sunRevision = revision
     const chunks = [...this.parts.values()].filter(p => !!p.sunlight).sort((a,b) =>
@@ -500,7 +584,8 @@ export class HeightLabScene extends Phaser.Scene {
     const start = performance.now()
     for (const p of chunks) {
       const light = p.sunlight!
-      if (light.revision !== revision) light.start(sl, day, this.look.sunStrength, this.look.sunlight && this.look.slopeFacing !== 'off', revision)
+      if (light.revision !== revision) light.start(sl, day, this.look.sunStrength, this.look.sunlight && this.look.slopeFacing !== 'off', revision,
+        this.look.spriteShadows === 'proxy' ? () => this.castersNear(p.cx, p.cy, revision) : null)
       while (light.pending) {
         const cost = light.step()
         if (cost !== null) { this.sunCosts.push(cost); if (this.sunCosts.length > 600) this.sunCosts.shift(); this.stillKey = '' }
@@ -831,7 +916,9 @@ export class HeightLabScene extends Phaser.Scene {
       parts.push({ o: text, dz: 3000, a: 1 })
     }
     // A twin on either layer: movers cross between them.
-    const thing = this.addThing({ parts, layer: node.layer, x, y, z: 0, seen: 1, tint: tint ?? 0xffffff, ...(this.area.slopes ? { sun: { x, y, height: sprite.displayHeight * 0.65, shadow: sunShadow! } } : {}) }, true)
+    const cast = this.area.slopes ? new MoverShadow(this, `hl-mover-shadow-${this.movers.length}`) : undefined
+    const proxy = this.area.slopes ? frameProxy(this, sprite.texture.key, sprite.frame.name, 'body', sprite.scaleY) : undefined
+    const thing = this.addThing({ parts, layer: node.layer, x, y, z: 0, seen: 1, tint: tint ?? 0xffffff, ...(this.area.slopes ? { sun: { x, y, height: sprite.displayHeight * 0.65, shadow: sunShadow!, kind: 'body' as const, cast, proxy } } : {}) }, true)
     const m: Mover = { thing, walker: { x, y, layer: node.layer, hw: 5, fh: 4 }, sprite, anim, speed, path: null, wait: 0, stuck: 0, next }
     this.movers.push(m)
     return m
@@ -1439,8 +1526,11 @@ export class HeightLabScene extends Phaser.Scene {
       sunlight: (() => {
         const t = this.hero.thing, [gx, gy] = fieldGradient(s.field, t.sun!.x, t.sun!.y)
         const at = this.sunAtFeet(t)
+        const v = shadowRay(gx, gy, this.daySun.direction, s.k), cast = castProxy(t.sun!.proxy!, t.x, t.y, v)
+        const casters = this.castersRevision === this.sunRevision ? [...this.castersLit.values()].filter(c => Math.hypot(c.x - t.x, c.y - t.y) < 160).map(c => ({ x: c.x, y: c.y, kind: c.proxy.kind, foot: [c.x + c.proxy.foot.x, c.y + c.proxy.foot.y], height: c.proxy.height, v: c.v, visible: c.visible })) : []
         return { tint: lightTint(at.rgb), shadow: sunShadow(gx, gy, t.sun!.height, this.daySun.direction), gait: this.hero.gait ?? null,
-          direction: this.daySun.direction, time: this.daySun.time, daylight: this.daySun.daylight, visibility: at.visible, opacity: shadowOpacity(at.visible, this.look.sunStrength, this.daySun.daylight) }
+          direction: this.daySun.direction, time: this.daySun.time, daylight: this.daySun.daylight, visibility: at.visible, opacity: shadowOpacity(at.visible, this.look.sunStrength, this.daySun.daylight),
+          mode: this.look.spriteShadows, ray: v, under: this.stillDarkAt(t.x, t.y - 1), cast: { x0: cast.x0, y0: cast.y0, w: cast.w, h: cast.h, foot: [t.x + t.sun!.proxy!.foot.x, t.y + t.sun!.proxy!.foot.y] }, casters }
       })(),
       sunMap: { pending: [...this.parts.values()].filter(p => p.sunlight && (p.sunlight.pending || p.sunlight.revision !== this.sunRevision)).length,
         revision: this.sunRevision, chunks: this.parts.size, costs: this.sunCosts, albedoPaints: this.albedoPaints },

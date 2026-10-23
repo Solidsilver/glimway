@@ -60,6 +60,8 @@ export interface LabLook {
   sunTime: number
   /** Follow the game/server clock, including the dev offset. */
   sunClock: boolean
+  /** Sprite cast shadows: 2d proxies cast onto the ground, or 2c sheared silhouettes. */
+  spriteShadows: 'proxy' | 'silhouette'
 }
 
 /** Preset drawing controls. Sunlight, strength and time update only the light layer. */
@@ -83,7 +85,7 @@ export function slopePresetOf(l: SlopeLook): SlopePreset | null {
 }
 
 /** "Reset": the Shading baseline, 60% uphill, 6% downhill, noon, gait and sunlight on. */
-export const SLOPE_RESET: Partial<LabLook> = { ...SLOPE_PRESETS.baseline.look, slopeUphill: 60, slopeDownhill: 6, slopeGait: true, sunlight: true, sunStrength: 1, sunTime: 0.5, sunClock: false }
+export const SLOPE_RESET: Partial<LabLook> = { ...SLOPE_PRESETS.baseline.look, slopeUphill: 60, slopeDownhill: 6, slopeGait: true, sunlight: true, sunStrength: 1, sunTime: 0.5, sunClock: false, spriteShadows: 'proxy' }
 
 /** Just the slopes area's drawing settings. */
 export function slopeSettings(l: SlopeLook & Partial<Pick<LabLook, 'sunlight' | 'sunStrength'>>): SlopeLook & Partial<Pick<LabLook, 'sunlight' | 'sunStrength'>> {
@@ -133,7 +135,7 @@ const DEFAULT: LabLook = {
   strategy: 'region',
   walkOverlay: false,
   ...SLOPE_PRESETS.baseline.look,
-  slopeUphill: 60, slopeDownhill: 6, slopeGait: true, sunlight: true, sunStrength: 1, sunTime: 0.5, sunClock: false
+  slopeUphill: 60, slopeDownhill: 6, slopeGait: true, sunlight: true, sunStrength: 1, sunTime: 0.5, sunClock: false, spriteShadows: 'proxy'
 }
 
 /** Each setting's allowed values (a range for the sliders). */
@@ -162,7 +164,8 @@ const ALLOWED: { [K in keyof LabLook]: readonly LabLook[K][] | { min: number; ma
   sunlight: [false, true],
   sunStrength: { min: 0, max: 2 },
   sunTime: { min: 0, max: 1 },
-  sunClock: [true, false]
+  sunClock: [true, false],
+  spriteShadows: ['proxy', 'silhouette']
 }
 
 /**

@@ -20,6 +20,7 @@
     { key: 'slopeLift', label: 'Lift strength', slopes: true, options: [{ value: 0, label: 'None' }, { value: 24, label: 'Moderate (24 px a level)' }, { value: 48, label: 'Full (48 px a level)' }] },
     { key: 'slopeGait', label: 'Slope gait', slopes: true, options: [{ value: false, label: 'Off' }, { value: true, label: 'On' }] },
     { key: 'sunlight', label: 'Sunlight', slopes: true, options: [{ value: false, label: 'Off' }, { value: true, label: 'On' }] },
+    { key: 'spriteShadows', label: 'Sprite shadows', slopes: true, options: [{ value: 'proxy', label: 'Proxy' }, { value: 'silhouette', label: '2c silhouette' }] },
     { key: 'strategy', label: 'Near home, the way up', walk: true, options: [{ value: 'region', label: 'Region plan' }, { value: 'chunk', label: 'Per-chunk repair' }] },
     { key: 'walkOverlay', label: 'Near home, stranded ground and chunk lines', walk: true, options: [{ value: false, label: 'Off' }, { value: true, label: 'On' }] },
     { key: 'fog', label: 'Levels above and below fade to', options: [{ value: 'fog', label: 'Fog' }, { value: 'sky', label: 'Sky' }, { value: 'none', label: 'Nothing' }] },

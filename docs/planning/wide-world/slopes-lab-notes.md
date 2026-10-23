@@ -1,4 +1,87 @@
-# Slopes lab, round 2c: one sun (exp/slopes-sun)
+# Slopes lab, round 2d: grounded sprite shadows (exp/slopes-shadows)
+
+2026-10-22. The 2c light layer, terrain shadows, sprite tint and linear speeds
+remain. Proxy shadows replace the sheared sprite drawing by default. Earlier
+rounds below are historical; 2d supersedes their sun path and sprite shadows.
+
+## How to walk 2d
+
+Open **Height lab → Walk the height lab**, then **Area → Slopes, hills and
+passes**. Choose **Reset to Shading baseline**. Check **Facing shade →
+Restrained**, **Contour detail → Off**, **Small terraces → Off**, **Lift strength
+→ None**, **Slope gait → On**, **Sunlight → On**, **Sun strength: 100%**,
+**Sprite shadows → Proxy**, **Uphill slowdown: 60%**, and **Downhill quickening:
+6%**. Uncheck **Sun follows the game clock** to enable **Time of day**.
+Keep **Levels overlay → Off**, **Levels above and below fade to → Fog**, and
+**Fog per level → Medium**. Close the dev panel between changes to judge the art.
+
+Field coordinates below match the CI evidence; the original spawn is (70,96).
+The screenshot HUD is not a control label or a coordinate overlay.
+
+| Stop | Field tile | Time of day and what to watch |
+|---|---|---|
+| Owner's meadow | 86,75 | Boulder at 87,73, pines and birch at 87,78. Step through **9.6, 10.6, 11.3, 11.6, 11.9, 12.2, 12.5, 13.7, 16.8 h**. Watch trunk bases, the boulder's underside and your feet. |
+| Hills meadow | 26,81 | **9.6, 12.0, 16.8 h**. Check feet and tree contacts on rolling ground, including overlapping evening shadows. |
+| Knoll, sunny / shaded-facing sides | 86,87 / 86,96 | **12.0 h**. Compare the compact rounded hero shadow on the two receiving slopes. “Shaded” here names the hill's facing; it does not promise terrain occlusion. |
+| Spire | View toward 40,40 from 40,52 | **16.8 h**. Check the long terrain shade; the hero is near the lower screen edge. |
+| Terrain shade | 69,34 | **7.2 / 16.8 h**. Only faint foot contact should remain, without a dark directional body shadow. |
+| Phone meadow | 86,75 | **9.6 h**, portrait. Check that feet and shadow remain readable beside the touch controls. |
+
+At the meadow compare **Sprite shadows → Proxy / 2c silhouette** at **11.6 h**
+and **16.8 h**. This compares caster shapes using the same new sun; it does not
+restore the old noon spin. Return to **Proxy**. Try **Sun strength: 50% / 100% /
+200%** if a contact is hard to see. The sun rises east, stays north at noon and
+sets west. Its azimuth moves steadily at 15°/hour and elevation tops at 66°;
+noon shadows stay short while dawn/dusk shadows lengthen.
+
+The owner's questions, at every stop:
+
+- Does every shadow leave from where the object touches the ground?
+- Do the noon steps change gently?
+- Does it look hand-made rather than a flat cutout?
+
+Also check whether the hero's noon shadow now reads as a soft, rounded pixel-art
+contact shape; whether a rock feels planted; and whether only faint contact
+remains in terrain shade. Proxy bodies have a broader base, a narrower rounded
+end and a one-world-pixel dithered rim. Trees use round crown slices above a
+trunk; rocks use low rounded slices. Pixel snapping and ordered edge dithering
+supply the handmade edge; direction stays continuous to avoid quantisation pops.
+
+Projection uses the local receiving plane and the same sun as the ground.
+Contacts persist faintly in terrain shade; overlapping sprite casts take the
+darker value, and directional casts fade with terrain visibility. These local
+proxies do not wrap around distant cliffs. The phone capture establishes
+framing only; it does not establish mobile performance.
+
+### Evidence and review (2d)
+
+[Source CI run 39911879693](https://github.com/Solidsilver/glimway/actions/runs/39911879693),
+code `a6a28250`, passed the GPU E2E suite: **17 passed, 0 flaky, 0 failed**.
+All 2,878 local Node tests pass, including a raster regression for a rounded
+noon body shadow on flat and sloping ground; all typechecks and Svelte checks
+are clean. Playwright and Vite ran only in CI.
+
+All 20 originals and 19 crops from this run were inspected at full size,
+after inspecting the same 39 from the handoff run 39909944507. Originals,
+matching state JSON and hashes are in [the 2d evidence index](lab/slopes/2d/README.md).
+
+| Frames | Contact / noon progression / art judgment |
+|---|---|
+| Meadow, all nine times | Pine trunks and birch bases connect to their casts; the boulder has a small shadow emerging beneath its front. Each noon step moves a short shadow gently through south. Rounded proxy masses and pixel edges replace the recognisable sheared sprite drawing. |
+| Meadow silhouette references, 11.6 / 16.8 h | The old flat tree outlines and long evening strips remain visible for comparison; both use the new sun path. |
+| Hills meadow, 9.6 / 12.0 / 16.8 h | Bases stay planted across the rolling ground. The noon hero contact is rounder and shorter; evening casts stretch consistently and overlapping shadows retain one darkness. |
+| Knoll, sunny / shaded-facing at noon | The hero's previous narrow rectangle is now a shorter rounded taper with a dithered rim. Both sides retain foot contact and respond to the receiving slope. These are facing-shade comparisons, not full terrain occlusion. |
+| Terrain shade, 7.2 / 16.8 h | Hero terrain visibility and directional opacity are zero in both state samples. Visually, only a faint foot contact remains; tree casts also fade. |
+| Spire, 16.8 h | Long terrain shade reads across the mountain. The original frames the feature with the hero at its lower edge; its centre crop cannot judge the hero's contact. |
+| Phone meadow, 9.6 h | Hero, rock and trunks remain grounded and legible at portrait size; touch controls leave the relevant feet clear. |
+
+Desktop time scrubbing through 41 sun positions recorded 237 rAF intervals:
+**p50/p95 16.7 ms, p99/max 16.8 ms**, none over 33 or 50 ms. Raw intervals and
+chunk costs remain in [2d-evidence.json](lab/slopes/2d/2d-evidence.json).
+This short desktop sample and one phone still do not measure mobile pacing
+or guarantee a worst-case world-streaming budget.
+
+## Slopes lab, round 2c: one sun (exp/slopes-sun)
 
 2026-10-22. Dev-only, on the same hand-made field. The 2b and 2a notes below
 are historical; their fixed NW light and smoothstep speeds are superseded here.

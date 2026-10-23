@@ -2,15 +2,22 @@
 import Phaser from 'phaser'
 import { buildSunMap, SUN_RES, type SunMap } from './sun-map.ts'
 import { silhouetteBounds, type DaySun } from './sun.ts'
+import { buildShadowLayer, casterProxy, type Caster, type CasterKind, type ShadowProxy } from './sun-shadow.ts'
 import type { SlopesInfo } from './slopes.ts'
 
 export class SunChunk {
   readonly image: Phaser.GameObjects.Image
   private texture: Phaser.Textures.CanvasTexture
   private data: ImageData
-  private work: Generator<void, SunMap> | null = null
+  private work: Generator<void, { map: SunMap; dark: Float32Array | null; px: Uint8ClampedArray | null }> | null = null
   revision = ''
   map: SunMap | null = null
+  /** Still casters' shadow darkness, one cell a world pixel (null: none drawn). */
+  dark: Float32Array | null = null
+  /** Those shadows, multiplied over the ground and light, under every sprite. */
+  readonly shade: Phaser.GameObjects.Image
+  private shadeTexture: Phaser.Textures.CanvasTexture
+  private shadeData: ImageData
   private cost = 0
   constructor(private scene: Phaser.Scene, private key: string, readonly x: number, readonly y: number, readonly width: number, readonly height: number) {
     // Half-texel alignment: maps sample the boundary itself. Crop off the
@@ -29,11 +36,25 @@ export class SunChunk {
     const mask = clip.createGeometryMask()
     this.image.setMask(mask)
     this.image.once('destroy', () => { mask.destroy(); clip.destroy() })
+    const shade = document.createElement('canvas'); shade.width = width; shade.height = height
+    if (scene.textures.exists(`${key}-shade`)) scene.textures.remove(`${key}-shade`)
+    this.shadeTexture = scene.textures.addCanvas(`${key}-shade`, shade)!
+    this.shadeTexture.setFilter(Phaser.Textures.FilterMode.NEAREST)
+    this.shadeData = new ImageData(width, height)
+    this.shade = scene.add.image(x, y, `${key}-shade`).setOrigin(0).setDepth(-998_990).setBlendMode(Phaser.BlendModes.MULTIPLY).setVisible(false)
   }
-  start(info: SlopesInfo, sun: DaySun, strength: number, enabled: boolean, revision: string): void {
+  /** `casters` (still trees and rocks that can reach this chunk) is read
+   * once the light is done; null draws no still shadows. */
+  start(info: SlopesInfo, sun: DaySun, strength: number, enabled: boolean, revision: string, casters: (() => readonly Caster[]) | null = null): void {
     this.revision = revision
     this.cost = 0
-    this.work = buildSunMap(info, this.x, this.y, this.width, this.height, sun, strength, enabled)
+    const { x, y, width, height } = this
+    this.work = (function* () {
+      const map = yield* buildSunMap(info, x, y, width, height, sun, strength, enabled)
+      if (!casters || !enabled) return { map, dark: null, px: null }
+      const layer = yield* buildShadowLayer(map, x, y, width, height, casters(), strength, sun.daylight)
+      return { map, ...layer }
+    })()
   }
   /** A few rows per step; returns the complete chunk's CPU+upload cost. */
   step(): number | null {
@@ -42,15 +63,81 @@ export class SunChunk {
     this.cost += performance.now() - t
     if (!next.done) return null
     const upload = performance.now()
-    this.map = next.value
-    this.data.data.set(next.value.px)
+    this.map = next.value.map
+    this.data.data.set(next.value.map.px)
     this.texture.context.putImageData(this.data, 0, 0)
     this.texture.refresh(); this.texture.setFilter(Phaser.Textures.FilterMode.LINEAR)
+    this.dark = next.value.dark
+    if (next.value.px) {
+      this.shadeData.data.set(next.value.px)
+      this.shadeTexture.context.putImageData(this.shadeData, 0, 0)
+      this.shadeTexture.refresh(); this.shadeTexture.setFilter(Phaser.Textures.FilterMode.NEAREST)
+    }
+    this.shade.setVisible(!!next.value.px)
     this.cost += performance.now() - upload
     this.work = null
     return this.cost
   }
   get pending(): boolean { return this.work !== null }
+  /** Still-shadow darkness at a world pixel (0 outside or before it's drawn). */
+  darkAt(wx: number, wy: number): number {
+    const lx = Math.floor(wx) - this.x, ly = Math.floor(wy) - this.y
+    return this.dark && lx >= 0 && ly >= 0 && lx < this.width && ly < this.height ? this.dark[ly * this.width + lx]! : 0
+  }
+  destroy(): void { this.image.destroy(); this.shade.destroy(); this.scene.textures.remove(this.key); this.scene.textures.remove(`${this.key}-shade`) }
+}
+
+/** Shadow proxies, made once per atlas frame, kind and scale (like masks). */
+const proxyCaches = new WeakMap<Phaser.Textures.TextureManager, Map<string, ShadowProxy>>()
+export function frameProxy(scene: Phaser.Scene, texture: string, frameName: string | number | undefined, kind: CasterKind, scale = 1): ShadowProxy {
+  let cache = proxyCaches.get(scene.textures)
+  if (!cache) { cache = new Map(); proxyCaches.set(scene.textures, cache) }
+  const frame = scene.textures.getFrame(texture, frameName), key = `${texture}-${frame.name}-${kind}-${scale.toFixed(4)}`
+  const old = cache.get(key)
+  if (old) return old
+  const canvas = document.createElement('canvas'); canvas.width = frame.cutWidth; canvas.height = frame.cutHeight
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })!
+  ctx.drawImage(frame.source.image as CanvasImageSource, frame.cutX, frame.cutY, frame.cutWidth, frame.cutHeight, 0, 0, canvas.width, canvas.height)
+  const proxy = casterProxy(kind, ctx.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height, scale)
+  cache.set(key, proxy)
+  return proxy
+}
+
+/** A walking caster's shadow: a small canvas redrawn only when its pixel
+ * position, the light, or the still shadows under it change. */
+export class MoverShadow {
+  readonly image: Phaser.GameObjects.Image
+  private texture: Phaser.Textures.CanvasTexture
+  private data: ImageData
+  private drawn = ''
+  static readonly SIZE = 192
+  constructor(private scene: Phaser.Scene, private key: string) {
+    const canvas = document.createElement('canvas'); canvas.width = canvas.height = MoverShadow.SIZE
+    if (scene.textures.exists(key)) scene.textures.remove(key)
+    this.texture = scene.textures.addCanvas(key, canvas)!
+    this.texture.setFilter(Phaser.Textures.FilterMode.NEAREST)
+    this.data = new ImageData(MoverShadow.SIZE, MoverShadow.SIZE)
+    this.image = scene.add.image(0, 0, key).setOrigin(0).setDepth(-998_980).setBlendMode(Phaser.BlendModes.MULTIPLY).setVisible(false)
+  }
+  /** `multiply(wx, wy)` gives each pixel's RGB multiplier, or null for none. */
+  draw(stamp: string, x0: number, y0: number, w: number, h: number, multiply: (wx: number, wy: number) => readonly [number, number, number] | null): void {
+    this.image.setVisible(true)
+    if (stamp === this.drawn) return
+    this.drawn = stamp
+    const S = MoverShadow.SIZE, px = this.data.data
+    px.fill(255)
+    // A body's longest (capped) shadow fits; anything past the canvas is cut.
+    for (let iy = 0; iy < Math.min(h, S); iy++) for (let ix = 0; ix < Math.min(w, S); ix++) {
+      const m = multiply(x0 + ix, y0 + iy)
+      if (!m) continue
+      const i = (iy * S + ix) * 4
+      px[i] = m[0] * 255; px[i + 1] = m[1] * 255; px[i + 2] = m[2] * 255
+    }
+    this.texture.context.putImageData(this.data, 0, 0)
+    this.texture.refresh(); this.texture.setFilter(Phaser.Textures.FilterMode.NEAREST)
+    this.image.setPosition(x0, y0)
+  }
+  hide(): void { this.image.setVisible(false) }
   destroy(): void { this.image.destroy(); this.scene.textures.remove(this.key) }
 }
 

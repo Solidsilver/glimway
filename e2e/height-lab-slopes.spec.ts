@@ -370,7 +370,8 @@ test.describe('slopes 2c', () => {
     await setLook(page, { sunTime: .9 })
     frames['spire-evening'] = await shot(page, '2c-spire-evening', spots.get('spire')!)
     const terrainShade = { name: 'terrain-shade', x: 69, y: 34, fx: 69, fy: 34, look: null }
-    for (const [name, time] of [['morning', .1], ['evening', .9]] as const) {
+    // 2d's arc is lower at 7.2 h, so this spot's morning sun comes at 8.4 h.
+    for (const [name, time] of [['morning', .2], ['evening', .9]] as const) {
       await setLook(page, { sunTime: time })
       frames[`terrain-shade-${name}`] = await shot(page, `2c-terrain-shade-${name}`, terrainShade)
     }
@@ -429,5 +430,112 @@ test.describe('slopes 2c phone', () => {
     await setLook(page, { area: 'slopes', ...SLOPE_PRESETS.baseline.look, sunlight: true, sunStrength: 1, sunTime: .1, sunClock: false, slopeUphill: 60, slopeDownhill: 6, grid: false, walkOverlay: false })
     const spots = new Map((await labState(page)).slopes!.spots.map(s => [s.name, s]))
     await shot(page, '2c-phone-owner-morning', { ...spots.get('pass-mid')!, look: null })
+  })
+})
+
+// Round 2d: proxy shadows. The owner's meadow time sweep, shade, spire, phone. CI only.
+type ShadowSlopes = SunSlopes & { sunlight: SunSlopes['sunlight'] & {
+  mode: string; ray: number[]; under: number; cast: { x0: number; y0: number; w: number; h: number; foot: number[] }
+  casters: { x: number; y: number; kind: string; foot: number[]; height: number; v: number[]; visible: number }[] } }
+const SWEEP = [9.6, 10.6, 11.3, 11.6, 11.9, 12.2, 12.5, 13.7, 16.8]
+const hourTime = (h: number) => Math.round((h - 6) / 12 * 1000) / 1000
+/** A crop around the hero (the camera follows them) to judge shadows at full size. */
+async function crop(page: Page, name: string) {
+  const vp = page.viewportSize()!
+  const w = Math.min(560, vp.width), h = Math.min(360, vp.height)
+  await page.screenshot({ path: `${OUT}/${name}-crop.png`, clip: { x: (vp.width - w) / 2, y: (vp.height - h) / 2, width: w, height: h } })
+}
+const SHADOW_LOOK: Look = { area: 'slopes', ...SLOPE_PRESETS.baseline.look, slopeUphill: 60, slopeDownhill: 6, sunlight: true, sunStrength: 1, sunTime: .5, sunClock: false, spriteShadows: 'proxy', grid: false, walkOverlay: false, fog: 'fog', fogStrength: 'medium', zoom: true, haze: true }
+
+test.describe('slopes 2d', () => {
+  test.use({ viewport: { width: 1280, height: 800 } })
+  test('height lab, slopes 2d: proxy shadows through the day at the meadow, in shade and at the spire', async ({ page }) => {
+    test.setTimeout(600_000)
+    mkdirSync(OUT, { recursive: true })
+    await openLab(page)
+    await setLook(page, SHADOW_LOOK)
+    const spots = new Map((await labState(page)).slopes!.spots.map(s => [s.name, s]))
+    // The meadow: a boulder at 87,73 among pines, a birch at 87,78; the hero just south-west of the rock.
+    const meadow: Spot = { name: 'meadow', x: 86, y: 75, fx: 86, fy: 75, look: null }
+    const hills: Spot = { name: 'hills-meadow', x: 26, y: 81, fx: 26, fy: 81, look: null }
+    const frames: Record<string, ShadowSlopes['sunlight']> = {}
+    for (const h of SWEEP) {
+      await setLook(page, { sunTime: hourTime(h) })
+      const name = `2d-meadow-${h.toFixed(1)}h`
+      frames[name] = ((await shot(page, name, meadow)).slopes as ShadowSlopes).sunlight
+      await crop(page, name)
+    }
+    // The same meadow drawn the 2c way, to compare.
+    for (const h of [11.6, 16.8]) {
+      await setLook(page, { sunTime: hourTime(h), spriteShadows: 'silhouette' })
+      const name = `2d-meadow-${h.toFixed(1)}h-2c-silhouette`
+      frames[name] = ((await shot(page, name, meadow)).slopes as ShadowSlopes).sunlight
+      await crop(page, name)
+    }
+    await setLook(page, { spriteShadows: 'proxy' })
+    for (const h of [9.6, 12, 16.8]) {
+      await setLook(page, { sunTime: hourTime(h) })
+      const name = `2d-hills-meadow-${h.toFixed(1)}h`
+      frames[name] = ((await shot(page, name, hills)).slopes as ShadowSlopes).sunlight
+      await crop(page, name)
+    }
+    // The knoll's shaded and sunny sides at noon; the spire's long evening shade.
+    await setLook(page, { sunTime: .5 })
+    for (const [name, x, y] of [['sunny', 86, 87], ['shaded', 86, 96]] as const) {
+      frames[`2d-knoll-${name}-noon`] = ((await shot(page, `2d-knoll-${name}-noon`, { name, x, y, fx: x, fy: y, look: null })).slopes as ShadowSlopes).sunlight
+      await crop(page, `2d-knoll-${name}-noon`)
+    }
+    await setLook(page, { sunTime: hourTime(16.8) })
+    frames['2d-spire-evening'] = ((await shot(page, '2d-spire-evening', spots.get('spire')!)).slopes as ShadowSlopes).sunlight
+    await crop(page, '2d-spire-evening')
+    // In terrain shade the hero's directional shadow fades; contact remains.
+    const terrainShade: Spot = { name: 'terrain-shade', x: 69, y: 34, fx: 69, fy: 34, look: null }
+    for (const [name, h] of [['morning', 7.2], ['evening', 16.8]] as const) {
+      await setLook(page, { sunTime: hourTime(h) })
+      frames[`2d-terrain-shade-${name}`] = ((await shot(page, `2d-terrain-shade-${name}`, terrainShade)).slopes as ShadowSlopes).sunlight
+      await crop(page, `2d-terrain-shade-${name}`)
+    }
+    // Scrubbing stays smooth with still shadows redrawn per chunk.
+    await setLook(page, { sunTime: .5 })
+    await put(page, meadow); await painted(page); await sunReady(page)
+    const before = await sunState(page)
+    await startFrames(page)
+    for (let i = 0; i <= 40; i++) {
+      await setLook(page, { sunTime: i / 40 })
+      await page.waitForTimeout(80)
+    }
+    const scrubbing = await endFrames(page)
+    await sunReady(page)
+    const after = await sunState(page)
+    writeFileSync(`${OUT}/2d-evidence.json`, JSON.stringify({ frames, scrubbing, lightCostsPerChunk: after.sunMap.costs, before: before.sunMap, after: after.sunMap }, null, 1))
+    expect(after.sunMap.albedoPaints).toBe(before.sunMap.albedoPaints)
+    // The noon sweep turns gently: 11.3 → 12.5 h moves the ray under 25°.
+    const angle = (s: ShadowSlopes['sunlight']) => Math.atan2(s.ray[1]!, s.ray[0]!) * 180 / Math.PI
+    expect(Math.abs(angle(frames['2d-meadow-12.5h']!) - angle(frames['2d-meadow-11.3h']!))).toBeLessThan(25)
+    const len = (s: ShadowSlopes['sunlight']) => Math.hypot(s.ray[0]!, s.ray[1]!)
+    expect(len(frames['2d-meadow-12.2h']!)).toBeLessThan(.6)
+    expect(len(frames['2d-meadow-16.8h']!)).toBeGreaterThan(2)
+    for (const [name, s] of Object.entries(frames)) {
+      expect(s.mode, name).toBe(name.includes('2c-silhouette') ? 'silhouette' : 'proxy')
+      // The hero's footprint lies inside their own cast box.
+      if (s.mode === 'proxy') {
+        expect(s.cast.foot[0]! >= s.cast.x0 && s.cast.foot[0]! <= s.cast.x0 + s.cast.w, name).toBe(true)
+        expect(s.cast.foot[1]! >= s.cast.y0 && s.cast.foot[1]! <= s.cast.y0 + s.cast.h, name).toBe(true)
+      }
+    }
+    expect(frames['2d-meadow-12.2h']!.casters.some(c => c.kind === 'rock')).toBe(true)
+    expect(frames['2d-meadow-12.2h']!.casters.some(c => c.kind === 'tree')).toBe(true)
+    expect(scrubbing.p95, 'time scrubbing frame p95').toBeLessThan(50)
+  })
+})
+
+test.describe('slopes 2d phone', () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
+  test('height lab, slopes 2d: proxy shadows phone frame', async ({ page }) => {
+    test.setTimeout(240_000)
+    mkdirSync(OUT, { recursive: true })
+    await openLab(page)
+    await setLook(page, { ...SHADOW_LOOK, sunTime: hourTime(9.6) })
+    await shot(page, '2d-phone-meadow-9.6h', { name: 'meadow', x: 86, y: 75, fx: 86, fy: 75, look: null })
   })
 })
