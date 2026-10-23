@@ -62,7 +62,9 @@ test('2c silhouette affine transform anchors the feet and sends its top away fro
     assert.ok(ray.dx * sun.direction[0] + ray.dy * sun.direction[1] < 0);
     const m = silhouetteTransform(12, 20, ray.dx, ray.dy);
     near(m.a * 6 + m.c * 20 + m.e, 0); near(m.b * 6 + m.d * 20 + m.f, 0);
-    near(m.a * 6 + m.e, ray.dx); near(m.b * 6 + m.f, ray.dy + 1.5);
+    near(m.a * 6 + m.e, ray.dx); near(m.b * 6 + m.f, ray.dy);
+    near(Math.hypot(m.a, m.b), 1);
+    near(m.a * ray.dx + m.b * ray.dy, 0);
   }
   assert.ok(sunShadow(0, 0, 20, sunAt(.1).direction).length > sunShadow(0, 0, 20, sunAt(.5).direction).length * 3);
   near(shadowOpacity(0, 1), 0); near(shadowOpacity(.5, 1), shadowOpacity(1, 1) / 2);

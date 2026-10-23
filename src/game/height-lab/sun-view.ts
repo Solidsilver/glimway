@@ -1,7 +1,7 @@
 /** Phaser adapter for the independent, cheap sun map and alpha silhouettes. */
 import Phaser from 'phaser'
 import { buildSunMap, SUN_RES, type SunMap } from './sun-map.ts'
-import { silhouetteTransform, type DaySun } from './sun.ts'
+import { type DaySun } from './sun.ts'
 import type { SlopesInfo } from './slopes.ts'
 
 export class SunChunk {
@@ -54,53 +54,42 @@ export class SunChunk {
   destroy(): void { this.image.destroy(); this.scene.textures.remove(this.key) }
 }
 
-let shadowId = 0
-/** One texture per caster, reused as the sun or its animation changes. The
- * source frame's alpha (not its colour) makes one soft dark silhouette. */
+/** Alpha masks are made once per atlas frame, shared by every caster and
+ * across scene restarts, like the lab's other art textures. Sun scrubbing
+ * only changes image transforms; no canvas work or texture uploads. */
+function silhouetteMask(scene: Phaser.Scene, body: Phaser.GameObjects.Image | Phaser.GameObjects.Sprite): string {
+  const frame = body.frame, key = `hl-sun-mask-${body.texture.key}-${frame.name}`
+  if (scene.textures.exists(key)) return key
+  const canvas = document.createElement('canvas')
+  canvas.width = frame.cutWidth; canvas.height = frame.cutHeight
+  const ctx = canvas.getContext('2d')!
+  ctx.drawImage(frame.source.image as CanvasImageSource, frame.cutX, frame.cutY, frame.cutWidth, frame.cutHeight, 0, 0, canvas.width, canvas.height)
+  ctx.globalCompositeOperation = 'source-in'
+  ctx.fillStyle = '#191b26'; ctx.fillRect(0, 0, canvas.width, canvas.height)
+  ctx.globalCompositeOperation = 'source-over'
+  const copy = document.createElement('canvas'); copy.width = canvas.width; copy.height = canvas.height
+  copy.getContext('2d')!.drawImage(canvas, 0, 0)
+  ctx.clearRect(0, 0, canvas.width, canvas.height)
+  ctx.filter = 'blur(0.6px)'; ctx.drawImage(copy, 0, 0); ctx.filter = 'none'
+  const texture = scene.textures.addCanvas(key, canvas)!
+  texture.setFilter(Phaser.Textures.FilterMode.LINEAR)
+  return key
+}
+
 export class SilhouetteShadow {
   readonly image: Phaser.GameObjects.Image
-  private key = `hl-silhouette-${shadowId++}`
-  private texture: Phaser.Textures.CanvasTexture
-  private signature = ''
-  private offsetX = 0
-  private offsetY = 0
   constructor(private scene: Phaser.Scene, x: number, y: number) {
-    const c = document.createElement('canvas'); c.width = c.height = 1
-    this.texture = scene.textures.addCanvas(this.key, c)!
-    this.texture.setFilter(Phaser.Textures.FilterMode.LINEAR)
-    this.image = scene.add.image(x, y, this.key).setOrigin(0)
+    this.image = scene.add.image(x, y, '__WHITE').setOrigin(0.5, 1)
   }
   project(body: Phaser.GameObjects.Image | Phaser.GameObjects.Sprite, dx: number, dy: number, x: number, y: number): void {
-    dx = Math.round(dx * 4) / 4; dy = Math.round(dy * 4) / 4
-    const w = Math.max(1, Math.round(body.displayWidth)), h = Math.max(1, Math.round(body.displayHeight))
-    const signature = `${body.texture.key}:${body.frame.name}:${body.flipX}:${w}:${h}:${dx}:${dy}`
-    if (this.signature !== signature) {
-      this.signature = signature
-      const m = silhouetteTransform(w, h, dx, dy)
-      const corners = [[0, 0], [w, 0], [0, h], [w, h]].map(([u, v]) => [m.a * u! + m.c * v! + m.e, m.b * u! + m.d * v! + m.f])
-      const minX = Math.floor(Math.min(...corners.map(p => p[0]!))) - 2, minY = Math.floor(Math.min(...corners.map(p => p[1]!))) - 2
-      const maxX = Math.ceil(Math.max(...corners.map(p => p[0]!))) + 2, maxY = Math.ceil(Math.max(...corners.map(p => p[1]!))) + 2
-      this.offsetX = minX; this.offsetY = minY
-      this.texture.setSize(maxX - minX, maxY - minY)
-      const ctx = this.texture.context, frame = body.frame
-      ctx.clearRect(0, 0, this.texture.width, this.texture.height)
-      ctx.save()
-      ctx.setTransform(m.a, m.b, m.c, m.d, m.e - minX, m.f - minY)
-      if (body.flipX) { ctx.translate(w, 0); ctx.scale(-1, 1) }
-      ctx.drawImage(frame.source.image as CanvasImageSource, frame.cutX, frame.cutY, frame.cutWidth, frame.cutHeight, 0, 0, w, h)
-      ctx.restore()
-      ctx.globalCompositeOperation = 'source-in'
-      ctx.fillStyle = '#191b26'; ctx.fillRect(0, 0, this.texture.width, this.texture.height)
-      ctx.globalCompositeOperation = 'source-over'
-      // A small, uniform soft edge without changing the silhouette's shape.
-      const copy = document.createElement('canvas'); copy.width = this.texture.width; copy.height = this.texture.height
-      copy.getContext('2d')!.drawImage(this.texture.canvas, 0, 0)
-      ctx.clearRect(0, 0, copy.width, copy.height)
-      ctx.filter = 'blur(0.6px)'; ctx.drawImage(copy, 0, 0); ctx.filter = 'none'
-      this.texture.refresh(); this.texture.setFilter(Phaser.Textures.FilterMode.LINEAR)
-      this.image.setTexture(this.key)
-    }
-    this.image.setPosition(x + this.offsetX, y + this.offsetY)
+    const key = silhouetteMask(this.scene, body)
+    if (this.image.texture.key !== key) this.image.setTexture(key)
+    const length = Math.hypot(dx, dy)
+    // This is silhouetteTransform's affine matrix: width perpendicular to
+    // the ray, source height flattened away from the foot. The negative Y
+    // scale puts the upside-down alpha mask onto the receiving plane.
+    this.image.setPosition(x, y).setRotation(length ? Math.atan2(-dx, dy) : 0)
+      .setScale(body.displayWidth / this.image.width, -Math.max(2, length) / this.image.height).setFlipX(body.flipX)
   }
-  destroy(): void { this.image.destroy(); this.scene.textures.remove(this.key) }
+  destroy(): void { this.image.destroy() }
 }

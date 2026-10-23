@@ -55,7 +55,12 @@ export function sunShadow(gx: number, gy: number, height: number, sun: SunDirect
  * (width/2,height); the top moves by the ray, the width stays readable.
  * The tiny flattening term keeps noon shadows from disappearing entirely. */
 export function silhouetteTransform(width: number, height: number, dx: number, dy: number): { a: number; b: number; c: number; d: number; e: number; f: number } {
-  return { a: 1, b: 0, c: -dx / height, d: -(dy + 1.5) / height, e: dx - width / 2, f: dy + 1.5 }
+  const length = Math.hypot(dx, dy)
+  const ux = length ? dx / length : 0, uy = length ? dy / length : 1
+  // The billboard's width lies across the shadow, so a westward sun
+  // cannot collapse a broad tree into a horizontal thread.
+  const a = uy, b = -ux, vx = ux * Math.max(2, length), vy = uy * Math.max(2, length)
+  return { a, b, c: -vx / height, d: -vy / height, e: vx - a * width / 2, f: vy - b * width / 2 }
 }
 /** A shaded foot cannot cast a second full-strength shadow. */
 export function shadowOpacity(visible: number, strength: number, daylight = 1): number {

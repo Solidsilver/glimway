@@ -369,7 +369,15 @@ test.describe('slopes 2c', () => {
     }
     await setLook(page, { sunTime: .9 })
     frames['spire-evening'] = await shot(page, '2c-spire-evening', spots.get('spire')!)
-    // A path beside the spire in terrain shadow: its own cast shadow fades.
+    const terrainShade = { name: 'terrain-shade', x: 69, y: 34, fx: 69, fy: 34, look: null }
+    for (const [name, time] of [['morning', .1], ['evening', .9]] as const) {
+      await setLook(page, { sunTime: time })
+      frames[`terrain-shade-${name}`] = await shot(page, `2c-terrain-shade-${name}`, terrainShade)
+    }
+    const shade = frames['terrain-shade-evening'].slopes as SunSlopes
+    expect(shade.sunlight.visibility).toBeLessThan(.15)
+    expect(shade.sunlight.opacity).toBeLessThan(.07)
+    expect((frames['terrain-shade-morning'].slopes as SunSlopes).sunlight.visibility).toBeGreaterThan(.85)
     await put(page, owner)
     await painted(page); await sunReady(page)
     expect(facing.morning.direction[0]).toBeGreaterThan(0)
@@ -408,6 +416,7 @@ test.describe('slopes 2c', () => {
     await setClock(null)
     await setLook(page, { sunClock: false, sunTime: .5 })
     writeFileSync(`${OUT}/2c-evidence.json`, JSON.stringify({ frames, facing, scrubbing, lightCostsPerChunk: after.sunMap.costs, runs, before: before.sunMap, after: after.sunMap }, null, 1))
+    expect(scrubbing.p95, 'time scrubbing frame p95').toBeLessThan(50)
   })
 })
 
