@@ -71,9 +71,11 @@ function lathe(kind: CasterKind, px: Uint8ClampedArray, w: number, h: number): S
   const footX = kind === 'rock' ? mid[half.indexOf(Math.max(...half))]! : mid.slice(0, baseRows).reduce((a, b) => a + b, 0) / baseRows
   const height = filled.length * s
   if (kind === 'body') {
-    const r = Math.max(2, Math.max(...half) * 0.62)
+    const r = Math.max(2.5, Math.max(...half) * 0.8)
     const rx = Math.max(3, Math.max(...half) * 0.6)
-    return { kind, slices: [{ x: 0, h0: 0, h1: Math.max(0, height - r), r0: r, r1: r }], contact: { rx, ry: rx * GROUND_ASPECT }, foot: { x: footX - w / 2, y: -pad - 1 }, height }
+    // A broad foot and rounded, narrower head avoid a straight-sided noon box.
+    // Keep the upper sphere inside the body height rather than extending it.
+    return { kind, slices: [{ x: 0, h0: 0, h1: Math.max(0, height - r * 1.5), r0: r, r1: r * 0.7 }], contact: { rx, ry: rx * GROUND_ASPECT }, foot: { x: footX - w / 2, y: -pad - 1 }, height }
   }
   // Smooth the leafy outline (a 3-row median), so crowns cast blobs, not lace.
   const smooth = half.map((_, i) => [half[i - 1] ?? half[i]!, half[i]!, half[i + 1] ?? half[i]!].sort((a, b) => a - b)[1]!)
@@ -151,7 +153,7 @@ export function castProxy(p: ShadowProxy, footX: number, footY: number, v: reado
       const t = ll > 1e-9 ? Math.max(0, Math.min(1, ((X - s.ax) * ex + (qy - s.ay) * ey) / ll)) : 0
       const margin = s.r0 + (s.r1 - s.r0) * t - Math.hypot(X - s.ax - ex * t, qy - s.ay - ey * t)
       if (margin < 0) continue
-      const pen = Math.min(2.5, 0.35 + 0.025 * (s.h0 + (s.h1 - s.h0) * t) * vLen)
+      const pen = Math.min(2.5, (p.kind === 'body' ? 1 : 0.35) + 0.025 * (s.h0 + (s.h1 - s.h0) * t) * vLen)
       if (margin >= pen || dither(x0 + ix, y0 + iy) < margin / pen) { dir[i] = 1; break }
     }
   }

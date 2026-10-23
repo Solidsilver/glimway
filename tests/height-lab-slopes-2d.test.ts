@@ -178,3 +178,21 @@ test('2d saved looks gain sprite shadows: proxy by default, 2c silhouette kept t
   assert.equal(migrateLook({ spriteShadows: 'silhouette' }).spriteShadows, 'silhouette');
   assert.equal(migrateLook({ spriteShadows: 'blob' }).spriteShadows, 'proxy');
 });
+
+// A rounded shadow must survive rasterisation, where a narrow capsule used
+// to turn into a constant-width rectangle under the feet on the noon knoll.
+test('2d noon body shadow has a rounded, tapering end on flat and sloping ground', () => {
+  const p = proxy('body');
+  for (const gy of [0, -0.1, 0.1]) {
+    const c = castProxy(p, ...FOOT, shadowRay(0, gy, sunAt(0.5).direction));
+    const widths: number[] = [];
+    for (let y = Math.floor(FOOT[1] + p.foot.y); y < c.y0 + c.h; y++) {
+      let width = 0;
+      for (let x = c.x0; x < c.x0 + c.w; x++) width += at(c, x, y).dir;
+      if (width) widths.push(width);
+    }
+    assert.ok(widths.length >= 3, 'visible below the feet');
+    assert.ok(widths.at(-1)! <= Math.max(...widths) * 0.8, 'tip rounds off instead of ending as a box');
+    assert.ok(widths.filter(w => w < Math.max(...widths)).length >= 2, 'multiple stepped edge rows');
+  }
+});
