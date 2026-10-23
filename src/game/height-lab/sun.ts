@@ -8,14 +8,17 @@ export const SUN: SunDirection = [-0.5 / n, -0.5 / n, 0.7 / n]
 export const AMBIENT: RGB = [0.45, 0.49, 0.58]
 export const NIGHT: RGB = [0.16, 0.19, 0.28]
 
-/** Dawn=0, noon=.5, dusk=1. A tilted arc: east to west, north at noon.
- * The small horizon elevation keeps dawn shadows finite. */
+/** Lowest and highest sun elevation (radians): above the horizon at dawn,
+ * well below the zenith at noon, so azimuth never has to race. */
+export const SUN_ELEVATION = { min: 0.08, max: 66 * Math.PI / 180 } as const
+/** Dawn=0, noon=.5, dusk=1. A tilted arc: east to west through north.
+ * Azimuth turns at one steady rate (15° an hour); elevation alone sets
+ * shadow length, so noon shadows are short rather than spinning. */
 export function sunAt(time: number, daylight = 1): DaySun {
-  const t = clamp(time), a = Math.PI * t
-  const x = Math.cos(a), y = -0.28 * Math.sin(a), z = 0.08 + 1.25 * Math.sin(a)
-  const len = Math.hypot(x, y, z)
+  const t = clamp(time), az = Math.PI * t
+  const e = SUN_ELEVATION.min + (SUN_ELEVATION.max - SUN_ELEVATION.min) * Math.pow(Math.sin(az), 1.5)
   const warm = Math.pow(Math.abs(2 * t - 1), 2)
-  return { direction: [x / len, y / len, z / len], color: [1, 0.98 - 0.24 * warm, 0.94 - 0.40 * warm], daylight: clamp(daylight), time: t }
+  return { direction: [Math.cos(e) * Math.cos(az), -Math.cos(e) * Math.sin(az), Math.sin(e)], color: [1, 0.98 - 0.24 * warm, 0.94 - 0.40 * warm], daylight: clamp(daylight), time: t }
 }
 
 /** Existing game/server clock, UTC like the calendar: sunrise 06:00, sunset 18:00.

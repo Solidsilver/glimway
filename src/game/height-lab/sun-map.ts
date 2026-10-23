@@ -75,6 +75,13 @@ export function* buildSunMap(info: SlopesInfo, x: number, y: number, width: numb
   }
   return map
 }
+/** sampleSunMap's visibility alone, allocation-free (per shadow pixel). */
+export function sampleVisibility(map: SunMap, x: number, y: number): number {
+  const fx = Math.max(0, Math.min(map.w - 1.00001, (x - map.x) / SUN_RES))
+  const fy = Math.max(0, Math.min(map.h - 1.00001, (y - map.y) / SUN_RES))
+  const ix = Math.floor(fx), iy = Math.floor(fy), ax = fx - ix, ay = fy - iy, i = iy * map.w + ix, v = map.visibility
+  return (v[i]! * (1 - ax) + v[i + 1]! * ax) * (1 - ay) + (v[i + map.w]! * (1 - ax) + v[i + map.w + 1]! * ax) * ay
+}
 export function sampleSunMap(map: SunMap, x: number, y: number): SunSample {
   const fx = Math.max(0, Math.min(map.w - 1.00001, (x - map.x) / SUN_RES))
   const fy = Math.max(0, Math.min(map.h - 1.00001, (y - map.y) / SUN_RES))
