@@ -46,19 +46,23 @@ export interface LabLook {
   slopeTerraces: boolean
   /** The slopes area: how far the ground is drawn north as it rises, px a level (0: not at all; 48: the round-1 true ¾ lift). */
   slopeLift: LiftPx
-  /** Speed cut at the walking limit, percent, 0–40; directional smoothstep. */
+  /** Speed cut at the walking limit, percent, 0–80; linear in the uphill component. */
   slopeUphill: number
   /** Speed gain at the downhill walking limit, percent, 0–20. */
   slopeDownhill: number
   /** Actual-speed cadence, a small directional lean and occasional steep-foot scuffs. */
   slopeGait: boolean
-  /** Extend facing light onto sprites and their cast shadows. */
+  /** Enable the separate sun layer and silhouette shadows. */
   sunlight: boolean
-  /** Sun intensity, 0–1; facing shade remains the reference when sunlight is off. */
+  /** Direct sun intensity, 0–2; zero keeps the ambient fill. */
   sunStrength: number
+  /** Dawn=0, noon=.5, dusk=1. */
+  sunTime: number
+  /** Follow the game/server clock, including the dev offset. */
+  sunClock: boolean
 }
 
-/** Preset drawing controls. Sunlight/strength also repaint, but presets preserve them. */
+/** Preset drawing controls. Sunlight, strength and time update only the light layer. */
 export const SLOPE_KEYS = ['slopeFacing', 'slopeContours', 'slopeTerraces', 'slopeLift'] as const
 export type SlopeLook = Pick<LabLook, (typeof SLOPE_KEYS)[number]>
 
@@ -78,8 +82,8 @@ export function slopePresetOf(l: SlopeLook): SlopePreset | null {
   return null
 }
 
-/** "Reset": the Shading baseline, 12% uphill, no downhill gain, gait and sunlight on. */
-export const SLOPE_RESET: Partial<LabLook> = { ...SLOPE_PRESETS.baseline.look, slopeUphill: 12, slopeDownhill: 0, slopeGait: true, sunlight: true, sunStrength: 1 }
+/** "Reset": the Shading baseline, 60% uphill, 6% downhill, noon, gait and sunlight on. */
+export const SLOPE_RESET: Partial<LabLook> = { ...SLOPE_PRESETS.baseline.look, slopeUphill: 60, slopeDownhill: 6, slopeGait: true, sunlight: true, sunStrength: 1, sunTime: 0.5, sunClock: false }
 
 /** Just the slopes area's drawing settings. */
 export function slopeSettings(l: SlopeLook & Partial<Pick<LabLook, 'sunlight' | 'sunStrength'>>): SlopeLook & Partial<Pick<LabLook, 'sunlight' | 'sunStrength'>> {
@@ -129,7 +133,7 @@ const DEFAULT: LabLook = {
   strategy: 'region',
   walkOverlay: false,
   ...SLOPE_PRESETS.baseline.look,
-  slopeUphill: 12, slopeDownhill: 0, slopeGait: true, sunlight: true, sunStrength: 1
+  slopeUphill: 60, slopeDownhill: 6, slopeGait: true, sunlight: true, sunStrength: 1, sunTime: 0.5, sunClock: false
 }
 
 /** Each setting's allowed values (a range for the sliders). */
@@ -152,11 +156,13 @@ const ALLOWED: { [K in keyof LabLook]: readonly LabLook[K][] | { min: number; ma
   slopeContours: ['off', 'sparse', 'current'],
   slopeTerraces: [true, false],
   slopeLift: [0, 24, 48],
-  slopeUphill: { min: 0, max: 40 },
+  slopeUphill: { min: 0, max: 80 },
   slopeDownhill: { min: 0, max: 20 },
   slopeGait: [false, true],
   sunlight: [false, true],
-  sunStrength: { min: 0, max: 1 }
+  sunStrength: { min: 0, max: 2 },
+  sunTime: { min: 0, max: 1 },
+  sunClock: [true, false]
 }
 
 /**

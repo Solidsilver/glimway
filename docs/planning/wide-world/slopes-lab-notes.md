@@ -1,3 +1,75 @@
+# Slopes lab, round 2c: one sun (exp/slopes-sun)
+
+2026-10-22. Dev-only, on the same hand-made field. The 2b and 2a notes below
+are historical; their fixed NW light and smoothstep speeds are superseded here.
+
+## How to walk 2c
+
+Open **Height lab → Walk the height lab**, then **Area → Slopes, hills and
+passes**. Choose **Reset to Shading baseline**, then **Slopes, drawn as (round
+1’s styles) → Shading by facing**. Reset now selects **Facing shade →
+Restrained**, **Contour detail → Off**, **Small terraces → Off**, **Lift strength
+→ None**, **Uphill slowdown: 60%**, **Downhill quickening: 6%**, **Slope gait →
+On**, **Sunlight → On**, **Sun strength: 100%**, **Time of day: 12.0 h**, and
+**Sun follows the game clock** unchecked. Existing numeric saved speeds are
+preserved; old Off/Gentle become 0/12. Reset chooses the new recommendation.
+
+The uphill range is **0–80%**, downhill **0–20%**, and sun strength **0–200%**.
+The directional speed response is linear: at the owner's typical 0.10 uphill
+component, 40/60/80% caps give ×0.84/×0.76/×0.68. Across the slope stays ×1.
+Start with **60% uphill / 6% downhill**, compare **0% / 0%**, then **40% / 6%**,
+and try **80% / 20%** as the strong endpoint. On the knoll's 56 px uphill run,
+Node field times are 0.509091 s at 0%, 0.757295 s at 40%, 1.001386 s at 60%,
+and 1.478355 s at 80%. The 60/6 downhill run is 0.485304 s. These are simulated
+field travel times at 110 px/s, not browser frame measurements.
+
+Keep **Levels overlay → Off**, **Levels above and below fade to → Fog**,
+**Fog per level → Medium**, and close the dev panel to judge the picture.
+At the owner's path between walls (about 72,48), move **Time of day** through
+**7.2 h**, **12.0 h**, and **16.8 h**. The sun rises east, tilts north at noon,
+and sets west; morning/evening light is warmer. Shadows go west in the morning,
+south at noon and east in the evening. Revisit the knoll's north and south
+sides (86,87 and 86,96), hills (30,88), outcrop approach (103,82), and spire
+(view toward 40,40 from 40,52). At evening the spire casts a long terrain shadow.
+Compare your own shadow in that shade with its shape in open sun.
+
+**Sun follows the game clock** disables the manual slider and reads the
+existing UTC game/server clock (06:00 dawn, 12:00 noon, 18:00 dusk). The existing
+dev clock advances it; follow its reload instruction after advancing the server.
+At night this area uses dim blue ambient. The lamp and cave lighting rework
+remains out of scope. All paused cave controls and other lab areas remain.
+
+The light layer uses 8 px texels per 24-tile chunk, Lambert normals from the
+bilinear field, cool ambient, and half-tile terrain rays bounded to a 64-tile
+halo. Ground albedo is cached independently of facing, sun strength and time.
+Moving the sun invalidates only light jobs; nearest chunks update first under
+a 3 ms frame budget, in four-row steps. Sprites sample that light map at their
+feet. Their alpha masks are flattened and sheared with the same sun ray,
+anchored at the foot, shortened/lengthened by the receiving slope, and faded
+by terrain visibility. The old ground rims, contact strips, old face-atlas
+lighting, and translucent contact shadows in the lab's prop atlas are gone.
+The normal game's atlas is untouched. Silhouettes approximate a local plane;
+they do not wrap across a distant cliff. Terrain shadows are bounded and the
+low-resolution map softens their edge.
+
+Questions for the owner:
+
+- Is 60/6 enough uphill effort on the pass, while across-slope travel stays comfortable?
+- Do all morning/noon/evening shadows agree, with the old west-side strip gone?
+- Do the hero, Wren, trees and boulders feel planted, and does the silhouette shape help?
+- Is the northward noon tilt enough to read the hills? Is dawn/dusk too warm or dark?
+- Does fading a sprite's shadow in terrain shade read naturally?
+
+### Evidence and performance (2c)
+
+Node verification covers linear speeds, migration, Lambert/ambient, wall
+shadow direction and length, alpha projection, shadow fading, the tilted arc,
+shared chunk samples, and albedo independence. CI captures matching frames and
+slider performance; measured results and selected originals are recorded after
+the foreground CI and visual review below.
+
+---
+
 # Slopes lab, round 2b: shading plus feel (exp/slopes-2b)
 
 2026-10-22. A dev-only comparison on the same hand-made 144×144 field. Round 2b

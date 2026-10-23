@@ -48,12 +48,17 @@
   {#if here}
     <button type="button" onclick={() => location.assign(labUrl(false))}>Leave the lab</button>
     {#if look.area === 'slopes'}
-      {#each [{ key: 'slopeUphill', label: 'Uphill slowdown', max: 40 }, { key: 'slopeDownhill', label: 'Downhill quickening', max: 20 }, { key: 'sunStrength', label: 'Sun strength', max: 100 }] as slider}
+      {#each [{ key: 'slopeUphill', label: 'Uphill slowdown', max: 80 }, { key: 'slopeDownhill', label: 'Downhill quickening', max: 20 }, { key: 'sunStrength', label: 'Sun strength', max: 200 }] as slider}
         <label class="row">
           <span class="label">{slider.label}: {Math.round((look[slider.key as 'slopeUphill' | 'slopeDownhill' | 'sunStrength']) * (slider.key === 'sunStrength' ? 100 : 1))}%</span>
           <input type="range" min="0" max={slider.max} step="1" aria-label={slider.label} value={look[slider.key as 'slopeUphill' | 'slopeDownhill' | 'sunStrength'] * (slider.key === 'sunStrength' ? 100 : 1)} oninput={(e) => setLabLook({ [slider.key]: Number(e.currentTarget.value) / (slider.key === 'sunStrength' ? 100 : 1) })} />
         </label>
       {/each}
+      <label class="row">
+        <span class="label">Time of day: {(6 + look.sunTime * 12).toFixed(1)} h (dawn to dusk)</span>
+        <input type="range" min="0" max="1" step="0.01" aria-label="Time of day" disabled={look.sunClock} value={look.sunTime} oninput={(e) => setLabLook({ sunTime: Number(e.currentTarget.value) })} />
+      </label>
+      <label class="row"><span class="label"><input type="checkbox" checked={look.sunClock} onchange={(e) => setLabLook({ sunClock: e.currentTarget.checked })} /> Sun follows the game clock</span></label>
       <div class="row" role="group" aria-label="Slopes, presets">
         <span class="label">Slopes, presets</span>
         {#each presets as [name, p] (name)}

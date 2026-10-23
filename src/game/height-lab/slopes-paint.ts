@@ -1,48 +1,4 @@
-/**
- * Height lab (dev only): the slopes area's ground (./slopes.ts) in the four
- * drawing treatments the owner compares (./slopes.ts SlopesLook), painted a
- * part (a chunk) at a time. Pure pixels (./slopes-art.ts makes them
- * textures), so a node script can render previews. The treatments combine:
- *
- *  - facing shade: ground facing the light (from the north-west, the top
- *    left of the screen, as relief maps light it) brighter, ground facing
- *    away darker. "Current" multiplies the brightness (round 1, 0.55–1.4);
- *    "restrained" shifts the palette instead, warmer and lighter toward the
- *    light, cooler and darker away from it, by a response that saturates
- *    (gentle hills get most of their cue, mountains no more), so grass stays
- *    grass and nothing goes near black or white under the hero;
- *  - contours: "current" is round 1's faint grass edge every half level,
- *    dark on the low side and light on the high side, a little stronger
- *    every two levels; "sparse" is every level, broken into short accents
- *    (grass tips, a soil edge, a few stones) chosen per 7 px world cell, so
- *    they stay put as the camera moves, and faded out toward steep ground;
- *    a light edge on the high side and a soft dark one below it, so the
- *    high side reads without a wall;
- *  - small terraces: the slope as shallow steps of a fifth of a level, each
- *    with a lit lip and a short riser where it faces you;
- *  - lift (24 or 48 px a level): the ground painted where it lies, then
- *    moved north k rows a level as it rises (./slopes.ts liftColumn),
- *    cliffs opening into their faces, painted here pixel by pixel (no tile
- *    sprites, so faces meet the lifted ground without steps at tile seams).
- *
- * Cliffs are lit as the slopes are, from the north-west: a drop to the north
- * or west has a light rim (the lit wall below it isn't seen from above), a
- * drop to the east a dark rim and a shadow cast east over the land below, a
- * south face (shaded) a light lip on top and a contact shadow at its foot.
- * Round 1 lit the cliffs' rims from the south and the slopes from the
- * north-west, so a rise could read as a hole.
- *
- * Whatever the treatment, the ground is the Wilds' own painter
- * (../wilds/ground-paint.ts), higher land drier, then stonier, then snowy;
- * too-steep ground is scree (streaks down the fall line, loose stones) or
- * bare rock; crags are broken rock (a standing rock is drawn on each by the
- * scene); the rocky path beside the scree is laid slabs in the scree's own
- * stone (it has to read as open by its shape). The level images are cut by half levels, pixel by pixel along the
- * ground's own height (cut by tile, they showed as blocks on steep ground),
- * so fog by height difference fades in small steps; each overlaps the band
- * below it by a pixel, so no seam shows between them.
- */
-import { SUN, facingResponse, sunFacing } from './sun.ts'
+/** Dev-only slope albedo: material, contours and terrace marks. Sun light lives in sun-map.ts. */
 import { TERRAIN } from '../../lib/tile.ts'
 import { wildsGround } from '../../lib/wilds/data.ts'
 import { fnv1a32 } from '../../lib/hash.ts'
@@ -76,10 +32,6 @@ const hexRGB = (s: string): RGB => [parseInt(s.slice(1, 3), 16), parseInt(s.slic
 export const BAND = 0.5
 export const bandOf = (z: number) => Math.floor(z / BAND + 1e-4) * BAND
 
-/** How strongly facing shades ("current"): brightness change per unit of the sun's cosine. */
-const SHADE_GAIN = 1.4
-/** A cliff, between neighbouring pixels: a step of more than this (levels). Walkable and steep slopes are under 0.07 a pixel. */
-const DROP = 0.15
 
 /** Contours every CONTOUR levels, stronger every CONTOUR_MAJOR of them; terraces TERRACE levels high. */
 export const CONTOUR = 0.5
@@ -123,8 +75,6 @@ export function paintField(area: LabArea, x0: number, y0: number, w: number, h: 
   const scree = hexRGB('#aa9f8e')
   const bare = hexRGB('#96928b')
   const sand = hexRGB('#c4c2b2')
-  const lipC: RGB = [255, 242, 196]
-  const ink: RGB = [29, 26, 36]
   const surface = area.stack.layers[SURFACE]!
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++) {
@@ -182,11 +132,10 @@ export function paintField(area: LabArea, x0: number, y0: number, w: number, h: 
         const dash = hash(lane, Math.floor(along / 5), 22)
         if (dash < 0.1) tint([58, 54, 50], rock ? 0.35 : 0.25)
         else if (dash > 0.93) tint([214, 208, 196], 0.18)
-        // Loose stones, a shadow under each.
+        // Loose pale stones in the material.
         if (hash(wx >> 1, wy >> 1, 23) < 0.05 && (wx & 1) === 0 && (wy & 1) === 0) tint([228, 222, 208], 0.55)
-        else if (hash(wx >> 1, (wy - 1) >> 1, 23) < 0.05 && (wx & 1) === 0 && (wy & 1) === 1) tint([40, 36, 34], 0.4)
         if (talus) {
-          // Fallen blocks at a cliff's foot: uneven stones, each lit on top and shadowed below.
+          // Fallen blocks at a cliff foot, varied by material.
           const bx = Math.floor((wx + (Math.floor(wy / 3) % 2) * 2) / 4)
           const by = Math.floor(wy / 3)
           const blk = hash(bx, by, 33)
@@ -194,8 +143,6 @@ export function paintField(area: LabArea, x0: number, y0: number, w: number, h: 
           r *= k2
           g *= k2 * 0.98
           b *= k2 * 0.97
-          if (wy % 3 === 0 && blk > 0.4) tint([220, 212, 196], 0.25)
-          else if (wy % 3 === 2 && hash(bx, by, 34) < 0.5) tint([30, 28, 28], 0.3)
         }
         // A rim of loose stones where the walkable ground ends.
         const fx = wx & 15
@@ -220,41 +167,20 @@ export function paintField(area: LabArea, x0: number, y0: number, w: number, h: 
         const ex = (wx + (Math.floor(wy / 5) % 2) * 3) % 6
         const ey = wy % 5
         if (ey === 4 || ex === 5) tint([30, 28, 30], 0.6)
-        else if (ey === 0 || ex === 0) tint([220, 214, 200], 0.3)
       } else if (ground === G['tops-path']) {
         // The rocky path: flat stones of the scree's own stone, laid (scree has streaks down the fall line and loose
         // stones): each stone a jittered 9 px cell's nearest pixels, its own shade, a dark joint round it, lit on its
         // north-west side, worn smooth (no grit).
-        const [stoneId, edge, nw] = flagstone(wx, wy)
+        const [stoneId, edge] = flagstone(wx, wy)
         const v = hash(stoneId, 0, 35)
         const c = scree.map((ch) => ch * (0.95 + v * 0.13)) as RGB
         r = c[0]
         g = c[1]
         b = c[2]
         if (edge < 0.45) tint([95, 90, 82], 0.45)
-        else if (edge < 1.1 && nw) tint([234, 228, 214], 0.2)
-        else if (edge < 1.1) tint([92, 86, 80], 0.12)
       }
       // The treatments: light, then lines.
       let k = 1
-      if (lk.facing !== 'off' && kind !== KIND.crag) {
-        const lit = sunFacing(gx, gy)
-        const strength = lk.sunlight ? (lk.sunStrength ?? 1) : 1
-        if (lk.facing === 'current') k *= Math.max(0.55, Math.min(1.4, 1 + strength * SHADE_GAIN * (lit - SUN[2])))
-        else {
-          // Restrained: toward a warm light or a cool shade of the pixel's own colour, by a response that saturates.
-          const t = facingResponse(gx, gy) * strength
-          if (t > 0) {
-            r = mix(r, Math.min(255, r * 1.16), t)
-            g = mix(g, Math.min(255, g * 1.14), t)
-            b = mix(b, Math.min(255, b * 1.04), t)
-          } else {
-            r = mix(r, r * 0.72, -t)
-            g = mix(g, g * 0.77, -t)
-            b = mix(b, b * 0.86 + 6, -t)
-          }
-        }
-      }
       const step = (lo: number, hi: number) => Math.abs(hi - lo) < 0.15
       if (lk.contours === 'current' && kind !== KIND.crag) {
         const band = Math.floor(z / CONTOUR)
@@ -314,24 +240,6 @@ export function paintField(area: LabArea, x0: number, y0: number, w: number, h: 
           const e1 = zAt(x + 1, y)
           const w1 = zAt(x - 1, y)
           if ((step(z, e1) && tb(e1) > here) || (step(z, w1) && tb(w1) > here)) k *= 0.84
-        }
-      }
-      // Cliffs' rims, lit from the north-west (a drop is a step of over DROP between neighbouring pixels).
-      const zw = zAt(x - 1, y)
-      const ze = zAt(x + 1, y)
-      const zn = zAt(x, y - 1)
-      const zs = zAt(x, y + 1)
-      if (z - zn > DROP || z - zw > DROP) tint(lipC, 0.38)
-      else if (z - zs > DROP) tint(lipC, 0.32)
-      else if (z - ze > DROP) tint(ink, 0.55)
-      else if (zs - z > DROP || ze - z > DROP) tint(ink, 0.35)
-      else {
-        // East of a drop (cast shadow, 4 px), or at a south face's foot (contact shadow on the talus, 4 px).
-        for (let d = 1; d <= 4; d++) {
-          if (zAt(x - d, y) - z > DROP || zAt(x, y - d) - z > DROP) {
-            k *= 0.66 + (d - 1) * 0.08
-            break
-          }
         }
       }
       px[o] = r * k
@@ -400,7 +308,7 @@ function gradPx(f: Field, wx: number, wy: number): [number, number] {
 /** The paint cache's key (./slopes-art.ts) for a chunk of the area as it's drawn: every setting that paints (facing, contours, terraces, lift strength). */
 export function chunkKey(area: LabArea, cx: number, cy: number): string {
   const l = area.slopes!.look
-  return `${l.facing}|${l.contours}|${l.terraces ? 1 : 0}|${l.lift}|${l.sunlight ? l.sunStrength ?? 1 : "legacy"}|${cx},${cy}`
+  return `${l.contours}|${l.terraces ? 1 : 0}|${l.lift}|${cx},${cy}`
 }
 
 /** A part of the map (tiles, inclusive). */
@@ -448,13 +356,19 @@ export function* paintPartSteps(area: LabArea, part: SlopesPart): Generator<void
       zp.set(g.z, (r - part.y0) * T * W)
       yield
     }
-    // Under a face, the land in front's height (the face's own art covers it).
-    for (let ty = part.y0; ty <= part.y1; ty++)
-      for (let tx = part.x0; tx <= part.x1; tx++) {
-        if (l.kind[ty * l.w + tx] !== KIND.face) continue
-        const z = info.z[ty * l.w + tx]!
-        for (let y = 0; y < T; y++) zp.fill(z, ((ty - part.y0) * T + y) * W + (tx - part.x0) * T, ((ty - part.y0) * T + y) * W + (tx - part.x0) * T + T)
+    for (let ty = part.y0; ty <= part.y1; ty++) for (let tx = part.x0; tx <= part.x1; tx++) {
+      const i = ty * l.w + tx
+      if (l.kind[i] !== KIND.face) continue
+      for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
+        const at = ((ty - part.y0) * T + y) * W + (tx - part.x0) * T + x
+        const z = l.faceTop[i]! - (l.faceRow[i]! + (y + 0.5) / T) / 3
+        const tint = faceTint(l.faceTop[i]!)
+        const material = 152 + (hash(tx * T + x, ty * T + y, 25) - 0.5) * 18
+        for (let c = 0; c < 3; c++) px[at * 4 + c] = material * tint[c]!
+        px[at * 4 + 3] = 255
+        zp[at] = z
       }
+    }
   } else {
     for (let c = part.x0; c <= part.x1; c += STRIP) {
       const cols = Math.min(STRIP, part.x1 - c + 1)
@@ -490,13 +404,12 @@ export function* paintPartSteps(area: LabArea, part: SlopesPart): Generator<void
           const o = (y * W + px0) * 4
           if (!sp) continue
           if (sp.face) {
-            // The face itself (no tile sprites in the lift): rock facing south, so in the north-west light's shade,
-            // darker toward its foot; strata by height (they run level across columns), a crack here and there.
+            // Unlit cliff material: level strata and occasional cracks.
             const down = (s - sp.s0) / Math.max(1e-6, sp.s1 - sp.s0)
             const zf = sp.zS - down * (sp.zS - sp.zBot)
             const hz = zf * info.k * T
             const strata = hz - Math.floor(hz / 6) * 6
-            let cc = 128 - down * 34 + (hash(wx, Math.floor(hz), 25) - 0.5) * 14
+            let cc = 152 + (hash(wx, Math.floor(hz), 25) - 0.5) * 14
             if (strata < 1) cc += 12
             else if (strata < 2) cc -= 22
             if (hash(wx, Math.floor(hz / 14), 26) < 0.025) cc -= 26
@@ -520,7 +433,6 @@ export function* paintPartSteps(area: LabArea, part: SlopesPart): Generator<void
       yield
     }
   }
-  if (!info.lift) faceFeet(area, px, W, part)
   return { px, z: zp }
 }
 
@@ -604,27 +516,4 @@ export function cutBands(part: SlopesPart, px: Uint8ClampedArray, zp: Float32Arr
 /** A lifted face's colour by the height it rises to (warm low down, greyer and cooler high up), as ./slopes-art.ts slopeFaceTint. */
 function faceTint(z: number): RGB {
   return z < 2.5 ? [1.06, 0.98, 0.88] : z < 5 ? [1, 0.96, 0.92] : z < 9 ? [0.94, 0.95, 1] : [1.02, 1.03, 1.07]
-}
-
-/**
- * Unlifted, a face is a tile sprite on its footprint (the local face rule,
- * ./scene.ts buildFaces): the contact shadow on the ground at its foot, in
- * tiles like the face. (Rims and lips are painted in field space, paintField.)
- */
-function faceFeet(area: LabArea, px: Uint8ClampedArray, W: number, part: SlopesPart): void {
-  const l = area.slopes!.view
-  const kindAt = (tx: number, ty: number) => (tx < 0 || ty < 0 || tx >= l.w || ty >= l.h ? KIND.none : l.kind[ty * l.w + tx]!)
-  for (let ty = part.y0; ty <= part.y1; ty++)
-    for (let tx = part.x0; tx <= part.x1; tx++) {
-      const k = kindAt(tx, ty)
-      if (k === KIND.face || k === KIND.none || kindAt(tx, ty - 1) !== KIND.face) continue
-      for (let y = 0; y < 6; y++)
-        for (let x = 0; x < T; x++) {
-          const i = ((ty * T + y - part.y0 * T) * W + tx * T + x - part.x0 * T) * 4
-          const m = 0.6 + y * 0.065
-          px[i] = px[i]! * m
-          px[i + 1] = px[i + 1]! * m
-          px[i + 2] = px[i + 2]! * m
-        }
-    }
 }
