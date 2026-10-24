@@ -1,3 +1,90 @@
+# Slopes lab, round 2e: edges that read, and partial see-through (exp/slopes-edges)
+
+2026-10-24. Everything from 2d remains (sun, proxy shadows, gait). 2e adds
+edge shading, which marks every height drop in every look. It also makes the
+lift's see-through partial: only the part of the hero behind higher ground
+turns into the grey outline.
+
+## How to walk 2e
+
+Open **Height lab → Walk the height lab**, then **Area → Slopes, hills and
+passes**. To match the owner's 2d screenshot, choose **Full lift reference**,
+then set **Facing shade → Restrained**, **Contour detail → Off**, **Sunlight →
+On**, **Sun strength: 100%** and **Sprite shadows → Proxy**. Uncheck **Sun
+follows the game clock** and set **Time of day: 7.8 h**. In the new **Edge
+shading** group, press **Edge defaults**. Compare the looks with **Slopes,
+drawn as → True ¾ lift / Shading by facing**. Close the dev panel between
+changes to judge the art.
+
+Edge defaults, and why:
+
+- **Edge shading: 60%.** The band reads at a glance on one-level steps without
+  turning them into outlines. 100% is the "strong" frame.
+- **Band width: 4 px.** This is for a one-level drop: two px of the dark tone,
+  then the lighter tone dithered on a checkerboard. Thinner bands vanish at
+  the lab's zoom; wider ones look like a painted ditch.
+- **Scale by height difference: on.** A two-level drop gets a wider, darker
+  band than a single step, and a cliff gets the widest. Turn it off to see
+  every edge at the same weight.
+- **Threshold: 0.5 levels.** Every whole-level step counts, including the
+  ramp's terraces and cliff lips. Even the steepest gentle hill climbs only a
+  few hundredths of a level per pixel, so meadows get no edges at all.
+- **Rim light on the high lip: on.** It's a one-pixel warm highlight, kept
+  faint so it marks which side is high without drawing a white outline.
+
+Edges come from field heights, never from the lift. Unlifted, the band lies on
+the low ground beside the drop. Lifted, it lies on the low ground drawn next to
+the lip on screen: behind a higher rim, or at the foot of a face. Over a cast
+shadow or in terrain shade the band is weaker. Together they are never more
+than 15% darker than the darker of the two alone.
+
+| Stop | Field tile | What to watch |
+|---|---|---|
+| Spiral ramp (owner's spot) | 130,93 | **7.8 h**. The ring steps (levels 2→3→4) should all read now, including the edges that are not in sun shadow. Try **Edge shading 0% / 60% / 100%** and toggle **Scale by height difference**. |
+| Hills meadow | 26,81 | Rolling ground must stay clean: no bands or rims anywhere. |
+| Cliff edge | 103,95 (outcrop top) | The rim on the lip, and the band at the cliff's foot below the face. |
+| Legs behind the ridge | 132,65 | True ¾ lift (48 px). Only the legs, which are behind the plateau's rim, turn into the grey outline. The head and body draw normally. |
+| Fully behind | 132,66 | One step further north: the whole hero is the outline. |
+| Moderate lift | 132,66 | **Moderate lift** (24 px). Only the feet are covered here. At 132,67 the whole hero is. |
+
+The owner's questions, at every stop:
+
+- Can you tell where the ground drops without the sun's help?
+- Is the band pixel-art (hard tones, a dither) rather than a blur?
+- Does the meadow stay uncluttered?
+- Does the see-through cover only what is really behind the ground?
+
+### Evidence and review (2e)
+
+[Source CI run 40059811180](https://github.com/Solidsilver/glimway/actions/runs/40059811180)
+(code `5dcd2785`) passed the GPU E2E suite. All local Node tests pass,
+including 14 new 2e tests (edge placement in flat, 48 px and 24 px looks, the
+threshold, two tones with dithering, the cap, and the see-through rows). All
+typechecks are clean. Playwright and Vite ran only in CI.
+
+The first run, [40058570708](https://github.com/Solidsilver/glimway/actions/runs/40058570708),
+was green but failed the look. At **strong**, the band darkened the low side by
+only about 13% (I sampled the pixels), so the screen showed nothing but thin
+light rim lines. 2e therefore raised the band's tones and its smallest
+single-level weight, wiped out less of it in terrain shade, made the default
+band 4 px, and cut the rim to about a third of its former strength. Run
+40059811180 samples the default band at **0.74×** (inner tone) and **0.86×**
+(dithered outer tone), with the rim at about **1.2–1.3×**.
+
+I inspected all 17 originals and 17 crops at full size. Originals, state JSON
+and hashes are in [the 2e evidence index](lab/slopes/2e/README.md).
+
+| Frames | What they show |
+|---|---|
+| Spiral ramp, lift, off / default / strong | Off matches the owner's screenshot: only the sun-shadowed edges read. At default every ring step reads: a dark band on the low side of each step, a faint warm rim on the high lip, and a band at the foot of each ramp-side face. Strong reads as a firm outline without going black. |
+| Spiral ramp, facing, off / default / strong | The same steps read in the unlifted look: bands at the foot of the faces and along the ring sides. |
+| Unscaled variants | Every step gets the same weight. Scaled, the two-level drops beside the ramp get a slightly wider, darker band than single steps. On this patch the difference is small, because most steps are one level. |
+| Hills meadow, lift / facing | No bands or rims anywhere. Rolling ground stays uncluttered. |
+| Cliff edge (outcrop top), lift / facing | A rim and band line the lip. The cliff face itself is untouched. |
+| See-through, legs, 48 px (132,65) | Head and shoulders draw normally. Everything below the plateau's rim (58 of 178 sprite pixels, from row 12) is the grey outline. |
+| See-through, full, 48 px (132,66) | The whole hero is the outline (177/177). |
+| See-through, 24 px (132,66) | Only the feet (6 px) are the outline. |
+
 # Slopes lab, round 2d: grounded sprite shadows (exp/slopes-shadows)
 
 2026-10-22. The 2c light layer, terrain shadows, sprite tint and linear speeds
