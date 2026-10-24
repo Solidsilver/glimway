@@ -539,3 +539,69 @@ test.describe('slopes 2d phone', () => {
     await shot(page, '2d-phone-meadow-9.6h', { name: 'meadow', x: 86, y: 75, fx: 86, fy: 75, look: null })
   })
 })
+
+// Round 2e: edge shading and partial see-through. The owner's spiral ramp in the lift and in
+// shading by facing, each with edges off / default / strong and scaled or not; a gentle meadow and a
+// cliff edge with the defaults; the hero with only the legs behind the plateau's rim, and fully behind. CI only.
+type EdgeSlopes = ShadowSlopes & {
+  cover: { box: number[]; covered: number; total: number; spriteCovered: number; spriteTotal: number; top: number }
+  edges: { settings: { strength: number; width: number; scale: boolean; threshold: number; rim: boolean }; chunks: number; edges: number }
+}
+const EDGE_DEFAULTS: Look = { edgeShade: .6, edgeWidth: 4, edgeScale: true, edgeThreshold: .5, edgeRim: true }
+const EDGE_VARIANTS: [string, Look][] = [
+  ['off', { ...EDGE_DEFAULTS, edgeShade: 0 }],
+  ['default', EDGE_DEFAULTS],
+  ['strong', { ...EDGE_DEFAULTS, edgeShade: 1 }],
+  ['default-unscaled', { ...EDGE_DEFAULTS, edgeScale: false }],
+  ['strong-unscaled', { ...EDGE_DEFAULTS, edgeShade: 1, edgeScale: false }]
+]
+/** The owner's screenshot: restrained facing, contours off, 7.8 h. */
+const OWNER_LOOK: Look = { ...SHADOW_LOOK, sunTime: hourTime(7.8), ...EDGE_DEFAULTS }
+
+test.describe('slopes 2e', () => {
+  test.use({ viewport: { width: 1280, height: 800 } })
+  test('height lab, slopes 2e: edge shading at the spiral ramp in two looks, and partial see-through', async ({ page }) => {
+    test.setTimeout(900_000)
+    mkdirSync(OUT, { recursive: true })
+    await openLab(page)
+    await setLook(page, OWNER_LOOK)
+    const spots = new Map((await labState(page)).slopes!.spots.map(s => [s.name, s]))
+    const ramp = spots.get('spiral-ramp')!
+    const frames: Record<string, { edges: EdgeSlopes['edges']; cover: EdgeSlopes['cover']; silhouette: boolean; tile: number[] }> = {}
+    const keep = async (name: string, spot: Spot, cropToo = true) => {
+      const st = (await shot(page, name, spot)).slopes as EdgeSlopes
+      frames[name] = { edges: st.edges, cover: st.cover, silhouette: st.silhouette, tile: st.tile }
+      if (cropToo) await crop(page, name)
+      return st
+    }
+    for (const [look, lift] of [['lift', 48], ['facing', 0]] as const) {
+      await setLook(page, { slopeLift: lift })
+      for (const [variant, edges] of EDGE_VARIANTS) {
+        await setLook(page, edges)
+        await keep(`2e-ramp-${look}-${variant}`, ramp)
+      }
+      await setLook(page, EDGE_DEFAULTS)
+      // Gentle hills stay clean; a cliff's edge reads.
+      await keep(`2e-hills-meadow-${look}`, spots.get('hills')!)
+      await keep(`2e-cliff-edge-${look}`, spots.get('outcrop-top')!)
+    }
+    // Partial see-through: legs behind the plateau's rim, then fully behind it; and at 24 px a level.
+    await setLook(page, { slopeLift: 48 })
+    const legs = await keep('2e-seethrough-legs-48', spots.get('legs-behind-ridge')!)
+    const full = await keep('2e-seethrough-full-48', spots.get('behind-plateau')!)
+    await setLook(page, { slopeLift: 24 })
+    const legs24 = await keep('2e-seethrough-legs-24', spots.get('behind-plateau')!)
+    writeFileSync(`${OUT}/2e-evidence.json`, JSON.stringify(frames, null, 1))
+    expect(legs.cover.spriteCovered, 'legs: some covered').toBeGreaterThan(0)
+    expect(legs.cover.spriteCovered, 'legs: not all covered').toBeLessThan(legs.cover.spriteTotal * .8)
+    expect(legs.cover.top, 'legs: covered from below the head').toBeGreaterThan(4)
+    expect(full.cover.spriteCovered, 'full: all covered').toBeGreaterThanOrEqual(full.cover.spriteTotal * .95)
+    expect(legs24.cover.spriteCovered).toBeGreaterThan(0)
+    expect(legs24.cover.spriteCovered).toBeLessThan(legs24.cover.spriteTotal)
+    for (const [name, f] of Object.entries(frames)) {
+      if (!name.startsWith('2e-ramp')) continue
+      if (name.endsWith('-off')) expect(f.edges.settings.strength, name).toBe(0)
+      else expect(f.edges.edges, name).toBeGreaterThan(0)
+    }
+  })
+})

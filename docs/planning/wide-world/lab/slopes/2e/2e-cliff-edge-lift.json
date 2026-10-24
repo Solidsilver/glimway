@@ -1,0 +1,1049 @@
+{
+ "area": "slopes",
+ "look": {
+  "area": "slopes",
+  "fog": "fog",
+  "fogStrength": "medium",
+  "darkness": 0.6,
+  "caveStyle": "mixed",
+  "zoom": true,
+  "haze": true,
+  "cave": "lantern",
+  "skyTiles": 6,
+  "crossfade": 3,
+  "way": "blend",
+  "grid": false,
+  "strategy": "region",
+  "walkOverlay": false,
+  "slopeFacing": "restrained",
+  "slopeContours": "off",
+  "slopeTerraces": false,
+  "slopeLift": 48,
+  "slopeUphill": 60,
+  "slopeDownhill": 6,
+  "slopeGait": true,
+  "sunlight": true,
+  "sunStrength": 1,
+  "sunTime": 0.15,
+  "sunClock": false,
+  "spriteShadows": "proxy",
+  "edgeShade": 0.6,
+  "edgeWidth": 4,
+  "edgeScale": true,
+  "edgeThreshold": 0.5,
+  "edgeRim": true
+ },
+ "built": {
+  "area": "slopes",
+  "skyTiles": 6,
+  "caveStyle": "mixed",
+  "strategy": "region",
+  "walkOverlay": false,
+  "sunlight": true,
+  "sunStrength": 1,
+  "slopeFacing": "restrained",
+  "slopeContours": "off",
+  "slopeTerraces": false,
+  "slopeLift": 48
+ },
+ "layer": 0,
+ "z": 4.09702620967742,
+ "sky": 1,
+ "walked": 0,
+ "cave": 0,
+ "alpha": 0,
+ "light": 1,
+ "lightMs": 0,
+ "corners": {
+  "shown": [
+   1,
+   1,
+   1,
+   1
+  ],
+  "own": [
+   0,
+   0,
+   0,
+   0
+  ]
+ },
+ "uncapped": 0,
+ "iris": 0,
+ "crossfade": false,
+ "slopes": {
+  "look": {
+   "sunlight": true,
+   "sunStrength": 1,
+   "facing": "restrained",
+   "contours": "off",
+   "terraces": false,
+   "lift": 48
+  },
+  "preset": null,
+  "style": "lift",
+  "lift": true,
+  "gentle": true,
+  "sunlight": {
+   "tint": 13487063,
+   "shadow": {
+    "dx": -18.322551370634617,
+    "dy": 9.335806223007365,
+    "length": 20.56388014366665,
+    "angle": 2.670353755551324
+   },
+   "gait": {
+    "cadence": 0,
+    "x": 0,
+    "y": 0,
+    "scuff": false,
+    "along": 0
+   },
+   "direction": [
+    0.817907342552816,
+    -0.41674460635901733,
+    0.39667557533689674
+   ],
+   "time": 0.15,
+   "daylight": 1,
+   "visibility": 1,
+   "opacity": 0.46,
+   "mode": "proxy",
+   "ray": [
+    -1.3374125088054463,
+    0.33007526564008705
+   ],
+   "under": 0,
+   "cast": {
+    "x0": 1635,
+    "y0": 2083,
+    "w": 27,
+    "h": 12,
+    "foot": [
+     1654.8461538461538,
+     2087.0350496277915
+    ]
+   },
+   "casters": [
+    {
+     "x": 1736,
+     "y": 1984,
+     "kind": "tree",
+     "foot": [
+      1736,
+      1981
+     ],
+     "height": 24.3,
+     "v": [
+      -2.337670854623652,
+      1.3248460459815772
+     ],
+     "visible": 1
+    },
+    {
+     "x": 1592,
+     "y": 2016,
+     "kind": "plant",
+     "foot": [
+      1591,
+      2015
+     ],
+     "height": 3,
+     "v": [
+      -1.316001215348358,
+      0.30878143771105776
+     ],
+     "visible": 1
+    },
+    {
+     "x": 1656,
+     "y": 2032,
+     "kind": "tree",
+     "foot": [
+      1656.5,
+      2029
+     ],
+     "height": 23.400000000000002,
+     "v": [
+      -1.2864313890686552,
+      0.27937383587919207
+     ],
+     "visible": 1
+    },
+    {
+     "x": 1704,
+     "y": 2032,
+     "kind": "plant",
+     "foot": [
+      1703.5,
+      2031
+     ],
+     "height": 3,
+     "v": [
+      -1.279096429940524,
+      0.2720791174235363
+     ],
+     "visible": 1
+    },
+    {
+     "x": 1624,
+     "y": 2048,
+     "kind": "tree",
+     "foot": [
+      1624.5,
+      2045
+     ],
+     "height": 23.400000000000002,
+     "v": [
+      -1.329091964085336,
+      0.32180036866102735
+     ],
+     "visible": 1
+    },
+    {
+     "x": 1704,
+     "y": 2080,
+     "kind": "plant",
+     "foot": [
+      1704.75,
+      2079
+     ],
+     "height": 3,
+     "v": [
+      -1.2942248020880964,
+      0.2871244930801889
+     ],
+     "visible": 1
+    },
+    {
+     "x": 1592,
+     "y": 2000,
+     "kind": "rock",
+     "foot": [
+      1592,
+      1997.69
+     ],
+     "height": 17.6,
+     "v": [
+      -1.3057409056386637,
+      0.29857741758052925
+     ],
+     "visible": 1
+    },
+    {
+     "x": 1720,
+     "y": 2000,
+     "kind": "rock",
+     "foot": [
+      1720,
+      1997.69
+     ],
+     "height": 17.6,
+     "v": [
+      -1.2391942717763953,
+      0.23239586841073157
+     ],
+     "visible": 1
+    },
+    {
+     "x": 1576,
+     "y": 2000,
+     "kind": "rock",
+     "foot": [
+      1576,
+      1997.69
+     ],
+     "height": 17.6,
+     "v": [
+      -1.3182392518645192,
+      0.3110071960273185
+     ],
+     "visible": 1
+    },
+    {
+     "x": 1736,
+     "y": 2016,
+     "kind": "rock",
+     "foot": [
+      1736,
+      2013.69
+     ],
+     "height": 17.6,
+     "v": [
+      -1.2484317059615828,
+      0.24158262466342284
+     ],
+     "visible": 1
+    },
+    {
+     "x": 1544,
+     "y": 2016,
+     "kind": "rock",
+     "foot": [
+      1544,
+      2013.69
+     ],
+     "height": 17.6,
+     "v": [
+      -1.3366143335602805,
+      0.3292814693025683
+     ],
+     "visible": 1
+    },
+    {
+     "x": 1768,
+     "y": 2016,
+     "kind": "rock",
+     "foot": [
+      1768,
+      2013.69
+     ],
+     "height": 16.8,
+     "v": [
+      -1.2304304360204723,
+      0.2236801123561566
+     ],
+     "visible": 1
+    },
+    {
+     "x": 1544,
+     "y": 2016,
+     "kind": "rock",
+     "foot": [
+      1544,
+      2013.69
+     ],
+     "height": 16.8,
+     "v": [
+      -1.3366143335602805,
+      0.3292814693025683
+     ],
+     "visible": 1
+    },
+    {
+     "x": 1768,
+     "y": 2016,
+     "kind": "rock",
+     "foot": [
+      1768,
+      2013.69
+     ],
+     "height": 17.6,
+     "v": [
+      -1.2395371940732094,
+      0.23273690938502034
+     ],
+     "visible": 1
+    },
+    {
+     "x": 1544,
+     "y": 2032,
+     "kind": "rock",
+     "foot": [
+      1544,
+      2029.69
+     ],
+     "height": 16.8,
+     "v": [
+      -1.3366143335602805,
+      0.3292814693025683
+     ],
+     "visible": 1
+    },
+    {
+     "x": 1768,
+     "y": 2032,
+     "kind": "rock",
+     "foot": [
+      1768,
+      2029.69
+     ],
+     "height": 16.8,
+     "v": [
+      -1.2602066737986137,
+      0.2532929932823996
+     ],
+     "visible": 1
+    },
+    {
+     "x": 1544,
+     "y": 2032,
+     "kind": "rock",
+     "foot": [
+      1544,
+      2029.69
+     ],
+     "height": 17.6,
+     "v": [
+      -1.3473675744739246,
+      0.3399757163434324
+     ],
+     "visible": 1
+    },
+    {
+     "x": 1768,
+     "y": 2032,
+     "kind": "rock",
+     "foot": [
+      1768,
+      2029.69
+     ],
+     "height": 16.8,
+     "v": [
+      -1.2464242440386177,
+      0.23958617597397924
+     ],
+     "visible": 1
+    },
+    {
+     "x": 1544,
+     "y": 2048,
+     "kind": "rock",
+     "foot": [
+      1544,
+      2045.69
+     ],
+     "height": 16.8,
+     "v": [
+      -1.3473675744739246,
+      0.3399757163434324
+     ],
+     "visible": 1
+    },
+    {
+     "x": 1768,
+     "y": 2048,
+     "kind": "rock",
+     "foot": [
+      1768,
+      2045.69
+     ],
+     "height": 16.8,
+     "v": [
+      -1.2487797605831594,
+      0.2419287698057801
+     ],
+     "visible": 1
+    },
+    {
+     "x": 1544,
+     "y": 2048,
+     "kind": "rock",
+     "foot": [
+      1544,
+      2045.69
+     ],
+     "height": 17.6,
+     "v": [
+      -1.3582952411864526,
+      0.3508434322574057
+     ],
+     "visible": 1
+    },
+    {
+     "x": 1768,
+     "y": 2048,
+     "kind": "rock",
+     "foot": [
+      1768,
+      2045.69
+     ],
+     "height": 17.6,
+     "v": [
+      -1.258161196326181,
+      0.25125873760242484
+     ],
+     "visible": 1
+    },
+    {
+     "x": 1544,
+     "y": 2064,
+     "kind": "rock",
+     "foot": [
+      1544,
+      2061.69
+     ],
+     "height": 16.8,
+     "v": [
+      -1.3582952411864526,
+      0.3508434322574057
+     ],
+     "visible": 1
+    },
+    {
+     "x": 1768,
+     "y": 2064,
+     "kind": "rock",
+     "foot": [
+      1768,
+      2061.69
+     ],
+     "height": 16.8,
+     "v": [
+      -1.2697612408296954,
+      0.2627951425432087
+     ],
+     "visible": 1
+    },
+    {
+     "x": 1544,
+     "y": 2064,
+     "kind": "rock",
+     "foot": [
+      1544,
+      2061.69
+     ],
+     "height": 17.6,
+     "v": [
+      -1.3450296279067908,
+      0.3376505960975403
+     ],
+     "visible": 1
+    },
+    {
+     "x": 1768,
+     "y": 2064,
+     "kind": "rock",
+     "foot": [
+      1768,
+      2061.69
+     ],
+     "height": 17.6,
+     "v": [
+      -1.2652573487948,
+      0.2583159595272828
+     ],
+     "visible": 1
+    },
+    {
+     "x": 1544,
+     "y": 2080,
+     "kind": "rock",
+     "foot": [
+      1544,
+      2077.69
+     ],
+     "height": 17.6,
+     "v": [
+      -1.3477729892783306,
+      0.340378906982158
+     ],
+     "visible": 1
+    },
+    {
+     "x": 1768,
+     "y": 2080,
+     "kind": "rock",
+     "foot": [
+      1768,
+      2077.69
+     ],
+     "height": 17.6,
+     "v": [
+      -1.2794617953031007,
+      0.27244247833760354
+     ],
+     "visible": 1
+    },
+    {
+     "x": 1544,
+     "y": 2080,
+     "kind": "rock",
+     "foot": [
+      1544,
+      2077.69
+     ],
+     "height": 16.8,
+     "v": [
+      -1.3722453992059789,
+      0.36471705764327506
+     ],
+     "visible": 1
+    },
+    {
+     "x": 1768,
+     "y": 2080,
+     "kind": "rock",
+     "foot": [
+      1768,
+      2077.69
+     ],
+     "height": 17.6,
+     "v": [
+      -1.2868009574156705,
+      0.27974137671950294
+     ],
+     "visible": 1
+    },
+    {
+     "x": 1544,
+     "y": 2096,
+     "kind": "rock",
+     "foot": [
+      1544,
+      2093.69
+     ],
+     "height": 17.6,
+     "v": [
+      -1.3559192509877591,
+      0.348480477092953
+     ],
+     "visible": 1
+    },
+    {
+     "x": 1768,
+     "y": 2096,
+     "kind": "rock",
+     "foot": [
+      1768,
+      2093.69
+     ],
+     "height": 17.6,
+     "v": [
+      -1.2868009574156705,
+      0.27974137671950294
+     ],
+     "visible": 1
+    },
+    {
+     "x": 1544,
+     "y": 2096,
+     "kind": "rock",
+     "foot": [
+      1544,
+      2093.69
+     ],
+     "height": 17.6,
+     "v": [
+      -1.3587072598022942,
+      0.351253190478079
+     ],
+     "visible": 1
+    },
+    {
+     "x": 1768,
+     "y": 2096,
+     "kind": "rock",
+     "foot": [
+      1768,
+      2093.69
+     ],
+     "height": 17.6,
+     "v": [
+      -1.2967646358758318,
+      0.2896503929634803
+     ],
+     "visible": 1
+    }
+   ]
+  },
+  "sunMap": {
+   "pending": 0,
+   "revision": "true:1:0.150:1.00:restrained:proxy:0.60:4:1:0.50:1",
+   "chunks": 23,
+   "costs": [
+    23.599999994039536,
+    15.5,
+    18.5,
+    15.200000002980232,
+    24.99999998509884,
+    16.100000023841858,
+    18.099999994039536,
+    26.200000002980232,
+    16.499999970197678,
+    28.799999982118607,
+    16,
+    25.599999994039536,
+    15.200000002980232,
+    14.799999997019768,
+    11.399999991059303,
+    69.00000002980232,
+    57.900000005960464,
+    31.099999994039536,
+    36.00000001490116,
+    29.599999994039536,
+    29.100000008940697,
+    34.10000002384186,
+    40.099999994039536,
+    25.500000044703484,
+    25.399999976158142,
+    25.69999997317791,
+    33.5,
+    34.00000001490116,
+    28.700000002980232,
+    25.69999998807907,
+    28.099999979138374,
+    32.79999999701977,
+    33.39999997615814,
+    31.69999995827675,
+    32.60000003874302,
+    30.299999967217445,
+    30.300000056624413,
+    38.19999995827675,
+    22.30000001192093,
+    19.600000008940697,
+    21.200000002980232,
+    30.400000005960464,
+    35.70000000298023,
+    31.700000017881393,
+    29.19999997317791,
+    21.099999994039536,
+    25.19999998807907,
+    28.899999976158142,
+    21.00000001490116,
+    28.100000023841858,
+    33.700000032782555,
+    29.200000002980232,
+    36.19999998807907,
+    24.400000005960464,
+    21.00000001490116,
+    23.399999976158142,
+    31.600000008940697,
+    31.00000001490116,
+    23.99999998509884,
+    22.400000005960464,
+    21.19999997317791,
+    24.200000002980232,
+    30.80000001192093,
+    27.099999964237213,
+    29.099999994039536,
+    29.599999994039536,
+    32.69999998807907,
+    38.400000005960464,
+    25.600000008940697,
+    25.39999996125698,
+    28.299999982118607,
+    35.19999998807907,
+    28.299999982118607,
+    25.100000008940697,
+    20.799999967217445,
+    27.80000001192093,
+    26.299999967217445,
+    26.099999994039536,
+    26.899999991059303,
+    24.399999991059303,
+    25.500000029802322,
+    25.49999998509884,
+    29.799999982118607,
+    22.30000001192093,
+    23.099999979138374,
+    30.50000001490116,
+    30.099999964237213,
+    27.00000001490116,
+    18.100000023841858,
+    21.899999991059303,
+    21.700000032782555,
+    32.19999997317791,
+    23.600000008940697,
+    29.80000002682209,
+    33.900000020861626,
+    27.599999994039536,
+    24.599999994039536,
+    23.400000005960464,
+    26.899999976158142,
+    19.50000001490116,
+    22.599999994039536,
+    37.30000001192093
+   ],
+   "albedoPaints": 31
+  },
+  "uphill": null,
+  "tile": [
+   103,
+   95
+  ],
+  "at": [
+   1656,
+   1532
+  ],
+  "shown": [
+   1656,
+   2087.342741935484
+  ],
+  "silhouette": false,
+  "cover": {
+   "box": [
+    1649,
+    2066,
+    15,
+    23
+   ],
+   "covered": 0,
+   "total": 345,
+   "spriteCovered": 0,
+   "spriteTotal": 178,
+   "top": -1
+  },
+  "edges": {
+   "settings": {
+    "strength": 0.6,
+    "width": 4,
+    "scale": true,
+    "threshold": 0.5,
+    "rim": true
+   },
+   "chunks": 23,
+   "edges": 9295
+  },
+  "kind": 2,
+  "size": [
+   144,
+   191
+  ],
+  "pending": 0,
+  "slow": [
+   {
+    "ms": 27,
+    "paint": 7.3,
+    "upload": 0,
+    "parts": 0
+   },
+   {
+    "ms": 54.6,
+    "paint": 3.9,
+    "upload": 45.8,
+    "parts": 1
+   }
+  ],
+  "paint": {
+   "frames": 319,
+   "p50": 5.9000000059604645,
+   "p95": 8,
+   "max": 14.800000011920929
+  },
+  "upload": {
+   "frames": 84,
+   "p50": 4,
+   "p95": 6.300000011920929,
+   "max": 45.80000001192093
+  },
+  "update": {
+   "frames": 120,
+   "p50": 0.699999988079071,
+   "p95": 11,
+   "max": 12.600000008940697
+  },
+  "spots": [
+   {
+    "name": "spawn",
+    "x": 70,
+    "y": 96,
+    "fx": 70,
+    "fy": 96,
+    "note": "low ground in the valley; the range north, the hills west, the sea south",
+    "look": null
+   },
+   {
+    "name": "hills",
+    "x": 30,
+    "y": 88,
+    "fx": 30,
+    "fy": 88,
+    "note": "rolling hills: walkable anywhere, no cliffs",
+    "look": null
+   },
+   {
+    "name": "pass-foot",
+    "x": 72,
+    "y": 70,
+    "fx": 72,
+    "fy": 70,
+    "note": "where the climb to the pass starts (path ground)",
+    "look": null
+   },
+   {
+    "name": "pass-mid",
+    "x": 72,
+    "y": 48,
+    "fx": 72,
+    "fy": 48,
+    "note": "halfway up: the too-steep band closes in on both sides",
+    "look": null
+   },
+   {
+    "name": "pass-top",
+    "x": 72,
+    "y": 31,
+    "fx": 72,
+    "fy": 31,
+    "note": "the saddle, about level 6; shoulders too steep either side",
+    "look": null
+   },
+   {
+    "name": "pass-north",
+    "x": 72,
+    "y": 10,
+    "fx": 72,
+    "fy": 10,
+    "note": "down the far side to the upland",
+    "look": null
+   },
+   {
+    "name": "steep-band",
+    "x": 56,
+    "y": 46,
+    "fx": 56,
+    "fy": 46,
+    "note": "below the scree band on the range’s south side, looking north",
+    "look": [
+     56,
+     69
+    ]
+   },
+   {
+    "name": "crags",
+    "x": 90,
+    "y": 40,
+    "fx": 90,
+    "fy": 40,
+    "note": "under the crags near the eastern peaks",
+    "look": [
+     92,
+     52
+    ]
+   },
+   {
+    "name": "spire",
+    "x": 37,
+    "y": 49,
+    "fx": 40,
+    "fy": 52,
+    "note": "below the spire (level 15): its face, crags round its foot; no way up",
+    "look": [
+     40,
+     63
+    ]
+   },
+   {
+    "name": "outcrop-slope",
+    "x": 103,
+    "y": 82,
+    "fx": 103,
+    "fy": 82,
+    "note": "the outcrop’s gentle side: walk south up onto it",
+    "look": null
+   },
+   {
+    "name": "outcrop-top",
+    "x": 103,
+    "y": 95,
+    "fx": 103,
+    "fy": 95,
+    "note": "the outcrop’s edge, about 3 levels over the valley",
+    "look": null
+   },
+   {
+    "name": "outcrop-cliff",
+    "x": 103,
+    "y": 108,
+    "fx": 103,
+    "fy": 108,
+    "note": "below the outcrop’s cliff, looking north at its face",
+    "look": [
+     103,
+     143
+    ]
+   },
+   {
+    "name": "sea-cliff",
+    "x": 30,
+    "y": 118,
+    "fx": 30,
+    "fy": 118,
+    "note": "the sea cliff’s top, the sand flats below",
+    "look": [
+     30,
+     170
+    ]
+   },
+   {
+    "name": "gully",
+    "x": 45,
+    "y": 112,
+    "fx": 45,
+    "fy": 112,
+    "note": "the one way down to the sea",
+    "look": null
+   },
+   {
+    "name": "sea",
+    "x": 45,
+    "y": 134,
+    "fx": 45,
+    "fy": 134,
+    "note": "on the sand flats under the cliff",
+    "look": null
+   },
+   {
+    "name": "plateau",
+    "x": 132,
+    "y": 110,
+    "fx": 132,
+    "fy": 110,
+    "note": "the plateau patch: whole levels, cliffs, ramps (like the generator)",
+    "look": null
+   },
+   {
+    "name": "behind-plateau",
+    "x": 132,
+    "y": 66,
+    "fx": 132,
+    "fy": 66,
+    "note": "just north of the plateau patch: in the lift, hidden behind it (drawn as a silhouette)",
+    "look": null
+   },
+   {
+    "name": "around-east",
+    "x": 128,
+    "y": 40,
+    "fx": 128,
+    "fy": 40,
+    "note": "round the range’s east end: the long way north",
+    "look": null
+   },
+   {
+    "name": "knoll",
+    "x": 86,
+    "y": 100,
+    "fx": 86,
+    "fy": 100,
+    "note": "the knoll: a cone, 0.2 level a tile every way round (the uphill runs)",
+    "look": [
+     86,
+     133
+    ]
+   },
+   {
+    "name": "rocky-path",
+    "x": 53,
+    "y": 42,
+    "fx": 53,
+    "fy": 42,
+    "note": "the rocky path beside the scree: walkable stone next to too-steep stone",
+    "look": [
+     51,
+     68
+    ]
+   },
+   {
+    "name": "spiral-ramp",
+    "x": 130,
+    "y": 93,
+    "fx": 130,
+    "fy": 93,
+    "note": "the owner’s spot (2e): level 3 of the stepped plateau, its ramps and whole-level edges round you",
+    "look": null
+   },
+   {
+    "name": "legs-behind-ridge",
+    "x": 132,
+    "y": 65,
+    "fx": 132,
+    "fy": 65,
+    "note": "just north of the plateau’s rim: in the full lift, only the legs are behind it (2e partial see-through)",
+    "look": null
+   }
+  ],
+  "parts": 23
+ }
+}

@@ -1,0 +1,529 @@
+{
+ "2e-ramp-lift-off": {
+  "edges": {
+   "settings": {
+    "strength": 0,
+    "width": 4,
+    "scale": true,
+    "threshold": 0.5,
+    "rim": true
+   },
+   "chunks": 0,
+   "edges": 0
+  },
+  "cover": {
+   "box": [
+    2081,
+    2086,
+    15,
+    23
+   ],
+   "covered": 0,
+   "total": 345,
+   "spriteCovered": 0,
+   "spriteTotal": 177,
+   "top": -1
+  },
+  "silhouette": false,
+  "tile": [
+   130,
+   93
+  ]
+ },
+ "2e-ramp-lift-default": {
+  "edges": {
+   "settings": {
+    "strength": 0.6,
+    "width": 4,
+    "scale": true,
+    "threshold": 0.5,
+    "rim": true
+   },
+   "chunks": 15,
+   "edges": 8222
+  },
+  "cover": {
+   "box": [
+    2081,
+    2086,
+    15,
+    23
+   ],
+   "covered": 0,
+   "total": 345,
+   "spriteCovered": 0,
+   "spriteTotal": 177,
+   "top": -1
+  },
+  "silhouette": false,
+  "tile": [
+   130,
+   93
+  ]
+ },
+ "2e-ramp-lift-strong": {
+  "edges": {
+   "settings": {
+    "strength": 1,
+    "width": 4,
+    "scale": true,
+    "threshold": 0.5,
+    "rim": true
+   },
+   "chunks": 15,
+   "edges": 8222
+  },
+  "cover": {
+   "box": [
+    2081,
+    2086,
+    15,
+    23
+   ],
+   "covered": 0,
+   "total": 345,
+   "spriteCovered": 0,
+   "spriteTotal": 177,
+   "top": -1
+  },
+  "silhouette": false,
+  "tile": [
+   130,
+   93
+  ]
+ },
+ "2e-ramp-lift-default-unscaled": {
+  "edges": {
+   "settings": {
+    "strength": 0.6,
+    "width": 4,
+    "scale": false,
+    "threshold": 0.5,
+    "rim": true
+   },
+   "chunks": 15,
+   "edges": 8222
+  },
+  "cover": {
+   "box": [
+    2081,
+    2086,
+    15,
+    23
+   ],
+   "covered": 0,
+   "total": 345,
+   "spriteCovered": 0,
+   "spriteTotal": 177,
+   "top": -1
+  },
+  "silhouette": false,
+  "tile": [
+   130,
+   93
+  ]
+ },
+ "2e-ramp-lift-strong-unscaled": {
+  "edges": {
+   "settings": {
+    "strength": 1,
+    "width": 4,
+    "scale": false,
+    "threshold": 0.5,
+    "rim": true
+   },
+   "chunks": 15,
+   "edges": 8222
+  },
+  "cover": {
+   "box": [
+    2081,
+    2086,
+    15,
+    23
+   ],
+   "covered": 0,
+   "total": 345,
+   "spriteCovered": 0,
+   "spriteTotal": 177,
+   "top": -1
+  },
+  "silhouette": false,
+  "tile": [
+   130,
+   93
+  ]
+ },
+ "2e-hills-meadow-lift": {
+  "edges": {
+   "settings": {
+    "strength": 0.6,
+    "width": 4,
+    "scale": true,
+    "threshold": 0.5,
+    "rim": true
+   },
+   "chunks": 22,
+   "edges": 5107
+  },
+  "cover": {
+   "box": [
+    481,
+    2046,
+    15,
+    23
+   ],
+   "covered": 0,
+   "total": 345,
+   "spriteCovered": 0,
+   "spriteTotal": 178,
+   "top": -1
+  },
+  "silhouette": false,
+  "tile": [
+   30,
+   88
+  ]
+ },
+ "2e-cliff-edge-lift": {
+  "edges": {
+   "settings": {
+    "strength": 0.6,
+    "width": 4,
+    "scale": true,
+    "threshold": 0.5,
+    "rim": true
+   },
+   "chunks": 23,
+   "edges": 9295
+  },
+  "cover": {
+   "box": [
+    1649,
+    2066,
+    15,
+    23
+   ],
+   "covered": 0,
+   "total": 345,
+   "spriteCovered": 0,
+   "spriteTotal": 178,
+   "top": -1
+  },
+  "silhouette": false,
+  "tile": [
+   103,
+   95
+  ]
+ },
+ "2e-ramp-facing-off": {
+  "edges": {
+   "settings": {
+    "strength": 0,
+    "width": 4,
+    "scale": true,
+    "threshold": 0.5,
+    "rim": true
+   },
+   "chunks": 0,
+   "edges": 0
+  },
+  "cover": {
+   "box": [
+    2081,
+    1478,
+    15,
+    23
+   ],
+   "covered": 0,
+   "total": 345,
+   "spriteCovered": 0,
+   "spriteTotal": 177,
+   "top": -1
+  },
+  "silhouette": false,
+  "tile": [
+   130,
+   93
+  ]
+ },
+ "2e-ramp-facing-default": {
+  "edges": {
+   "settings": {
+    "strength": 0.6,
+    "width": 4,
+    "scale": true,
+    "threshold": 0.5,
+    "rim": true
+   },
+   "chunks": 16,
+   "edges": 8075
+  },
+  "cover": {
+   "box": [
+    2081,
+    1478,
+    15,
+    23
+   ],
+   "covered": 0,
+   "total": 345,
+   "spriteCovered": 0,
+   "spriteTotal": 177,
+   "top": -1
+  },
+  "silhouette": false,
+  "tile": [
+   130,
+   93
+  ]
+ },
+ "2e-ramp-facing-strong": {
+  "edges": {
+   "settings": {
+    "strength": 1,
+    "width": 4,
+    "scale": true,
+    "threshold": 0.5,
+    "rim": true
+   },
+   "chunks": 16,
+   "edges": 8075
+  },
+  "cover": {
+   "box": [
+    2081,
+    1478,
+    15,
+    23
+   ],
+   "covered": 0,
+   "total": 345,
+   "spriteCovered": 0,
+   "spriteTotal": 177,
+   "top": -1
+  },
+  "silhouette": false,
+  "tile": [
+   130,
+   93
+  ]
+ },
+ "2e-ramp-facing-default-unscaled": {
+  "edges": {
+   "settings": {
+    "strength": 0.6,
+    "width": 4,
+    "scale": false,
+    "threshold": 0.5,
+    "rim": true
+   },
+   "chunks": 16,
+   "edges": 8075
+  },
+  "cover": {
+   "box": [
+    2081,
+    1478,
+    15,
+    23
+   ],
+   "covered": 0,
+   "total": 345,
+   "spriteCovered": 0,
+   "spriteTotal": 177,
+   "top": -1
+  },
+  "silhouette": false,
+  "tile": [
+   130,
+   93
+  ]
+ },
+ "2e-ramp-facing-strong-unscaled": {
+  "edges": {
+   "settings": {
+    "strength": 1,
+    "width": 4,
+    "scale": false,
+    "threshold": 0.5,
+    "rim": true
+   },
+   "chunks": 16,
+   "edges": 8075
+  },
+  "cover": {
+   "box": [
+    2081,
+    1478,
+    15,
+    23
+   ],
+   "covered": 0,
+   "total": 345,
+   "spriteCovered": 0,
+   "spriteTotal": 177,
+   "top": -1
+  },
+  "silhouette": false,
+  "tile": [
+   130,
+   93
+  ]
+ },
+ "2e-hills-meadow-facing": {
+  "edges": {
+   "settings": {
+    "strength": 0.6,
+    "width": 4,
+    "scale": true,
+    "threshold": 0.5,
+    "rim": true
+   },
+   "chunks": 20,
+   "edges": 5807
+  },
+  "cover": {
+   "box": [
+    481,
+    1398,
+    15,
+    23
+   ],
+   "covered": 0,
+   "total": 345,
+   "spriteCovered": 0,
+   "spriteTotal": 177,
+   "top": -1
+  },
+  "silhouette": false,
+  "tile": [
+   30,
+   88
+  ]
+ },
+ "2e-cliff-edge-facing": {
+  "edges": {
+   "settings": {
+    "strength": 0.6,
+    "width": 4,
+    "scale": true,
+    "threshold": 0.5,
+    "rim": true
+   },
+   "chunks": 20,
+   "edges": 9760
+  },
+  "cover": {
+   "box": [
+    1649,
+    1510,
+    15,
+    23
+   ],
+   "covered": 0,
+   "total": 345,
+   "spriteCovered": 0,
+   "spriteTotal": 177,
+   "top": -1
+  },
+  "silhouette": false,
+  "tile": [
+   103,
+   95
+  ]
+ },
+ "2e-seethrough-legs-48": {
+  "edges": {
+   "settings": {
+    "strength": 0.6,
+    "width": 4,
+    "scale": true,
+    "threshold": 0.5,
+    "rim": true
+   },
+   "chunks": 16,
+   "edges": 6688
+  },
+  "cover": {
+   "box": [
+    2113,
+    1732,
+    15,
+    23
+   ],
+   "covered": 165,
+   "total": 345,
+   "spriteCovered": 58,
+   "spriteTotal": 178,
+   "top": 12
+  },
+  "silhouette": true,
+  "tile": [
+   132,
+   65
+  ]
+ },
+ "2e-seethrough-full-48": {
+  "edges": {
+   "settings": {
+    "strength": 0.6,
+    "width": 4,
+    "scale": true,
+    "threshold": 0.5,
+    "rim": true
+   },
+   "chunks": 16,
+   "edges": 6688
+  },
+  "cover": {
+   "box": [
+    2113,
+    1748,
+    15,
+    23
+   ],
+   "covered": 345,
+   "total": 345,
+   "spriteCovered": 177,
+   "spriteTotal": 177,
+   "top": 0
+  },
+  "silhouette": true,
+  "tile": [
+   132,
+   66
+  ]
+ },
+ "2e-seethrough-legs-24": {
+  "edges": {
+   "settings": {
+    "strength": 0.6,
+    "width": 4,
+    "scale": true,
+    "threshold": 0.5,
+    "rim": true
+   },
+   "chunks": 12,
+   "edges": 5976
+  },
+  "cover": {
+   "box": [
+    2113,
+    1421,
+    15,
+    23
+   ],
+   "covered": 60,
+   "total": 345,
+   "spriteCovered": 6,
+   "spriteTotal": 177,
+   "top": 19
+  },
+  "silhouette": true,
+  "tile": [
+   132,
+   66
+  ]
+ }
+}

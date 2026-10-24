@@ -50,10 +50,11 @@ import { fieldLight, sampleSunMap, sampleVisibility, terrainVisibility } from '.
 import { castProxy, dither, overShadow, shadeMultiply, shadowDarkness, shadowRay, type Caster, type CasterKind, type ShadowProxy } from './sun-shadow'
 import { SunChunk, SilhouetteShadow, MoverShadow, frameProxy } from './sun-view'
 import { serverNow, setGameNow } from '../clock'
-import { fieldGradient, fieldZ, FOG_LEVELS, display, lookName, mapPoint, nearestWalkable, slopeWalk, uphillFactor } from './slopes'
+import { coverRects, coveredPixels, fieldGradient, fieldZ, FOG_LEVELS, display, lookName, mapPoint, nearestWalkable, slopeWalk, uphillFactor } from './slopes'
 import { FRIEND_LIGHT, HERO_LIGHT, LIGHT_RES, wayIn } from './light'
 import { caveTint, clearLitScratch, litPixels, pixelSpans, type FillOptions, type Lighting } from './lighting'
-import { SLOPE_KEYS, SLOPE_PRESETS, fogFor, labLook, onLabLook, setLabLook, slopePresetOf, slopeSettings, slopesLook, styleOf, type LabLook } from './look'
+import { edgeKey } from './edges'
+import { SLOPE_KEYS, SLOPE_PRESETS, edgeSettings, fogFor, labLook, onLabLook, setLabLook, slopePresetOf, slopeSettings, slopesLook, styleOf, type LabLook } from './look'
 
 const T = TILE_PX
 const DECOR_ATLAS = 'wilds-decor-outer-Carting'
@@ -132,6 +133,10 @@ interface SlopesState {
   at: [number, number]
   shown: [number, number]
   silhouette: boolean
+  /** 2e: the hero's sprite box (world px), how many of its pixels nearer ground covers (drawn as the outline), and its first covered row from the top (-1: none). */
+  cover: { box: [number, number, number, number]; covered: number; total: number; spriteCovered: number; spriteTotal: number; top: number }
+  /** 2e: edge shading's settings, and edges found in the chunks built so far. */
+  edges: { settings: ReturnType<typeof edgeSettings>; chunks: number; edges: number }
   kind: number
   /** What's drawn, in tiles (the lift's view is taller). */
   size: [number, number]
@@ -246,6 +251,13 @@ export class HeightLabScene extends Phaser.Scene {
   private castersRevision = ''
   private albedoPaints = 0
   private facing = 'down'
+  /** 2e partial see-through: the hero's covered pixels as a mask, the outline drawn through it, the body through its inverse. */
+  private coverGfx: Phaser.GameObjects.Graphics | null = null
+  private coverShow: Phaser.Display.Masks.GeometryMask | null = null
+  private coverHide: Phaser.Display.Masks.GeometryMask | null = null
+  private ghost: Phaser.GameObjects.Sprite | null = null
+  private coverKey = ''
+  private cover: SlopesState['cover'] = { box: [0, 0, 0, 0], covered: 0, total: 0, spriteCovered: 0, spriteTotal: 0, top: -1 }
   /** The generated area's built chunks (./walk.ts), by "cx,cy" (the area's own chunks). */
   private parts = new Map<string, Part>()
   private propsByChunk: Map<string, LabArea['props']> | null = null
@@ -311,6 +323,7 @@ export class HeightLabScene extends Phaser.Scene {
       this.buildCave()
     }
     this.buildMovers()
+    this.buildCover()
     if (resume) {
       this.hero.walker.x = resume.x
       this.hero.walker.y = resume.y
@@ -385,6 +398,7 @@ export class HeightLabScene extends Phaser.Scene {
       if (this.textures.exists('hl-crossfade')) this.textures.remove('hl-crossfade')
       for (const key of [...this.parts.keys()]) this.dropPart(key)
       labHook(null)
+      this.dropCover()
     })
     labHook(this)
     cam.fadeIn(400, 12, 12, 20)
@@ -575,7 +589,7 @@ export class HeightLabScene extends Phaser.Scene {
     if (!sl) return
     const day = this.look.sunClock ? clockSun(serverNow()) : sunAt(this.look.sunTime)
     // Clock lighting updates roughly every 43 seconds; the manual slider has .01 steps.
-    const revision = `${this.look.sunlight}:${this.look.sunStrength}:${day.time.toFixed(3)}:${day.daylight.toFixed(2)}:${this.look.slopeFacing}:${this.look.spriteShadows}`
+    const revision = `${this.look.sunlight}:${this.look.sunStrength}:${day.time.toFixed(3)}:${day.daylight.toFixed(2)}:${this.look.slopeFacing}:${this.look.spriteShadows}:${edgeKey(edgeSettings(this.look))}`
     this.daySun = day
     this.sunRevision = revision
     const chunks = [...this.parts.values()].filter(p => !!p.sunlight).sort((a,b) =>
@@ -585,7 +599,7 @@ export class HeightLabScene extends Phaser.Scene {
     for (const p of chunks) {
       const light = p.sunlight!
       if (light.revision !== revision) light.start(sl, day, this.look.sunStrength, this.look.sunlight && this.look.slopeFacing !== 'off', revision,
-        this.look.spriteShadows === 'proxy' ? () => this.castersNear(p.cx, p.cy, revision) : null)
+        this.look.spriteShadows === 'proxy' ? () => this.castersNear(p.cx, p.cy, revision) : null, edgeSettings(this.look))
       while (light.pending) {
         const cost = light.step()
         if (cost !== null) { this.sunCosts.push(cost); if (this.sunCosts.length > 600) this.sunCosts.shift(); this.stillKey = '' }
@@ -1114,6 +1128,105 @@ export class HeightLabScene extends Phaser.Scene {
     if (!gait.scuff) m.scuffPx = 0
   }
 
+  /** 2e: the outline sprite and the mask its covered part is drawn through (the slopes area only). */
+  private buildCover(): void {
+    this.coverKey = ''
+    this.cover = { box: [0, 0, 0, 0], covered: 0, total: 0, spriteCovered: 0, spriteTotal: 0, top: -1 }
+    if (!this.area.slopes) return
+    this.coverGfx = this.make.graphics({ x: 0, y: 0 }, false)
+    this.coverShow = this.coverGfx.createGeometryMask()
+    this.coverHide = this.coverGfx.createGeometryMask().setInvertAlpha(true)
+    const sp = this.hero.sprite
+    this.ghost = this.add.sprite(sp.x, sp.y, sp.texture.key, sp.frame.name).setOrigin(0.5, 1).setVisible(false).setTintFill(0x2c2640).setAlpha(0.7).setDepth(BAND.dark - 10)
+    this.ghost.setMask(this.coverShow)
+  }
+
+  private dropCover(): void {
+    this.ghost?.destroy()
+    this.coverShow?.destroy()
+    this.coverHide?.destroy()
+    this.coverGfx?.destroy()
+    this.ghost = null
+    this.coverShow = this.coverHide = null
+    this.coverGfx = null
+  }
+
+  /**
+   * Partial see-through (2e): only the hero's pixels that nearer, higher
+   * ground covers in the lift (./slopes.ts coveredPixels) show as the grey
+   * outline over everything; the rest of the body draws as usual, through
+   * the inverse of the same mask. Worked out only when the sprite's pixel
+   * box or field row moves.
+   */
+  private seeThrough(): void {
+    const sl = this.area.slopes
+    const sp = this.hero.sprite
+    if (!sl || !this.ghost || !this.coverGfx) return
+    const x0 = Math.floor(sp.x - sp.displayWidth * sp.originX)
+    const y0 = Math.floor(sp.y - sp.displayHeight * sp.originY)
+    const w = Math.ceil(sp.displayWidth) + 1
+    const h = Math.ceil(sp.displayHeight) + 1
+    const fy = this.hero.walker.y - this.hero.walker.fh / 2
+    const key = `${x0},${y0},${w},${h},${fy.toFixed(1)},${sl.lift},${sp.frame.name}`
+    if (key !== this.coverKey) {
+      this.coverKey = key
+      const mask = sl.lift ? coveredPixels(sl, fy, this.hero.thing.z, x0, y0, w, h) : new Uint8Array(w * h)
+      let covered = 0
+      let top = -1
+      for (let i = 0; i < mask.length; i++) if (mask[i]) { covered++; if (top < 0) top = Math.floor(i / w) }
+      // The sprite's own opaque pixels, covered or not (the spec's "legs only" check).
+      let spriteCovered = 0
+      let spriteTotal = 0
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        if (!this.opaqueAt(sp, x0 + x + 0.5, y0 + y + 0.5)) continue
+        spriteTotal++
+        if (mask[y * w + x]) spriteCovered++
+      }
+      this.cover = { box: [x0, y0, w, h], covered, total: w * h, spriteCovered, spriteTotal, top }
+      this.coverGfx.clear().fillStyle(0xffffff)
+      for (const r of coverRects(mask, x0, y0, w, h)) this.coverGfx.fillRect(r.x, r.y, r.w, r.h)
+    }
+    if (this.cover.covered === 0) {
+      if (sp.mask) sp.clearMask()
+      this.ghost.setVisible(false)
+      return
+    }
+    if (sp.mask !== this.coverHide) sp.setMask(this.coverHide!)
+    if (this.ghost.texture.key !== sp.texture.key) this.ghost.setTexture(sp.texture.key)
+    this.ghost
+      .setVisible(sp.visible)
+      .setFrame(sp.frame.name)
+      .setScale(sp.scaleX, sp.scaleY)
+      .setFlipX(sp.flipX)
+      .setPosition(sp.x, sp.y)
+  }
+
+  /** Whether a sprite's drawn pixel at world (x, y) is opaque (each frame's alpha read once). */
+  private opaqueAt(sp: Phaser.GameObjects.Sprite, x: number, y: number): boolean {
+    const fw = sp.frame.cutWidth
+    const fh = sp.frame.cutHeight
+    const fx = (x - (sp.x - sp.displayWidth * sp.originX)) / sp.scaleX
+    const fy = (y - (sp.y - sp.displayHeight * sp.originY)) / sp.scaleY
+    const px = Math.floor(sp.flipX ? fw - fx : fx)
+    const py = Math.floor(fy)
+    if (px < 0 || py < 0 || px >= fw || py >= fh) return false
+    const key = `${sp.texture.key}:${sp.frame.name}`
+    let alpha = this.frameAlpha.get(key)
+    if (!alpha) {
+      const c = document.createElement('canvas')
+      c.width = fw
+      c.height = fh
+      const ctx = c.getContext('2d', { willReadFrequently: true })!
+      ctx.drawImage(sp.frame.source.image as CanvasImageSource, sp.frame.cutX, sp.frame.cutY, fw, fh, 0, 0, fw, fh)
+      const d = ctx.getImageData(0, 0, fw, fh).data
+      alpha = new Uint8Array(fw * fh)
+      for (let i = 0; i < alpha.length; i++) alpha[i] = d[i * 4 + 3]!
+      this.frameAlpha.set(key, alpha)
+    }
+    return alpha[py * fw + px]! > 0
+  }
+  private frameAlpha = new Map<string, Uint8Array>()
+
   /** A mover's parts follow its walker. */
   private place(m: Mover): void {
     const w = m.walker
@@ -1254,18 +1367,13 @@ export class HeightLabScene extends Phaser.Scene {
           .setAlpha(vis * fog)
           .setVisible(vis * fog > 0.01)
       }
-      // Behind higher ground in the lift: the hero shows as a silhouette over everything (their shadow and fog twin go).
+      // The hero's feet behind higher ground in the lift: their shadow and fog twin go (what's covered shows as the outline, seeThrough).
       if (t.silhouette) {
-        const sil = t.parts[0]!.o as Phaser.GameObjects.Sprite
-        sil.setDepth(BAND.dark - 10).setAlpha(0.7).setTintFill(0x2c2640)
         t.parts[1]?.o.setVisible(false)
         t.twin?.setVisible(false)
-        t.tinted = true
-      } else if (t.tinted && t === this.hero.thing && !byTint) {
-        ;(t.parts[0]!.o as Phaser.GameObjects.Sprite).clearTint()
-        t.tinted = false
       }
     }
+    this.seeThrough()
     const hx = this.hero.thing.x
     this.drawLight(v, iris, fade, wv)
 
@@ -1539,6 +1647,11 @@ export class HeightLabScene extends Phaser.Scene {
       at: [this.hero.walker.x, this.hero.walker.y],
       shown: [this.hero.thing.x, this.hero.thing.y],
       silhouette: !!this.hero.thing.silhouette,
+      cover: this.cover,
+      edges: (() => {
+        const chunks = [...this.parts.values()].map(p => p.sunlight?.edges).filter(e => !!e)
+        return { settings: edgeSettings(this.look), chunks: chunks.length, edges: chunks.reduce((a, e) => a + e!.edges, 0) }
+      })(),
       kind: l.kind[ty * l.w + tx] ?? 0,
       size: [s.view.w, s.view.h],
       pending: this.jobs.length + this.uploads.length,
