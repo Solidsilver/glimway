@@ -3,7 +3,7 @@ import Phaser from 'phaser'
 import { buildSunMap, sampleVisibility, SUN_RES, type SunMap } from './sun-map.ts'
 import { silhouetteBounds, type DaySun } from './sun.ts'
 import { buildShadowLayer, casterProxy, dither, SHADOW_KEEP, type Caster, type CasterKind, type ShadowProxy } from './sun-shadow.ts'
-import { EDGE_KEEP, chunkEdgesSteps, combineShade, edgeKey, type EdgeSettings } from './edges.ts'
+import { EDGE_KEEP, EDGE_MAX_DARK, chunkEdgesSteps, combineShade, edgeKey, type EdgeSettings } from './edges.ts'
 import type { SlopesInfo } from './slopes.ts'
 
 export class SunChunk {
@@ -80,7 +80,7 @@ export class SunChunk {
       let rims = false
       for (let i = 0; i < width * height; i++) {
         const lx = i % width, ly = (i - lx) / width
-        const ed = e.dark[i]! * edges.strength
+        const ed = Math.min(EDGE_MAX_DARK, e.dark[i]! * edges.strength)
         const cd = dark ? dark[i]! : 0
         if (ed > 0 || cd > 0) {
           const vis = ed > 0 && lit ? (sampleVisibility(map, x + lx + 0.5, y + ly + 0.5) >= dither(x + lx, y + ly) ? 1 : 0) : 1

@@ -72,7 +72,7 @@ export interface LabLook {
 }
 
 /** 2e edge shading's defaults (./edges.ts EDGE_DEFAULT): reset keeps them. */
-export const EDGE_LOOK: Pick<LabLook, 'edgeShade' | 'edgeWidth' | 'edgeScale' | 'edgeThreshold' | 'edgeRim'> = { edgeShade: 0.6, edgeWidth: 3, edgeScale: true, edgeThreshold: 0.5, edgeRim: true }
+export const EDGE_LOOK: Pick<LabLook, 'edgeShade' | 'edgeWidth' | 'edgeScale' | 'edgeThreshold' | 'edgeRim'> = { edgeShade: 0.6, edgeWidth: 4, edgeScale: true, edgeThreshold: 0.5, edgeRim: true }
 
 /** The look's edge settings as ./edges.ts takes them. */
 export function edgeSettings(l: Pick<LabLook, 'edgeShade' | 'edgeWidth' | 'edgeScale' | 'edgeThreshold' | 'edgeRim'>): EdgeSettings {

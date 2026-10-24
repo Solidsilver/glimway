@@ -547,7 +547,7 @@ type EdgeSlopes = ShadowSlopes & {
   cover: { box: number[]; covered: number; total: number; spriteCovered: number; spriteTotal: number; top: number }
   edges: { settings: { strength: number; width: number; scale: boolean; threshold: number; rim: boolean }; chunks: number; edges: number }
 }
-const EDGE_DEFAULTS: Look = { edgeShade: .6, edgeWidth: 3, edgeScale: true, edgeThreshold: .5, edgeRim: true }
+const EDGE_DEFAULTS: Look = { edgeShade: .6, edgeWidth: 4, edgeScale: true, edgeThreshold: .5, edgeRim: true }
 const EDGE_VARIANTS: [string, Look][] = [
   ['off', { ...EDGE_DEFAULTS, edgeShade: 0 }],
   ['default', EDGE_DEFAULTS],

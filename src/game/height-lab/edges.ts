@@ -32,10 +32,12 @@ export interface EdgeSettings {
 }
 
 /** Defaults (the owner's spiral ramp: whole-level steps read, gentle hills untouched). */
-export const EDGE_DEFAULT: EdgeSettings = { strength: 0.6, width: 3, scale: true, threshold: 0.5, rim: true }
+export const EDGE_DEFAULT: EdgeSettings = { strength: 0.6, width: 4, scale: true, threshold: 0.5, rim: true }
 
 /** At 100% strength: the inner tone's darkening, the outer dithered tone's, and the rim's lightening, before scaling. */
-export const EDGE_TONE = { inner: 0.42, outer: 0.22, rim: 0.28 } as const
+export const EDGE_TONE = { inner: 0.75, outer: 0.4, rim: 0.12 } as const
+/** The most an edge darkens one pixel (strong, a big drop): dark, never black. */
+export const EDGE_MAX_DARK = 0.7
 
 /** The widest band any setting can make (px): the margin a chunk reads past its edges. */
 export const EDGE_MAX_WIDTH = 8
@@ -45,7 +47,7 @@ export const EDGE_MARGIN = Math.ceil(EDGE_MAX_WIDTH * 2.5) + 1
 export function edgeBand(drop: number, s: EdgeSettings): { width: number; k: number } {
   if (!s.scale) return { width: Math.max(1, Math.round(s.width)), k: 1 }
   const width = Math.max(1, Math.round(s.width * Math.min(2.5, Math.max(0.5, 0.5 + drop * 0.5))))
-  const k = Math.min(1.3, Math.max(0.4, 0.4 + drop * 0.3))
+  const k = Math.min(1.3, Math.max(0.55, 0.55 + drop * 0.3))
   return { width, k }
 }
 
@@ -203,6 +205,6 @@ export const EDGE_KEEP = [1, 0.94, 0.8] as const
  */
 export const EDGE_CAP = 0.85
 export function combineShade(cast: number, edge: number, terrainVisible: number): number {
-  const e = 1 - edge * (0.45 + 0.55 * terrainVisible)
+  const e = 1 - edge * (0.7 + 0.3 * terrainVisible)
   return Math.max(Math.min(cast, e) * EDGE_CAP, cast * e)
 }
