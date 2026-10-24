@@ -132,3 +132,16 @@ height.
 - **Time of day for the sun:** a real arc, tilted. The sun rises in the east, sets in the west,
   and stays a little north so hills keep their shape at noon. Morning and evening shadows run
   long and warm. At night, the existing lamp and cave lighting take over.
+
+## After walking slopes 2d (owner, 2026-10-23)
+
+- **True ¾ lift is growing on the owner**, especially with the 2d shadows. It's back in play
+  next to shading by facing; neither is picked yet.
+- **Partial see-through.** The grey outline when the hero walks behind higher ground is good,
+  but it's all or nothing: with only the legs behind a ridge, the whole body turns grey. Only
+  the hidden part of the sprite should show as the outline.
+- **Edges must read.** On the spiral ramp it's hard to see where one level ends and the next
+  begins; sun shadows mark only some edges, and with shading by facing the unshadowed edges
+  are even harder to see. Add stylized edge shading wherever height changes (a darker band on
+  the low side, behind and under the drop), for every look in the lab, adjustable in strength
+  and with an option to scale it by the height difference.
