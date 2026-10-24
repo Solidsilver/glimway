@@ -1,6 +1,6 @@
 <script lang="ts">
   import Icon from '../../ui/Icon.svelte'
-  import { SLOPE_PRESETS, SLOPE_RESET, inLab, labLook, labUrl, onLabLook, setLabLook, slopePresetOf, styleOf, styleSettings, type LabLook, type SlopePreset } from './look'
+  import { EDGE_LOOK, SLOPE_PRESETS, SLOPE_RESET, inLab, labLook, labUrl, onLabLook, setLabLook, slopePresetOf, styleOf, styleSettings, type LabLook, type SlopePreset } from './look'
   import type { SlopeStyle } from './slopes'
 
   // The height lab's corner of the dev panel (src/ui/dev/DevPanel.svelte):
@@ -66,6 +66,24 @@
           <button type="button" class="small" aria-pressed={slopePresetOf(look) === name} onclick={() => setLabLook({ ...p.look })}>{p.name}</button>
         {/each}
         <button type="button" class="small" onclick={() => setLabLook({ ...SLOPE_RESET })}>Reset to Shading baseline</button>
+      </div>
+      <div class="row" role="group" aria-label="Edge shading" data-testid="height-lab-edges">
+        <span class="label">Edge shading: a darker band below every drop, in every look</span>
+        <label class="row">
+          <span class="label">Edge shading: {Math.round(look.edgeShade * 100)}%</span>
+          <input type="range" min="0" max="100" step="5" aria-label="Edge shading" value={Math.round(look.edgeShade * 100)} oninput={(e) => setLabLook({ edgeShade: Number(e.currentTarget.value) / 100 })} />
+        </label>
+        <label class="row">
+          <span class="label">Band width: {look.edgeWidth} px{look.edgeScale ? ' (a level’s drop)' : ''}</span>
+          <input type="range" min="1" max="8" step="1" aria-label="Band width" value={look.edgeWidth} oninput={(e) => setLabLook({ edgeWidth: Number(e.currentTarget.value) })} />
+        </label>
+        <label class="row">
+          <span class="label">Threshold: {look.edgeThreshold.toFixed(1)} {look.edgeThreshold === 1 ? 'level' : 'levels'} (the smallest step that counts)</span>
+          <input type="range" min="0.1" max="2" step="0.1" aria-label="Edge threshold" value={look.edgeThreshold} oninput={(e) => setLabLook({ edgeThreshold: Number(e.currentTarget.value) })} />
+        </label>
+        <label class="row"><span class="label"><input type="checkbox" checked={look.edgeScale} onchange={(e) => setLabLook({ edgeScale: e.currentTarget.checked })} /> Scale by height difference</span></label>
+        <label class="row"><span class="label"><input type="checkbox" checked={look.edgeRim} onchange={(e) => setLabLook({ edgeRim: e.currentTarget.checked })} /> Rim light on the high lip</span></label>
+        <button type="button" class="small" onclick={() => setLabLook({ ...EDGE_LOOK })}>Edge defaults</button>
       </div>
       <div class="row" role="group" aria-label="Slopes, drawn as">
         <span class="label">Slopes, drawn as (round 1’s styles)</span>

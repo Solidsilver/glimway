@@ -1,15 +1,16 @@
 /** Phaser adapter for the independent, cheap sun map and alpha silhouettes. */
 import Phaser from 'phaser'
-import { buildSunMap, SUN_RES, type SunMap } from './sun-map.ts'
+import { buildSunMap, sampleVisibility, SUN_RES, type SunMap } from './sun-map.ts'
 import { silhouetteBounds, type DaySun } from './sun.ts'
-import { buildShadowLayer, casterProxy, type Caster, type CasterKind, type ShadowProxy } from './sun-shadow.ts'
+import { buildShadowLayer, casterProxy, dither, SHADOW_KEEP, type Caster, type CasterKind, type ShadowProxy } from './sun-shadow.ts'
+import { EDGE_KEEP, chunkEdgesSteps, combineShade, edgeKey, type EdgeSettings } from './edges.ts'
 import type { SlopesInfo } from './slopes.ts'
 
 export class SunChunk {
   readonly image: Phaser.GameObjects.Image
   private texture: Phaser.Textures.CanvasTexture
   private data: ImageData
-  private work: Generator<void, { map: SunMap; dark: Float32Array | null; px: Uint8ClampedArray | null }> | null = null
+  private work: Generator<void, { map: SunMap; dark: Float32Array | null; px: Uint8ClampedArray | null; rim: Uint8ClampedArray | null }> | null = null
   revision = ''
   map: SunMap | null = null
   /** Still casters' shadow darkness, one cell a world pixel (null: none drawn). */
@@ -19,6 +20,11 @@ export class SunChunk {
   private shadeTexture: Phaser.Textures.CanvasTexture
   private shadeData: ImageData
   private cost = 0
+  /** 2e: this chunk's edge amounts, kept across sun changes (they're the field's), and the rim's additive image. */
+  edges: { key: string; dark: Float32Array; rim: Float32Array; edges: number } | null = null
+  readonly rim: Phaser.GameObjects.Image
+  private rimTexture: Phaser.Textures.CanvasTexture
+  private rimData: ImageData
   constructor(private scene: Phaser.Scene, private key: string, readonly x: number, readonly y: number, readonly width: number, readonly height: number) {
     // Half-texel alignment: maps sample the boundary itself. Crop off the
     // halo in world space, so multiply overlays never overlap at seams.
@@ -42,18 +48,49 @@ export class SunChunk {
     this.shadeTexture.setFilter(Phaser.Textures.FilterMode.NEAREST)
     this.shadeData = new ImageData(width, height)
     this.shade = scene.add.image(x, y, `${key}-shade`).setOrigin(0).setDepth(-998_990).setBlendMode(Phaser.BlendModes.MULTIPLY).setVisible(false)
+    const rim = document.createElement('canvas'); rim.width = width; rim.height = height
+    if (scene.textures.exists(`${key}-rim`)) scene.textures.remove(`${key}-rim`)
+    this.rimTexture = scene.textures.addCanvas(`${key}-rim`, rim)!
+    this.rimTexture.setFilter(Phaser.Textures.FilterMode.NEAREST)
+    this.rimData = new ImageData(width, height)
+    this.rim = scene.add.image(x, y, `${key}-rim`).setOrigin(0).setDepth(-998_985).setBlendMode(Phaser.BlendModes.ADD).setVisible(false)
   }
   /** `casters` (still trees and rocks that can reach this chunk) is read
    * once the light is done; null draws no still shadows. */
-  start(info: SlopesInfo, sun: DaySun, strength: number, enabled: boolean, revision: string, casters: (() => readonly Caster[]) | null = null): void {
+  start(info: SlopesInfo, sun: DaySun, strength: number, enabled: boolean, revision: string, casters: (() => readonly Caster[]) | null = null, edges: EdgeSettings | null = null): void {
     this.revision = revision
     this.cost = 0
     const { x, y, width, height } = this
+    const chunk = this
     this.work = (function* () {
       const map = yield* buildSunMap(info, x, y, width, height, sun, strength, enabled)
-      if (!casters || !enabled) return { map, dark: null, px: null }
-      const layer = yield* buildShadowLayer(map, x, y, width, height, casters(), strength, sun.daylight)
-      return { map, ...layer }
+      // Edges are the field's: worked out once per setting, not per sun.
+      const on = !!edges && edges.strength > 0
+      if (on && chunk.edges?.key !== edgeKey(edges)) {
+        chunk.edges = { key: edgeKey(edges), ...(yield* chunkEdgesSteps(info, x, y, width, height, edges)) }
+      }
+      const layer = casters && enabled ? yield* buildShadowLayer(map, x, y, width, height, casters(), strength, sun.daylight) : null
+      if (!on) return { map, dark: layer?.dark ?? null, px: layer?.px ?? null, rim: null }
+      // Edge bands over the casts, capped; weaker in terrain shade (the sun already darkens it there).
+      const e = chunk.edges!
+      const px = new Uint8ClampedArray(width * height * 4).fill(255)
+      const rim = new Uint8ClampedArray(width * height * 4)
+      const dark = layer?.dark
+      const lit = enabled && sun.daylight > 0
+      let rims = false
+      for (let i = 0; i < width * height; i++) {
+        const lx = i % width, ly = (i - lx) / width
+        const ed = e.dark[i]! * edges.strength
+        const cd = dark ? dark[i]! : 0
+        if (ed > 0 || cd > 0) {
+          const vis = ed > 0 && lit ? (sampleVisibility(map, x + lx + 0.5, y + ly + 0.5) >= dither(x + lx, y + ly) ? 1 : 0) : 1
+          for (let c = 0; c < 3; c++) px[i * 4 + c] = combineShade(1 - cd * SHADOW_KEEP[c]!, ed * EDGE_KEEP[c]!, vis) * 255
+        }
+        const r = e.rim[i]! * edges.strength * (1 - cd)
+        if (r > 0) { rims = true; rim[i * 4] = r * 255; rim[i * 4 + 1] = r * 245; rim[i * 4 + 2] = r * 210; rim[i * 4 + 3] = 255 }
+        if ((i + 1) % (width * 64) === 0) yield
+      }
+      return { map, dark: dark ?? null, px, rim: rims ? rim : null }
     })()
   }
   /** A few rows per step; returns the complete chunk's CPU+upload cost. */
@@ -74,6 +111,12 @@ export class SunChunk {
       this.shadeTexture.refresh(); this.shadeTexture.setFilter(Phaser.Textures.FilterMode.NEAREST)
     }
     this.shade.setVisible(!!next.value.px)
+    if (next.value.rim) {
+      this.rimData.data.set(next.value.rim)
+      this.rimTexture.context.putImageData(this.rimData, 0, 0)
+      this.rimTexture.refresh(); this.rimTexture.setFilter(Phaser.Textures.FilterMode.NEAREST)
+    }
+    this.rim.setVisible(!!next.value.rim)
     this.cost += performance.now() - upload
     this.work = null
     return this.cost
@@ -84,7 +127,7 @@ export class SunChunk {
     const lx = Math.floor(wx) - this.x, ly = Math.floor(wy) - this.y
     return this.dark && lx >= 0 && ly >= 0 && lx < this.width && ly < this.height ? this.dark[ly * this.width + lx]! : 0
   }
-  destroy(): void { this.image.destroy(); this.shade.destroy(); this.scene.textures.remove(this.key); this.scene.textures.remove(`${this.key}-shade`) }
+  destroy(): void { this.image.destroy(); this.shade.destroy(); this.rim.destroy(); this.scene.textures.remove(this.key); this.scene.textures.remove(`${this.key}-shade`); this.scene.textures.remove(`${this.key}-rim`) }
 }
 
 /** Shadow proxies, made once per atlas frame, kind and scale (like masks). */

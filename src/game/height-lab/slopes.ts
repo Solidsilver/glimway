@@ -403,7 +403,9 @@ const SPOTS: SlopeSpot[] = [
   { name: 'behind-plateau', tx: 132, ty: 66, note: 'just north of the plateau patch: in the lift, hidden behind it (drawn as a silhouette)' },
   { name: 'around-east', tx: 128, ty: 40, note: 'round the range’s east end: the long way north' },
   { name: 'knoll', tx: 86, ty: 100, note: 'the knoll: a cone, 0.2 level a tile every way round (the uphill runs)', look: [86, 92] },
-  { name: 'rocky-path', tx: 53, ty: 42, note: 'the rocky path beside the scree: walkable stone next to too-steep stone', look: [51, 40] }
+  { name: 'rocky-path', tx: 53, ty: 42, note: 'the rocky path beside the scree: walkable stone next to too-steep stone', look: [51, 40] },
+  { name: 'spiral-ramp', tx: 130, ty: 93, note: 'the owner’s spot (2e): level 3 of the stepped plateau, its ramps and whole-level edges round you' },
+  { name: 'legs-behind-ridge', tx: 132, ty: 65, note: 'just north of the plateau’s rim: in the full lift, only the legs are behind it (2e partial see-through)' }
 ]
 
 function fieldProps(f: Field): PropSpot[] {
@@ -629,6 +631,62 @@ export function display(info: SlopesInfo, x: number, y: number, z: number): { x:
   const sp = spanAt(col, sy / T - 0.02)
   const hidden = !sp || sp.face || spanGround(sp, sy / T - 0.02).z > z + HIDE_ABOVE
   return { x, y: sy, hidden }
+}
+
+/** How much nearer (field px) the ground drawn over a sprite pixel must be before it covers it: a hair, so their own ground never does. */
+export const COVER_PX = 2
+
+/**
+ * Slopes 2e, partial see-through: which pixels of a sprite standing at
+ * field row `fieldY` (px) are covered by nearer ground in the lift, over a
+ * rectangle of screen pixels (world px, w × h): 1 covered, 0 not. A pixel
+ * is covered when the ground or face the lift draws there lies south of
+ * the sprite (nearer the viewer) and stands more than HIDE_ABOVE above
+ * its feet (display's rule for the feet, row by row): with the legs behind
+ * a ridge only the legs are; the ground just in front of the toes on a
+ * slope never is. No lift: nothing is.
+ */
+export function coveredPixels(info: SlopesInfo, fieldY: number, z: number, x0: number, y0: number, w: number, h: number): Uint8Array {
+  const out = new Uint8Array(w * h)
+  if (!info.lift) return out
+  const f = info.field
+  for (let x = 0; x < w; x++) {
+    const wx = x0 + x
+    if (wx < 0 || wx >= f.w * TILE_PX) continue
+    const col = liftColumn(f, wx >> 4, ((wx & 15) + 0.5) / TILE_PX, info.pad, info.k)
+    let k = col.length - 1
+    for (let y = 0; y < h; y++) {
+      const s = (y0 + y + 0.5) / TILE_PX
+      while (k >= 0 && col[k]!.s1 <= s) k--
+      const sp = k >= 0 && col[k]!.s0 <= s ? col[k]! : null
+      if (!sp) continue
+      const g = sp.face ? null : spanGround(sp, s)
+      const near = g ? (sp.ty + g.fy) * TILE_PX : (sp.ty + 1) * TILE_PX
+      const top = g ? g.z : sp.zS
+      if (near > fieldY + COVER_PX && top > z + HIDE_ABOVE) out[y * w + x] = 1
+    }
+  }
+  return out
+}
+
+/** Covered pixels as runs down each column (x, y0, y1 exclusive), neighbouring columns with the same run merged into one rectangle. */
+export function coverRects(mask: Uint8Array, x0: number, y0: number, w: number, h: number): { x: number; y: number; w: number; h: number }[] {
+  const out: { x: number; y: number; w: number; h: number }[] = []
+  let open = new Map<string, { x: number; y: number; w: number; h: number }>()
+  for (let x = 0; x < w; x++) {
+    const next = new Map<string, { x: number; y: number; w: number; h: number }>()
+    let y = 0
+    while (y < h) {
+      if (!mask[y * w + x]) { y++; continue }
+      const a = y
+      while (y < h && mask[y * w + x]) y++
+      const key = `${a},${y}`
+      const r = open.get(key)
+      if (r) { r.w++; next.set(key, r) } else { const nr = { x: x0 + x, y: y0 + a, w: 1, h: y - a }; out.push(nr); next.set(key, nr) }
+    }
+    open = next
+  }
+  return out
 }
 
 /**

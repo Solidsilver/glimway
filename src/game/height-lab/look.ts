@@ -8,6 +8,7 @@
 import type { AreaName } from './area.ts'
 import type { ContourDetail, FacingShade, LiftPx, SlopeStyle, SlopesLook } from './slopes.ts'
 import type { WayIn } from './light.ts'
+import type { EdgeSettings } from './edges.ts'
 
 export interface LabLook {
   /** Which area to walk (switching rebuilds the scene). */
@@ -62,6 +63,20 @@ export interface LabLook {
   sunClock: boolean
   /** Sprite cast shadows: 2d proxies cast onto the ground, or 2c sheared silhouettes. */
   spriteShadows: 'proxy' | 'silhouette'
+  /** 2e edge shading (./edges.ts): strength 0–1 (0 off), band width px, scaled by the drop, the smallest step that counts (levels), a light rim on the lip. */
+  edgeShade: number
+  edgeWidth: number
+  edgeScale: boolean
+  edgeThreshold: number
+  edgeRim: boolean
+}
+
+/** 2e edge shading's defaults (./edges.ts EDGE_DEFAULT): reset keeps them. */
+export const EDGE_LOOK: Pick<LabLook, 'edgeShade' | 'edgeWidth' | 'edgeScale' | 'edgeThreshold' | 'edgeRim'> = { edgeShade: 0.6, edgeWidth: 3, edgeScale: true, edgeThreshold: 0.5, edgeRim: true }
+
+/** The look's edge settings as ./edges.ts takes them. */
+export function edgeSettings(l: Pick<LabLook, 'edgeShade' | 'edgeWidth' | 'edgeScale' | 'edgeThreshold' | 'edgeRim'>): EdgeSettings {
+  return { strength: l.edgeShade, width: l.edgeWidth, scale: l.edgeScale, threshold: l.edgeThreshold, rim: l.edgeRim }
 }
 
 /** Preset drawing controls. Sunlight, strength and time update only the light layer. */
@@ -85,7 +100,7 @@ export function slopePresetOf(l: SlopeLook): SlopePreset | null {
 }
 
 /** "Reset": the Shading baseline, 60% uphill, 6% downhill, noon, gait and sunlight on. */
-export const SLOPE_RESET: Partial<LabLook> = { ...SLOPE_PRESETS.baseline.look, slopeUphill: 60, slopeDownhill: 6, slopeGait: true, sunlight: true, sunStrength: 1, sunTime: 0.5, sunClock: false, spriteShadows: 'proxy' }
+export const SLOPE_RESET: Partial<LabLook> = { ...SLOPE_PRESETS.baseline.look, slopeUphill: 60, slopeDownhill: 6, slopeGait: true, sunlight: true, sunStrength: 1, sunTime: 0.5, sunClock: false, spriteShadows: 'proxy', ...EDGE_LOOK }
 
 /** Just the slopes area's drawing settings. */
 export function slopeSettings(l: SlopeLook & Partial<Pick<LabLook, 'sunlight' | 'sunStrength'>>): SlopeLook & Partial<Pick<LabLook, 'sunlight' | 'sunStrength'>> {
@@ -135,7 +150,8 @@ const DEFAULT: LabLook = {
   strategy: 'region',
   walkOverlay: false,
   ...SLOPE_PRESETS.baseline.look,
-  slopeUphill: 60, slopeDownhill: 6, slopeGait: true, sunlight: true, sunStrength: 1, sunTime: 0.5, sunClock: false, spriteShadows: 'proxy'
+  slopeUphill: 60, slopeDownhill: 6, slopeGait: true, sunlight: true, sunStrength: 1, sunTime: 0.5, sunClock: false, spriteShadows: 'proxy',
+  ...EDGE_LOOK
 }
 
 /** Each setting's allowed values (a range for the sliders). */
@@ -165,7 +181,12 @@ const ALLOWED: { [K in keyof LabLook]: readonly LabLook[K][] | { min: number; ma
   sunStrength: { min: 0, max: 2 },
   sunTime: { min: 0, max: 1 },
   sunClock: [true, false],
-  spriteShadows: ['proxy', 'silhouette']
+  spriteShadows: ['proxy', 'silhouette'],
+  edgeShade: { min: 0, max: 1 },
+  edgeWidth: { min: 1, max: 8 },
+  edgeScale: [true, false],
+  edgeThreshold: { min: 0.1, max: 2 },
+  edgeRim: [true, false]
 }
 
 /**
