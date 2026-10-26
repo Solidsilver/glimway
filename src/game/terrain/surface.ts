@@ -25,7 +25,6 @@ export const SLOPE = 0
 export const STEEP = 1
 export const CRAG = 2
 export const CLIFF = 3
-export type SlopeKind = typeof SLOPE | typeof STEEP | typeof CRAG | typeof CLIFF
 
 /** Edge directions, as flag bits: N, E, S, W. */
 export const DX = [0, 1, 0, -1] as const

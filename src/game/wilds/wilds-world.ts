@@ -16,6 +16,8 @@ import { borderRect } from '../../lib/wilds/coords.ts'
 import { PLACES, fixedChunks } from '../../lib/places.ts'
 import { anchorTile, fixedGroundAt, fixedPlaceOf, fixedSolidAt, fixedStand, footprintAt } from './fixed.ts'
 import { nearestOpen } from './window-plan.ts'
+import { terrain } from '../terrain/store.ts'
+import { terrainSettings } from '../terrain/settings.ts'
 
 /** How far past the border the camera may look (the pale drift), in px. */
 export const DRIFT_VIEW_PX = 12 * TILE
@@ -59,7 +61,9 @@ export function outdoorGroundAt(tx: number, ty: number): number | null {
 
 /** Is a world tile solid? (Off the grid, and where nothing is loaded yet, it is.) */
 export function outdoorSolidAt(tx: number, ty: number): boolean {
-  return onFixed(tx, ty) ? fixedSolidAt(tx, ty) : solidAt(tx, ty)
+  if (onFixed(tx, ty)) return fixedSolidAt(tx, ty)
+  // Dev height terrain: ground nobody walks (too steep, crags, a cliff's face) is solid too.
+  return solidAt(tx, ty) || (terrainSettings().on && terrain.closedAt(tx, ty))
 }
 
 /**
