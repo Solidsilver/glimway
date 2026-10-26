@@ -137,7 +137,7 @@ function find(t: TerrainStore): Spots {
     if (open(tx, ty, 8, 0, -1) && z(tx, ty - 8) - z(tx, ty) > 0.6) add(out.climb, { tx, ty, path: line(tx, ty, 8, 0, -1), at: ty - 8, rise: z(tx, ty - 8) - z(tx, ty), up: 'ArrowUp' })
     else if (open(tx, ty, 8, 0, 1) && z(tx, ty + 8) - z(tx, ty) > 0.6) add(out.climb, { tx, ty, path: line(tx, ty, 8, 0, 1), at: ty + 8, rise: z(tx, ty + 8) - z(tx, ty), up: 'ArrowDown' })
     // A cliff face's bottom row with open ground below it and room to walk up to it.
-    if (t.kindAt(tx, ty) === CLIFF && t.kindAt(tx, ty - 1) === CLIFF && open(tx, ty + 1, 3, 0, 1)) add(out.cliff, { tx, ty: ty + 2, path: line(tx, ty + 1, 3, 0, 1), at: ty, rise: 0 })
+    if (t.kindAt(tx, ty) === CLIFF && t.kindAt(tx, ty - 1) === CLIFF && open(tx, ty + 1, 3, 0, 1)) add(out.cliff, { tx, ty: ty + 2, path: line(tx, ty - 1, 5, 0, 1), at: ty, rise: 0 })
     // Ground rising to the south: in the lift, nearer and higher ground covers the legs, not the head.
     if (out.ridge.length < 12 && t.walkable(tx, ty)) {
       const here = z(tx, ty)
@@ -164,8 +164,9 @@ async function usable(page: Page, list: Spot[], name: string): Promise<Spot> {
   for (const s of list) {
     await standAt(page, s.tx, s.ty)
     const blocked = await page.evaluate((path) => {
-      const w = window as unknown as { __fsTileSolid: (x: number, y: number) => boolean; __fsSolidAt: (x: number, y: number) => boolean }
-      return path.filter(([x, y]) => w.__fsTileSolid(x, y) || w.__fsSolidAt(x, y)).length
+      // Collision bodies only (trees, water): the terrain's own closed ground is solid to the open map too.
+      const w = window as unknown as { __fsSolidAt: (x: number, y: number) => boolean }
+      return path.filter(([x, y]) => w.__fsSolidAt(x, y)).length
     }, s.path)
     const p = await player(page)
     if (!blocked && Math.floor(p.x / T) === s.tx && Math.floor((p.y - 2) / T) === s.ty) return s
@@ -243,6 +244,13 @@ test.describe('height terrain in the Wilds', () => {
     }
 
     // Budgets: terrain work per frame, bakes, and textures let go.
+    // Measured over a steady walk in the lift (warps and arrivals are the bake starts, timed apart).
+    await standAt(page, seam.tx, seam.ty)
+    await page.evaluate(() => (window as unknown as { __fsTerrainReset: () => void }).__fsTerrainReset())
+    for (let i = 0; i < 3; i++) {
+      await holdKey(page, 'ArrowRight', 900)
+      await holdKey(page, 'ArrowLeft', 900)
+    }
     const last = (await state(page))!
     frames.budget = { frameMs: last.frameMs, startMs: last.startMs, bakeMs: last.bakeMs, textures: last.textures, images: last.images.length }
     save()

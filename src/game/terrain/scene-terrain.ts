@@ -525,6 +525,12 @@ export class SceneTerrain {
     this.moved.push({ o: this.ghost! as Moved['o'], x: this.ghost!.x, y: this.ghost!.y, visible: false })
   }
 
+  /** Timings afresh (the spec's steady walk). */
+  resetStats(): void {
+    this.stats.frameMs.length = 0
+    this.stats.startMs.length = 0
+  }
+
   /** The readout for the dev hooks and the E2E spec. */
   state(): Record<string, unknown> {
     const sp = this.deps.hero().sprite

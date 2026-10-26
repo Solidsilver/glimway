@@ -138,6 +138,8 @@ export interface FsHooks {
   /** Dev height terrain (../terrain/scene-terrain.ts): its readout, and its settings changed (the dev panel's Terrain section). */
   __fsTerrain: () => Record<string, unknown> | null
   __fsTerrainSet: (change: Partial<import('./terrain/settings').TerrainSettings>) => void
+  /** Start the terrain's frame timings afresh (a steady walk's budget). */
+  __fsTerrainReset: () => void
   /** The screen insets the camera keeps the hero clear of; set them, or read them. */
   __fsDevInsets: (v?: Insets) => Insets
   /** The hero sprite's box on screen (CSS px from the canvas's top left). */
