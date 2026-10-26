@@ -4,7 +4,7 @@ import { buildSunMap, sampleVisibility, SUN_RES, type SunMap } from './sun-map.t
 import { silhouetteBounds, type DaySun } from './sun.ts'
 import { buildShadowLayer, casterProxy, dither, SHADOW_KEEP, type Caster, type CasterKind, type ShadowProxy } from './sun-shadow.ts'
 import { EDGE_KEEP, EDGE_MAX_DARK, chunkEdgesSteps, combineShade, edgeKey, type EdgeSettings } from './edges.ts'
-import type { SlopesInfo } from './slopes.ts'
+import type { TerrainView } from './field.ts'
 
 export class SunChunk {
   readonly image: Phaser.GameObjects.Image
@@ -57,7 +57,7 @@ export class SunChunk {
   }
   /** `casters` (still trees and rocks that can reach this chunk) is read
    * once the light is done; null draws no still shadows. */
-  start(info: SlopesInfo, sun: DaySun, strength: number, enabled: boolean, revision: string, casters: (() => readonly Caster[]) | null = null, edges: EdgeSettings | null = null): void {
+  start(info: TerrainView, sun: DaySun, strength: number, enabled: boolean, revision: string, casters: (() => readonly Caster[]) | null = null, edges: EdgeSettings | null = null): void {
     this.revision = revision
     this.cost = 0
     const { x, y, width, height } = this

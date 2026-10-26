@@ -8,7 +8,7 @@
 import type { AreaName } from './area.ts'
 import type { ContourDetail, FacingShade, LiftPx, SlopeStyle, SlopesLook } from './slopes.ts'
 import type { WayIn } from './light.ts'
-import type { EdgeSettings } from './edges.ts'
+import type { EdgeSettings } from '../terrain/edges.ts'
 
 export interface LabLook {
   /** Which area to walk (switching rebuilds the scene). */

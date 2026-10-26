@@ -1,4 +1,4 @@
-import { MAX_WALK_SLOPE } from './slopes.ts'
+import { MAX_WALK_SLOPE } from './field.ts'
 
 /** Actual field velocity, never projected screen velocity. Lean is a one-pixel
  * body offset; its shadow and logical feet stay planted. No extra art needed. */

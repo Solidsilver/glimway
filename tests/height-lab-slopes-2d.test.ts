@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { SUN_ELEVATION, shadowOpacity, sunAt } from '../src/game/height-lab/sun.ts';
-import { GROUND_ASPECT, MAX_REACH, buildShadowLayer, castProxy, casterProxy, overShadow, shadeMultiply, shadowDarkness, shadowRay, type Caster } from '../src/game/height-lab/sun-shadow.ts';
-import type { SunMap } from '../src/game/height-lab/sun-map.ts';
+import { SUN_ELEVATION, shadowOpacity, sunAt } from '../src/game/terrain/sun.ts';
+import { GROUND_ASPECT, MAX_REACH, buildShadowLayer, castProxy, casterProxy, overShadow, shadeMultiply, shadowDarkness, shadowRay, type Caster } from '../src/game/terrain/sun-shadow.ts';
+import type { SunMap } from '../src/game/terrain/sun-map.ts';
 import { migrateLook } from '../src/game/height-lab/look.ts';
 
 const hours = (h: number) => (h - 6) / 12;

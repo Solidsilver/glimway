@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DEFAULT_AREA_OPTIONS } from '../src/game/height-lab/area.ts';
 import { HIDE_ABOVE, buildSlopes, coverRects, coveredPixels, display, fieldZ, styleLook, type SlopesInfo } from '../src/game/height-lab/slopes.ts';
-import { EDGE_CAP, EDGE_DEFAULT, EDGE_MARGIN, EDGE_MAX_WIDTH, chunkEdges, combineShade, edgeAmounts, edgeBand, viewHeights, type EdgeSettings } from '../src/game/height-lab/edges.ts';
+import { EDGE_CAP, EDGE_DEFAULT, EDGE_MARGIN, EDGE_MAX_WIDTH, chunkEdges, combineShade, edgeAmounts, edgeBand, viewHeights, type EdgeSettings } from '../src/game/terrain/edges.ts';
 import { EDGE_LOOK, edgeSettings, migrateLook } from '../src/game/height-lab/look.ts';
 
 const flat = buildSlopes(DEFAULT_AREA_OPTIONS, styleLook('shade')).slopes!;

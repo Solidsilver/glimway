@@ -4,8 +4,8 @@ import { DEFAULT_AREA_OPTIONS } from '../src/game/height-lab/area.ts';
 import { migrateLook, SLOPE_PRESETS, slopesLook } from '../src/game/height-lab/look.ts';
 import { KIND, SURFACE, newLayer, type Walker } from '../src/game/height-lab/levels.ts';
 import { buildSlopes, fieldEdges, slopeWalk, uphillFactor, type Field } from '../src/game/height-lab/slopes.ts';
-import { slopeGait } from '../src/game/height-lab/slope-gait.ts';
-import { SUN, sunFacing, sunShadow, sunTint } from '../src/game/height-lab/sun.ts';
+import { slopeGait } from '../src/game/terrain/slope-gait.ts';
+import { SUN, sunFacing, sunShadow, sunTint } from '../src/game/terrain/sun.ts';
 import { chunkKey, paintField } from '../src/game/height-lab/slopes-paint.ts';
 
 function plane(gx: number, gy: number) {
