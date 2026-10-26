@@ -5,6 +5,9 @@ import { freshPlayer } from './home-helpers'
 import { CLIFF, decodeTerrainBatch } from '../src/game/terrain/surface'
 import { TerrainStore } from '../src/game/terrain/store'
 import type { TerrainSettings } from '../src/game/terrain/settings'
+import { buildWindow } from '../src/game/terrain/window-field'
+import { windowView } from '../src/game/terrain/bake'
+import { coveredPixels } from '../src/game/terrain/field'
 
 /**
  * Generated height terrain in the real Wilds, on the dev server, behind the
@@ -150,8 +153,20 @@ function find(t: TerrainStore): Spots {
         top = Math.min(top, ty + k - 3 * zk)
         rise = Math.max(rise, zk - here)
       }
-      // Covered from below the head (the sprite is about 1.25 tiles tall): the nearest top between the knees and the waist.
-      if (top < foot - 0.25 && top > foot - 0.8) add(out.ridge, { tx, ty, path: [[tx, ty]], at: ty, rise })
+      // Near the knees to the waist by a rough look, then exactly as the game works it out (./field.ts coveredPixels)
+      // for a hero-sized box standing where a warp puts the feet: some of it covered, not all.
+      if (top < foot - 0.1 && top > foot - 2) {
+        const ox = tx - 6
+        const oy = ty - 8
+        const view = windowView(buildWindow(t, ox, oy, 13, 56), true)
+        const fx = tx * T + 8
+        const fy = ty * T + 8
+        const zf = t.zAt(fx, fy - 2)
+        const sy = fy - 3 * T * zf
+        const mask = coveredPixels(view, fy - 2 - oy * T, zf, fx - 6 - ox * T, sy - 21 - (oy - view.pad) * T, 12, 22)
+        const n = mask.reduce((a, m) => a + m, 0)
+        if (n > 12 * 22 * 0.1 && n < 12 * 22 * 0.75) add(out.ridge, { tx, ty, path: [[tx, ty]], at: ty, rise })
+      }
     }
   }
   for (const k of ['seam', 'climb', 'cliff', 'ridge'] as const) expect(out[k].length, `${k} candidates near home`).toBeGreaterThan(0)
@@ -201,21 +216,25 @@ test.describe('height terrain in the Wilds', () => {
       expect(Math.floor(across.x / T), `${mode}: crossed the seam at ${seam.at}`).toBeGreaterThanOrEqual(seam.at)
       await shot(page, `${mode}-seam-crossed`, frames)
 
-      // Climb: slower up than down the same slope (measured twice at most: a creature can wander into the way).
+      // Climb: slower up than down the same slope, each walked from its own warp (the foot, then the top).
+      // Measured twice at most: a creature can wander into the way.
       let up = 0
       let down = 0
+      const back = climb.up === 'ArrowDown' ? 'ArrowUp' : 'ArrowDown'
       for (let tries = 0; tries < 2; tries++) {
         await standAt(page, climb.tx, climb.ty)
         if (tries === 0) await shot(page, `${mode}-climb-foot`, frames)
         const y0 = (await player(page)).y
         await holdKey(page, climb.up ?? 'ArrowUp', 700)
         const st = (await state(page))!
+        up = Math.abs((await player(page)).y - y0)
+        await standAt(page, climb.tx, climb.at)
         const y1 = (await player(page)).y
-        await holdKey(page, climb.up === 'ArrowDown' ? 'ArrowUp' : 'ArrowDown', 700)
-        const y2 = (await player(page)).y
-        up = Math.abs(y1 - y0)
-        down = Math.abs(y2 - y1)
-        frames[`${mode}-climb-${tries}`] = { up, down, k: st.k, gradient: st.hero.gradient }
+        await holdKey(page, back, 700)
+        const st2 = (await state(page))!
+        down = Math.abs((await player(page)).y - y1)
+        frames[`${mode}-climb-${tries}`] = { up, down, kUp: st.k, kDown: st2.k, gradient: st.hero.gradient, blocked: st2.blocked }
+        save()
         if (up > 8 && up / down < 0.92) break
       }
       expect(up, `${mode}: walked uphill`).toBeGreaterThan(8)
