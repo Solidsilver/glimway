@@ -28,8 +28,9 @@ import (
 // DevTerrainPath is the route's path.
 const DevTerrainPath = "/api/dev/terrain"
 
-// DevTerrainRecipe is the recipe the route serves (wilds.SlopeRecipes).
-const DevTerrainRecipe = wilds.SlopeRecipe
+// DevTerrainRecipe is the recipe the route serves unless asked for another
+// with ?recipe= (wilds.SlopeRecipeFor: slopes-gen@1 stays selectable).
+const DevTerrainRecipe = wilds.SlopeRecipeV2
 
 // devTerrainMost is the most chunks one request may ask for (a 7×7 window).
 const devTerrainMost = 49
@@ -56,28 +57,30 @@ func (a *Server) DevTerrain(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid chunks", http.StatusBadRequest)
 		return
 	}
-	out, err := devTerrainReply(r, here.Seed, DevTerrainRecipe, asked)
+	recipe := DevTerrainRecipe
+	if q := r.URL.Query().Get("recipe"); q != "" {
+		recipe = q
+	}
+	out, err := devTerrainReply(r, here.Seed, recipe, asked)
 	if err != nil {
 		status := http.StatusInternalServerError
-		if errors.Is(err, errDevTerrainAsk) {
+		if errors.Is(err, errDevTerrainAsk) || errors.Is(err, errDevTerrainRecipe) {
 			status = http.StatusBadRequest
 		}
 		http.Error(w, err.Error(), status)
 		return
 	}
 	w.Header().Set("Content-Type", "application/octet-stream")
-	w.Header().Set("X-Glimway-Terrain-Recipe", DevTerrainRecipe)
+	w.Header().Set("X-Glimway-Terrain-Recipe", recipe)
 	w.WriteHeader(200)
 	_, _ = w.Write(out)
 }
 
 func devTerrainReply(r *http.Request, seed, recipe string, asked []string) ([]byte, error) {
-	surfacer := wilds.SlopeRecipes[recipe]
-	if surfacer == nil {
+	sampler, err := wilds.SlopeRecipeFor(seed, recipe)
+	if err != nil {
 		return nil, errDevTerrainRecipe
 	}
-	// One sampler for the request: its node cache is bounded by what's asked.
-	sampler := surfacer(seed)
 	var out []byte
 	for _, c := range asked {
 		xs, ys, ok := strings.Cut(c, ",")

@@ -10,9 +10,9 @@ type SlopeSurfacer interface {
 	Surface(ctx context.Context, x, y, w, h int) (*SlopeSurface, error)
 }
 
-// SlopeRecipes are the height recipes a dev server can serve, by id. A new
-// recipe (slopes-gen@2, natural ranges) is one more entry; the dev terrain
-// route (server/internal/api/dev_terrain.go) picks one by id.
-var SlopeRecipes = map[string]func(seed string) SlopeSurfacer{
-	SlopeRecipe: func(seed string) SlopeSurfacer { return NewSlopeSampler(seed) },
+// SlopeRecipeFor is a recipe's sampler by id (slopes-gen@1, the placeholder
+// bars; slopes-gen@2, natural ranges), or an error for an unknown id. The
+// dev terrain route (server/internal/api/dev_terrain.go) picks one by id.
+func SlopeRecipeFor(seed, recipe string) (SlopeSurfacer, error) {
+	return NewSlopeSamplerRecipe(seed, recipe)
 }

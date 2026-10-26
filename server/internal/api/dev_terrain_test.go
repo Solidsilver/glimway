@@ -34,7 +34,7 @@ func TestDevTerrainServesChunkSurfaces(t *testing.T) {
 		return w
 	}
 	w := get("?c=5,-19&c=-1,-1&c=16,-19", true)
-	if w.Code != 200 || w.Header().Get("X-Glimway-Terrain-Recipe") != wilds.SlopeRecipe {
+	if w.Code != 200 || w.Header().Get("X-Glimway-Terrain-Recipe") != wilds.SlopeRecipeV2 {
 		t.Fatalf("terrain: %d %s", w.Code, w.Body.String())
 	}
 	body := w.Body.Bytes()
@@ -50,7 +50,11 @@ func TestDevTerrainServesChunkSurfaces(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		fresh, err := wilds.NewSlopeSampler(seed).Surface(context.Background(), cx*24, cy*24, 24, 24)
+		sampler, err := wilds.NewSlopeSamplerRecipe(seed, wilds.SlopeRecipeV2)
+		if err != nil {
+			t.Fatal(err)
+		}
+		fresh, err := sampler.Surface(context.Background(), cx*24, cy*24, 24, 24)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -76,5 +80,25 @@ func TestDevTerrainServesChunkSurfaces(t *testing.T) {
 	x.api.DevTerrain(rec, r)
 	if rec.Code != http.StatusMethodNotAllowed {
 		t.Fatal("POST:", rec.Code)
+	}
+}
+
+// slopes-gen@1 stays selectable; an unknown recipe is refused.
+func TestDevTerrainRecipeIsSelectable(t *testing.T) {
+	x := newRig(t)
+	c, _ := x.ready("terrain-v1")
+	r := httptest.NewRequest(http.MethodGet, DevTerrainPath+"?c=0,0&recipe="+wilds.SlopeRecipe, nil)
+	r.AddCookie(c)
+	w := httptest.NewRecorder()
+	x.api.DevTerrain(w, r)
+	if w.Code != 200 || w.Header().Get("X-Glimway-Terrain-Recipe") != wilds.SlopeRecipe {
+		t.Fatal("v1:", w.Code)
+	}
+	r = httptest.NewRequest(http.MethodGet, DevTerrainPath+"?c=0,0&recipe=slopes-gen@9", nil)
+	r.AddCookie(c)
+	w = httptest.NewRecorder()
+	x.api.DevTerrain(w, r)
+	if w.Code != 400 {
+		t.Fatal("unknown recipe:", w.Code)
 	}
 }
