@@ -55,6 +55,7 @@ func run(args []string, stdout io.Writer) error {
 	rect, at, seedB, contentB, view, addr := "-20,-30,20,0", "0,0", "", "", "region", "127.0.0.1:8099"
 	fs.StringVar(&o.Seed, "seed", "map", "world seed")
 	fs.StringVar(&o.Terrain, "terrain", "", "lab-only ridge access strategy: region or chunk (region view)")
+	fs.StringVar(&o.SlopeRecipe, "slope-recipe", "", "slope recipe: slopes-gen@1 (default) or slopes-gen@2")
 	fs.StringVar(&o.Slopes, "slopes", "", "lab-only slopes view: height, kinds, routes, reach, tunnels (-24..23 chunks)")
 	fs.IntVar(&o.TerrainSamples, "terrain-samples", 1, "cold plan samples per strategy (1..20)")
 	fs.Uint64Var(&o.TerrainOrder, "terrain-order", 0, "chunk shuffle seed for independent generation and seam checks")

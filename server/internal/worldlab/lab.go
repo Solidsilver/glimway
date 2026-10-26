@@ -173,18 +173,19 @@ func (l *Lab) walk(w http.ResponseWriter, r *http.Request, req labRequest) {
 // epoch, at, rules}) or a check ({rules}). Rules: the wilds rules as JSON text;
 // empty is the server's embedded rules.
 type labRequest struct {
-	Slopes   string  `json:"slopes,omitempty"`
-	Terrain  string  `json:"terrain,omitempty"`
-	View     string  `json:"view"`
-	Seed     string  `json:"seed"`
-	Epoch    string  `json:"epoch"`
-	Rect     [4]int  `json:"rect"`
-	Scale    int     `json:"scale"`
-	Overlays string  `json:"overlays"`
-	Field    string  `json:"field"`
-	Rules    string  `json:"rules"`
-	At       *[2]int `json:"at"`
-	B        *struct {
+	SlopeRecipe string  `json:"slopeRecipe,omitempty"`
+	Slopes      string  `json:"slopes,omitempty"`
+	Terrain     string  `json:"terrain,omitempty"`
+	View        string  `json:"view"`
+	Seed        string  `json:"seed"`
+	Epoch       string  `json:"epoch"`
+	Rect        [4]int  `json:"rect"`
+	Scale       int     `json:"scale"`
+	Overlays    string  `json:"overlays"`
+	Field       string  `json:"field"`
+	Rules       string  `json:"rules"`
+	At          *[2]int `json:"at"`
+	B           *struct {
 		Seed  string `json:"seed"`
 		Field string `json:"field"`
 		Rules string `json:"rules"`
@@ -214,6 +215,7 @@ func (req labRequest) options(seed, rules string) Options {
 	o := Options{View: req.View, Seed: seed, Epoch: req.Epoch, Rect: req.Rect, Scale: req.Scale, Overlays: req.Overlays, Field: req.Field, Workers: labWorkers}
 	o.Terrain = req.Terrain
 	o.Slopes = req.Slopes
+	o.SlopeRecipe = req.SlopeRecipe
 	if rules != "" && rules != string(embeddedRules()) {
 		o.Raw = []byte(rules)
 	}
