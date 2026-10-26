@@ -91,14 +91,23 @@ async function scan(page: Page): Promise<TerrainStore> {
   return store
 }
 
+interface Spot {
+  tx: number
+  ty: number
+  /** Tiles the walk crosses: none may be solid in the flat Wilds (a tree, the Tangle). */
+  path: [number, number][]
+  /** The seam's or the face's row or column. */
+  at: number
+  rise: number
+}
 interface Spots {
-  seam: { tx: number; ty: number; edge: number }
-  climb: { tx: number; ty: number; rise: number }
-  cliff: { tx: number; ty: number; face: number }
-  ridge: { tx: number; ty: number; rise: number }
+  seam: Spot[]
+  climb: Spot[]
+  cliff: Spot[]
+  ridge: Spot[]
 }
 
-/** The nearest-home examples of each feature (tiles), on ground the hero can stand on. */
+/** Candidates for each feature, nearest home first, at least four tiles apart (the flat Wilds' trees are checked once there). */
 function find(t: TerrainStore): Spots {
   const lo = -SCAN * S + 4
   const hi = (SCAN + 1) * S - 4
@@ -111,32 +120,53 @@ function find(t: TerrainStore): Spots {
     for (let i = 0; i < n; i++) if (!t.canStep(tx + dx * i, ty + dy * i, dx === 1 ? 1 : dx === -1 ? 3 : dy === 1 ? 2 : 0)) return false
     return true
   }
-  let seam: Spots['seam'] | null = null
-  let climb: Spots['climb'] | null = null
-  let cliff: Spots['cliff'] | null = null
-  let ridge: Spots['ridge'] | null = null
+  const line = (tx: number, ty: number, n: number, dx: number, dy: number): [number, number][] => Array.from({ length: n + 1 }, (_, i) => [tx + dx * i, ty + dy * i])
+  const out: Spots = { seam: [], climb: [], cliff: [], ridge: [] }
+  const add = (list: Spot[], s: Spot) => {
+    if (list.length >= 12 || list.some((o) => Math.hypot(o.tx - s.tx, o.ty - s.ty) < 4)) return
+    list.push(s)
+  }
   for (const [tx, ty] of near) {
     // A chunk edge crossed on open, raised ground: four tiles either side.
-    if (!seam && ((tx + 4) % S + S) % S === 0 && z(tx, ty) > 0.2 && open(tx, ty, 8, 1, 0) && open(tx, ty - 1, 8, 1, 0)) seam = { tx, ty, edge: tx + 4 }
+    if (((tx + 4) % S + S) % S === 0 && z(tx, ty) > 0.2 && open(tx, ty, 8, 1, 0)) add(out.seam, { tx, ty, path: line(tx, ty, 8, 1, 0), at: tx + 4, rise: 0 })
     // A straight climb north: 8 open steps rising at least a level.
-    if (!climb && open(tx, ty, 8, 0, -1) && open(tx - 1, ty, 8, 0, -1) && z(tx, ty - 8) - z(tx, ty) > 1) climb = { tx, ty, rise: z(tx, ty - 8) - z(tx, ty) }
+    if (open(tx, ty, 8, 0, -1) && z(tx, ty - 8) - z(tx, ty) > 1) add(out.climb, { tx, ty, path: line(tx, ty, 8, 0, -1), at: ty - 8, rise: z(tx, ty - 8) - z(tx, ty) })
     // A cliff face's bottom row with open ground below it and room to walk up to it.
-    if (!cliff && t.kindAt(tx, ty) === CLIFF && t.walkable(tx, ty + 1) && open(tx, ty + 1, 3, 0, 1) && open(tx - 1, ty + 1, 3, 0, 1) && t.kindAt(tx, ty - 1) === CLIFF) cliff = { tx, ty: ty + 2, face: ty }
-    // Ground rising fast to the south: in the lift, nearer and higher ground hides the legs.
-    if (!ridge && t.walkable(tx, ty) && t.walkable(tx, ty - 1)) {
+    if (t.kindAt(tx, ty) === CLIFF && t.kindAt(tx, ty - 1) === CLIFF && open(tx, ty + 1, 3, 0, 1)) add(out.cliff, { tx, ty: ty + 2, path: line(tx, ty + 1, 3, 0, 1), at: ty, rise: 0 })
+    // Ground rising to the south: in the lift, nearer and higher ground covers the legs, not the head.
+    if (t.walkable(tx, ty)) {
+      const foot = ty + 0.7 - 3 * z(tx, ty)
       let rise = 0
-      for (let k = 1; k <= 6; k++) if (ty + k + 0.5 - 3 * z(tx, ty + k) < ty + 0.7 - 3 * z(tx, ty) - 0.4) rise = Math.max(rise, z(tx, ty + k) - z(tx, ty))
-      if (rise > 0.9) ridge = { tx, ty, rise }
+      let top = Infinity
+      for (let k = 1; k <= 6; k++) {
+        const zk = z(tx, ty + k)
+        if (Number.isNaN(zk) || zk < z(tx, ty) + 0.3) continue
+        const s = ty + k - 3 * zk
+        if (s < foot - 0.3) { rise = Math.max(rise, zk - z(tx, ty)); top = Math.min(top, s) }
+      }
+      // Covered from below the head: no more than a tile above the feet.
+      if (rise > 0 && top > foot - 1) add(out.ridge, { tx, ty, path: [[tx, ty]], at: ty, rise })
     }
-    if (seam && climb && cliff && ridge) break
   }
-  expect(seam, 'a seam to cross near home').not.toBeNull()
-  expect(climb, 'a slope to climb near home').not.toBeNull()
-  expect(cliff, 'a cliff near home').not.toBeNull()
-  expect(ridge, 'a ridge to stand behind near home').not.toBeNull()
-  return { seam: seam!, climb: climb!, cliff: cliff!, ridge: ridge! }
+  for (const k of ['seam', 'climb', 'cliff', 'ridge'] as const) expect(out[k].length, `${k} candidates near home`).toBeGreaterThan(0)
+  return out
 }
 
+/** Warp to a candidate and keep it if no tile of its walk is solid in the flat Wilds; the first that works. */
+async function usable(page: Page, list: Spot[], name: string): Promise<Spot> {
+  const tried: string[] = []
+  for (const s of list) {
+    await standAt(page, s.tx, s.ty)
+    const blocked = await page.evaluate((path) => {
+      const w = window as unknown as { __fsTileSolid: (x: number, y: number) => boolean; __fsSolidAt: (x: number, y: number) => boolean }
+      return path.filter(([x, y]) => w.__fsTileSolid(x, y) || w.__fsSolidAt(x, y)).length
+    }, s.path)
+    const p = await player(page)
+    if (!blocked && Math.floor(p.x / T) === s.tx && Math.floor((p.y - 2) / T) === s.ty) return s
+    tried.push(`${s.tx},${s.ty}: ${blocked} solid, stood at ${Math.floor(p.x / T)},${Math.floor((p.y - 2) / T)}`)
+  }
+  throw new Error(`no usable ${name}: ${tried.join(' | ')}`)
+}
 test.describe('height terrain in the Wilds', () => {
   test.use({ viewport: { width: 1280, height: 800 } })
   test('dev switch: walk generated land near home, top-down and in the ¾ lift', async ({ page }) => {
@@ -144,22 +174,28 @@ test.describe('height terrain in the Wilds', () => {
     mkdirSync(OUT, { recursive: true })
     await freshPlayer(page)
     const spots = find(await scan(page))
-    const frames: Record<string, unknown> = { spots }
+    const frames: Record<string, unknown> = { candidates: spots }
     const save = () => writeFileSync(`${OUT}/evidence.json`, JSON.stringify(frames, null, 1))
     await setTerrain(page, { on: true, mode: 'top', sunClock: false, sunTime: 0.3, edgeShade: 0.6, uphill: 60, downhill: 6 })
+    const seam = await usable(page, spots.seam, 'seam')
+    const climb = await usable(page, spots.climb, 'climb')
+    const cliff = await usable(page, spots.cliff, 'cliff')
+    const ridge = await usable(page, spots.ridge, 'ridge')
+    frames.chosen = { seam, climb, cliff, ridge }
+    save()
 
     for (const mode of ['top', 'lift'] as const) {
       await setTerrain(page, { mode })
       // Cross a chunk seam, east, on raised ground.
-      await standAt(page, spots.seam.tx, spots.seam.ty)
+      await standAt(page, seam.tx, seam.ty)
       await shot(page, `${mode}-seam`, frames)
       await holdKey(page, 'ArrowRight', 1300)
       const across = await player(page)
-      expect(Math.floor(across.x / T), `${mode}: crossed the seam at ${spots.seam.edge}`).toBeGreaterThanOrEqual(spots.seam.edge)
+      expect(Math.floor(across.x / T), `${mode}: crossed the seam at ${seam.at}`).toBeGreaterThanOrEqual(seam.at)
       await shot(page, `${mode}-seam-crossed`, frames)
 
       // Climb: slower up than down the same slope.
-      await standAt(page, spots.climb.tx, spots.climb.ty)
+      await standAt(page, climb.tx, climb.ty)
       await shot(page, `${mode}-climb-foot`, frames)
       const y0 = (await player(page)).y
       await holdKey(page, 'ArrowUp', 700)
@@ -175,18 +211,18 @@ test.describe('height terrain in the Wilds', () => {
       await shot(page, `${mode}-climb-after`, frames)
 
       // A cliff: walking north into its face stops below it.
-      await standAt(page, spots.cliff.tx, spots.cliff.ty)
+      await standAt(page, cliff.tx, cliff.ty)
       const before = (await state(page))!.blocked
       await holdKey(page, 'ArrowUp', 1200)
       const p = await player(page)
       const after = (await state(page))!
-      frames[`${mode}-cliff`] = { at: [p.x, p.y], face: spots.cliff.face, blocked: after.blocked - before }
-      expect(Math.floor((p.y - 2) / T), `${mode}: stopped below the face`).toBeGreaterThan(spots.cliff.face)
+      frames[`${mode}-cliff`] = { at: [p.x, p.y], face: cliff.at, blocked: after.blocked - before }
+      expect(Math.floor((p.y - 2) / T), `${mode}: stopped below the face`).toBeGreaterThan(cliff.at)
       expect(after.blocked, `${mode}: the field blocked the walk`).toBeGreaterThan(before)
       await shot(page, `${mode}-cliff`, frames)
 
       // Behind a ridge: in the lift, only what's covered shows as the outline.
-      await standAt(page, spots.ridge.tx, spots.ridge.ty)
+      await standAt(page, ridge.tx, ridge.ty)
       const behind = await shot(page, `${mode}-ridge`, frames)
       if (mode === 'lift') {
         expect(behind.cover.covered, 'lift: part of the hero is behind the ridge').toBeGreaterThan(0)

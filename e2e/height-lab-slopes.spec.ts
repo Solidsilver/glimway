@@ -435,7 +435,7 @@ test.describe('slopes 2c phone', () => {
 
 // Round 2d: proxy shadows. The owner's meadow time sweep, shade, spire, phone. CI only.
 type ShadowSlopes = SunSlopes & { sunlight: SunSlopes['sunlight'] & {
-  mode: string; ray: number[]; under: number; cast: { x0: number; y0: number; w: number; h: number; foot: number[] }
+  ray: number[]; under: number; cast: { x0: number; y0: number; w: number; h: number; foot: number[] }
   casters: { x: number; y: number; kind: string; foot: number[]; height: number; v: number[]; visible: number }[] } }
 const SWEEP = [9.6, 10.6, 11.3, 11.6, 11.9, 12.2, 12.5, 13.7, 16.8]
 const hourTime = (h: number) => Math.round((h - 6) / 12 * 1000) / 1000
@@ -508,12 +508,9 @@ test.describe('slopes 2d', () => {
     expect(len(frames['2d-meadow-12.2h']!)).toBeLessThan(.6)
     expect(len(frames['2d-meadow-16.8h']!)).toBeGreaterThan(2)
     for (const [name, s] of Object.entries(frames)) {
-      expect(s.mode, name).toBe(name.includes('2c-silhouette') ? 'silhouette' : 'proxy')
       // The hero's footprint lies inside their own cast box.
-      if (s.mode === 'proxy') {
-        expect(s.cast.foot[0]! >= s.cast.x0 && s.cast.foot[0]! <= s.cast.x0 + s.cast.w, name).toBe(true)
-        expect(s.cast.foot[1]! >= s.cast.y0 && s.cast.foot[1]! <= s.cast.y0 + s.cast.h, name).toBe(true)
-      }
+      expect(s.cast.foot[0]! >= s.cast.x0 && s.cast.foot[0]! <= s.cast.x0 + s.cast.w, name).toBe(true)
+      expect(s.cast.foot[1]! >= s.cast.y0 && s.cast.foot[1]! <= s.cast.y0 + s.cast.h, name).toBe(true)
     }
     expect(frames['2d-meadow-12.2h']!.casters.some(c => c.kind === 'rock')).toBe(true)
     expect(frames['2d-meadow-12.2h']!.casters.some(c => c.kind === 'tree')).toBe(true)
