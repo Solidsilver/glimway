@@ -20,7 +20,7 @@ const OUT = '.e2e-artifacts/terrain-ingame'
 const T = 16
 const S = 24
 /** Chunks scanned round home for the features. */
-const SCAN = 18
+const SCAN = 22
 
 type Terrain = Record<string, unknown> & {
   on: boolean
@@ -97,6 +97,8 @@ interface Spot {
   ty: number
   /** Tiles the walk crosses: none may be solid in the flat Wilds (a tree, the Tangle). */
   path: [number, number][]
+  /** A climb: the key that walks up it (and the other way back). */
+  up?: 'ArrowUp' | 'ArrowDown'
   /** The seam's or the face's row or column. */
   at: number
   rise: number
@@ -131,8 +133,9 @@ function find(t: TerrainStore): Spots {
     if (out.seam.length >= 12 && out.climb.length >= 12 && out.cliff.length >= 12 && out.ridge.length >= 12) break
     // A chunk edge crossed on open, raised ground: four tiles either side.
     if (((tx + 4) % S + S) % S === 0 && z(tx, ty) > 0.2 && open(tx, ty, 8, 1, 0)) add(out.seam, { tx, ty, path: line(tx, ty, 8, 1, 0), at: tx + 4, rise: 0 })
-    // A straight climb north: 8 open steps rising at least a level.
-    if (open(tx, ty, 8, 0, -1) && z(tx, ty - 8) - z(tx, ty) > 1) add(out.climb, { tx, ty, path: line(tx, ty, 8, 0, -1), at: ty - 8, rise: z(tx, ty - 8) - z(tx, ty) })
+    // A straight climb north or south: 8 open steps rising at least 0.6 of a level.
+    if (open(tx, ty, 8, 0, -1) && z(tx, ty - 8) - z(tx, ty) > 0.6) add(out.climb, { tx, ty, path: line(tx, ty, 8, 0, -1), at: ty - 8, rise: z(tx, ty - 8) - z(tx, ty), up: 'ArrowUp' })
+    else if (open(tx, ty, 8, 0, 1) && z(tx, ty + 8) - z(tx, ty) > 0.6) add(out.climb, { tx, ty, path: line(tx, ty, 8, 0, 1), at: ty + 8, rise: z(tx, ty + 8) - z(tx, ty), up: 'ArrowDown' })
     // A cliff face's bottom row with open ground below it and room to walk up to it.
     if (t.kindAt(tx, ty) === CLIFF && t.kindAt(tx, ty - 1) === CLIFF && open(tx, ty + 1, 3, 0, 1)) add(out.cliff, { tx, ty: ty + 2, path: line(tx, ty + 1, 3, 0, 1), at: ty, rise: 0 })
     // Ground rising to the south: in the lift, nearer and higher ground covers the legs, not the head.
@@ -204,13 +207,13 @@ test.describe('height terrain in the Wilds', () => {
         await standAt(page, climb.tx, climb.ty)
         if (tries === 0) await shot(page, `${mode}-climb-foot`, frames)
         const y0 = (await player(page)).y
-        await holdKey(page, 'ArrowUp', 700)
+        await holdKey(page, climb.up ?? 'ArrowUp', 700)
         const st = (await state(page))!
         const y1 = (await player(page)).y
-        await holdKey(page, 'ArrowDown', 700)
+        await holdKey(page, climb.up === 'ArrowDown' ? 'ArrowUp' : 'ArrowDown', 700)
         const y2 = (await player(page)).y
-        up = y0 - y1
-        down = y2 - y1
+        up = Math.abs(y1 - y0)
+        down = Math.abs(y2 - y1)
         frames[`${mode}-climb-${tries}`] = { up, down, k: st.k, gradient: st.hero.gradient }
         if (up > 8 && up / down < 0.92) break
       }
