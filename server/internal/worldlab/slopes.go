@@ -74,13 +74,13 @@ func slopeBareBytes(surface *wilds.SlopeSurface, cx, cy int, raw []byte) int {
 	}
 	return proto.Size(wilds.ToProto(c, DefaultEpoch)) + len(raw) + 4
 }
-func slopeMeasure(ctx context.Context, seed string) (*wilds.SlopePlan, *SlopeMetrics, error) {
+func slopeMeasure(ctx context.Context, seed, recipe string) (*wilds.SlopePlan, *SlopeMetrics, error) {
 	start := time.Now()
-	p, err := wilds.NewSlopePlan(ctx, seed, -576, -576, 1152, 1152)
+	p, err := wilds.NewSlopePlanRecipe(ctx, seed, recipe, -576, -576, 1152, 1152)
 	if err != nil {
 		return nil, nil, err
 	}
-	m := &SlopeMetrics{Recipe: wilds.SlopeRecipe, Domain: [4]int{-576, -576, 575, 575}, ColdMS: float64(time.Since(start).Nanoseconds()) / 1e6, Kinds: map[string]int{}, BiomeKinds: map[string]map[string]float64{}, Budgets: map[string]SlopeBudget{}, HeightRange: [2]float64{1000, 0}}
+	m := &SlopeMetrics{Recipe: recipe, Domain: [4]int{-576, -576, 575, 575}, ColdMS: float64(time.Since(start).Nanoseconds()) / 1e6, Kinds: map[string]int{}, BiomeKinds: map[string]map[string]float64{}, Budgets: map[string]SlopeBudget{}, HeightRange: [2]float64{1000, 0}}
 	m.CanonicalGridBytes = len(p.Corners) * 2
 	m.WireLayout = "SL2: Uint16 shared grid, sparse four-corner overrides, explicit cliff and N/E/S/W discontinuity planes"
 	m.Note = "Finite home-rooted field-coordinate certificate over 48x48 chunks; crop edges never imply access. Collision resolves the Uint16 grid plus tile overrides and edge flags, independently of projection and cover. Starting generated range 0..15 levels; no clipping. Bare bytes include the undressed WorldChunk protobuf and framed SL2 envelope; dressing is unmeasured. Warm = fresh sampler + shared-grid generation + encode; decode/checks excluded. Override-probe is a synthetic raised tile on flat ground, not generated country."
@@ -90,11 +90,26 @@ func slopeMeasure(ctx context.Context, seed string) (*wilds.SlopePlan, *SlopeMet
 	}
 	for _, r := range p.Ranges {
 		a, b := [2]int{r.PassX, r.Y - 104}, [2]int{r.PassX, r.Y + 104}
-		pass := p.Route(a, b, func(x, y int) bool { return x < r.PassX-1 || x > r.PassX+1 })
+		if recipe == wilds.SlopeRecipeV2 {
+			a, b = r.PassEnds[0], r.PassEnds[1]
+		}
+		pass := p.Route(a, b, func(x, y int) bool {
+			if recipe == wilds.SlopeRecipeV2 {
+				_, across := slopeCrossing(a, b, x, y)
+				return math.Abs(across) > 2
+			}
+			return x < r.PassX-1 || x > r.PassX+1
+		})
 		// Close only the saddle neck (its 64-tile notch support and the
 		// bent crest's full width), then measure the actual walking graph.
 		// Forcing a detour outside the whole nominal range would inflate it.
-		end := p.Route(a, b, func(x, y int) bool { return absInt(x-r.PassX) < 64 && absInt(y-r.Y) < 24 })
+		end := p.Route(a, b, func(x, y int) bool {
+			if recipe == wilds.SlopeRecipeV2 {
+				along, across := slopeCrossing(a, b, x, y)
+				return math.Abs(along) < 26 && math.Abs(across) < 66
+			}
+			return absInt(x-r.PassX) < 64 && absInt(y-r.Y) < 24
+		})
 		if len(pass) == 0 || len(end) == 0 {
 			return nil, nil, fmt.Errorf("range %s has no pass or end detour", r.ID)
 		}
@@ -111,12 +126,16 @@ func slopeMeasure(ctx context.Context, seed string) (*wilds.SlopePlan, *SlopeMet
 		x := r.PassX + 86
 		y := r.Y + int(math.Round(9*math.Sin(float64(x-r.X)/87)))
 		tc := SlopeTunnel{Range: r.ID, North: [2]int{x, y - 24}, South: [2]int{x, y + 24}, Length: 48}
-		for yy := y - 24; yy <= y+24; yy++ {
-			if p.Ground[p.Index(x, yy)].Kind != wilds.SlopeGround {
+		if recipe == wilds.SlopeRecipeV2 {
+			tc.North, tc.South = r.TunnelEnds[0], r.TunnelEnds[1]
+			tc.Length = int(math.Round(math.Hypot(float64(tc.North[0]-tc.South[0]), float64(tc.North[1]-tc.South[1]))))
+		}
+		for _, pt := range slopeLine(tc.North, tc.South) {
+			if p.Ground[p.Index(pt[0], pt[1])].Kind != wilds.SlopeGround {
 				tc.BlockedTiles++
 			}
 		}
-		if tc.BlockedTiles > 0 && m.Certificate.Labels[p.Index(x, y-24)] == m.Certificate.Home && m.Certificate.Labels[p.Index(x, y+24)] == m.Certificate.Home {
+		if tc.BlockedTiles > 0 && m.Certificate.Labels[p.Index(tc.North[0], tc.North[1])] == m.Certificate.Home && m.Certificate.Labels[p.Index(tc.South[0], tc.South[1])] == m.Certificate.Home {
 			m.Tunnels = append(m.Tunnels, tc)
 		}
 	}
@@ -191,14 +210,24 @@ func slopeMeasure(ctx context.Context, seed string) (*wilds.SlopePlan, *SlopeMet
 	m.GeometrySHA256 = hex.EncodeToString(hash.Sum(nil))
 	r := p.Ranges[3]
 	fixtures := map[string][2]int{"flat": {0, 1}, "hills": {6, 2}, "mountainside": {floorSlope(r.X+90, 24), floorSlope(r.Y+12, 24)}, "spire": {floorSlope(r.Spire[0], 24), floorSlope(r.Spire[1], 24)}, "override-probe": {0, 1}}
+	fixtures["pass"] = [2]int{floorSlope(r.PassX, 24), floorSlope(r.Y, 24)}
+	fixtures["outcrop"] = [2]int{floorSlope(r.Outcrop[0], 24), floorSlope(r.Outcrop[1], 24)}
+	if recipe == wilds.SlopeRecipeV2 {
+		pt := r.Crest[len(r.Crest)*3/4]
+		fixtures["mountainside"] = [2]int{floorSlope(pt[0]-int(math.Round(24*math.Sin(r.Angle))), 24), floorSlope(pt[1]+int(math.Round(24*math.Cos(r.Angle))), 24)}
+		fixtures["pass"] = [2]int{floorSlope((r.PassEnds[0][0]+r.PassEnds[1][0])/2, 24), floorSlope((r.PassEnds[0][1]+r.PassEnds[1][1])/2, 24)}
+		fixtures["outcrop"] = [2]int{floorSlope(r.Outcrop[0], 24), floorSlope(r.Outcrop[1], 24)}
+	}
 	for name, xy := range fixtures {
 		var times []float64
 		var raw []byte
 		var surface *wilds.SlopeSurface
 		for i := 0; i < 81; i++ {
 			at := time.Now()
-			s := wilds.NewSlopeSampler(seed)
-			var err error
+			s, err := wilds.NewSlopeSamplerRecipe(seed, recipe)
+			if err != nil {
+				return nil, nil, err
+			}
 			surface, err = s.Surface(ctx, xy[0]*24, xy[1]*24, 24, 24)
 			if err != nil {
 				return nil, nil, err
@@ -279,7 +308,11 @@ func slopeHeightColour(t wilds.SlopeTile) color.RGBA {
 }
 func renderSlopes(ctx context.Context, o Options) (Result, error) {
 	start := time.Now()
-	p, m, err := slopeMeasure(ctx, o.Seed)
+	recipe := o.SlopeRecipe
+	if recipe == "" {
+		recipe = wilds.SlopeRecipe
+	}
+	p, m, err := slopeMeasure(ctx, o.Seed, recipe)
 	if err != nil {
 		return Result{}, err
 	}
@@ -340,19 +373,28 @@ func renderSlopes(ctx context.Context, o Options) (Result, error) {
 	}
 	if o.Slopes == "tunnels" {
 		for _, t := range m.Tunnels {
-			for y := t.North[1]; y <= t.South[1]; y++ {
-				point([2]int{t.North[0], y}, color.RGBA{245, 100, 224, 255}, 1)
+			for _, pt := range slopeLine(t.North, t.South) {
+				point(pt, color.RGBA{245, 100, 224, 255}, 1)
 			}
 			point(t.North, color.RGBA{255, 255, 255, 255}, 3)
 			point(t.South, color.RGBA{255, 255, 255, 255}, 3)
 		}
 	}
 	for _, r := range m.Ranges {
-		point([2]int{r.PassX, r.Y}, color.RGBA{255, 225, 70, 255}, 3)
+		pt := [2]int{r.PassX, r.Y}
+		if recipe == wilds.SlopeRecipeV2 {
+			pt = [2]int{(r.PassEnds[0][0] + r.PassEnds[1][0]) / 2, (r.PassEnds[0][1] + r.PassEnds[1][1]) / 2}
+		}
+		point(pt, color.RGBA{255, 225, 70, 255}, 3)
 		point(r.Spire, color.RGBA{209, 163, 255, 255}, 3)
 	}
 	point([2]int{12, 30}, color.RGBA{255, 255, 255, 255}, 4)
 	labels := map[string]string{"height": "HEIGHT 0-15 / HILLSHADE", "kinds": "SLOPE GREEN / STEEP OCHRE / CRAG PURPLE / CLIFF DARK", "routes": "PASS GOLD / END DETOUR CYAN", "reach": "HOME GREEN / STRANDED PINK / INTENTIONAL PURPLE", "tunnels": "TUNNEL CANDIDATES PINK / ENTRANCES WHITE"}
+	version := "SLOPES 1 / "
+	if recipe == wilds.SlopeRecipeV2 {
+		version = "SLOPES 2 / "
+	}
+	labels[o.Slopes] = version + labels[o.Slopes]
 	// Place a dark legend directly in each exported image.
 	for y := 0; y < 19 && y < img.Bounds().Dy(); y++ {
 		for x := 0; x < min(img.Bounds().Dx(), len(labels[o.Slopes])*4+12); x++ {
@@ -393,4 +435,26 @@ func drawSlopeLabel(img *image.RGBA, x, y int, text string, fg color.RGBA) {
 			}
 		}
 	}
+}
+
+// Coordinates relative to the midpoint of a crossing, in tiles along its
+// travel direction and across it. Used only to constrain diagnostic routes.
+func slopeCrossing(a, b [2]int, x, y int) (float64, float64) {
+	dx, dy := float64(b[0]-a[0]), float64(b[1]-a[1])
+	length := math.Hypot(dx, dy)
+	px, py := float64(x)-float64(a[0]+b[0])/2, float64(y)-float64(a[1]+b[1])/2
+	return (px*dx + py*dy) / length, (px*dy - py*dx) / length
+}
+func slopeLine(a, b [2]int) [][2]int {
+	n := max(absInt(b[0]-a[0]), absInt(b[1]-a[1]))
+	out := make([][2]int, n+1)
+	for i := range out {
+		if n == 0 {
+			out[i] = a
+		} else {
+			f := float64(i) / float64(n)
+			out[i] = [2]int{a[0] + int(math.Round(float64(b[0]-a[0])*f)), a[1] + int(math.Round(float64(b[1]-a[1])*f))}
+		}
+	}
+	return out
 }

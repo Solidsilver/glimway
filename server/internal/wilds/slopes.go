@@ -43,7 +43,7 @@ type SlopeTile struct {
 	SlopeGroundData
 }
 
-// SlopeRange owns one bounded E-W range, its saddle, and nearby rock features.
+// SlopeRange describes one bounded range, its saddle, and nearby rock features.
 type SlopeRange struct {
 	ID         string  `json:"id"`
 	X          int     `json:"x"`
@@ -53,6 +53,13 @@ type SlopeRange struct {
 	PassX      int     `json:"passX"`
 	Spire      [2]int  `json:"spire"`
 	Outcrop    [2]int  `json:"outcrop"`
+	// V2 diagnostics describe the rotated, winding range in world coordinates.
+	Angle      float64   `json:"angleRadians,omitempty"`
+	Width      float64   `json:"shoulderHalfWidth,omitempty"`
+	PassEnds   [2][2]int `json:"passEnds,omitempty"`
+	TunnelEnds [2][2]int `json:"tunnelEnds,omitempty"`
+	Crest      [][2]int  `json:"crest,omitempty"`
+	Branch     [][2]int  `json:"branch,omitempty"`
 }
 
 func SlopeRangeAt(seed string, ox, oy int) SlopeRange {
@@ -73,9 +80,11 @@ func SlopeRangeAt(seed string, ox, oy int) SlopeRange {
 // SlopeSampler caches only bounded, world-aligned field nodes for one request.
 // Interpolation is at absolute 8-tile nodes, including at negative coordinates.
 type SlopeSampler struct {
-	Seed   string
-	nodes  map[[2]int][2]int
-	ranges map[[2]int]SlopeRange
+	Seed     string
+	recipe   string
+	nodes    map[[2]int][2]int
+	ranges   map[[2]int]SlopeRange
+	rangesV2 map[[2]int]*slopeRangeV2
 }
 
 func NewSlopeSampler(seed string) *SlopeSampler {
@@ -86,7 +95,12 @@ func (s *SlopeSampler) owner(x, y int) SlopeRange {
 	if r, ok := s.ranges[k]; ok {
 		return r
 	}
-	r := SlopeRangeAt(s.Seed, k[0], k[1])
+	var r SlopeRange
+	if s.recipe == SlopeRecipeV2 {
+		r = s.rangeV2(x, y).SlopeRange
+	} else {
+		r = SlopeRangeAt(s.Seed, k[0], k[1])
+	}
 	s.ranges[k] = r
 	return r
 }
@@ -135,6 +149,9 @@ func slopeHomeDistance(x, y int) float64 {
 // shape returns unquantized height and intentional crest/spire masks. Ranges
 // have broad smooth lower sides and a narrow upper rock rib split by a saddle.
 func (s *SlopeSampler) shape(x, y int) (float64, bool, bool) {
+	if s.recipe == SlopeRecipeV2 {
+		return s.shapeV2(x, y)
+	}
 	u, relief := s.fields(x, y)
 	d := slopeHomeDistance(x, y)
 	if d <= 24 {
@@ -242,17 +259,27 @@ type SlopePlan struct {
 }
 
 func NewSlopePlan(ctx context.Context, seed string, x, y, w, h int) (*SlopePlan, error) {
+	return NewSlopePlanRecipe(ctx, seed, SlopeRecipe, x, y, w, h)
+}
+
+// NewSlopePlanRecipe builds an explicitly versioned preview behind the same
+// quantized surface and access API as NewSlopePlan.
+func NewSlopePlanRecipe(ctx context.Context, seed, recipe string, x, y, w, h int) (*SlopePlan, error) {
 	if w <= 0 || h <= 0 || w > 2400000/h {
 		return nil, fmt.Errorf("slope plan needs 1..2400000 tiles")
 	}
-	surface, err := NewSlopeSampler(seed).Surface(ctx, x, y, w, h)
+	sampler, err := NewSlopeSamplerRecipe(seed, recipe)
+	if err != nil {
+		return nil, err
+	}
+	surface, err := sampler.Surface(ctx, x, y, w, h)
 	if err != nil {
 		return nil, err
 	}
 	p := &SlopePlan{X: x, Y: y, SlopeSurface: surface}
 	for oy := floorDiv(y, SlopeOwnerTiles); oy <= floorDiv(y+h-1, SlopeOwnerTiles); oy++ {
 		for ox := floorDiv(x, SlopeOwnerTiles); ox <= floorDiv(x+w-1, SlopeOwnerTiles); ox++ {
-			p.Ranges = append(p.Ranges, SlopeRangeAt(seed, ox, oy))
+			p.Ranges = append(p.Ranges, sampler.owner(ox*SlopeOwnerTiles+288, oy*SlopeOwnerTiles+288))
 		}
 	}
 	return p, nil
