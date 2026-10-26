@@ -166,7 +166,8 @@ export class MoverShadow {
   /** The canvas's last painted rectangle (only it is cleared and put again). */
   private used = { w: 0, h: 0 }
   draw(stamp: string, x0: number, y0: number, w: number, h: number, multiply: (wx: number, wy: number) => readonly [number, number, number] | null): void {
-    this.image.setVisible(true)
+    // Placed every call: a stamp without a position redraws only when the shadow's shape or light changes.
+    this.image.setVisible(true).setPosition(x0, y0)
     if (stamp === this.drawn) return
     this.drawn = stamp
     const S = MoverShadow.SIZE, px = this.data.data

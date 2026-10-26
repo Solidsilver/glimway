@@ -41,7 +41,7 @@ import { edgeKey } from './edges.ts'
 import { nearestWalkable, standTile, sweep, type Feet } from './walk.ts'
 import { slopeGait } from './slope-gait.ts'
 import { MoverShadow, frameProxy } from './sun-view.ts'
-import { castProxy, shadeMultiply, shadowDarkness, shadowRay, type ShadowProxy } from './sun-shadow.ts'
+import { castProxy, shadeMultiply, shadowDarkness, shadowRay, type Cast, type ShadowProxy } from './sun-shadow.ts'
 import { terrainVisibility } from './sun-map.ts'
 
 const T = 16
@@ -87,6 +87,8 @@ export class SceneTerrain {
   private sunKey = ''
   private shadow: MoverShadow | null = null
   private proxy: ShadowProxy | null = null
+  private cast: Cast | null = null
+  private castKey = ''
   private ghost: Phaser.GameObjects.Sprite | null = null
   private coverGfx: Phaser.GameObjects.Graphics | null = null
   private coverShow: Phaser.Display.Masks.GeometryMask | null = null
@@ -327,12 +329,21 @@ export class SceneTerrain {
     const z = terrain.zAt(sp.x, sp.y - 2)
     const nearV = this.nearView(sp.x, sp.y)
     const visible = nearV && !Number.isNaN(z) ? terrainVisibility(nearV.view.field, sp.x - nearV.ox * T, sp.y - 2 - nearV.oy * T, z, this.sun.direction) : 1
+    // The shape is cast once per ray (quantized), light and frame; walking only moves it.
+    const q = (n: number) => Math.round(n * 20) / 20
     const v = shadowRay(gx, gy, this.sun.direction, s.mode === 'lift' ? K : 0)
-    const cast = castProxy(this.proxy, sp.x, sp.y, v)
-    const stamp = `${cast.x0},${cast.y0},${cast.w},${cast.h},${this.sunKey},${visible},${s.sunStrength}`
+    const vq: [number, number] = [q(v[0]), q(v[1])]
+    const stamp = `${vq[0]},${vq[1]},${this.sunKey},${visible},${s.sunStrength},${sp.frame.name}`
+    if (stamp !== this.castKey || !this.cast) {
+      this.cast = castProxy(this.proxy, 0, 0, vq)
+      this.castKey = stamp
+    }
+    const cast = this.cast
+    const fx = Math.round(sp.x)
+    const fy = Math.round(sp.y)
     const { daylight } = this.sun
-    this.shadow.draw(stamp, cast.x0, cast.y0, cast.w, cast.h, (wx, wy) => {
-      const j = (wy - cast.y0) * cast.w + (wx - cast.x0)
+    this.shadow.draw(stamp, fx + cast.x0, fy + cast.y0, cast.w, cast.h, (wx, wy) => {
+      const j = (wy - fy - cast.y0) * cast.w + (wx - fx - cast.x0)
       if (!cast.dir[j] && !cast.contact[j]) return null
       const d = shadowDarkness(cast.dir[j]!, cast.contact[j]!, visible, visible, s.sunStrength, daylight)
       return d > 0 ? shadeMultiply(d) : null
@@ -375,6 +386,8 @@ export class SceneTerrain {
     const lift = terrainSettings().mode === 'lift'
     const hero = this.deps.hero()
     const heroBody = this.deps.body()
+    // The hero's feet in field space, before the pass lifts the sprite.
+    const heroAt: [number, number] = [hero.sprite.x, hero.sprite.y]
     const view = this.scene.cameras.main.worldView
     // The lift draws ground up to 15 levels north of where it lies: sprites that far south may show.
     const reach = lift ? K * T * 15 + 64 : 64
@@ -430,7 +443,7 @@ export class SceneTerrain {
     }
     this.stats.hidden = hidden
     this.stats.hiddenOnClosed = onClosed
-    this.seeThrough(lift)
+    this.seeThrough(lift, heroAt)
     const ms = performance.now() - t0
     const f = this.stats.frameMs
     if (f.length) f[f.length - 1] = f[f.length - 1]! + ms
@@ -470,7 +483,7 @@ export class SceneTerrain {
   }
 
   /** Only the hero's pixels that nearer, higher ground covers show as the grey outline; the rest draws as usual. */
-  private seeThrough(lift: boolean): void {
+  private seeThrough(lift: boolean, at: [number, number]): void {
     const hero = this.deps.hero()
     const sp = hero.sprite
     const body = this.deps.body()
@@ -487,8 +500,8 @@ export class SceneTerrain {
       this.own.add(this.ghost)
       this.ghost.setMask(this.coverShow)
     }
-    const z = terrain.zAt(sp.x, sp.y - 2)
-    const near = this.nearView(sp.x, sp.y)
+    const z = terrain.zAt(at[0], at[1] - 2)
+    const near = this.nearView(at[0], at[1])
     if (!near || Number.isNaN(z)) {
       this.ghost!.setVisible(false)
       if (body.mask) body.clearMask()
@@ -499,7 +512,7 @@ export class SceneTerrain {
     const y0 = Math.floor(sp.y - sp.displayHeight * sp.originY)
     const w = Math.ceil(sp.displayWidth) + 1
     const h = Math.ceil(sp.displayHeight) + 1
-    const fieldY = (this.last?.y ?? sp.y) - 2
+    const fieldY = at[1] - 2
     const key = `${x0},${y0},${w},${h},${fieldY.toFixed(1)},${near.key}`
     if (key !== this.coverKey) {
       this.coverKey = key
