@@ -100,6 +100,7 @@ export class SceneTerrain {
   /** What the pass leaves alone (its own images), and objects drawn by someone else's feet (the hero's shadow). */
   private own = new WeakSet<Phaser.GameObjects.GameObject>()
   private feetOf = new WeakMap<Phaser.GameObjects.GameObject, [number, number]>()
+  private seen = new WeakMap<Phaser.GameObjects.GameObject, { x: number; y: number; v: number; lift: boolean; z: number; closed: boolean; behind: boolean }>()
   stats = { bakes: 0, bakeMs: [] as number[], frameMs: [] as number[], startMs: [] as number[], blocked: 0, k: 1, covered: 0, spriteTotal: 0, hidden: 0, hiddenOnClosed: 0 }
 
   constructor(private scene: Phaser.Scene, private deps: SceneTerrainDeps) {
@@ -374,6 +375,9 @@ export class SceneTerrain {
     const lift = terrainSettings().mode === 'lift'
     const hero = this.deps.hero()
     const heroBody = this.deps.body()
+    const view = this.scene.cameras.main.worldView
+    // The lift draws ground up to 15 levels north of where it lies: sprites that far south may show.
+    const reach = lift ? K * T * 15 + 64 : 64
     let hidden = 0
     let onClosed = 0
     for (const o of this.scene.children.list) {
@@ -391,18 +395,27 @@ export class SceneTerrain {
         continue
       }
       const foot = this.feetOf.get(o) ?? [g.x, g.y]
+      // Off screen (with the lift's reach north): nothing to draw.
+      if (foot[0] < view.x - 64 || foot[0] > view.right + 64 || foot[1] < view.y - 32 || foot[1] > view.bottom + reach) continue
       const isHero = o === heroBody || o === hero.sprite
-      const tx = Math.floor(foot[0] / T)
-      const ty = Math.floor((foot[1] - 1) / T)
-      if (!isHero && CLOSED_KINDS.has(terrain.kindAt(tx, ty))) {
+      // Still sprites keep what was worked out for them until they move or the terrain changes.
+      let at = this.seen.get(o)
+      if (!at || at.x !== foot[0] || at.y !== foot[1] || at.v !== terrain.version || at.lift !== lift) {
+        const z = terrain.zAt(foot[0], foot[1] - 1)
+        const closed = !isHero && CLOSED_KINDS.has(terrain.kindAt(Math.floor(foot[0] / T), Math.floor((foot[1] - 1) / T)))
+        const behind = lift && !isHero && !closed && g.depth < 1e6 && !Number.isNaN(z) && z !== 0 && this.behind(foot[0], foot[1] - 1, z)
+        at = { x: foot[0], y: foot[1], v: terrain.version, lift, z, closed, behind }
+        this.seen.set(o, at)
+      }
+      if (at.closed) {
         onClosed++
         this.move(g, 0, 0, false)
         continue
       }
       if (!lift) continue
-      const z = terrain.zAt(foot[0], foot[1] - 1)
+      const z = at.z
       if (Number.isNaN(z) || z === 0) continue
-      if (!isHero && g.depth < 1e6 && this.behind(foot[0], foot[1] - 1, z)) {
+      if (at.behind) {
         hidden++
         this.move(g, 0, 0, false)
         continue
