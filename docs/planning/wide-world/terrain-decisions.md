@@ -145,3 +145,19 @@ height.
   are even harder to see. Add stylized edge shading wherever height changes (a darker band on
   the low side, behind and under the drop), for every look in the lab, adjustable in strength
   and with an option to scale it by the height difference.
+
+## After walking slopes 2e (owner, 2026-10-26)
+
+- **Edge shading helped a lot.** With it, the owner read parts of the mountain area correctly
+  for the first time. Strength and width need more testing on more ground.
+- **Partial see-through works** for the hero. Trees and other sprites don't use it, which is fine.
+- **The look is chosen, in two modes:** top-down (shading by facing) and true ¾ lift at
+  48 px a level. Both keep the 2c/2d sun, proxy shadows, 2e edge shading, slope speed and gait.
+  Contours, terraces and the 24 px lift leave the lab.
+- **Next: generated terrain in the real game.** Two lanes in parallel:
+  - the generator makes natural ranges in place of the placeholder bars (ridges, passes,
+    spires, hills, outcrops);
+  - the game client streams and draws the terrain, with the look switches (top-down or ¾ lift,
+    edge shading, sun) moved to the main dev panel.
+- **Dev servers only.** A dev-mode switch turns height terrain on. The live server and
+  playtesters keep today's Wilds until the owner signs it off.
