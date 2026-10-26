@@ -127,6 +127,7 @@ function find(t: TerrainStore): Spots {
     list.push(s)
   }
   for (const [tx, ty] of near) {
+    if (out.seam.length >= 12 && out.climb.length >= 12 && out.cliff.length >= 12 && out.ridge.length >= 12) break
     // A chunk edge crossed on open, raised ground: four tiles either side.
     if (((tx + 4) % S + S) % S === 0 && z(tx, ty) > 0.2 && open(tx, ty, 8, 1, 0)) add(out.seam, { tx, ty, path: line(tx, ty, 8, 1, 0), at: tx + 4, rise: 0 })
     // A straight climb north: 8 open steps rising at least a level.
@@ -134,18 +135,19 @@ function find(t: TerrainStore): Spots {
     // A cliff face's bottom row with open ground below it and room to walk up to it.
     if (t.kindAt(tx, ty) === CLIFF && t.kindAt(tx, ty - 1) === CLIFF && open(tx, ty + 1, 3, 0, 1)) add(out.cliff, { tx, ty: ty + 2, path: line(tx, ty + 1, 3, 0, 1), at: ty, rise: 0 })
     // Ground rising to the south: in the lift, nearer and higher ground covers the legs, not the head.
-    if (t.walkable(tx, ty)) {
-      const foot = ty + 0.7 - 3 * z(tx, ty)
-      let rise = 0
+    if (out.ridge.length < 12 && t.walkable(tx, ty)) {
+      const here = z(tx, ty)
+      const foot = ty + 0.7 - 3 * here
       let top = Infinity
-      for (let k = 1; k <= 6; k++) {
+      let rise = 0
+      for (let k = 1; k <= 46; k++) {
         const zk = z(tx, ty + k)
-        if (Number.isNaN(zk) || zk < z(tx, ty) + 0.3) continue
-        const s = ty + k - 3 * zk
-        if (s < foot - 0.3) { rise = Math.max(rise, zk - z(tx, ty)); top = Math.min(top, s) }
+        if (Number.isNaN(zk) || zk < here + 0.3) continue
+        top = Math.min(top, ty + k - 3 * zk)
+        rise = Math.max(rise, zk - here)
       }
-      // Covered from below the head: no more than a tile above the feet.
-      if (rise > 0 && top > foot - 1) add(out.ridge, { tx, ty, path: [[tx, ty]], at: ty, rise })
+      // Covered from below the head (the sprite is about 1.25 tiles tall): the nearest top between the knees and the waist.
+      if (top < foot - 0.25 && top > foot - 0.8) add(out.ridge, { tx, ty, path: [[tx, ty]], at: ty, rise })
     }
   }
   for (const k of ['seam', 'climb', 'cliff', 'ridge'] as const) expect(out[k].length, `${k} candidates near home`).toBeGreaterThan(0)

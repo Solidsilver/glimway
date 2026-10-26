@@ -365,9 +365,9 @@ export class SceneTerrain {
       const g = o as Phaser.GameObjects.GameObject & { x: number; y: number; visible: boolean; scrollFactorY?: number; depth: number; type: string }
       if (!g.visible || g.scrollFactorY !== 1 || g.getData?.('terrain')) continue
       if (g.type !== 'Image' && g.type !== 'Sprite' && g.type !== 'Container' && g.type !== 'Text' && g.type !== 'Rectangle') continue
-      // The flat ground: under the lifted ground, never shown between it.
+      // The flat ground of a chunk baked lifted: under the lifted ground, never shown between it (an unbaked one stays).
       if (g.depth <= GROUND_DEPTH) {
-        if (lift) this.move(g, 0, 0, false)
+        if (lift && this.images.has(`${Math.floor(g.x / CHUNK_PX)},${Math.floor(g.y / CHUNK_PX)}`)) this.move(g, 0, 0, false)
         continue
       }
       // The blob shadow gives way to the sun's.
