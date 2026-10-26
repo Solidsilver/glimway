@@ -163,20 +163,25 @@ export class MoverShadow {
     this.image = scene.add.image(0, 0, key).setOrigin(0).setDepth(-998_980).setBlendMode(Phaser.BlendModes.MULTIPLY).setVisible(false)
   }
   /** `multiply(wx, wy)` gives each pixel's RGB multiplier, or null for none. */
+  /** The canvas's last painted rectangle (only it is cleared and put again). */
+  private used = { w: 0, h: 0 }
   draw(stamp: string, x0: number, y0: number, w: number, h: number, multiply: (wx: number, wy: number) => readonly [number, number, number] | null): void {
     this.image.setVisible(true)
     if (stamp === this.drawn) return
     this.drawn = stamp
     const S = MoverShadow.SIZE, px = this.data.data
-    px.fill(255)
     // A body's longest (capped) shadow fits; anything past the canvas is cut.
-    for (let iy = 0; iy < Math.min(h, S); iy++) for (let ix = 0; ix < Math.min(w, S); ix++) {
+    const cw = Math.min(w, S), ch = Math.min(h, S)
+    const dw = Math.max(cw, this.used.w), dh = Math.max(ch, this.used.h)
+    for (let iy = 0; iy < dh; iy++) px.fill(255, iy * S * 4, (iy * S + dw) * 4)
+    for (let iy = 0; iy < ch; iy++) for (let ix = 0; ix < cw; ix++) {
       const m = multiply(x0 + ix, y0 + iy)
       if (!m) continue
       const i = (iy * S + ix) * 4
       px[i] = m[0] * 255; px[i + 1] = m[1] * 255; px[i + 2] = m[2] * 255
     }
-    this.texture.context.putImageData(this.data, 0, 0)
+    this.used = { w: cw, h: ch }
+    if (dw > 0 && dh > 0) this.texture.context.putImageData(this.data, 0, 0, 0, 0, dw, dh)
     this.texture.refresh(); this.texture.setFilter(Phaser.Textures.FilterMode.NEAREST)
     this.image.setPosition(x0, y0)
   }
