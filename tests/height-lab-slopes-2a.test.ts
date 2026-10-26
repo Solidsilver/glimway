@@ -39,9 +39,7 @@ const field = buildField();
 /** Every combination of the drawing settings. */
 const LOOKS: SlopesLook[] = [];
 for (const facing of ['off', 'restrained', 'current'] as const)
-  for (const contours of ['off', 'sparse', 'current'] as const)
-    for (const terraces of [false, true])
-      for (const lift of [0, 24, 48] as const) LOOKS.push({ facing, contours, terraces, lift });
+  for (const lift of [0, 48] as const) LOOKS.push({ facing, lift });
 
 /** A small area whose height is z(x, y) (levels, x and y in tiles), all walkable: a field and a stack walking it. */
 function plane(z: (x: number, y: number) => number, n = 40): { f: Field; stack: Stack } {
@@ -175,9 +173,9 @@ test('every drawing setting walks the same field: the same collision map, spawn,
   }
 });
 
-test('lift strengths: everything lifts k rows a level (24 px: 1.5, 48 px: 3), cliffs open into k rows of face a level', () => {
-  for (const lift of [24, 48] as const) {
-    const a = buildSlopes(DEFAULT_AREA_OPTIONS, { facing: 'restrained', contours: 'off', terraces: false, lift });
+test('the true ¾ lift: everything lifts 3 rows a level (48 px), cliffs open into 3 rows of face a level', () => {
+  for (const lift of [48] as const) {
+    const a = buildSlopes(DEFAULT_AREA_OPTIONS, { facing: 'restrained', lift });
     const info = a.slopes!;
     const k = lift / T;
     assert.equal(info.k, k);
@@ -217,40 +215,19 @@ test('lift strengths: everything lifts k rows a level (24 px: 1.5, 48 px: 3), cl
   }
 });
 
-test('lift strengths: a weaker lift hides no more walkable ground than the full one', () => {
-  const hidden = (lift: 24 | 48) => {
-    const a = buildSlopes(DEFAULT_AREA_OPTIONS, { facing: 'off', contours: 'off', terraces: false, lift });
-    const info = a.slopes!;
-    let n = 0;
-    for (let ty = 0; ty < info.field.h; ty += 2)
-      for (let tx = 0; tx < info.field.w; tx += 2) {
-        if (!walkableKind(a.stack.layers[SURFACE]!.kind[ty * info.field.w + tx]!)) continue;
-        if (display(info, tx * T + 8, ty * T + 8, fieldZ(info.field, tx, ty, 0.5, 0.5)).hidden) n++;
-      }
-    return n;
-  };
-  const moderate = hidden(24);
-  const full = hidden(48);
-  assert.ok(moderate <= full, `hidden walkable tiles: moderate ${moderate}, full ${full}`);
-  assert.ok(full > 0, 'behind the plateau patch, the full lift hides some');
-});
-
-test('presets: the five, as documented; a preset is recognised; reset is the Shading baseline with the recommended slowdown', () => {
-  assert.deepEqual(Object.values(SLOPE_PRESETS).map((p) => p.name), ['Shading baseline', 'Sparse contours', 'Small terraces', 'Moderate lift', 'Full lift reference']);
+test('presets: the two chosen looks; a preset is recognised; reset is top-down with the recommended slowdown', () => {
+  assert.deepEqual(Object.values(SLOPE_PRESETS).map((p) => p.name), ['Top-down', 'True ¾ lift']);
   const b = SLOPE_PRESETS.baseline.look;
-  assert.deepEqual(b, { slopeFacing: 'restrained', slopeContours: 'off', slopeTerraces: false, slopeLift: 0 });
-  assert.deepEqual(SLOPE_PRESETS.sparse.look, { ...b, slopeContours: 'sparse' });
-  assert.deepEqual(SLOPE_PRESETS.terraces.look, { ...b, slopeTerraces: true });
-  assert.deepEqual(SLOPE_PRESETS.moderate.look, { ...b, slopeLift: 24 });
-  assert.deepEqual(SLOPE_PRESETS.full.look, { slopeFacing: 'current', slopeContours: 'off', slopeTerraces: false, slopeLift: 48 });
+  assert.deepEqual(b, { slopeFacing: 'restrained', slopeLift: 0 });
+  assert.deepEqual(SLOPE_PRESETS.full.look, { slopeFacing: 'current', slopeLift: 48 });
   for (const [name, p] of Object.entries(SLOPE_PRESETS)) assert.equal(slopePresetOf(p.look), name);
-  assert.equal(slopePresetOf({ ...b, slopeContours: 'current' }), null);
+  assert.equal(slopePresetOf({ ...b, slopeFacing: 'off' }), null);
   assert.equal(SLOPE_RESET.slopeUphill, 60);
   assert.equal(slopePresetOf(SLOPE_RESET as SlopeLook), 'baseline');
   // Presets change only the drawing.
   for (const p of Object.values(SLOPE_PRESETS)) assert.deepEqual(Object.keys(p.look).sort(), [...SLOPE_KEYS].sort());
-  // Round 1's styles as settings, and back.
-  for (const st of ['shade', 'contours', 'terraces', 'lift'] as const) assert.equal(styleOf(styleSettings(st, b)), st);
+  // The looks as settings, and back.
+  for (const st of ['shade', 'lift'] as const) assert.equal(styleOf(styleSettings(st, b)), st);
   assert.equal(styleSettings('lift', b).slopeLift, 48);
 });
 
@@ -258,12 +235,13 @@ test('saved settings migrate: round 1’s style and shading become the settings 
   const d = migrateLook(null);
   assert.equal(slopePresetOf(d), 'baseline');
   assert.equal(d.slopeUphill, 60);
-  const old = (slopeStyle: string, slopeShade: boolean) => ((l) => ({ facing: l.facing, contours: l.contours, terraces: l.terraces, lift: l.lift }))(slopesLook(migrateLook({ area: 'slopes', fog: 'sky', slopeStyle, slopeShade })));
-  assert.deepEqual(old('shade', false), { facing: 'current', contours: 'off', terraces: false, lift: 0 }, 'shading by facing was always shaded');
-  assert.deepEqual(old('contours', true), { facing: 'current', contours: 'current', terraces: false, lift: 0 });
-  assert.deepEqual(old('contours', false), { facing: 'off', contours: 'current', terraces: false, lift: 0 });
-  assert.deepEqual(old('terraces', false), { facing: 'off', contours: 'off', terraces: true, lift: 0 });
-  assert.deepEqual(old('lift', true), { facing: 'current', contours: 'off', terraces: false, lift: 48 });
+  const old = (slopeStyle: string, slopeShade: boolean) => ((l) => ({ facing: l.facing, lift: l.lift }))(slopesLook(migrateLook({ area: 'slopes', fog: 'sky', slopeStyle, slopeShade })));
+  assert.deepEqual(old('shade', false), { facing: 'current', lift: 0 }, 'shading by facing was always shaded');
+  // Contours and terraces have left the lab: they read as top-down.
+  assert.deepEqual(old('contours', true), { facing: 'current', lift: 0 });
+  assert.deepEqual(old('contours', false), { facing: 'off', lift: 0 });
+  assert.deepEqual(old('terraces', false), { facing: 'off', lift: 0 });
+  assert.deepEqual(old('lift', true), { facing: 'current', lift: 48 });
   // The rest of an old save kept.
   const m = migrateLook({ area: 'slopes', fog: 'sky', darkness: 0.3, slopeStyle: 'lift', slopeShade: true });
   assert.equal(m.area, 'slopes');
@@ -271,17 +249,18 @@ test('saved settings migrate: round 1’s style and shading become the settings 
   assert.equal(m.darkness, 0.3);
   assert.ok(!('slopeStyle' in m) && !('slopeShade' in m), 'the old keys go');
   // Bad values: defaults, field by field.
-  const bad = migrateLook({ area: 'moon', fog: 3, darkness: 7, crossfade: Number.NaN, slopeLift: 30, slopeFacing: 'loud', slopeTerraces: 'yes', slopeUphill: 'gentle', zoom: false });
+  const bad = migrateLook({ area: 'moon', fog: 3, darkness: 7, crossfade: Number.NaN, slopeLift: 30, slopeFacing: 'loud', slopeUphill: 'gentle', zoom: false });
   assert.equal(bad.area, d.area);
   assert.equal(bad.fog, d.fog);
   assert.equal(bad.darkness, d.darkness);
   assert.equal(bad.crossfade, d.crossfade);
   assert.equal(bad.slopeLift, d.slopeLift);
   assert.equal(bad.slopeFacing, d.slopeFacing);
-  assert.equal(bad.slopeTerraces, d.slopeTerraces);
   assert.equal(bad.zoom, false, 'good values kept');
   // New settings win over old keys if both are there.
-  assert.equal(migrateLook({ slopeStyle: 'lift', slopeLift: 24 }).slopeLift, 24);
+  assert.equal(migrateLook({ slopeStyle: 'shade', slopeLift: 48 }).slopeLift, 48);
+  // The 24 px lift has left: a save with it walks the true ¾ lift.
+  assert.equal(migrateLook({ slopeLift: 24 }).slopeLift, 48);
   assert.deepEqual(migrateLook('garbage'), d);
   assert.deepEqual(migrateLook([1, 2]), d);
 });
@@ -289,32 +268,10 @@ test('saved settings migrate: round 1’s style and shading become the settings 
 test('albedo cache depends on material drawing controls, never facing or sun controls', () => {
   const keys = new Set(LOOKS.map((look) => chunkKey({ slopes: { look } } as Parameters<typeof chunkKey>[0], 2, 3)));
   assert.equal(keys.size, LOOKS.length / 3);
-  const make = (facing: SlopesLook['facing']) => buildSlopes(DEFAULT_AREA_OPTIONS, { facing, contours: 'off', terraces: false, lift: 0 });
+  const make = (facing: SlopesLook['facing']) => buildSlopes(DEFAULT_AREA_OPTIONS, { facing, lift: 0 });
   const pixels = (facing: SlopesLook['facing']) => paintField(make(facing), 81 * T, 87 * T, 16, 16).px;
   assert.deepEqual(pixels('off'), pixels('restrained'));
   assert.deepEqual(pixels('off'), pixels('current'));
-});
-
-test('sparse contours are fixed to the world: a pixel paints the same whichever part it is painted in', () => {
-  const a = buildSlopes(DEFAULT_AREA_OPTIONS, { facing: 'restrained', contours: 'sparse', terraces: false, lift: 0 });
-  const x0 = (KNOLL.x - 6) * T;
-  const y0 = (KNOLL.y - 6) * T;
-  const one = paintField(a, x0, y0, 12 * T, 12 * T).px;
-  const two = paintField(a, x0 + 37, y0 + 21, 12 * T, 12 * T).px;
-  let differ = 0;
-  for (let y = 21; y < 12 * T; y++)
-    for (let x = 37; x < 12 * T; x++) {
-      const i = (y * 12 * T + x) * 4;
-      const j = ((y - 21) * 12 * T + x - 37) * 4;
-      if (one[i] !== two[j] || one[i + 1] !== two[j + 1] || one[i + 2] !== two[j + 2]) differ++;
-    }
-  assert.equal(differ, 0);
-  // And they're there: sparse differs from no contours on the knoll, but on few pixels.
-  const none = paintField(buildSlopes(DEFAULT_AREA_OPTIONS, { facing: 'restrained', contours: 'off', terraces: false, lift: 0 }), x0, y0, 12 * T, 12 * T).px;
-  let marked = 0;
-  for (let i = 0; i < one.length; i += 4) if (one[i] !== none[i]) marked++;
-  const share = marked / (one.length / 4);
-  assert.ok(share > 0.005 && share < 0.08, `sparse marks ${(share * 100).toFixed(1)}% of the knoll`);
 });
 
 test('the knoll: 0.2 level a tile all round its flank, walkable; the rocky path: walkable stone beside the scree, reachable', () => {

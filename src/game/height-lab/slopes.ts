@@ -9,13 +9,13 @@
  *
  * The field is ground: where things are on the land, seen from above. Two
  * maps are built from it, the walk layer the scene uses:
- *  - flat (the shading, contour and terrace styles): a map tile is a field
+ *  - flat (top-down, shading by facing): a map tile is a field
  *    tile; slopes are drawn where they lie, and a cliff's face takes
  *    ROWS_PER_LEVEL rows a level off the lower land south of it (the local
  *    face rule, as the other areas), so a level still lifts by 3 rows.
- *  - lifted (lift strength 24 or 48 px a level; 48 is round 1's true ¾
+ *  - lifted (the true ¾ lift, 48 px a level, round 1's
  *    style): everything is drawn k rows a level further north as it rises
- *    (k = 1.5 or 3; screen row = field row − k z, plus a margin). A slope
+ *    (k = 3; screen row = field row − k z, plus a margin). A slope
  *    facing you stretches, one facing away squashes (and past 1/k level a
  *    tile it hides), a cliff opens into its face by k rows a level, and
  *    nothing walkable hides: the steepness limit is under 1/3. The lifted
@@ -57,38 +57,32 @@ const q = (z: number) => Math.round(z * Q) / Q
 /** Fog by height difference here: a "level" of fog for every FOG_LEVELS levels (the range is 15 tall). */
 export const FOG_LEVELS = 4
 
-/** Round 1's four drawing styles (now shortcuts to settings, ./look.ts styleSettings). */
-export type SlopeStyle = 'shade' | 'contours' | 'terraces' | 'lift'
+/** The two looks the owner chose (2026-10-26): top-down (shading by facing) and the true ¾ lift. */
+export type SlopeStyle = 'shade' | 'lift'
 
 /** Shading by facing: none, restrained (palette shifts that keep the grass's colour), or round 1's (brightness multiplied). */
 export type FacingShade = 'off' | 'restrained' | 'current'
-/** Contours: none, sparse (broken accents every level), or round 1's (a line every half level). */
-export type ContourDetail = 'off' | 'sparse' | 'current'
-/** Lift strength, px a level: none, moderate, full (round 1's true ¾ lift, ROWS_PER_LEVEL rows). */
-export type LiftPx = 0 | 24 | 48
+/** Lift strength, px a level: none (top-down), or the true ¾ lift (ROWS_PER_LEVEL rows a level). */
+export type LiftPx = 0 | 48
 
 /** How the slopes area is drawn (./slopes-paint.ts): every combination walks the same field. */
 export interface SlopesLook {
   sunlight?: boolean
   sunStrength?: number
   facing: FacingShade
-  contours: ContourDetail
-  terraces: boolean
   lift: LiftPx
 }
 
-/** Round 1's styles as looks (the tests; ./look.ts styleSettings for the panel). */
+/** The looks by name (the tests; ./look.ts styleSettings for the panel). */
 export function styleLook(style: SlopeStyle, shade = true): SlopesLook {
   const facing: FacingShade = style === 'shade' || shade ? 'current' : 'off'
-  return { facing, contours: style === 'contours' ? 'current' : 'off', terraces: style === 'terraces', lift: style === 'lift' ? 48 : 0 }
+  return { facing, lift: style === 'lift' ? 48 : 0 }
 }
 
 /** The settings in a few words (the HUD). */
 export function lookName(l: SlopesLook): string {
   const parts = [l.facing === 'off' ? 'no facing shade' : `${l.facing} shade`]
-  if (l.contours !== 'off') parts.push(`${l.contours} contours`)
-  if (l.terraces) parts.push('terraces')
-  parts.push(l.lift ? `lift ${l.lift} px` : 'no lift')
+  parts.push(l.lift ? `lift ${l.lift} px` : 'top-down')
   return parts.join(' · ')
 }
 

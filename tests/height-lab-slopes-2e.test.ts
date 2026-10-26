@@ -7,7 +7,6 @@ import { EDGE_LOOK, edgeSettings, migrateLook } from '../src/game/height-lab/loo
 
 const flat = buildSlopes(DEFAULT_AREA_OPTIONS, styleLook('shade')).slopes!;
 const lifted = buildSlopes(DEFAULT_AREA_OPTIONS, styleLook('lift')).slopes!;
-const moderate = buildSlopes(DEFAULT_AREA_OPTIONS, { ...styleLook('lift'), lift: 24 }).slopes!;
 const T = 16;
 
 /** Edge amounts over a small window (world px). */
@@ -19,7 +18,7 @@ const count = (a: Float32Array) => a.reduce((n, v) => n + (v > 0 ? 1 : 0), 0);
 // ---------------------------------------------------------------- edges
 
 test('2e edges: the stepped plateau’s whole-level steps get bands and rims in every look', () => {
-  for (const [name, info] of [['flat', flat], ['lift 48', lifted], ['lift 24', moderate]] as const) {
+  for (const [name, info] of [['flat', flat], ['lift 48', lifted]] as const) {
     const e = window(info, 120 * T, Math.round((64 + (info.lift ? info.pad - info.k * 4 : 0)) * T), 24 * T, 48 * T);
     assert.ok(e.edges > 200, `${name}: edges ${e.edges}`);
     assert.ok(count(e.dark) > 500, `${name}: band px`);
@@ -128,10 +127,7 @@ test('2e see-through: with the legs behind the plateau rim only the bottom rows 
   assert.equal(coveredRows(lifted, 132, 66).rows.every(Boolean), true);
 });
 
-test('2e see-through: it works at 24 px a level too, and never without the lift', () => {
-  const partial = coveredRows(moderate, 132, 66).rows.filter(Boolean).length;
-  assert.ok(partial > 0 && partial < 20);
-  assert.equal(coveredRows(moderate, 132, 67).rows.filter(Boolean).length >= 18, true);
+test('2e see-through: never without the lift', () => {
   assert.equal(coveredRows(flat, 132, 66).rows.some(Boolean), false);
 });
 

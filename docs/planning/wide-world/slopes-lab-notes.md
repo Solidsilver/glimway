@@ -1,6 +1,8 @@
 # Slopes lab, round 2e: edges that read, and partial see-through (exp/slopes-edges)
 
-2026-10-24. Everything from 2d remains (sun, proxy shadows, gait). 2e adds
+2026-10-24. (Since 2026-10-26 the lab has only the two chosen looks, top-down and the
+true ¾ lift: contours, terraces, the 24 px lift and the 2c silhouette shadows are gone,
+and so is the walk stop that covered the 24 px lift.) Everything from 2d remains (sun, proxy shadows, gait). 2e adds
 edge shading, which marks every height drop in every look. It also makes the
 lift's see-through partial: only the part of the hero behind higher ground
 turns into the grey outline.
@@ -45,7 +47,6 @@ than 15% darker than the darker of the two alone.
 | Cliff edge | 103,95 (outcrop top) | The rim on the lip, and the band at the cliff's foot below the face. |
 | Legs behind the ridge | 132,65 | True ¾ lift (48 px). Only the legs, which are behind the plateau's rim, turn into the grey outline. The head and body draw normally. |
 | Fully behind | 132,66 | One step further north: the whole hero is the outline. |
-| Moderate lift | 132,66 | **Moderate lift** (24 px). Only the feet are covered here. At 132,67 the whole hero is. |
 
 The owner's questions, at every stop:
 

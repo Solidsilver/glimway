@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { SUN_ELEVATION, shadowOpacity, sunAt } from '../src/game/terrain/sun.ts';
 import { GROUND_ASPECT, MAX_REACH, buildShadowLayer, castProxy, casterProxy, overShadow, shadeMultiply, shadowDarkness, shadowRay, type Caster } from '../src/game/terrain/sun-shadow.ts';
 import type { SunMap } from '../src/game/terrain/sun-map.ts';
-import { migrateLook } from '../src/game/height-lab/look.ts';
 
 const hours = (h: number) => (h - 6) / 12;
 const azimuth = (t: number) => { const d = sunAt(t).direction; return Math.atan2(d[1], d[0]); };
@@ -171,12 +170,6 @@ test('2d proxies are lathed from the art: a pine casts a cone, a body a capsule;
   for (let y = a.y0; y < a.y0 + a.h; y++) for (let x = a.x0; x < a.x0 + a.w; x++) if (at(a, x, y).dir) { n++; if (at(b, 199 - x, y).dir) same++; }
   assert.ok(n > 20 && same / n > 0.9, `${same}/${n}`);
   assert.ok(Math.abs(a.x0 + a.w - (200 - b.x0)) <= 1);
-});
-
-test('2d saved looks gain sprite shadows: proxy by default, 2c silhouette kept to compare', () => {
-  assert.equal(migrateLook({}).spriteShadows, 'proxy');
-  assert.equal(migrateLook({ spriteShadows: 'silhouette' }).spriteShadows, 'silhouette');
-  assert.equal(migrateLook({ spriteShadows: 'blob' }).spriteShadows, 'proxy');
 });
 
 // A rounded shadow must survive rasterisation, where a narrow capsule used

@@ -1,4 +1,4 @@
-/** Dev-only slope albedo: material, contours and terrace marks. Sun light lives in sun-map.ts. */
+/** Dev-only slope albedo: material and cliff faces. Sun light lives in ../terrain/sun-map.ts. */
 import { TERRAIN } from '../../lib/tile.ts'
 import { wildsGround } from '../../lib/wilds/data.ts'
 import { fnv1a32 } from '../../lib/hash.ts'
@@ -9,9 +9,6 @@ import { G, GROUNDS, SURFACE, type LabArea } from './area.ts'
 import { DX, DY, KIND, TILE_PX } from './levels.ts'
 import { liftColumn, spanGround, type Field, type Span } from './slopes.ts'
 
-/** Sparse contours: a level apart, in accents chosen per SPARSE_CELL px world cell (a few in ten left out). */
-export const SPARSE_CONTOUR = 1
-const SPARSE_CELL = 9
 
 type RGB = [number, number, number]
 const T = TILE_PX
@@ -33,10 +30,6 @@ export const BAND = 0.5
 export const bandOf = (z: number) => Math.floor(z / BAND + 1e-4) * BAND
 
 
-/** Contours every CONTOUR levels, stronger every CONTOUR_MAJOR of them; terraces TERRACE levels high. */
-export const CONTOUR = 0.5
-const CONTOUR_MAJOR = 4
-export const TERRACE = 0.2
 
 /** The painter's terrain for each of the slopes area's grounds (its own tints are this file's). */
 const SPECIAL: Partial<Record<string, keyof typeof TERRAIN>> = { 'tops-scree': 'stone_b', 'tops-crag': 'stone_a', 'wq-stone': 'stone_a', 'tops-path': 'path_a' }
@@ -68,7 +61,6 @@ export function paintField(area: LabArea, x0: number, y0: number, w: number, h: 
       zg[y * zw + x] = zPx(f, wx, wy)
     }
   const zAt = (x: number, y: number) => zg[(y + M) * zw + x + M]!
-  const lk = info.look
   const dry = hexRGB('#d8c890')
   const stone = hexRGB('#a8a296')
   const snow = hexRGB('#eef2f8')
@@ -87,7 +79,6 @@ export function paintField(area: LabArea, x0: number, y0: number, w: number, h: 
       const talus = surface.kind[i] === KIND.face
       const kind = talus ? KIND.steep : f.kind[i]!
       const ground = f.ground[i]!
-      const open = kind === KIND.flat || kind === KIND.slope || kind === KIND.prop
       const o = (y * w + x) * 4
       let r = px[o]!
       let g = px[o + 1]!
@@ -179,72 +170,9 @@ export function paintField(area: LabArea, x0: number, y0: number, w: number, h: 
         b = c[2]
         if (edge < 0.45) tint([95, 90, 82], 0.45)
       }
-      // The treatments: light, then lines.
-      let k = 1
-      const step = (lo: number, hi: number) => Math.abs(hi - lo) < 0.15
-      if (lk.contours === 'current' && kind !== KIND.crag) {
-        const band = Math.floor(z / CONTOUR)
-        let low = false
-        let high = false
-        let major = false
-        for (const [ax, ay] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
-          const zn = zAt(x + ax, y + ay)
-          if (!step(z, zn)) continue
-          const bn = Math.floor(zn / CONTOUR)
-          if (bn > band) {
-            low = true
-            if (bn % CONTOUR_MAJOR === 0) major = true
-          } else if (bn < band) high = true
-        }
-        if (low) k *= major ? 0.55 : 0.7
-        else if (high) k *= 1.15
-      }
-      if (lk.contours === 'sparse' && open && ground !== G.bank && slope > 0.02) {
-        // Distance (px) above the level line below, and below the level line above.
-        const gp = slope / T
-        const lv = z / SPARSE_CONTOUR
-        const above = ((lv - Math.floor(lv)) * SPARSE_CONTOUR) / gp
-        const below = ((Math.ceil(lv) - lv) * SPARSE_CONTOUR) / gp
-        // The line this pixel is by (the one below it on the high side, the one above on the low side), and the accent there.
-        const line = above < below ? Math.floor(lv) : Math.ceil(lv)
-        const cell = hash(Math.floor(wx / SPARSE_CELL), Math.floor(wy / SPARSE_CELL), 41 + line)
-        const fade = 1 - smoothstep(0.18, 0.26, slope)
-        if (cell >= 0.5 && fade > 0) {
-          if (cell < 0.78) {
-            // Grass tips: light blades of uneven height on the high side's edge, a dark shade under them.
-            if (hash(wx, line, 43) < 0.6 && above < 0.7 + 1.1 * hash(wx, line, 44)) tint([204, 228, 124], 0.42 * fade)
-            else if (below < 0.9) tint([32, 56, 26], 0.28 * fade)
-            else if (below < 1.8) tint([32, 56, 26], 0.1 * fade)
-          } else if (cell < 0.94) {
-            // A soil edge: a light rim, bare soil just below it.
-            if (above < 0.9) tint([240, 230, 186], 0.32 * fade)
-            else if (below < 0.9) tint([92, 68, 44], 0.32 * fade)
-            else if (below < 1.8) tint([92, 68, 44], 0.12 * fade)
-          } else if (below < 1.8 && hash(wx >> 1, wy >> 1, 45) < 0.45) {
-            // A few stones along the line, each lit on top, a shadow under it.
-            tint((wy & 1) === 0 ? [222, 216, 200] : [48, 44, 40], (wy & 1) === 0 ? 0.48 * fade : 0.28 * fade)
-          }
-        }
-      }
-      if (lk.terraces && kind !== KIND.crag) {
-        const tb = (zz: number) => Math.floor(zz / TERRACE)
-        const here = tb(z)
-        const n1 = zAt(x, y - 1)
-        const n2 = zAt(x, y - 2)
-        const s1 = zAt(x, y + 1)
-        if (step(z, n1) && tb(n1) > here) k *= 0.6
-        else if (step(z, n2) && step(n1, n2) && tb(n2) > here) k *= 0.8
-        else if (step(z, s1) && tb(s1) < here) k *= 1.24
-        else if (step(z, s1) && tb(s1) > here) k *= 0.78
-        else {
-          const e1 = zAt(x + 1, y)
-          const w1 = zAt(x - 1, y)
-          if ((step(z, e1) && tb(e1) > here) || (step(z, w1) && tb(w1) > here)) k *= 0.84
-        }
-      }
-      px[o] = r * k
-      px[o + 1] = g * k
-      px[o + 2] = b * k
+      px[o] = r
+      px[o + 1] = g
+      px[o + 2] = b
       px[o + 3] = 255
     }
   const zs = new Float32Array(w * h)
@@ -305,10 +233,10 @@ function gradPx(f: Field, wx: number, wy: number): [number, number] {
   return [(c[i + 1]! - c[i]!) * (1 - fy) + (c[i + 2]! - c[i + 3]!) * fy, (c[i + 3]! - c[i]!) * (1 - fx) + (c[i + 2]! - c[i + 1]!) * fx]
 }
 
-/** The paint cache's key (./slopes-art.ts) for a chunk of the area as it's drawn: every setting that paints (facing, contours, terraces, lift strength). */
+/** The paint cache's key (./slopes-art.ts) for a chunk of the area as it's drawn: every setting that paints (the lift). */
 export function chunkKey(area: LabArea, cx: number, cy: number): string {
   const l = area.slopes!.look
-  return `${l.contours}|${l.terraces ? 1 : 0}|${l.lift}|${cx},${cy}`
+  return `${l.lift}|${cx},${cy}`
 }
 
 /** A part of the map (tiles, inclusive). */

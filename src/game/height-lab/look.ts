@@ -6,7 +6,7 @@
  * still load.
  */
 import type { AreaName } from './area.ts'
-import type { ContourDetail, FacingShade, LiftPx, SlopeStyle, SlopesLook } from './slopes.ts'
+import type { FacingShade, LiftPx, SlopeStyle, SlopesLook } from './slopes.ts'
 import type { WayIn } from './light.ts'
 import type { EdgeSettings } from '../terrain/edges.ts'
 
@@ -41,11 +41,7 @@ export interface LabLook {
   walkOverlay: boolean
   /** The slopes area: shading by facing, none, restrained (palette shifts) or the round-1 strength (./slopes-paint.ts; switching repaints). */
   slopeFacing: FacingShade
-  /** The slopes area: contour lines, none, sparse (broken, every level) or the round-1 half-level lines. */
-  slopeContours: ContourDetail
-  /** The slopes area: the slope drawn as small terraces. */
-  slopeTerraces: boolean
-  /** The slopes area: how far the ground is drawn north as it rises, px a level (0: not at all; 48: the round-1 true ¾ lift). */
+  /** The slopes area: top-down (0) or the true ¾ lift (48 px a level). */
   slopeLift: LiftPx
   /** Speed cut at the walking limit, percent, 0–80; linear in the uphill component. */
   slopeUphill: number
@@ -61,8 +57,6 @@ export interface LabLook {
   sunTime: number
   /** Follow the game/server clock, including the dev offset. */
   sunClock: boolean
-  /** Sprite cast shadows: 2d proxies cast onto the ground, or 2c sheared silhouettes. */
-  spriteShadows: 'proxy' | 'silhouette'
   /** 2e edge shading (./edges.ts): strength 0–1 (0 off), band width px, scaled by the drop, the smallest step that counts (levels), a light rim on the lip. */
   edgeShade: number
   edgeWidth: number
@@ -80,17 +74,14 @@ export function edgeSettings(l: Pick<LabLook, 'edgeShade' | 'edgeWidth' | 'edgeS
 }
 
 /** Preset drawing controls. Sunlight, strength and time update only the light layer. */
-export const SLOPE_KEYS = ['slopeFacing', 'slopeContours', 'slopeTerraces', 'slopeLift'] as const
+export const SLOPE_KEYS = ['slopeFacing', 'slopeLift'] as const
 export type SlopeLook = Pick<LabLook, (typeof SLOPE_KEYS)[number]>
 
-/** The comparison presets (slopes-lab-recommendations.md §3): drawing only; fog, zoom, haze and the uphill slowdown stay as they are. */
-export type SlopePreset = 'baseline' | 'sparse' | 'terraces' | 'moderate' | 'full'
+/** The two looks the owner chose (terrain-decisions.md, 2e): drawing only; fog, zoom, haze and the uphill slowdown stay as they are. */
+export type SlopePreset = 'baseline' | 'full'
 export const SLOPE_PRESETS: Record<SlopePreset, { name: string; look: SlopeLook }> = {
-  baseline: { name: 'Shading baseline', look: { slopeFacing: 'restrained', slopeContours: 'off', slopeTerraces: false, slopeLift: 0 } },
-  sparse: { name: 'Sparse contours', look: { slopeFacing: 'restrained', slopeContours: 'sparse', slopeTerraces: false, slopeLift: 0 } },
-  terraces: { name: 'Small terraces', look: { slopeFacing: 'restrained', slopeContours: 'off', slopeTerraces: true, slopeLift: 0 } },
-  moderate: { name: 'Moderate lift', look: { slopeFacing: 'restrained', slopeContours: 'off', slopeTerraces: false, slopeLift: 24 } },
-  full: { name: 'Full lift reference', look: { slopeFacing: 'current', slopeContours: 'off', slopeTerraces: false, slopeLift: 48 } }
+  baseline: { name: 'Top-down', look: { slopeFacing: 'restrained', slopeLift: 0 } },
+  full: { name: 'True ¾ lift', look: { slopeFacing: 'current', slopeLift: 48 } }
 }
 
 /** The preset the slopes settings are exactly, if any. */
@@ -99,34 +90,29 @@ export function slopePresetOf(l: SlopeLook): SlopePreset | null {
   return null
 }
 
-/** "Reset": the Shading baseline, 60% uphill, 6% downhill, noon, gait and sunlight on. */
-export const SLOPE_RESET: Partial<LabLook> = { ...SLOPE_PRESETS.baseline.look, slopeUphill: 60, slopeDownhill: 6, slopeGait: true, sunlight: true, sunStrength: 1, sunTime: 0.5, sunClock: false, spriteShadows: 'proxy', ...EDGE_LOOK }
+/** "Reset": top-down, 60% uphill, 6% downhill, noon, gait and sunlight on. */
+export const SLOPE_RESET: Partial<LabLook> = { ...SLOPE_PRESETS.baseline.look, slopeUphill: 60, slopeDownhill: 6, slopeGait: true, sunlight: true, sunStrength: 1, sunTime: 0.5, sunClock: false, ...EDGE_LOOK }
 
 /** Just the slopes area's drawing settings. */
 export function slopeSettings(l: SlopeLook & Partial<Pick<LabLook, 'sunlight' | 'sunStrength'>>): SlopeLook & Partial<Pick<LabLook, 'sunlight' | 'sunStrength'>> {
-  return { sunlight: l.sunlight, sunStrength: l.sunStrength, slopeFacing: l.slopeFacing, slopeContours: l.slopeContours, slopeTerraces: l.slopeTerraces, slopeLift: l.slopeLift }
+  return { sunlight: l.sunlight, sunStrength: l.sunStrength, slopeFacing: l.slopeFacing, slopeLift: l.slopeLift }
 }
 
 /** The slopes settings as the drawing code takes them (./slopes.ts buildSlopes). */
 export function slopesLook(l: SlopeLook & Partial<Pick<LabLook, 'sunlight' | 'sunStrength'>>): SlopesLook {
-  return { sunlight: l.sunlight, sunStrength: l.sunStrength, facing: l.slopeFacing, contours: l.slopeContours, terraces: l.slopeTerraces, lift: l.slopeLift }
+  return { sunlight: l.sunlight, sunStrength: l.sunStrength, facing: l.slopeFacing, lift: l.slopeLift }
 }
 
-/**
- * Round 1's four styles, as settings (the "Slopes, drawn as" row picks one):
- * each the one treatment, facing shade kept (shading by facing turns it on).
- */
+/** The two looks as settings (the "Slopes, drawn as" row picks one), facing shade kept (top-down turns it on). */
 export function styleSettings(style: SlopeStyle, l: SlopeLook): SlopeLook {
   const facing = l.slopeFacing
-  if (style === 'shade') return { slopeFacing: facing === 'off' ? 'current' : facing, slopeContours: 'off', slopeTerraces: false, slopeLift: 0 }
-  if (style === 'contours') return { slopeFacing: facing, slopeContours: 'current', slopeTerraces: false, slopeLift: 0 }
-  if (style === 'terraces') return { slopeFacing: facing, slopeContours: 'off', slopeTerraces: true, slopeLift: 0 }
-  return { slopeFacing: facing, slopeContours: 'off', slopeTerraces: false, slopeLift: 48 }
+  if (style === 'shade') return { slopeFacing: facing === 'off' ? 'current' : facing, slopeLift: 0 }
+  return { slopeFacing: facing, slopeLift: 48 }
 }
 
-/** Which of round 1's styles the settings are, if one (the row's pressed button). */
+/** Which look the settings are, if one (the row's pressed button). */
 export function styleOf(l: SlopeLook): SlopeStyle | null {
-  for (const s of ['shade', 'contours', 'terraces', 'lift'] as const) {
+  for (const s of ['shade', 'lift'] as const) {
     const t = styleSettings(s, l)
     if (SLOPE_KEYS.every((k) => t[k] === l[k])) return s
   }
@@ -150,7 +136,7 @@ const DEFAULT: LabLook = {
   strategy: 'region',
   walkOverlay: false,
   ...SLOPE_PRESETS.baseline.look,
-  slopeUphill: 60, slopeDownhill: 6, slopeGait: true, sunlight: true, sunStrength: 1, sunTime: 0.5, sunClock: false, spriteShadows: 'proxy',
+  slopeUphill: 60, slopeDownhill: 6, slopeGait: true, sunlight: true, sunStrength: 1, sunTime: 0.5, sunClock: false,
   ...EDGE_LOOK
 }
 
@@ -171,9 +157,7 @@ const ALLOWED: { [K in keyof LabLook]: readonly LabLook[K][] | { min: number; ma
   strategy: ['region', 'chunk'],
   walkOverlay: [true, false],
   slopeFacing: ['off', 'restrained', 'current'],
-  slopeContours: ['off', 'sparse', 'current'],
-  slopeTerraces: [true, false],
-  slopeLift: [0, 24, 48],
+  slopeLift: [0, 48],
   slopeUphill: { min: 0, max: 80 },
   slopeDownhill: { min: 0, max: 20 },
   slopeGait: [false, true],
@@ -181,7 +165,6 @@ const ALLOWED: { [K in keyof LabLook]: readonly LabLook[K][] | { min: number; ma
   sunStrength: { min: 0, max: 2 },
   sunTime: { min: 0, max: 1 },
   sunClock: [true, false],
-  spriteShadows: ['proxy', 'silhouette'],
   edgeShade: { min: 0, max: 1 },
   edgeWidth: { min: 1, max: 8 },
   edgeScale: [true, false],
@@ -192,7 +175,8 @@ const ALLOWED: { [K in keyof LabLook]: readonly LabLook[K][] | { min: number; ma
 /**
  * Settings read back from storage, whatever wrote them: every known value
  * checked (anything else is the default). Round 1 saved the slopes area as
- * `slopeStyle` + `slopeShade`; those become the settings that draw the same.
+ * `slopeStyle` + `slopeShade`; those become the settings that draw the same
+ * (contours, terraces and the 24 px lift, gone since 2e, the nearest look).
  */
 export function migrateLook(raw: unknown): LabLook {
   const out: LabLook = { ...DEFAULT }
@@ -209,8 +193,11 @@ export function migrateLook(raw: unknown): LabLook {
   const old = r.slopeStyle
   if ((old === 'shade' || old === 'contours' || old === 'terraces' || old === 'lift') && !SLOPE_KEYS.some((k) => k in r)) {
     const facing = old === 'shade' || r.slopeShade !== false ? 'current' : 'off'
-    Object.assign(out, styleSettings(old, { ...out, slopeFacing: facing }))
+    // Contours and terraces have left the lab: they read as top-down.
+    Object.assign(out, old === 'shade' || old === 'lift' ? styleSettings(old, { ...out, slopeFacing: facing }) : { slopeFacing: facing, slopeLift: 0 })
   }
+  // The moderate (24 px) lift has left too: the true ¾ lift.
+  if (r.slopeLift === 24) out.slopeLift = 48
   return out
 }
 
