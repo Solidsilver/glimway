@@ -103,16 +103,17 @@ export class SceneTerrain {
     const step = () => this.gate()
     const pre = () => this.liftPass()
     const post = () => this.restore()
-    scene.physics.world.on(Phaser.Physics.Arcade.Events.WORLD_STEP, step)
+    const world = scene.physics.world
+    world.on(Phaser.Physics.Arcade.Events.WORLD_STEP, step)
     scene.events.on(Phaser.Scenes.Events.PRE_RENDER, pre)
     scene.events.on(Phaser.Scenes.Events.RENDER, post)
     const off = onTerrainSettings((s, was) => this.changed(s, was))
     onSceneEnd(scene, () => {
-      scene.physics.world.off(Phaser.Physics.Arcade.Events.WORLD_STEP, step)
+      world?.off(Phaser.Physics.Arcade.Events.WORLD_STEP, step)
       scene.events.off(Phaser.Scenes.Events.PRE_RENDER, pre)
       scene.events.off(Phaser.Scenes.Events.RENDER, post)
       off()
-      this.teardown()
+      this.teardown(true)
     })
   }
 
@@ -125,7 +126,8 @@ export class SceneTerrain {
     if (s.on && !was.on) this.deps.window()?.repaintForTerrain()
   }
 
-  private teardown(): void {
+  /** `ending`: the scene is going; its hero and sprites may already be gone. */
+  private teardown(ending = false): void {
     this.active = false
     for (const c of this.images.values()) this.drop(c)
     this.images.clear()
@@ -133,10 +135,11 @@ export class SceneTerrain {
     this.last = null
     this.shadow?.destroy()
     this.shadow = null
-    this.dropCover()
+    this.dropCover(ending)
     terrain.clear()
-    const body = this.deps.hero().sprite.anims
-    if (body) body.timeScale = 1
+    if (ending) return
+    const anims = this.deps.hero()?.sprite?.anims
+    if (anims) anims.timeScale = 1
   }
 
   private drop(c: ChunkImage): void {
@@ -425,8 +428,8 @@ export class SceneTerrain {
 
   // ------------------------------------------------------------ partial see-through
 
-  private dropCover(): void {
-    const body = this.deps.body()
+  private dropCover(ending = false): void {
+    const body = ending ? null : this.deps.body()
     if (body && this.coverHide && body.mask === this.coverHide) body.clearMask()
     this.ghost?.destroy()
     this.coverShow?.destroy()
