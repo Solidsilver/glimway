@@ -14,6 +14,7 @@
   import { loadDevPrefs, saveDevPrefs, withRecent, type DevSection as SectionId } from './dev-prefs'
   import { loadTimingsText } from '../loading.svelte'
   import LabSection from '../../game/height-lab/LabSection.svelte'
+  import TerrainSection from './TerrainSection.svelte'
   import { inLab } from '../../game/height-lab/look'
 
   // Dev mode: give this account Glimway's own things through the dev
@@ -208,6 +209,11 @@
     <DevSection id="world-lab" icon="world" title="World lab" open={open['world-lab']} onToggle={(o) => fold('world-lab', o)}>
       <p class="sub">The Wilds generator from any seed: atlas, region and chunk, overlays, stats, a diff, an editable copy of the rules, and “go here”. It renders on this server, away from the game, and changes nothing.</p>
       <button type="button" class="primary" onclick={onWorldLab}>Open the world lab</button>
+    </DevSection>
+  {/if}
+  {#if tools?.hooks || tools?.world_lab}
+    <DevSection id="terrain" icon="stone" title="Terrain" open={open.terrain} onToggle={(o) => fold('terrain', o)}>
+      <TerrainSection />
     </DevSection>
   {/if}
   {#if !lab}{@render heightLab()}{/if}
