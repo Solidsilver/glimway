@@ -49,6 +49,7 @@ type Options struct {
 	// Walk: the walk lab's window (walk.go) instead of a picture.
 	Walk           bool    `json:"walk,omitempty"`
 	Terrain        string  `json:"terrain,omitempty"`
+	SlopeRecipe    string  `json:"slopeRecipe,omitempty"`
 	Slopes         string  `json:"slopes,omitempty"` // height, kinds, routes, reach, tunnels
 	TerrainSamples int     `json:"terrainSamples,omitempty"`
 	TerrainOrder   uint64  `json:"terrainOrder,omitempty"`
@@ -110,6 +111,9 @@ func enabled(o Options, name string) bool {
 
 // Validate refuses a render outside the limits, before any work.
 func Validate(o Options) error {
+	if o.SlopeRecipe != "" && (o.Slopes == "" || (o.SlopeRecipe != wilds.SlopeRecipe && o.SlopeRecipe != wilds.SlopeRecipeV2)) {
+		return errors.New("slopeRecipe requires slopes and must be slopes-gen@1 or slopes-gen@2")
+	}
 	if o.Slopes != "" {
 		if len(o.Raw) > 0 && !bytes.Equal(o.Raw, embeddedRules()) {
 			return errors.New("slopes uses embedded rules")
