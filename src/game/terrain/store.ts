@@ -12,7 +12,8 @@ import type { StepRule } from './walk.ts'
 export const CHUNK = 24
 const TILE = 16
 
-const key = (cx: number, cy: number) => `${cx},${cy}`
+/** A chunk as one number (chunk coordinates stay well inside ±2^20). */
+const key = (cx: number, cy: number) => (cx + 1048576) * 2097152 + (cy + 1048576)
 
 export type TerrainFetch = (chunks: [number, number][]) => Promise<{ cx: number; cy: number; surface: SlopeSurface }[]>
 
@@ -25,8 +26,8 @@ export const devTerrainFetch: TerrainFetch = async (chunks) => {
 }
 
 export class TerrainStore implements StepRule {
-  private chunks = new Map<string, SlopeSurface>()
-  private asked = new Set<string>()
+  private chunks = new Map<number, SlopeSurface>()
+  private asked = new Set<number>()
   /** Bumped whenever a chunk arrives or goes. */
   version = 0
   /** Why the last fetch failed ('' when none did): a live server has no route. */
@@ -100,10 +101,22 @@ export class TerrainStore implements StepRule {
   // A tile's chunk and index, without allocating.
   private s: SlopeSurface | null = null
   private i = 0
+  private lastCx = Number.NaN
+  private lastCy = Number.NaN
+  private lastV = -1
+  private lastS: SlopeSurface | null = null
   private locate(tx: number, ty: number): boolean {
     const cx = Math.floor(tx / CHUNK)
     const cy = Math.floor(ty / CHUNK)
-    const s = this.chunks.get(key(cx, cy))
+    let s: SlopeSurface | undefined
+    if (cx === this.lastCx && cy === this.lastCy && this.lastV === this.version) s = this.lastS ?? undefined
+    else {
+      s = this.chunks.get(key(cx, cy))
+      this.lastCx = cx
+      this.lastCy = cy
+      this.lastV = this.version
+      this.lastS = s ?? null
+    }
     if (!s) return false
     this.s = s
     this.i = (ty - cy * CHUNK) * s.w + (tx - cx * CHUNK)

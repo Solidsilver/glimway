@@ -97,7 +97,10 @@ export class SceneTerrain {
   private scuffPx = 0
   private prev: [number, number] | null = null
   /** The readout (dev hooks, the E2E spec). */
-  stats = { bakes: 0, bakeMs: [] as number[], frameMs: [] as number[], blocked: 0, k: 1, covered: 0, spriteTotal: 0, hidden: 0, hiddenOnClosed: 0 }
+  /** What the pass leaves alone (its own images), and objects drawn by someone else's feet (the hero's shadow). */
+  private own = new WeakSet<Phaser.GameObjects.GameObject>()
+  private feetOf = new WeakMap<Phaser.GameObjects.GameObject, [number, number]>()
+  stats = { bakes: 0, bakeMs: [] as number[], frameMs: [] as number[], startMs: [] as number[], blocked: 0, k: 1, covered: 0, spriteTotal: 0, hidden: 0, hiddenOnClosed: 0 }
 
   constructor(private scene: Phaser.Scene, private deps: SceneTerrainDeps) {
     const step = () => this.gate()
@@ -167,9 +170,16 @@ export class SceneTerrain {
     for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) want.push([hcx + dx, hcy + dy])
     terrain.want(want)
     this.updateSun(s)
-    this.bakes(win, s)
+    // A bake started (its window built and posted) is the attach cost, kept apart from the steady frame.
+    const tb = performance.now()
+    const started = this.bakes(win, s)
+    const startMs = performance.now() - tb
+    if (started) {
+      this.stats.startMs.push(startMs)
+      if (this.stats.startMs.length > 200) this.stats.startMs.shift()
+    }
     this.heroLook(s)
-    this.stats.frameMs.push(performance.now() - t0)
+    this.stats.frameMs.push(performance.now() - t0 - (started ? startMs : 0))
     if (this.stats.frameMs.length > 600) this.stats.frameMs.shift()
   }
 
@@ -188,7 +198,9 @@ export class SceneTerrain {
     return `${around}|${s.mode}|${edgeKey(terrainEdges(s))}|${this.sunKey}|${s.sunStrength}|${albedo}`
   }
 
-  private bakes(win: WildsWindow, s: TerrainSettings): void {
+  /** Start the bakes due (true when one started). */
+  private bakes(win: WildsWindow, s: TerrainSettings): boolean {
+    let started = false
     const chunks = win.terrainChunks()
     const here = new Set(chunks.map((c) => c.key))
     for (const [key, c] of this.images) if (!here.has(key)) { this.drop(c); this.images.delete(key) }
@@ -201,6 +213,7 @@ export class SceneTerrain {
       const sig = this.bakeSig(c.cx, c.cy, s, c.sig)
       if (this.images.get(c.key)?.sig === sig || this.pending.get(c.key) === sig) continue
       this.pending.set(c.key, sig)
+      started = true
       const ox = c.cx * CHUNK_TILES - HALO
       const oy = c.cy * CHUNK_TILES - HALO
       const job = { win: buildWindow(terrain, ox, oy, CHUNK_TILES + 2 * HALO, CHUNK_TILES + 2 * HALO), cx: c.cx, cy: c.cy, albedo: c.rgba, lift: s.mode === 'lift', sun: this.sun, sunStrength: s.sunStrength, edges: terrainEdges(s) }
@@ -214,6 +227,7 @@ export class SceneTerrain {
         this.place(c.key, c.cy, sig, r.baked)
       })
     }
+    return started
   }
 
   private place(key: string, cy: number, sig: string, b: Baked): void {
@@ -226,7 +240,8 @@ export class SceneTerrain {
     if (this.scene.textures.exists(tex)) this.scene.textures.remove(tex)
     this.scene.textures.addCanvas(tex, canvas)
     // Over the flat ground, under its tile art; lifted, the north chunks first.
-    const img = this.scene.add.image(b.x, b.y, tex).setOrigin(0, 0).setDepth(GROUND_DEPTH + 0.25 + (cy + 1e5) * 1e-6).setData('terrain', true)
+    const img = this.scene.add.image(b.x, b.y, tex).setOrigin(0, 0).setDepth(GROUND_DEPTH + 0.25 + (cy + 1e5) * 1e-6)
+    this.own.add(img)
     if (had) this.drop(had)
     this.images.set(key, { img, tex, sig, edges: b.edges })
   }
@@ -321,7 +336,7 @@ export class SceneTerrain {
       const d = shadowDarkness(cast.dir[j]!, cast.contact[j]!, visible, visible, s.sunStrength, daylight)
       return d > 0 ? shadeMultiply(d) : null
     })
-    this.shadow.image.setData('terrainFoot', [sp.x, sp.y])
+    this.feetOf.set(this.shadow.image, [sp.x, sp.y])
   }
 
   /** A field window round (x, y) world px, reaching far enough south for the lift's hiding (rebuilt as the hero crosses tiles or terrain arrives). */
@@ -363,7 +378,7 @@ export class SceneTerrain {
     let onClosed = 0
     for (const o of this.scene.children.list) {
       const g = o as Phaser.GameObjects.GameObject & { x: number; y: number; visible: boolean; scrollFactorY?: number; depth: number; type: string }
-      if (!g.visible || g.scrollFactorY !== 1 || g.getData?.('terrain')) continue
+      if (!g.visible || g.scrollFactorY !== 1 || this.own.has(o)) continue
       if (g.type !== 'Image' && g.type !== 'Sprite' && g.type !== 'Container' && g.type !== 'Text' && g.type !== 'Rectangle') continue
       // The flat ground of a chunk baked lifted: under the lifted ground, never shown between it (an unbaked one stays).
       if (g.depth <= GROUND_DEPTH) {
@@ -375,7 +390,7 @@ export class SceneTerrain {
         this.move(g, 0, 0, false)
         continue
       }
-      const foot = (g.getData?.('terrainFoot') as [number, number] | undefined) ?? [g.x, g.y]
+      const foot = this.feetOf.get(o) ?? [g.x, g.y]
       const isHero = o === heroBody || o === hero.sprite
       const tx = Math.floor(foot[0] / T)
       const ty = Math.floor((foot[1] - 1) / T)
@@ -456,7 +471,7 @@ export class SceneTerrain {
       this.coverShow = this.coverGfx.createGeometryMask()
       this.coverHide = this.coverGfx.createGeometryMask().setInvertAlpha(true)
       this.ghost = this.scene.add.sprite(0, 0, sp.texture.key, sp.frame.name).setOrigin(0.5, 1).setVisible(false).setTintFill(0x2c2640).setAlpha(0.7).setDepth(9e6)
-      this.ghost.setData('terrain', true)
+      this.own.add(this.ghost)
       this.ghost.setMask(this.coverShow)
     }
     const z = terrain.zAt(sp.x, sp.y - 2)
@@ -523,7 +538,8 @@ export class SceneTerrain {
       sun: { time: this.sun.time, daylight: this.sun.daylight, key: this.sunKey },
       bakes: this.stats.bakes,
       bakeMs: pct(this.stats.bakeMs),
-      frameMs: pct(this.stats.frameMs)
+      frameMs: pct(this.stats.frameMs),
+      startMs: pct(this.stats.startMs)
     }
   }
 }
