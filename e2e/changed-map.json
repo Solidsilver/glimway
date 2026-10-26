@@ -21,6 +21,10 @@
   "ignore": ["**/*.md", "docs/**", ".agent/**", "tests/**", "e2e/changed-map.json", "deploy/**", "scripts/*-vectors.ts", "scripts/papers.ts", "scripts/webgl-renderer.ts", "scripts/e2e-artifacts.mjs", "perf/**", "playwright.perf.config.ts", "playwright.first-paint.perf.config.ts", "scripts/trace-hotspots.mjs", "scripts/png-diff.ts", "content/vectors/**", "content/**/*_test.go", "server/**/*_test.go", "server/**/testdata/**", "server/internal/store/storetest/**", "e2e/hooks.d.ts"],
   "rules": [
     {
+      "paths": ["src/game/terrain/**", "src/ui/dev/TerrainSection.svelte", "server/internal/api/dev_terrain.go", "server/internal/wilds/slopes*.go"],
+      "specs": ["terrain-ingame.spec.ts", "height-lab-slopes.spec.ts"]
+    },
+    {
       "paths": ["src/game/height-lab/**"],
       "specs": ["height-lab-screens.spec.ts", "height-lab-walk.spec.ts", "height-lab-slopes.spec.ts"]
     },
