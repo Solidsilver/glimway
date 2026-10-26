@@ -79,6 +79,9 @@ to climb, a cliff face and ground rising south (to stand behind); its
 - **Fog by height** and the lab's climbing haze/zoom are not in the game.
 - **Fixed places** (the Commons, the lots) stay flat images; the generator
   keeps them flat, so they meet the terrain at level 0.
+- Only the attached 3×3 chunks are baked. On a wide screen the view can reach
+  a little past them: there the flat painted ground shows, without light or
+  materials, until you walk closer.
 - Turning the switch on mid-walk re-paints the attached chunks once (to keep
   their ground for the bake).
 
