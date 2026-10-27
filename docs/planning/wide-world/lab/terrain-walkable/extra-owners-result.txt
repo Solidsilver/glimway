@@ -1,0 +1,4 @@
+=== RUN   TestWalkableExtraOwners
+--- PASS: TestWalkableExtraOwners (37.70s)
+PASS
+ok  	glimway/server/internal/wilds	37.809s

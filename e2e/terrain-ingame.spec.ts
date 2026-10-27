@@ -129,11 +129,14 @@ function find(t: TerrainStore): Spots {
   const line = (tx: number, ty: number, n: number, dx: number, dy: number): [number, number][] => Array.from({ length: n + 1 }, (_, i) => [tx + dx * i, ty + dy * i])
   const out: Spots = { seam: [], climb: [], cliff: [], ridge: [] }
   const add = (list: Spot[], s: Spot) => {
-    if (list.length >= 12 || list.some((o) => Math.hypot(o.tx - s.tx, o.ty - s.ty) < 4)) return
+    // Broad shoulders offer many climbs along the same wooded foothill. Spread
+    // candidates across it so one patch of cover cannot exhaust the search.
+    const climb = list === out.climb
+    if (list.length >= (climb ? 64 : 12) || list.some((o) => Math.hypot(o.tx - s.tx, o.ty - s.ty) < (climb ? 12 : 4))) return
     list.push(s)
   }
   for (const [tx, ty] of near) {
-    if (out.seam.length >= 12 && out.climb.length >= 12 && out.cliff.length >= 12 && out.ridge.length >= 12) break
+    if (out.seam.length >= 12 && out.climb.length >= 64 && out.cliff.length >= 12 && out.ridge.length >= 12) break
     // A chunk edge crossed on open, raised ground: four tiles either side.
     if (((tx + 4) % S + S) % S === 0 && z(tx, ty) > 0.2 && open(tx, ty, 8, 1, 0)) add(out.seam, { tx, ty, path: line(tx, ty, 8, 1, 0), at: tx + 4, rise: 0 })
     // A straight climb north or south: 8 open steps rising at least 0.6 of a level.
@@ -284,4 +287,51 @@ test.describe('height terrain in the Wilds', () => {
     await page.screenshot({ path: `${OUT}/off.png` })
     expect((await state(page))!.textures).toBe(0)
   })
+})
+
+// The original short hill check cannot catch an entirely closed upper range.
+// Find a substantial high shoulder in the bytes served to this player, then
+// use real keyboard movement (and the flat Wilds collision bodies) to climb it.
+test('generated range shoulder: walk uphill at least three levels', async ({ page }) => {
+  test.setTimeout(600_000)
+  mkdirSync(OUT, { recursive: true })
+  await freshPlayer(page)
+  const terrain = await scan(page)
+  const candidates: Spot[] = []
+  const z = (x: number, y: number) => terrain.zAt(x * T + 8, y * T + 8)
+  for (let y = -SCAN * S + 40; y < SCAN * S - 40; y += 3) {
+    for (let x = -SCAN * S + 40; x < SCAN * S - 40; x += 3) {
+      for (const dy of [-1, 1]) {
+        const n = 36
+        const rise = z(x, y + dy * n) - z(x, y)
+        if (rise < 3.6 || z(x, y + dy * n) < 8 || z(x, y) < 2) continue
+        const path: [number, number][] = Array.from({ length: n + 1 }, (_, i) => [x, y + dy * i])
+        if (path.some(([tx, ty], i) => !terrain.walkable(tx, ty) || (i < n && !terrain.canStep(tx, ty, dy > 0 ? 2 : 0)) || (i > 0 && z(tx, ty) < z(x, ty - dy) - 0.02))) continue
+        candidates.push({ tx: x, ty: y, path, at: y + dy * n, rise, up: dy > 0 ? 'ArrowDown' : 'ArrowUp' })
+      }
+    }
+  }
+  expect(candidates.length, 'long walkable shoulders reaching level eight').toBeGreaterThan(0)
+  candidates.sort((a, b) => Math.hypot(a.tx - 12, a.ty - 60) - Math.hypot(b.tx - 12, b.ty - 60))
+  await setTerrain(page, { on: true, mode: 'top', uphill: 0, downhill: 0, sunClock: false, sunTime: 0.3 })
+  const shoulder = await usable(page, candidates.slice(0, 100), 'high range shoulder')
+  const frames: Record<string, unknown> = { shoulder, candidates: candidates.length }
+  for (const mode of ['top', 'lift'] as const) {
+    await setTerrain(page, { mode })
+    const start = await standAt(page, shoulder.tx, shoulder.ty)
+    await shot(page, `shoulder-${mode}-foot`, frames)
+    await waitForLive(page)
+    await page.keyboard.down(shoulder.up!)
+    try {
+      await expect.poll(async () => ((await state(page))?.hero.z ?? start.hero.z) - start.hero.z,
+        { timeout: 25_000, message: `${mode}: climb three levels through actual terrain collision` }).toBeGreaterThanOrEqual(3)
+    } finally {
+      await page.keyboard.up(shoulder.up!)
+    }
+    const end = await shot(page, `shoulder-${mode}-high`, frames)
+    expect(end.hero.walkable).toBe(true)
+    expect(end.hero.z - start.hero.z).toBeGreaterThanOrEqual(3)
+    frames[`${mode}-rise`] = { start: start.hero, end: end.hero, rise: end.hero.z - start.hero.z }
+    writeFileSync(`${OUT}/shoulder-evidence.json`, JSON.stringify(frames, null, 2))
+  }
 })
