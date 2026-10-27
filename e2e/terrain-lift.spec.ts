@@ -39,7 +39,7 @@ type Terrain = Record<string, unknown> & {
   startMs: { p50: number; p95: number; max: number; n: number }
   frameMs: { p50: number; p95: number; max: number; n: number }
 }
-type Void = { void: number; total: number; at: [number, number][] }
+type Void = { void: number; total: number; at: [number, number][]; why: Record<string, unknown>[] }
 
 const state = (page: Page) => page.evaluate(() => (window as unknown as { __fsTerrain: () => Terrain | null }).__fsTerrain())
 const setTerrain = (page: Page, s: Partial<TerrainSettings>) => page.evaluate((c) => (window as unknown as { __fsTerrainSet: (c: Partial<TerrainSettings>) => void }).__fsTerrainSet(c), s)
@@ -183,11 +183,11 @@ test.describe('height terrain: the ¾ lift beside high ground', () => {
     // Right after the warp: the terrain is still arriving and baking. Whatever isn't drawn yet, nothing is empty.
     const pend = await frame(page, 'lift-full-pending', evidence)
     save()
-    expect(pend.v.void, `no void right after the warp (at ${JSON.stringify(pend.v.at)})`).toBeLessThanOrEqual(20)
+    expect.soft(pend.v.void, `no void right after the warp (${JSON.stringify(pend.v.why)})`).toBeLessThanOrEqual(20)
     let st = await settled(page)
     const full = await frame(page, 'lift-full', evidence)
     save()
-    expect(full.v.void, `full height: no void (at ${JSON.stringify(full.v.at)})`).toBeLessThanOrEqual(20)
+    expect.soft(full.v.void, `full height: no void (${JSON.stringify(full.v.why)})`).toBeLessThanOrEqual(20)
     expect(st.need.length, 'the view needs chunks past the 3×3').toBeGreaterThan(0)
 
     // Compressed: every bake's look changes; placeholders go in first.
@@ -195,11 +195,11 @@ test.describe('height terrain: the ¾ lift beside high ground', () => {
     await page.waitForTimeout(120)
     const sw = await frame(page, 'lift-compressed-switch', evidence)
     save()
-    expect(sw.v.void, `switching: no void (at ${JSON.stringify(sw.v.at)})`).toBeLessThanOrEqual(20)
+    expect.soft(sw.v.void, `switching: no void (${JSON.stringify(sw.v.why)})`).toBeLessThanOrEqual(20)
     await settled(page)
     const comp = await frame(page, 'lift-compressed', evidence)
     save()
-    expect(comp.v.void, `compressed: no void (at ${JSON.stringify(comp.v.at)})`).toBeLessThanOrEqual(20)
+    expect.soft(comp.v.void, `compressed: no void (${JSON.stringify(comp.v.why)})`).toBeLessThanOrEqual(20)
 
     // Beside the range: its east or west side in view.
     await setTerrain(page, { tall: 'full' })
@@ -207,22 +207,22 @@ test.describe('height terrain: the ¾ lift beside high ground', () => {
     evidence.beside = beside
     await settled(page)
     const bf = await frame(page, 'lift-full-beside', evidence)
-    expect(bf.v.void, `beside, full height: no void (at ${JSON.stringify(bf.v.at)})`).toBeLessThanOrEqual(20)
+    expect.soft(bf.v.void, `beside, full height: no void (${JSON.stringify(bf.v.why)})`).toBeLessThanOrEqual(20)
     await setTerrain(page, { tall: 'compressed' })
     await settled(page)
     const bc = await frame(page, 'lift-compressed-beside', evidence)
-    expect(bc.v.void, `beside, compressed: no void (at ${JSON.stringify(bc.v.at)})`).toBeLessThanOrEqual(20)
+    expect.soft(bc.v.void, `beside, compressed: no void (${JSON.stringify(bc.v.why)})`).toBeLessThanOrEqual(20)
     save()
 
     // Top-down, at both spots.
     await setTerrain(page, { mode: 'top' })
     await settled(page)
     const tb = await frame(page, 'top-beside', evidence)
-    expect(tb.v.void).toBeLessThanOrEqual(20)
+    expect.soft(tb.v.void, "top-down beside: no void").toBeLessThanOrEqual(20)
     await stand(page, [south], 'south again')
     await settled(page)
     const ts = await frame(page, 'top-south', evidence)
-    expect(ts.v.void).toBeLessThanOrEqual(20)
+    expect.soft(ts.v.void, "top-down south: no void").toBeLessThanOrEqual(20)
     save()
 
     // Budget: a steady walk beside the range in the lift at full height (the widest window).
@@ -238,7 +238,7 @@ test.describe('height terrain: the ¾ lift beside high ground', () => {
     const walked = (await probe(page))!
     evidence.budget = { frameMs: st.frameMs, startMs: st.startMs, bakeMs: st.bakeMs, quickMs: st.quickMs, bakes: st.bakes, quick: st.quick, images: st.images.length, need: st.need.length, textures: st.textures, bytes: st.bytes, void: walked.void }
     save()
-    expect(walked.void, 'after walking: no void').toBeLessThanOrEqual(20)
+    expect.soft(walked.void, 'after walking: no void').toBeLessThanOrEqual(20)
     expect(st.frameMs.p95, 'terrain CPU p95 per frame (ms)').toBeLessThan(4)
     expect(st.startMs.p95, 'a bake started: no big stall (ms)').toBeLessThan(16)
     expect(st.textures, 'textures only for the baked chunks').toBeLessThanOrEqual(st.images.length + 2)

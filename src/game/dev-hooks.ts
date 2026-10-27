@@ -141,7 +141,7 @@ export interface FsHooks {
   /** Start the terrain's frame timings afresh (a steady walk's budget). */
   __fsTerrainReset: () => void
   /** Dev height terrain: one frame over a magenta background, its magenta (nothing drawn) pixels counted. */
-  __fsTerrainVoid: () => Promise<{ void: number; total: number; at: [number, number][] }> | null
+  __fsTerrainVoid: () => Promise<{ void: number; total: number; at: [number, number][]; why: Record<string, unknown>[] }> | null
   /** The screen insets the camera keeps the hero clear of; set them, or read them. */
   __fsDevInsets: (v?: Insets) => Insets
   /** The hero sprite's box on screen (CSS px from the canvas's top left). */

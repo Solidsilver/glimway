@@ -198,7 +198,8 @@ test.describe('height terrain in the Wilds', () => {
     const spots = find(await scan(page))
     const frames: Record<string, unknown> = { candidates: spots }
     const save = () => writeFileSync(`${OUT}/evidence.json`, JSON.stringify(frames, null, 1))
-    await setTerrain(page, { on: true, mode: 'top', sunClock: false, sunTime: 0.3, edgeShade: 0.6, uphill: 60, downhill: 6 })
+    // Full height: the ridge was picked by the 3-rows-a-level lift (find).
+    await setTerrain(page, { on: true, mode: 'top', tall: 'full', sunClock: false, sunTime: 0.3, edgeShade: 0.6, uphill: 60, downhill: 6 })
     const seam = await usable(page, spots.seam, 'seam')
     const climb = await usable(page, spots.climb, 'climb')
     const cliff = await usable(page, spots.cliff, 'cliff')

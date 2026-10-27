@@ -662,7 +662,7 @@ export class SceneTerrain {
    * background, and the magenta pixels counted (canvas px): wherever
    * nothing was drawn. The background is put back after.
    */
-  voidProbe(): Promise<{ void: number; total: number; at: [number, number][] }> {
+  voidProbe(): Promise<{ void: number; total: number; at: [number, number][]; why: Record<string, unknown>[] }> {
     const cam = this.scene.cameras.main
     const c = cam.backgroundColor
     const prev = { r: c.red, g: c.green, b: c.blue, a: c.alpha }
@@ -686,12 +686,28 @@ export class SceneTerrain {
               if (at.length < 16 && n % 97 === 1) at.push([(i / 4) % img.width, Math.floor(i / 4 / img.width)])
             }
           }
-          resolve({ void: n, total: img.width * img.height, at })
+          resolve({ void: n, total: img.width * img.height, at, why: at.map(([x, y]) => this.whyEmpty(x, y)) })
         }
         if (img.complete) count()
         else img.onload = count
       })
     })
+  }
+
+  /** What's at canvas px (x, y) as the terrain sees it: the world point, its chunk, and each image over it with its alpha there. */
+  private whyEmpty(x: number, y: number): Record<string, unknown> {
+    const p = this.scene.cameras.main.getWorldPoint(x, y)
+    const key = `${Math.floor(p.x / CHUNK_PX)},${Math.floor(p.y / CHUNK_PX)}`
+    const over: Record<string, unknown>[] = []
+    for (const [k, c] of this.images) {
+      const ix = Math.floor(p.x - c.img.x)
+      const iy = Math.floor(p.y - c.img.y)
+      if (ix < 0 || iy < 0 || ix >= c.img.width || iy >= c.img.height) continue
+      const src = this.scene.textures.get(c.tex).getSourceImage() as HTMLCanvasElement
+      const a = src.getContext?.('2d')?.getImageData(ix, iy, 1, 1).data[3]
+      over.push({ key: k, quick: c.quick, look: c.look, at: [ix, iy], size: [c.img.width, c.img.height], alpha: a, depth: c.img.depth, visible: c.img.visible })
+    }
+    return { canvas: [x, y], world: [Math.round(p.x * 100) / 100, Math.round(p.y * 100) / 100], chunk: key, flatHidden: this.flatHidden.has(key), wanted: this.wanted.has(key), need: this.need.includes(key), terrain: terrain.has(Math.floor(p.x / CHUNK_PX), Math.floor(p.y / CHUNK_PX)), over }
   }
 
   /** Timings afresh (the spec's steady walk). */

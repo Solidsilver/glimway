@@ -14,8 +14,11 @@ nothing is stored, and with the switch off none of the new code runs.
 3. **Drawn as: Top-down / True ¾ lift.** Edge shading (strength, band width,
    threshold, scale by height difference, rim), sun strength, **Sun follows
    the game clock** or a fixed **Time of day**, uphill slowdown and downhill
-   quickening, and the slope gait are below it. **Defaults** puts back the
-   lab's settled values (60% uphill, 6% downhill, 60% edges, 4 px band).
+   quickening, and the slope gait are below it. **Tall ground (¾ lift):
+   Full height / Compressed**, with the knee and the step above it, is
+   under **Drawn as**. **Defaults** puts back the lab's settled values (60%
+   uphill, 6% downhill, 60% edges, 4 px band) and compressed tall ground
+   (48 px a level to level 4, then 16 px a level).
 
 The settings are kept on the device (`glimway:terrain` in localStorage).
 
@@ -79,10 +82,8 @@ to climb, a cliff face and ground rising south (to stand behind); its
 - **Fog by height** and the lab's climbing haze/zoom are not in the game.
 - **Fixed places** (the Commons, the lots) stay flat images; the generator
   keeps them flat, so they meet the terrain at level 0.
-- Only the attached chunks (the 3×3 plus chunks kept near a seam) are baked.
-  On a wide screen the view can reach
-  a little past them: there the flat painted ground shows, without light or
-  materials, until you walk closer.
+- ~~Only the attached chunks are baked~~: fixed in exp/terrain-lift-fix
+  (below): the view's needed chunks are baked too.
 - Turning the switch on mid-walk re-paints the attached chunks once (to keep
   their ground for the bake).
 
