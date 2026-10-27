@@ -15,7 +15,7 @@
  * The window is the chunk and a halo round it, so seams, edges and the
  * sun's rays read across chunks; ground not loaded is flat at 0.
  */
-import { TILE_PX as T, VIEW_FACE, fieldZ, liftColumn, liftPad, spanGround, type LiftCurve, type Span, type TerrainView } from './field.ts'
+import { TILE_PX as T, VIEW_FACE, closedDrawn, fieldZ, liftColumn, liftPad, spanGround, type LiftCurve, type Span, type TerrainView } from './field.ts'
 import { buildSunMap, sampleSunMap, sampleVisibility, type SunMap } from './sun-map.ts'
 import { EDGE_KEEP, EDGE_MAX_DARK, chunkEdges, combineShade, type EdgeSettings } from './edges.ts'
 import { dither } from './sun-shadow.ts'
@@ -82,7 +82,7 @@ export function windowView(win: BakeWindow, lift: boolean, curve?: LiftCurve): T
   if (!lift) for (let i = 0; i < n; i++) if (win.faceRows[i]! > 0) kind[i] = VIEW_FACE
   const k = lift ? 3 : 0
   const c = lift ? curve : undefined
-  return { lift, k, curve: c, field, pad: lift ? liftPad(field, k, c) : 0, view: { w: win.w, h: win.h, kind, faceTop: win.faceTop, faceRow: win.faceRow, faceRows: win.faceRows } }
+  return { lift, k, curve: c, ox: win.ox, oy: win.oy, field, pad: lift ? liftPad(field, k, c) : 0, view: { w: win.w, h: win.h, kind, faceTop: win.faceTop, faceRow: win.faceRow, faceRows: win.faceRows } }
 }
 
 /** The plain ground that stands in for a chunk not painted yet (the scene passes its neighbours' mean), a little varied, world-fixed. */
@@ -97,7 +97,6 @@ function run<R>(it: Generator<void, R>): R {
   }
 }
 
-const walkableField = (k: number) => k === FIELD_SLOPE
 
 export function bakeChunk(job: BakeJob): Baked {
   const { win } = job
@@ -159,23 +158,16 @@ export function bakeChunk(job: BakeJob): Baked {
     const wx = wx0 + x
     const wy = (win.oy + ty) * T + Math.min(15, Math.floor(fy * T))
     const i = ty * f.w + tx
-    const kind = f.kind[i]!
+    // Closed ground's outline is rounded off the tile grid (./field.ts closedDrawn).
+    const kind = closedDrawn(f, tx, ty, fx, fy, wx, wy)
     const z = fieldZ(f, tx, ty, fx, fy)
     heightTint(c, z, wx, wy)
     if (kind === FIELD_STEEP) {
       const o = i * 4
       const gx = (f.corner[o + 1]! - f.corner[o]!) * (1 - fy) + (f.corner[o + 2]! - f.corner[o + 3]!) * fy
       const gy = (f.corner[o + 3]! - f.corner[o]!) * (1 - fx) + (f.corner[o + 2]! - f.corner[o + 1]!) * fx
-      const px = Math.floor(fx * T)
-      const py = Math.floor(fy * T)
-      let rim = -1
-      for (const [d, nx, ny] of [[py, tx, ty - 1], [15 - px, tx + 1, ty], [15 - py, tx, ty + 1], [px, tx - 1, ty]] as const) {
-        if (nx < 0 || ny < 0 || nx >= f.w || ny >= f.h) continue
-        const j = ny * f.w + nx
-        if (!walkableField(f.kind[j]!) || win.faceRows[j]! > 0) continue
-        if (rim < 0 || d < rim) rim = d
-      }
-      steepMaterial(c, wx, wy, gx, gy, z, win.faceRows[i]! > 0, rim)
+      // No loose-stone rim on the tile edge: the outline is rounded, and edge shading marks the border.
+      steepMaterial(c, wx, wy, gx, gy, z, win.faceRows[i]! > 0, -1)
     } else if (kind === FIELD_CRAG) {
       const o = i * 4
       const gx = (f.corner[o + 1]! - f.corner[o]!) * (1 - fy) + (f.corner[o + 2]! - f.corner[o + 3]!) * fy

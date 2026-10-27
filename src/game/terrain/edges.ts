@@ -17,7 +17,7 @@
  * range's border reads even where its foot rises gently. Values here are amounts (0–1), turned into colour by ./sun-view.ts,
  * which also caps them against cast shadows.
  */
-import { TILE_PX as T, VIEW_FACE, fieldZ, liftColumn, type TerrainView } from './field.ts'
+import { TILE_PX as T, VIEW_FACE, closedDrawn, fieldZ, liftColumn, type TerrainView } from './field.ts'
 
 export interface EdgeSettings {
   /** 0–1: the band's strength (0 off). */
@@ -39,8 +39,6 @@ export const EDGE_DEFAULT: EdgeSettings = { strength: 0.6, width: 4, scale: true
 export const EDGE_TONE = { inner: 0.75, outer: 0.4, rim: 0.12 } as const
 /** The closed border's band, of the drop band's tones. */
 export const BORDER_TONE = 0.9
-/** Field kinds nobody walks (the lab's KIND.steep and KIND.crag; ./bake.ts FIELD_STEEP, FIELD_CRAG). */
-const closedKind = (k: number) => k === 8 || k === 9
 /** The most an edge darkens one pixel (strong, a big drop): dark, never black. */
 export const EDGE_MAX_DARK = 0.7
 
@@ -94,7 +92,8 @@ export function* viewHeightsSteps(info: TerrainView, x0: number, y0: number, w: 
         } else {
           const fy = Math.max(0, Math.min(1, (s - sp.sN) / (sp.sS - sp.sN)))
           z[i] = sp.zN + (sp.zS - sp.zN) * fy
-          if (closedKind(f.kind[sp.ty * f.w + (wx >> 4)]!)) closed[i] = 1
+          const fx = ((wx & 15) + 0.5) / T
+          if (closedDrawn(f, wx >> 4, sp.ty, fx, fy, ((info.ox ?? 0) * T) + wx, ((info.oy ?? 0) + sp.ty) * T + Math.min(15, Math.floor(fy * T))) >= 0) closed[i] = 1
         }
       }
       if ((x + 1) % 48 === 0) yield
@@ -117,7 +116,7 @@ export function* viewHeightsSteps(info: TerrainView, x0: number, y0: number, w: 
         face[i] = 1
       } else {
         z[i] = fieldZ(f, tx, ty, ((wx & 15) + 0.5) / T, ((wy & 15) + 0.5) / T)
-        if (closedKind(f.kind[ty * f.w + tx]!)) closed[i] = 1
+        if (closedDrawn(f, tx, ty, ((wx & 15) + 0.5) / T, ((wy & 15) + 0.5) / T, (info.ox ?? 0) * T + wx, (info.oy ?? 0) * T + wy) >= 0) closed[i] = 1
       }
     }
     if ((y + 1) % 96 === 0) yield

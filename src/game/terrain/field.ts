@@ -63,6 +63,9 @@ export interface TerrainView {
   pad: number
   /** Tall ground compressed above a knee (none: k rows a level all the way up). */
   curve?: LiftCurve
+  /** The field's origin in world tiles (a game bake's window; 0 in the lab). */
+  ox?: number
+  oy?: number
   /** The flat look's faces (unused lifted). */
   view: FaceView
 }
@@ -107,6 +110,47 @@ export function fieldGradient(f: Field, x: number, y: number): [number, number] 
   const c = f.corner
   const i = (ty * f.w + tx) * 4
   return [(c[i + 1]! - c[i]!) * (1 - fy) + (c[i + 2]! - c[i + 3]!) * fy, (c[i + 3]! - c[i]!) * (1 - fx) + (c[i + 2]! - c[i + 1]!) * fx]
+}
+
+// ---------------------------------------------------------------- closed ground's outline
+
+/** Field kinds nobody walks: the lab's KIND.steep and KIND.crag (the game's bake uses the same values). */
+export const closedKind = (k: number) => k === 8 || k === 9
+
+const jitter = (x: number, y: number) => {
+  let h = (x * 374761393 + y * 668265263 + 1442695041 * 51) | 0
+  h = Math.imul(h ^ (h >>> 13), 1274126177)
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296
+}
+
+/**
+ * Where closed ground is drawn at field tile (tx, ty), fractions (fx, fy)
+ * (world px wx, wy for a little jitter): its outline rounded off the tile
+ * grid (the closed tiles' centres, blended, cut at a half), so a diagonal
+ * edge reads as rock, not a staircase. Straight edges stay on the tile
+ * edge; walking keeps the tiles. The kind drawn there: the nearest closed
+ * tile's, or -1 for walkable ground.
+ */
+export function closedDrawn(f: Field, tx: number, ty: number, fx: number, fy: number, wx: number, wy: number): number {
+  const px = tx + fx - 0.5
+  const py = ty + fy - 0.5
+  const x0 = Math.floor(px)
+  const y0 = Math.floor(py)
+  const u = px - x0
+  const v = py - y0
+  let sum = 0
+  let best = -1
+  let bestW = -1
+  for (let j = 0; j < 4; j++) {
+    const x = Math.min(f.w - 1, Math.max(0, x0 + (j & 1)))
+    const y = Math.min(f.h - 1, Math.max(0, y0 + (j >> 1)))
+    const k = f.kind[y * f.w + x]!
+    if (!closedKind(k)) continue
+    const w = ((j & 1) ? u : 1 - u) * ((j >> 1) ? v : 1 - v)
+    sum += w
+    if (w > bestW) { bestW = w; best = k }
+  }
+  return sum + (jitter(wx >> 1, wy >> 1) - 0.5) * 0.16 > 0.5 ? best : -1
 }
 
 // ---------------------------------------------------------------- the lifted view
