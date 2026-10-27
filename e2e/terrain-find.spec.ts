@@ -13,11 +13,15 @@ type Hooks = { __fsTerrain: () => Terrain; __fsTerrainSet: (s: Partial<TerrainSe
 const terrain = (page: Page) => page.evaluate(() => (window as unknown as Hooks).__fsTerrain())
 const mapState = (page: Page) => page.evaluate(() => (window as unknown as Hooks).__fsWorldMap())
 
-async function baked(page: Page): Promise<void> {
+async function baked(page: Page, minImages = 9): Promise<void> {
+  let last: Terrain | null = null
   await expect.poll(async () => {
-    const s = await terrain(page)
-    return s?.on && s.chunks >= 25 && s.pending === 0 && s.images.length >= 9
-  }, { timeout: 60_000 }).toBe(true)
+    last = await terrain(page)
+    return last?.on && last.chunks >= 25 && last.pending === 0 && last.images.length >= minImages
+  }, { timeout: 60_000 }).toBe(true).catch((e: unknown) => {
+    writeFileSync(`${OUT}/bake-failure.json`, JSON.stringify(last, null, 2))
+    throw e
+  })
   await page.waitForTimeout(900)
 }
 
@@ -44,7 +48,9 @@ test('find generated terrain through every dev button, and read its heights on t
       // The button searches from home each time, making the two looks
       // comparable. Only the destination button performs the feature warp.
       await warp(page, 'outdoors', 12, 60)
-      await baked(page)
+      // Fixed Commons chunks keep their authored images, so home has
+      // fewer terrain bakes than an all-generated 3×3 arrival window.
+      await baked(page, 0)
       const response = page.waitForResponse((r) => r.url().includes('/api/dev/terrain/features?') && r.status() === 200)
       await page.getByTestId(`terrain-go-${kind}`).click()
       const reply = await (await response).json() as FeatureReply
@@ -71,6 +77,7 @@ test('find generated terrain through every dev button, and read its heights on t
   await warp(page, 'outdoors', ...mapStand)
   await baked(page)
   await page.keyboard.press('Backquote')
+  await baked(page)
   const surfaceReads: string[] = []
   const reads: string[] = []
   page.on('request', (r) => {
