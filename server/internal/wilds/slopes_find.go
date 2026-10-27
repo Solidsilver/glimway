@@ -151,8 +151,9 @@ func SlopeOwnerFeatures(ctx context.Context, seed, recipe string, ox, oy int) ([
 		add("crest", peak, peak, 64)
 	}
 	if i := p.Index(r.Spire[0], r.Spire[1]); i >= 0 && p.Ground[i].Unreachable {
-		// North of the spire: its lifted crown projects toward this view.
-		add("spire", r.Spire, [2]int{r.Spire[0], r.Spire[1] - 24}, 10)
+		// The nearest connected ground outside the deliberate footprint.
+		// The dev camera fits the spire, rather than standing in its shadow.
+		add("spire", r.Spire, r.Spire, 48)
 	}
 	// Outcrops have a gentle north approach and an explicit south face.
 	if i := p.Index(r.Outcrop[0], r.Outcrop[1]); i >= 0 && p.Ground[i].Kind == SlopeCliff {

@@ -25,7 +25,10 @@ export function heightChunks(view: MapView, vp: MapViewport): [number, number][]
 export function heightColour(height: number, kind: number, dx: number, dy: number): string {
   const z = Math.max(0, Math.min(15, height / 256))
   const shade = Math.max(0.55, Math.min(1.3, 1 + (dx - dy) / 256 * 0.85))
-  const stops = kind === 3 ? [91, 65, 49] : kind === 2 ? [104, 103, 99] : [164 + z * 4.5, 181 - z * 2.5, 119 + z * 5.5]
+  const low = z < 4 ? [167, 185, 131] : z < 8 ? [186, 178, 139] : [178, 168, 150]
+  const high = z < 4 ? [186, 178, 139] : z < 8 ? [178, 168, 150] : [235, 233, 224]
+  const t = z < 4 ? z / 4 : z < 8 ? (z - 4) / 4 : (z - 8) / 7
+  const stops = kind === 3 ? [91, 65, 49] : kind === 2 ? [104, 103, 99] : low.map((v, i) => v + (high[i]! - v) * t)
   return `rgba(${stops.map((v) => Math.round(Math.max(0, Math.min(255, v * shade)))).join(',')},0.88)`
 }
 
@@ -78,6 +81,8 @@ export class HeightMap {
     ctx.textBaseline = 'middle'
     for (const m of this.marks.values()) {
       const p = toScreen(view, vp, m.x + 0.5, m.y + 0.5)
+      // Keep the saddle icon readable when the hero stands in the pass.
+      if (m.kind === 'pass') p.x += 10
       if (p.x < -10 || p.y < -10 || p.x > vp.w + 10 || p.y > vp.h + 10) continue
       ctx.lineWidth = 3
       ctx.strokeStyle = '#fff6da'

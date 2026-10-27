@@ -21,7 +21,7 @@
   "ignore": ["**/*.md", "docs/**", ".agent/**", "tests/**", "e2e/changed-map.json", "deploy/**", "scripts/*-vectors.ts", "scripts/papers.ts", "scripts/webgl-renderer.ts", "scripts/e2e-artifacts.mjs", "perf/**", "playwright.perf.config.ts", "playwright.first-paint.perf.config.ts", "scripts/trace-hotspots.mjs", "scripts/png-diff.ts", "content/vectors/**", "content/**/*_test.go", "server/**/*_test.go", "server/**/testdata/**", "server/internal/store/storetest/**", "e2e/hooks.d.ts"],
   "rules": [
     {
-      "paths": ["src/game/terrain/find.ts", "src/game/terrain/map.ts", "src/ui/dev/TerrainSection.svelte", "src/ui/WorldMap.svelte", "server/internal/api/dev_terrain_find.go", "server/internal/api/dev_terrain_map.go", "server/internal/wilds/slopes_find.go"],
+      "paths": ["src/game/terrain/find.ts", "src/game/terrain/feature-view.ts", "src/game/terrain/map.ts", "src/ui/dev/TerrainSection.svelte", "src/ui/WorldMap.svelte", "server/internal/api/dev_terrain_find.go", "server/internal/api/dev_terrain_map.go", "server/internal/wilds/slopes_find.go"],
       "specs": ["terrain-find.spec.ts"]
     },
     {

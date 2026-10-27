@@ -191,7 +191,7 @@ async function usable(page: Page, list: Spot[], name: string): Promise<Spot> {
 }
 test.describe('height terrain in the Wilds', () => {
   test.use({ viewport: { width: 1280, height: 800 } })
-  test('dev switch: walk generated land near home, top-down and in the ¾ lift', async ({ page }) => {
+  test('dev switch: walk generated land near home, top-down and in the ¾ lift', { tag: '@terrain-proof' }, async ({ page }) => {
     test.setTimeout(900_000)
     mkdirSync(OUT, { recursive: true })
     await freshPlayer(page)

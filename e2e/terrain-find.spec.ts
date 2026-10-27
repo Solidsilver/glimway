@@ -9,7 +9,7 @@ import { openingScale } from '../src/lib/wilds/map-view'
 const OUT = '.e2e-artifacts/terrain-find'
 type Terrain = { on: boolean; chunks: number; pending: number; images: unknown[]; hero: { tile: number[]; z: number; walkable: boolean } }
 type MapState = { view: { cx: number; cy: number; scale: number }; vp: { w: number; h: number }; height: { on: boolean; chunks: number; requests: number; version: number; error: string } }
-type Hooks = { __fsTerrain: () => Terrain; __fsTerrainSet: (s: Partial<TerrainSettings>) => void; __fsWorldMap: () => MapState; __fsDevParkCreatures: () => number }
+type Hooks = { __fsTerrain: () => Terrain; __fsTerrainSet: (s: Partial<TerrainSettings>) => void; __fsWorldMap: () => MapState; __fsDevParkCreatures: () => number; __fsBanners: () => { current: unknown | null } }
 const terrain = (page: Page) => page.evaluate(() => (window as unknown as Hooks).__fsTerrain())
 const mapState = (page: Page) => page.evaluate(() => (window as unknown as Hooks).__fsWorldMap())
 
@@ -26,7 +26,7 @@ async function baked(page: Page, minImages = 9): Promise<void> {
 }
 
 test.use({ viewport: { width: 1600, height: 1000 } })
-test('find generated terrain through every dev button, and read its heights on the world map', async ({ page }) => {
+test('find generated terrain through every dev button, and read its heights on the world map', { tag: '@terrain-proof' }, async ({ page }) => {
   test.setTimeout(600_000)
   mkdirSync(OUT, { recursive: true })
   await freshPlayer(page)
@@ -61,12 +61,32 @@ test('find generated terrain through every dev button, and read its heights on t
       await expect(page.getByTestId('terrain-destination')).toContainText(FEATURE_LABELS[kind], { timeout: 60_000 })
       await expect.poll(async () => {
         const p = await player(page)
-        return Math.hypot(p.x / 16 - chosen.stand[0] - 0.5, p.y / 16 - chosen.stand[1] - 0.5)
-      }, { timeout: 60_000 }).toBeLessThan(3)
+        return Math.max(Math.abs(p.x / 16 - chosen.stand[0] - 0.5), Math.abs(p.y / 16 - chosen.stand[1] - 0.5))
+      // The existing warp moves off trees/cover within a 24-tile radius.
+      // Its terrain-only stand is certified by the Go graph tests.
+      }, { timeout: 60_000 }).toBeLessThanOrEqual(24.1)
+      await page.evaluate(() => (window as unknown as Hooks).__fsDevParkCreatures())
       await baked(page)
+      await expect.poll(() => page.evaluate(() => (window as unknown as Hooks).__fsBanners().current), { timeout: 15_000 }).toBeNull()
       const state = await terrain(page)
       expect(state.hero.walkable, `${mode}/${kind}: open arrival`).toBe(true)
-      frames[`${mode}-${kind}`] = { chosen, arrival: state.hero, label: await page.getByTestId('terrain-destination').textContent() }
+      const camera = await page.evaluate(() => window.__fsDevCamera?.())
+      if (kind === 'spire') {
+        const screen = await page.evaluate(({ target, lift }) => {
+          const stage = document.querySelector('main > .stage')!.getBoundingClientRect()
+          return { w: stage.width, h: stage.height,
+            crown: window.__fsDevToScreen!((target[0] + 0.5) * 16, (target[1] + 0.5) * 16 - (lift ? 15 * 48 : 0)),
+            base: window.__fsDevToScreen!((target[0] + 0.5) * 16, (target[1] + 24) * 16) }
+        }, { target: chosen.target, lift: mode === 'lift' })
+        for (const p of [screen.crown, screen.base]) {
+          expect(p.x, 'spire inside viewport').toBeGreaterThan(0)
+          expect(p.x, 'spire inside viewport').toBeLessThan(screen.w)
+          expect(p.y, 'spire inside viewport').toBeGreaterThan(0)
+          expect(p.y, 'spire inside viewport').toBeLessThan(screen.h)
+        }
+        frames[`${mode}-spire-screen`] = screen
+      }
+      frames[`${mode}-${kind}`] = { chosen, arrival: state.hero, camera, label: await page.getByTestId('terrain-destination').textContent() }
       await page.screenshot({ path: `${OUT}/${mode}-${kind}.png` })
       save()
     }

@@ -3,7 +3,7 @@ import { basename, join, relative } from 'node:path'
 
 // The run's report, and a second pass's (scripts/e2e-changed.ts: the smoke
 // tier after a lane's specs) in its own folder.
-const reportPaths = [['test-results/e2e-results.json', 'e2e-results.json'], ['test-results/smoke/e2e-results.json', 'smoke-e2e-results.json']]
+const reportPaths = [['test-results/e2e-results.json', 'e2e-results.json'], ['test-results/smoke/e2e-results.json', 'smoke-e2e-results.json'], ['test-results/terrain-proof/e2e-results.json', 'terrain-proof-e2e-results.json']]
 const outDir = '.e2e-artifacts'
 const traceDir = join(outDir, 'traces')
 const traceMaxCount = Number(process.env.E2E_TRACE_FILES) || 3

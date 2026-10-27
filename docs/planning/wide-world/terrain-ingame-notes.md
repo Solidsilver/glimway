@@ -27,6 +27,10 @@ pass, range crest (a walkable shoulder), spire view, outcrop top, outcrop foot
 warp and reports the feature, distance in chunks, compass direction and
 arrival level. The spire itself stays unreachable; a tunnel candidate is
 metadata, not an open tunnel.
+The spire view temporarily fits its footprint and lifted crown on screen;
+choosing another feature or walking away restores normal camera framing.
+Normal cover can move a warp to nearby open ground (the existing warp's
+24-tile search); the returned stand's certificate concerns height terrain.
 
 Ranges sit near the centres of 576-tile owner squares, roughly twelve
 chunks diagonally from home. Walking straight north can go between them,

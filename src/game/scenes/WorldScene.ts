@@ -529,7 +529,7 @@ export class WorldScene extends Phaser.Scene {
     if (open) this.physics.world.setBounds(open.bounds.x, open.bounds.y, open.bounds.w, open.bounds.h)
     else this.physics.world.setBounds(0, 0, this.world.widthPx, this.world.heightPx)
     this.cameras.main.startFollow(this.hero.sprite, true, 0.12, 0.12)
-    this.camera = new WorldCamera(this, this.world)
+    this.camera = new WorldCamera(this, this.world, () => this.hero.sprite)
     // A first visit paints the ground's transitions off the main thread
     // (src/game/area/terrain.ts): stay dark until they're in (a second at
     // most), so the area never shows without its edges.

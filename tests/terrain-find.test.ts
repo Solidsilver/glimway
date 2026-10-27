@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { featureLabel, nearestFeatures, type TerrainFeature } from '../src/game/terrain/find.ts'
 import { HEIGHT_BATCH, HEIGHT_CACHE, HeightMap, heightChunks, heightColour, type HeightChunk } from '../src/game/terrain/map.ts'
+import { setTerrainFeatureView, spireCamera, terrainFeatureCamera } from '../src/game/terrain/feature-view.ts'
 
 const feature: TerrainFeature = { kind: 'pass', target: [240, -240], stand: [240, -239], level: 6, owner: [0, -1] }
 test('terrain destinations describe target distance and direction and the stand height', () => {
@@ -66,4 +67,24 @@ test('height tint shows levels, facing, crags and cliffs distinctly', () => {
   assert.notEqual(heightColour(256, 0, 0, 0), heightColour(12 * 256, 0, 0, 0))
   assert.notEqual(heightColour(256, 0, 64, 0), heightColour(256, 0, -64, 0))
   assert.notEqual(heightColour(256, 2, 0, 0), heightColour(256, 3, 0, 0))
+})
+
+test('the spire view fits the footprint and lifted crown and ends when walking away', () => {
+  const spire: TerrainFeature = { ...feature, kind: 'spire', target: [-457, 213], stand: [-440, 213] }
+  const hero = { x: spire.stand[0] * 16 + 8, y: spire.stand[1] * 16 + 8 }
+  for (const mode of ['top', 'lift'] as const) {
+    const f = spireCamera(spire, hero, mode, 1100, 700)
+    const centre = { x: hero.x - f.x, y: hero.y - f.y }
+    for (const dx of [-32, 32]) for (const dy of [mode === 'lift' ? -48 : -32, 32]) {
+      assert(Math.abs((spire.target[0] * 16 + dx * 16 - centre.x) * f.zoom) < 550)
+      assert(Math.abs((spire.target[1] * 16 + dy * 16 - centre.y) * f.zoom) < 350)
+    }
+  }
+  setTerrainFeatureView(spire)
+  assert.equal(terrainFeatureCamera({ x: 0, y: 0 }, 'top', 1100, 700), null, 'not at the destination yet')
+  assert(terrainFeatureCamera(hero, 'lift', 1100, 700))
+  assert.equal(terrainFeatureCamera({ x: hero.x + 40 * 16, y: hero.y }, 'lift', 1100, 700), null)
+  assert.equal(terrainFeatureCamera(hero, 'lift', 1100, 700), null, 'walking away restored normal framing')
+  setTerrainFeatureView(feature)
+  assert.equal(terrainFeatureCamera(hero, 'top', 1100, 700), null, 'other destinations use normal framing')
 })

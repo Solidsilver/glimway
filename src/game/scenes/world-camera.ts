@@ -8,16 +8,22 @@ import { onSceneEnd } from '../scene-end'
 import Phaser from 'phaser'
 import { canvasRatio, canvasZoomFor, playInsets, roomZoomFor, snapScroll } from '../viewport'
 import type { WorldData } from '../worlds'
+import { DEV_TOOLS } from '../../lib/dev-tools'
+import { terrainSettings } from '../terrain/settings'
+import { terrainFeatureCamera, type FeatureCamera } from '../terrain/feature-view'
+import { terrain } from '../terrain/store'
 
 export class WorldCamera {
   /** What the camera was last framed for (playInsets.rev, the canvas ratio, zoom, size). */
   private framedFor = ''
   private followOffset = { x: 0, y: 0 }
   private edgeFade: Phaser.GameObjects.Image[] = []
+  private focusKey = ''
 
   constructor(
     private scene: Phaser.Scene,
-    private world: WorldData
+    private world: WorldData,
+    private hero: () => { x: number; y: number }
   ) {
     this.apply(scene.scale.width, scene.scale.height)
     this.snapToPixels()
@@ -69,6 +75,22 @@ export class WorldCamera {
     this.frameCamera()
   }
 
+  private feature(): FeatureCamera | null {
+    if (!DEV_TOOLS || !this.world.open || !terrainSettings().on) return null
+    const r = canvasRatio()
+    const cam = this.scene.cameras.main
+    const hero = this.hero()
+    const mode = terrainSettings().mode
+    const focus = terrainFeatureCamera(hero, mode,
+      Math.max(160, cam.width / r - playInsets.left - playInsets.right),
+      Math.max(160, cam.height / r - playInsets.top - playInsets.bottom))
+    if (focus && mode === 'lift') {
+      const z = terrain.zAt(hero.x, hero.y - 2)
+      if (Number.isFinite(z)) focus.y -= 48 * z
+    }
+    return focus
+  }
+
   /**
    * Fit the camera to the map and to the screen the interface leaves open
    * (src/game/viewport.ts): the bounds reach past each map edge by the
@@ -79,6 +101,9 @@ export class WorldCamera {
    */
   private frameCamera(): void {
     const cam = this.scene.cameras.main
+    const focus = this.feature()
+    if (focus) cam.setZoom(focus.zoom * canvasRatio())
+    this.focusKey = focus ? `${focus.zoom}:${focus.x}:${focus.y}` : ''
     const z = cam.zoom
     const W = cam.width
     const H = cam.height
@@ -104,6 +129,7 @@ export class WorldCamera {
     const [by, bh] = axis(view.h, H, top, bottom)
     cam.setBounds(view.x + bx, view.y + by, bw, bh)
     this.followOffset = { x: (left - right) / (2 * z), y: (top - bottom) / (2 * z) }
+    if (focus) { this.followOffset.x += focus.x; this.followOffset.y += focus.y }
     cam.setFollowOffset(this.followOffset.x, this.followOffset.y)
     // Indoors the room's own vignette and dark surround end it (./area/room-art.ts).
     this.layEdgeFade(!this.indoors && !this.world.open && (left || right || top || bottom) ? 1 : 0)
@@ -117,6 +143,12 @@ export class WorldCamera {
   /** Re-frame when the insets, the ratio, the zoom or the size changed (cheap: one string compare a frame). */
   keepFramed(): void {
     const cam = this.scene.cameras.main
+    const focus = this.feature()
+    const key = focus ? `${focus.zoom}:${focus.x}:${focus.y}` : ''
+    if (key !== this.focusKey) {
+      this.apply(cam.width, cam.height)
+      return
+    }
     if (this.indoors && this.framedFor.split(':')[0] !== String(playInsets.rev)) this.apply(cam.width, cam.height)
     else if (this.framedFor !== `${playInsets.rev}:${canvasRatio()}:${cam.zoom}:${cam.width}x${cam.height}`) this.frameCamera()
     // startFollow elsewhere (placement, the lantern beat) resets the offset.

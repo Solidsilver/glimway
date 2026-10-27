@@ -4,13 +4,14 @@
   import { heroPosition } from '../../game/map-position'
   import { canDevWarp, devWarpTo } from '../../game/dev-warp'
   import { FEATURE_LABELS, nearestFeatures, featureLabel, type FeatureKind } from '../../game/terrain/find'
+  import { setTerrainFeatureView } from '../../game/terrain/feature-view'
 
   let { session }: { session: Session } = $props()
   let busy = $state(false)
   let message = $state('')
   let request: AbortController | null = null
   $effect(() => {
-    if (!s.on) request?.abort()
+    if (!s.on) { request?.abort(); setTerrainFeatureView(null) }
     return () => request?.abort()
   })
 
@@ -27,6 +28,7 @@
       if (controller.signal.aborted || !s.on) return
       const f = found.features.find((f) => f.kind === kind)
       if (!f) { message = 'No certified feature of this kind in the surrounding owner squares.'; return }
+      setTerrainFeatureView(f)
       message = devWarpTo(...f.stand) ? featureLabel(f, x, y) : 'Enter the world first.'
     } catch (e) {
       if (!controller.signal.aborted) message = e instanceof Error ? e.message : String(e)

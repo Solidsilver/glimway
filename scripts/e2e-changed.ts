@@ -30,7 +30,8 @@ const map = JSON.parse(readFileSync('e2e/changed-map.json', 'utf8')) as Map
 const base = process.env.E2E_BASE || 'dev'
 const args = process.argv.slice(2)
 const listOnly = args.includes('--list')
-const passThrough = args.filter((a) => a !== '--list')
+const forceFull = args.includes('--full')
+const passThrough = args.filter((a) => a !== '--list' && a !== '--full')
 
 const git = (...a: string[]) => execFileSync('git', a, { encoding: 'utf8' }).split('\n').filter(Boolean)
 
@@ -78,7 +79,7 @@ const changed = (
 const specs = new Set<string>()
 const reasons: string[] = []
 const unmapped: string[] = []
-let full = false
+let full = forceFull
 let smoke = false
 
 for (const file of changed) {
@@ -132,9 +133,20 @@ if (full) {
 }
 if (listOnly) process.exit(0)
 
-const run = (extra: string[], env: Record<string, string> = {}) => spawnSync('npx', ['playwright', 'test', ...extra, ...passThrough], { stdio: 'inherit', env: { ...process.env, ...env } }).status ?? 1
+const run = (extra: string[], env: Record<string, string> = {}, last: string[] = []) => spawnSync('npx', ['playwright', 'test', ...extra, ...passThrough, ...last], { stdio: 'inherit', env: { ...process.env, ...env } }).status ?? 1
 let status = 0
-if (full || pw.length) status = run(pw)
+// Terrain's measured frame budget must not overlap another terrain view's
+// cold graph planning and bakes. Keep both proofs, with the same thresholds,
+// in a single-worker pass after the other selected specs.
+const proofFiles = ['e2e/terrain-find.spec.ts', 'e2e/terrain-ingame.spec.ts']
+const proofs = full ? proofFiles : pw.filter((f) => proofFiles.includes(f))
+const regular = full ? ['--grep-invert', 'terrain-proof'] : pw.filter((f) => !proofFiles.includes(f))
+const mainRan = full || regular.length > 0
+if (mainRan) status = run(regular)
+if (proofs.length) {
+  const report = mainRan ? 'test-results/terrain-proof/e2e-results.json' : 'test-results/e2e-results.json'
+  status = run([...proofs, '--output', 'test-results/terrain-proof'], { E2E_RESULTS: report }, ['--workers=1']) || status
+}
 // A second pass has its own output folder and report: Playwright empties its
 // output folder as it starts, which took the first pass's traces and JSON
 // report with it (scripts/e2e-artifacts.mjs reads both).
