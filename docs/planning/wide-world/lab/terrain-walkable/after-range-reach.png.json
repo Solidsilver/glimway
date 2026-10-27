@@ -18,7 +18,7 @@
     "maxWalkableRisePerTile": 0.2498168274268669,
     "certificate": {
       "components": 5,
-      "homeTiles": 1313519,
+      "homeTiles": 1313560,
       "strandedComponents": 0,
       "strandedTiles": 0,
       "intentionalComponents": 4,
@@ -26,8 +26,8 @@
     },
     "kindTiles": {
       "cliff": 814,
-      "crag": 8292,
-      "slope": 1313681,
+      "crag": 8251,
+      "slope": 1313722,
       "steep": 4317
     },
     "kindShareByBiome": {
@@ -45,8 +45,8 @@
       },
       "whitequiet": {
         "cliff": 0.0006843309595603174,
-        "crag": 0.004811702059408482,
-        "slope": 0.9919139643910286,
+        "crag": 0.004714279943637742,
+        "slope": 0.9920113865067993,
         "steep": 0.00259000259000259
       }
     },
@@ -251,8 +251,8 @@
           ]
         ],
         "passSteps": 242,
-        "endSteps": 380,
-        "extraSteps": 138,
+        "endSteps": 376,
+        "extraSteps": 134,
         "passMaxRisePerTile": 0.03983608994994363,
         "passWaypoints": [
           [
@@ -987,14 +987,14 @@
           ],
           [
             -320,
-            -406
+            -405
           ],
           [
-            -158,
-            -406
+            -159,
+            -405
           ],
           [
-            -158,
+            -159,
             -257
           ],
           [
@@ -3796,9 +3796,9 @@
         ],
         "samples": 80,
         "generationAndEncodeMs": {
-          "p50": 0.164344,
-          "p95": 0.189813,
-          "max": 0.398828
+          "p50": 0.142782,
+          "p95": 0.151603,
+          "max": 0.169473
         },
         "heightBytes": 155,
         "bareWholeBytes": 591,
@@ -3811,9 +3811,9 @@
         ],
         "samples": 80,
         "generationAndEncodeMs": {
-          "p50": 0.692823,
-          "p95": 0.840816,
-          "max": 0.938909
+          "p50": 0.611161,
+          "p95": 0.827874,
+          "max": 1.082859
         },
         "heightBytes": 1403,
         "bareWholeBytes": 1841,
@@ -3826,9 +3826,9 @@
         ],
         "samples": 80,
         "generationAndEncodeMs": {
-          "p50": 0.589312,
-          "p95": 0.830907,
-          "max": 0.946919
+          "p50": 0.61361,
+          "p95": 0.810155,
+          "max": 0.892546
         },
         "heightBytes": 1403,
         "bareWholeBytes": 1841,
@@ -3841,9 +3841,9 @@
         ],
         "samples": 80,
         "generationAndEncodeMs": {
-          "p50": 0.849087,
-          "p95": 0.948749,
-          "max": 1.118353
+          "p50": 0.739253,
+          "p95": 0.810164,
+          "max": 1.027259
         },
         "heightBytes": 2441,
         "bareWholeBytes": 2879,
@@ -3856,9 +3856,9 @@
         ],
         "samples": 80,
         "generationAndEncodeMs": {
-          "p50": 0.167654,
-          "p95": 0.192094,
-          "max": 0.209395
+          "p50": 0.144213,
+          "p95": 0.217024,
+          "max": 0.233294
         },
         "heightBytes": 525,
         "bareWholeBytes": 961,
@@ -3871,9 +3871,9 @@
         ],
         "samples": 80,
         "generationAndEncodeMs": {
-          "p50": 0.590622,
-          "p95": 0.829116,
-          "max": 0.98417
+          "p50": 0.59516,
+          "p95": 0.642991,
+          "max": 0.767524
         },
         "heightBytes": 1403,
         "bareWholeBytes": 1841,
@@ -3886,9 +3886,9 @@
         ],
         "samples": 80,
         "generationAndEncodeMs": {
-          "p50": 0.668023,
-          "p95": 0.984329,
-          "max": 1.095601
+          "p50": 0.621741,
+          "p95": 0.668552,
+          "max": 0.808584
         },
         "heightBytes": 1475,
         "bareWholeBytes": 1913,
@@ -3905,8 +3905,8 @@
       "p95": 1841,
       "max": 2879
     },
-    "geometrySHA256": "b8a01a2d96fc2026900dca215e95c775b2bee1346cffb19f6a53948ef3b827bf",
-    "coldFieldMs": 1367.866654,
+    "geometrySHA256": "7370a631b780a6a9bc4cd02bbf4fe38632d07ce134e8bd4fd44d3fbcb077199c",
+    "coldFieldMs": 1271.295368,
     "note": "Finite home-rooted field-coordinate certificate over 48x48 chunks; crop edges never imply access. Collision resolves the Uint16 grid plus tile overrides and edge flags, independently of projection and cover. Starting generated range 0..15 levels; no clipping. Bare bytes include the undressed WorldChunk protobuf and framed SL2 envelope; dressing is unmeasured. Warm = fresh sampler + shared-grid generation + encode; decode/checks excluded. Override-probe is a synthetic raised tile on flat ground, not generated country."
   },
   "content": "",
@@ -3927,6 +3927,6 @@
   "landShareByChunkCentre": {},
   "longestAxialLandRunChunks": 0,
   "unreachableWalkableTiles": 0,
-  "generationMs": 6107.818448,
+  "generationMs": 5871.209211,
   "note": "SLOPES 2 / HOME GREEN / STRANDED PINK / INTENTIONAL PURPLE. Biome shares count every tile's effective biome. Finite home-rooted field-coordinate certificate over 48x48 chunks; crop edges never imply access. Collision resolves the Uint16 grid plus tile overrides and edge flags, independently of projection and cover. Starting generated range 0..15 levels; no clipping. Bare bytes include the undressed WorldChunk protobuf and framed SL2 envelope; dressing is unmeasured. Warm = fresh sampler + shared-grid generation + encode; decode/checks excluded. Override-probe is a synthetic raised tile on flat ground, not generated country."
 }

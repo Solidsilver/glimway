@@ -26,6 +26,9 @@ func TestSlopeRangesWalkability(t *testing.T) {
 			t.Fatal(err)
 		}
 		c := p.Certificate(12, 30)
+		if c.StrandedTiles != 0 {
+			t.Fatalf("%s: %d stranded shoulder tiles", seed, c.StrandedTiles)
+		}
 		s, _ := NewSlopeSamplerRecipe(seed, SlopeRecipeV2)
 		for _, rr := range p.Ranges {
 			r := s.rangeV2(rr.X, rr.Y)

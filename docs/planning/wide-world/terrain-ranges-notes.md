@@ -204,7 +204,12 @@ that entire rib as crag. Merely relaxing the crag mask would have left steep
 unwalkable slopes. The walk limit and four-corner collision contract stay fixed.
 
 The new profile distributes the full climb across a smooth 76–124-tile
-half-width, with 92–111-tile end tapers and an 82-tile saddle support. Bend
+half-width, with seeded 92–111-tile end tapers and an 82-tile saddle support. Taller
+owners widen the half-width to at least 8.5 times their target rise and the
+end taper to at least 9 times the rise. This leaves headroom for the base
+field and quantization: the first height-varied revision exposed eight
+stranded tiles in slopes-17 where gradients fluctuated around the exact limit.
+Lengthening the approaches removes those steep rings before classification. Bend
 amplitude, target height and tributary height vary independently per owner;
 a quarter of owners omit the tributary, and the others use differing lower
 spurs. A radial envelope vanishes by radius 250. Peak amplitude reserves
@@ -214,7 +219,7 @@ construction are unchanged. No codec, client or contract changes are involved.
 
 Closed ground is deliberately sparse: 2–5-tile winding crest half-widths,
 interrupted crag bands on one flank, outcrop south scarps and the separate
-pinnacles. The measured closed share is **3.72–5.64%** of the footprint, well
+pinnacles. The measured closed share is **3.72–4.98%** of the footprint, well
 under the requested 25% ceiling. Crag masks use continuous ridge coordinates
 and curved outlines, never whole-level contour thresholds. They do not create
 the broad staircase of closed upper sides. The analytic bands are crag; explicit
@@ -270,22 +275,22 @@ After:
 
 | Seed | Owner | Footprint tiles | Kinds % | Walkable % | Above 3 / 6 / 9 tiles (% footprint) | p95 level/tile | Home ≥8 tiles |
 |---|---|---:|---|---:|---|---:|---:|
-| map | -1:-1 | 76406 | 95.58 / 1.43 / 2.65 / 0.34 | 95.44 | 36516 (47.79%) / 15072 (19.73%) / 5608 (7.34%) | 0.1810 | 8231 |
+| map | -1:-1 | 76406 | 95.64 / 1.43 / 2.60 / 0.34 | 95.50 | 35867 (46.94%) / 14193 (18.58%) / 4760 (6.23%) | 0.1719 | 7327 |
 | map | 0:-1 | 84832 | 95.98 / 1.23 / 2.76 / 0.03 | 95.86 | 31299 (36.90%) / 13539 (15.96%) / 4094 (4.83%) | 0.1617 | 6770 |
 | map | -1:0 | 84604 | 95.84 / 1.30 / 2.55 / 0.31 | 95.71 | 25103 (29.67%) / 9700 (11.47%) / 2369 (2.80%) | 0.1799 | 4306 |
 | map | 0:0 | 83972 | 96.28 / 1.30 / 2.11 / 0.31 | 96.16 | 30112 (35.86%) / 12721 (15.15%) / 3637 (4.33%) | 0.1615 | 6196 |
-| slopes-17 | -1:-1 | 83755 | 95.43 / 1.29 / 2.97 / 0.31 | 95.29 | 53250 (63.58%) / 21806 (26.04%) / 9393 (11.21%) | 0.1657 | 12836 |
-| slopes-17 | 0:-1 | 66487 | 94.36 / 1.69 / 3.88 / 0.06 | 94.20 | 35253 (53.02%) / 15749 (23.69%) / 7482 (11.25%) | 0.2115 | 9797 |
-| slopes-17 | -1:0 | 72923 | 94.37 / 1.58 / 3.69 / 0.36 | 94.21 | 41344 (56.70%) / 17056 (23.39%) / 7716 (10.58%) | 0.2001 | 10229 |
-| slopes-17 | 0:0 | 84555 | 95.79 / 1.30 / 2.60 / 0.31 | 95.67 | 36259 (42.88%) / 15501 (18.33%) / 5489 (6.49%) | 0.1749 | 8269 |
-| slopes-991 | -1:-1 | 67357 | 94.43 / 1.60 / 3.58 / 0.39 | 94.25 | 31388 (46.60%) / 13456 (19.98%) / 5472 (8.12%) | 0.1940 | 7703 |
-| slopes-991 | 0:-1 | 81998 | 95.69 / 1.23 / 3.03 / 0.05 | 95.54 | 49479 (60.34%) / 21685 (26.45%) / 10060 (12.27%) | 0.1801 | 13368 |
-| slopes-991 | -1:0 | 81435 | 95.15 / 1.33 / 3.19 / 0.32 | 95.01 | 46032 (56.53%) / 18914 (23.23%) / 8380 (10.29%) | 0.1934 | 11301 |
-| slopes-991 | 0:0 | 76074 | 96.19 / 1.41 / 2.05 / 0.34 | 96.03 | 30452 (40.03%) / 9767 (12.84%) / 3225 (4.24%) | 0.1603 | 4635 |
+| slopes-17 | -1:-1 | 83755 | 95.47 / 1.29 / 2.92 / 0.31 | 95.34 | 52807 (63.05%) / 21069 (25.16%) / 8752 (10.45%) | 0.1632 | 12149 |
+| slopes-17 | 0:-1 | 84932 | 95.80 / 1.22 / 2.93 / 0.05 | 95.67 | 46649 (54.93%) / 19695 (23.19%) / 8721 (10.27%) | 0.1744 | 11779 |
+| slopes-17 | -1:0 | 80728 | 95.02 / 1.33 / 3.32 / 0.33 | 94.87 | 46339 (57.40%) / 18783 (23.27%) / 8471 (10.49%) | 0.1881 | 11322 |
+| slopes-17 | 0:0 | 84555 | 95.82 / 1.30 / 2.57 / 0.31 | 95.70 | 35860 (42.41%) / 15021 (17.76%) / 5127 (6.06%) | 0.1740 | 7866 |
+| slopes-991 | -1:-1 | 76325 | 95.14 / 1.41 / 3.11 / 0.34 | 94.98 | 36633 (48.00%) / 15028 (19.69%) / 5810 (7.61%) | 0.1804 | 8350 |
+| slopes-991 | 0:-1 | 82877 | 95.82 / 1.22 / 2.92 / 0.05 | 95.66 | 49343 (59.54%) / 20427 (24.65%) / 8804 (10.62%) | 0.1744 | 12043 |
+| slopes-991 | -1:0 | 81435 | 95.20 / 1.33 / 3.15 / 0.32 | 95.06 | 45479 (55.85%) / 18070 (22.19%) / 7639 (9.38%) | 0.1895 | 10513 |
+| slopes-991 | 0:0 | 76074 | 96.20 / 1.41 / 2.04 / 0.34 | 96.04 | 30373 (39.93%) / 9655 (12.69%) / 3138 (4.12%) | 0.1602 | 4539 |
 
-All twelve ranges now have **4,306–13,368** home-connected tiles at level 8+.
-Typical upper shoulder gradients (p95) are **0.1603–0.2115** levels/tile,
-64–85% of the 0.25 limit. All ordinary tiles still obey the exact limit.
+All twelve ranges now have **4,306–12,149** home-connected tiles at level 8+.
+Typical upper shoulder gradients (p95) are **0.1602–0.1895** levels/tile,
+64–76% of the 0.25 limit. All ordinary tiles still obey the exact limit.
 The original three full 48×48-chunk certificates and sixteen independent
 positive/negative owners keep zero unintended stranded tiles and isolated
 spires. The new high-ground gate additionally requires at least 75% walkable
@@ -308,31 +313,31 @@ ribbons, open high sides and the same separate pinnacles.
 | Walkable reach | [atlas](lab/terrain-walkable/before-atlas-reach.png), [range](lab/terrain-walkable/before-range-reach.png) | [atlas](lab/terrain-walkable/after-atlas-reach.png), [range](lab/terrain-walkable/after-range-reach.png) |
 | Height + hillshade | [atlas](lab/terrain-walkable/before-atlas-height.png), [range](lab/terrain-walkable/before-range-height.png) | [atlas](lab/terrain-walkable/after-atlas-height.png), [range](lab/terrain-walkable/after-range-height.png) |
 
-The map certificate’s home-connected area grows from **1,268,192 to 1,313,519**
+The map certificate’s home-connected area grows from **1,268,192 to 1,313,560**
 tiles. It retains four isolated summit components / 162 walkable summit tiles,
 zero stranded tiles, four tunnel candidates and the level 0–15 bounds.
-Pass/end-route steps for the four owners are now **242/380, 218/462, 224/430,
+Pass/end-route steps for the four owners are now **242/376, 218/462, 224/430,
 238/386**. Endpoint distances changed, so these are not speed comparisons.
 
 Paired map atlas workers, Nix shell, nice 10, GOMAXPROCS=2, 80 warm samples:
 
 | Fixture | Before warm p95 ms | After warm p95 ms | After bare whole B |
 |---|---:|---:|---:|
-| flat | 0.146 | 0.220 | 591 |
-| hills | 0.694 | 0.852 | 1841 |
-| mountainside | 0.840 | 0.659 | 1841 |
-| outcrop | 0.833 | 0.957 | 2879 |
-| override-probe | 0.175 | 0.176 | 961 |
-| pass | 0.689 | 0.766 | 1841 |
-| spire | 0.828 | 0.754 | 1913 |
+| flat | 0.146 | 0.149 | 591 |
+| hills | 0.694 | 0.804 | 1841 |
+| mountainside | 0.840 | 0.641 | 1841 |
+| outcrop | 0.833 | 0.797 | 2879 |
+| override-probe | 0.175 | 0.183 | 961 |
+| pass | 0.689 | 0.663 | 1841 |
+| spire | 0.828 | 0.708 | 1913 |
 
 Largest bare whole payload stays **2,879 B**; p50/p95 stays **1,841/1,841 B**,
 and generated overrides stay zero. Cold full-field assembly was 1.410 seconds
-before / 1.238 seconds after. These shared-host timings include scheduler
+before / 1.277 seconds after. These shared-host timings include scheduler
 noise; the same coordinates and budgets remain near the previous recipe and
 under the existing 5 ms warm gate. They do not measure client rendering or
 future dressed production chunks. Every retained after sidecar has geometry
-digest `b8a01a2d96fc2026900dca215e95c775b2bee1346cffb19f6a53948ef3b827bf`.
+digest `7370a631b780a6a9bc4cd02bbf4fe38632d07ce134e8bd4fd44d3fbcb077199c`.
 
 Reproduce after renders and per-range measurements:
 

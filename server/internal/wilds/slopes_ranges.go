@@ -69,6 +69,11 @@ func (s *SlopeSampler) rangeV2(x, y int) *slopeRangeV2 {
 	// categorical biome multiplier can create a wall at a region boundary.
 	u, relief := s.fields(r.X, r.Y)
 	r.Height = 9 + 1.5*u + relief + float64(character>>12%3)*0.6
+	// Tall, narrow owners need proportionally longer approaches. Leave
+	// headroom for base-field gradients and corner quantization; otherwise
+	// threshold-sized steep rings can trap a few apparently walkable tiles.
+	r.Width = math.Max(r.Width, r.Height*8.5)
+	r.taper = math.Max(r.taper, r.Height*9)
 	pass := r.world(r.notch, r.axis(r.notch))
 	r.PassX = pass[0] // retained for old diagnostic readers; V2 uses PassEnds
 	r.PassEnds = [2][2]int{r.world(r.notch, r.axis(r.notch)-88), r.world(r.notch, r.axis(r.notch)+88)}
