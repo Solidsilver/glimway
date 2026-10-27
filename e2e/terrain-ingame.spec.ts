@@ -129,11 +129,14 @@ function find(t: TerrainStore): Spots {
   const line = (tx: number, ty: number, n: number, dx: number, dy: number): [number, number][] => Array.from({ length: n + 1 }, (_, i) => [tx + dx * i, ty + dy * i])
   const out: Spots = { seam: [], climb: [], cliff: [], ridge: [] }
   const add = (list: Spot[], s: Spot) => {
-    if (list.length >= 12 || list.some((o) => Math.hypot(o.tx - s.tx, o.ty - s.ty) < 4)) return
+    // Broad shoulders offer many climbs along the same wooded foothill. Spread
+    // candidates across it so one patch of cover cannot exhaust the search.
+    const climb = list === out.climb
+    if (list.length >= (climb ? 64 : 12) || list.some((o) => Math.hypot(o.tx - s.tx, o.ty - s.ty) < (climb ? 12 : 4))) return
     list.push(s)
   }
   for (const [tx, ty] of near) {
-    if (out.seam.length >= 12 && out.climb.length >= 12 && out.cliff.length >= 12 && out.ridge.length >= 12) break
+    if (out.seam.length >= 12 && out.climb.length >= 64 && out.cliff.length >= 12 && out.ridge.length >= 12) break
     // A chunk edge crossed on open, raised ground: four tiles either side.
     if (((tx + 4) % S + S) % S === 0 && z(tx, ty) > 0.2 && open(tx, ty, 8, 1, 0)) add(out.seam, { tx, ty, path: line(tx, ty, 8, 1, 0), at: tx + 4, rise: 0 })
     // A straight climb north or south: 8 open steps rising at least 0.6 of a level.
