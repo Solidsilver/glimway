@@ -39,6 +39,8 @@
   import { ui } from './store.svelte'
   import Icon from './Icon.svelte'
   import ArtIcon from './ArtIcon.svelte'
+  import { onTerrainSettings, terrainSettings } from '../game/terrain/settings'
+  import { HeightMap, heightChunks } from '../game/terrain/map'
 
   /**
    * The world map (docs/design/world-map.md): the Wilds you've walked this
@@ -56,6 +58,15 @@
   let { session, scale = null, onScale, onClose }: { session: Session; scale?: number | null; onScale: (scale: number) => void; onClose: () => void } = $props()
 
   const renderer = new MapRenderer(canvasImage)
+  const heights = DEV_TOOLS ? new HeightMap() : null
+  let terrainOn = $state(DEV_TOOLS && terrainSettings().on)
+  let heightLayer = $state(true)
+  let heightVersion = $state(0)
+  let heightError = $state('')
+  let heightCanvas = $state<HTMLCanvasElement | null>(null)
+  $effect(() => {
+    if (DEV_TOOLS) return onTerrainSettings((s) => { terrainOn = s.on })
+  })
 
   let result = $state<MapLoad | null>(null)
   let loading = $state(true)
@@ -72,6 +83,36 @@
   /** Map loads and terrain draws (playtests read them through the dev hook). */
   let loads = 0
   let draws = 0
+
+  // Viewport-only coarse reads, debounced on pan/zoom, cancelled on close
+  // and on either switch going off. SL2 terrain is never fetched here.
+  $effect(() => {
+    const v = view, size = vp
+    if (!terrainOn || !heightLayer || !heights || !v || size.w <= 0) return
+    const controller = new AbortController()
+    const timer = setTimeout(() => {
+      heightError = ''
+      void heights.load(heightChunks(v, size), controller.signal, () => { heightVersion++ }).catch((e: unknown) => {
+        if (!controller.signal.aborted) heightError = e instanceof Error ? e.message : String(e)
+      })
+    }, 180)
+    return () => { clearTimeout(timer); controller.abort() }
+  })
+
+  $effect(() => {
+    const v = view, size = vp, c = heightCanvas
+    const on = terrainOn && heightLayer
+    void heightVersion
+    const ratio = Math.min(2, dpr)
+    if (!v || !c || !heights || !on) return
+    const raf = requestAnimationFrame(() => {
+      const b = backingSize(size, ratio)
+      c.width = b.w; c.height = b.h
+      const ctx = c.getContext('2d')
+      if (ctx) heights.draw(ctx, v, size, ratio)
+    })
+    return () => cancelAnimationFrame(raf)
+  })
 
   // ---------------------------------------------------------------- where you are
 
@@ -496,7 +537,7 @@
   // Playtests (src/game/dev-hooks.ts): the view, you, and how often it loaded and drew.
   $effect(() => {
     if (!DEV_TOOLS) return
-    return expose('__fsWorldMap', () => ({ view: view ? { ...view } : null, vp: { ...vp }, frame, hero, outside, loads, draws, cached: renderer.cached, stats: { ...renderer.stats }, result: result ? { scope: result.scope, missing: result.missing, offline: result.offline, partial: result.partial, ended: result.ended, endsAt: result.endsAt } : null, online, notes: [...notes], chunks: result?.input?.chunks.length ?? 0 }))
+    return expose('__fsWorldMap', () => ({ view: view ? { ...view } : null, vp: { ...vp }, frame, hero, outside, loads, draws, cached: renderer.cached, stats: { ...renderer.stats }, result: result ? { scope: result.scope, missing: result.missing, offline: result.offline, partial: result.partial, ended: result.ended, endsAt: result.endsAt } : null, online, notes: [...notes], chunks: result?.input?.chunks.length ?? 0, height: { on: terrainOn && heightLayer, chunks: heights?.chunks.size ?? 0, requests: heights?.requests ?? 0, version: heightVersion, error: heightError } }))
   })
 </script>
 
@@ -525,6 +566,7 @@
   >
     <div class="picture" role="img" aria-label={`${MAP_LABELS.title}. ${summary}`}>
       <canvas bind:this={canvas} data-testid="map-canvas"></canvas>
+      {#if terrainOn && heightLayer}<canvas class="height-canvas" bind:this={heightCanvas} data-testid="map-height-canvas"></canvas>{/if}
     </div>
     <div class="marks" aria-hidden="true">
       {#each labels as l, i (i)}
@@ -563,9 +605,13 @@
         {/if}
       </div>
     {/if}
+    {#if terrainOn && heightLayer}
+      <div class="height-legend" data-testid="map-height-legend">Height 0–15 · ◇ pass · ▲ spire · grey crags · brown cliffs{#if heightError}<br />{heightError}{/if}</div>
+    {/if}
   </div>
 
   <div class="tools" role="group" aria-label={MAP_LABELS.controls}>
+    {#if terrainOn}<label class="layer-toggle"><input type="checkbox" bind:checked={heightLayer} data-testid="map-height-layer" /> Height</label>{/if}
     <button type="button" onclick={() => zoom(1)} aria-label={MAP_LABELS.zoomIn} title={MAP_LABELS.zoomIn} data-testid="map-zoom-in">+</button>
     <span class="pct" aria-hidden="true">{view ? zoomPercent(view.scale, openScale) : 100}%</span>
     <button type="button" onclick={() => zoom(-1)} aria-label={MAP_LABELS.zoomOut} title={MAP_LABELS.zoomOut} data-testid="map-zoom-out">−</button>
@@ -674,6 +720,18 @@
 </div>
 
 <style>
+  .height-canvas { pointer-events: none; }
+  .height-legend {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    max-width: calc(100% - 16px);
+    padding: 5px 8px;
+    background: #fff6daed;
+    color: #503c2e;
+    font-size: 12px;
+    pointer-events: none;
+  }
   /* Full screen: the whole viewport, its safe areas kept clear. Not a sheet: nothing here drags it shut. */
   .world-map {
     position: fixed;

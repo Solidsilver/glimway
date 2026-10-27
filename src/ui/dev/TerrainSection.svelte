@@ -1,5 +1,37 @@
 <script lang="ts">
   import { onTerrainSettings, setTerrainSettings, terrainSettings, TERRAIN_DEFAULT, type TerrainSettings } from '../../game/terrain/settings'
+  import type { Session } from '../../game/session'
+  import { heroPosition } from '../../game/map-position'
+  import { canDevWarp, devWarpTo } from '../../game/dev-warp'
+  import { FEATURE_LABELS, nearestFeatures, featureLabel, type FeatureKind } from '../../game/terrain/find'
+
+  let { session }: { session: Session } = $props()
+  let busy = $state(false)
+  let message = $state('')
+  let request: AbortController | null = null
+  $effect(() => {
+    if (!s.on) request?.abort()
+    return () => request?.abort()
+  })
+
+  async function go(kind: FeatureKind): Promise<void> {
+    const p = heroPosition(session.state, session.link?.worldId ?? '')
+    if (!p || !canDevWarp()) { message = 'Enter the world first.'; return }
+    busy = true
+    message = 'Finding certified terrain…'
+    const controller = new AbortController()
+    request = controller
+    try {
+      const x = p.x / 16, y = p.y / 16
+      const found = await nearestFeatures(x, y, controller.signal)
+      if (controller.signal.aborted || !s.on) return
+      const f = found.features.find((f) => f.kind === kind)
+      if (!f) { message = 'No certified feature of this kind in the surrounding owner squares.'; return }
+      message = devWarpTo(...f.stand) ? featureLabel(f, x, y) : 'Enter the world first.'
+    } catch (e) {
+      if (!controller.signal.aborted) message = e instanceof Error ? e.message : String(e)
+    } finally { busy = false }
+  }
 
   // The dev panel's Terrain section (DevPanel.svelte): generated height
   // terrain in the Wilds (src/game/terrain), on dev servers only. The look
@@ -14,6 +46,14 @@
   <p class="what">Generated height terrain in the Wilds: hills, ranges with passes, crags and cliffs, regenerated from the world’s seed (nothing is saved). Only a dev server serves it; the live server stays flat.</p>
   <label class="row"><span class="label"><input type="checkbox" checked={s.on} onchange={(e) => set({ on: e.currentTarget.checked })} data-testid="dev-terrain-on" /> Height terrain</span></label>
   {#if s.on}
+    <div class="row" role="group" aria-label="Go to the nearest">
+      <span class="label">Go to the nearest:</span>
+      {#each Object.entries(FEATURE_LABELS) as [kind, label]}
+        <button type="button" class="small" disabled={busy} onclick={() => void go(kind as FeatureKind)} data-testid={`terrain-go-${kind}`}>{label}</button>
+      {/each}
+    </div>
+    <p class="what">Spire: view only. Tunnel: candidate only. Arrivals are certified for height terrain; trees and other cover are separate.</p>
+    <p class="what" role="status" data-testid="terrain-destination">{message}</p>
     <div class="row" role="group" aria-label="Drawn as">
       <span class="label">Drawn as</span>
       <button type="button" class="small" aria-pressed={s.mode === 'top'} onclick={() => set({ mode: 'top' })}>Top-down</button>

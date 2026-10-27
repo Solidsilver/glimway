@@ -19,6 +19,35 @@ nothing is stored, and with the switch off none of the new code runs.
 
 The settings are kept on the device (`glimway:terrain` in localStorage).
 
+## Finding the features
+
+With **Height terrain** on, the Terrain section offers **Go to the nearest:**
+pass, range crest (a walkable shoulder), spire view, outcrop top, outcrop foot
+(below the cliff), hills, and tunnel candidate. Each uses the existing dev
+warp and reports the feature, distance in chunks, compass direction and
+arrival level. The spire itself stays unreachable; a tunnel candidate is
+metadata, not an open tunnel.
+
+Ranges sit near the centres of 576-tile owner squares, roughly twelve
+chunks diagonally from home. Walking straight north can go between them,
+as in the owner's map screenshot. The buttons use the current world's seed
+and the generator's plan, searching only the surrounding 3×3 owners. Each
+stand is in its owner's certified transit-rim component; those continuous
+rims form the terrain's backbone to home. The home owner's component must
+also contain the Commons at (12,30). This is height-only certification:
+trees and other cover still have their separate collision rules.
+
+The world map's **Height** toggle defaults to on while Height terrain is on.
+It shades explored and unexplored ground by level and facing, marks crags
+grey and south cliffs brown, and shows **◇ passes / ▲ spires**. Switching
+Height off restores the ordinary map. Reads use `/api/dev/terrain/map`
+(36 samples per chunk, at most 256 chunks per request), never whole SL2
+surfaces. Each opening caches at most 1,024 chunks; at extreme zoom-outs
+only the nearest 1,024 visible chunks receive height. Feature summaries
+are cached for at most 32 owners server-side. Both routes are compiled and
+mounted only in dev builds, with the same account gates and recipe
+selection as `/api/dev/terrain`.
+
 ## Where to walk
 
 The terrain is `slopes-gen@2` (natural ranges, the Sol lane), regenerated

@@ -213,7 +213,7 @@
   {/if}
   {#if tools?.hooks || tools?.world_lab}
     <DevSection id="terrain" icon="stone" title="Terrain" open={open.terrain} onToggle={(o) => fold('terrain', o)}>
-      <TerrainSection />
+      <TerrainSection {session} />
     </DevSection>
   {/if}
   {#if !lab}{@render heightLab()}{/if}

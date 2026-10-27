@@ -66,7 +66,7 @@ func devRoutes(a *api.Server, caller devCaller) func(http.Handler) http.Handler 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			inLab := strings.HasPrefix(r.URL.Path, worldlab.Prefix)
-			if r.URL.Path != api.DevGrantPath && r.URL.Path != api.DevFightFallPath && r.URL.Path != api.DevWarpPath && r.URL.Path != api.DevTerrainPath && !inLab {
+			if r.URL.Path != api.DevGrantPath && r.URL.Path != api.DevFightFallPath && r.URL.Path != api.DevWarpPath && r.URL.Path != api.DevTerrainPath && r.URL.Path != api.DevTerrainFeaturesPath && r.URL.Path != api.DevTerrainMapPath && !inLab {
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -80,6 +80,10 @@ func devRoutes(a *api.Server, caller devCaller) func(http.Handler) http.Handler 
 				a.DevFightFall(w, r)
 			case r.URL.Path == api.DevTerrainPath && (tools.Hooks || tools.WorldLab):
 				a.DevTerrain(w, r)
+			case r.URL.Path == api.DevTerrainFeaturesPath && (tools.Hooks || tools.WorldLab):
+				a.DevTerrainFeatures(w, r)
+			case r.URL.Path == api.DevTerrainMapPath && (tools.Hooks || tools.WorldLab):
+				a.DevTerrainMap(w, r)
 			case r.URL.Path == api.DevWarpPath && (tools.Hooks || tools.WorldLab):
 				a.DevWarp(w, r)
 			case r.URL.Path == api.DevGrantPath && tools.Grant:
