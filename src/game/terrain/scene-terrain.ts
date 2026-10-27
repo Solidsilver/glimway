@@ -100,9 +100,8 @@ export class SceneTerrain {
   private pendingQuick = new Map<string, string>()
   /** The chunks baked now: the attached and the view's (./need.ts). */
   private wanted = new Set<string>()
-  /** The view's chunks, and those whose flat ground the lift may hide (it and every needed chunk south of it drawn). */
+  /** The view's chunks (./need.ts). */
   private need: string[] = []
-  private flatHidden = new Set<string>()
   private plain: { sig: string; rgb: RGB } | null = null
   /** What the bake schedule was last worked out for, frames since, and bakes landed (each one looks again). */
   private scheduled = ''
@@ -169,7 +168,6 @@ export class SceneTerrain {
     this.pendingQuick.clear()
     this.wanted.clear()
     this.need = []
-    this.flatHidden.clear()
     this.scheduled = ''
     this.last = null
     this.shadow?.destroy()
@@ -206,7 +204,7 @@ export class SceneTerrain {
     // What to bake is looked at again only when something it depends on moved (the view by 32 px, the
     // terrain, the look, the sun, a bake landing), or every SCHEDULE_FRAMES frames for painted ground arriving.
     const v = this.scene.cameras.main.worldView
-    const key = `${Math.floor(v.x / 32)},${Math.floor(v.y / 32)},${hcx},${hcy},${terrain.version},${this.look(s)},${this.sunKey},${edgeKey(terrainEdges(s))},${s.sunStrength},${this.landed}`
+    const key = `${Math.floor(v.x / 32)},${Math.floor(v.y / 32)},${hcx},${hcy},${terrain.arrived},${this.look(s)},${this.sunKey},${edgeKey(terrainEdges(s))},${s.sunStrength},${this.landed}`
     let started = false
     let startMs = 0
     if (key !== this.scheduled || ++this.idle >= SCHEDULE_FRAMES) {
@@ -224,7 +222,6 @@ export class SceneTerrain {
       // A bake started (its window built and posted) is the attach cost, kept apart from the steady frame.
       const tb = performance.now()
       started = this.bakes(win, s)
-      this.coverage(s)
       startMs = performance.now() - tb
     }
     if (started) {
@@ -338,29 +335,6 @@ export class SceneTerrain {
       })
     }
     return started
-  }
-
-  /**
-   * Which attached chunks' flat ground the lift hides: those drawn for the
-   * look whose needed chunks south (in the same column) are drawn too.
-   * Anywhere else the flat ground stays under the lifted images, so a bake
-   * still on its way shows the plain painted ground, never the void.
-   */
-  private coverage(s: TerrainSettings): void {
-    this.flatHidden.clear()
-    if (s.mode !== 'lift') return
-    const look = this.look(s)
-    const drawn = (key: string) => this.images.get(key)?.look === look
-    const south = new Map<number, number[]>()
-    for (const k of this.need) {
-      const [cx, cy] = k.split(',').map(Number) as [number, number]
-      south.set(cx, [...(south.get(cx) ?? []), cy])
-    }
-    for (const key of this.images.keys()) {
-      if (!drawn(key)) continue
-      const [cx, cy] = key.split(',').map(Number) as [number, number]
-      if ((south.get(cx) ?? []).every((y) => y <= cy || !terrain.has(cx, y) || drawn(`${cx},${y}`))) this.flatHidden.add(key)
-    }
   }
 
   private place(key: string, cy: number, sig: string, look: string, quick: boolean, b: Baked): void {
@@ -488,7 +462,7 @@ export class SceneTerrain {
     const ty = Math.floor(y / T)
     const s = terrainSettings()
     const lift = s.mode === 'lift'
-    const key = `${tx},${ty},${terrain.version},${this.look(s)}`
+    const key = `${tx},${ty},${terrain.arrived},${this.look(s)}`
     if (this.near?.key === key) return this.near
     const ox = tx - 6
     const oy = ty - 8
@@ -533,11 +507,8 @@ export class SceneTerrain {
       const g = o as Phaser.GameObjects.GameObject & { x: number; y: number; visible: boolean; scrollFactorY?: number; depth: number; type: string }
       if (!g.visible || g.scrollFactorY !== 1 || this.own.has(o)) continue
       if (g.type !== 'Image' && g.type !== 'Sprite' && g.type !== 'Container' && g.type !== 'Text' && g.type !== 'Rectangle') continue
-      // The flat ground of a chunk baked lifted: under the lifted ground, never shown between it (an unbaked one stays).
-      if (g.depth <= GROUND_DEPTH) {
-        if (lift && this.flatHidden.has(`${Math.floor(g.x / CHUNK_PX)},${Math.floor(g.y / CHUNK_PX)}`)) this.move(g, 0, 0, false)
-        continue
-      }
+      // The flat ground stays under the lifted images (they cover it wherever they're whole): where one is still on its way, ground shows, never the void.
+      if (g.depth <= GROUND_DEPTH) continue
       // The blob shadow gives way to the sun's.
       if (o === hero.shadow) {
         this.move(g, 0, 0, false)
@@ -549,11 +520,11 @@ export class SceneTerrain {
       const isHero = o === heroBody || o === hero.sprite
       // Still sprites keep what was worked out for them until they move or the terrain changes.
       let at = this.seen.get(o)
-      if (!at || at.x !== foot[0] || at.y !== foot[1] || at.v !== terrain.version || at.look !== look) {
+      if (!at || at.x !== foot[0] || at.y !== foot[1] || at.v !== terrain.arrived || at.look !== look) {
         const z = terrain.zAt(foot[0], foot[1] - 1)
         const closed = !isHero && CLOSED_KINDS.has(terrain.kindAt(Math.floor(foot[0] / T), Math.floor((foot[1] - 1) / T)))
         const behind = lift && !isHero && !closed && g.depth < 1e6 && !Number.isNaN(z) && z !== 0 && this.behind(foot[0], foot[1] - 1, z, curve)
-        at = { x: foot[0], y: foot[1], v: terrain.version, look, z, closed, behind }
+        at = { x: foot[0], y: foot[1], v: terrain.arrived, look, z, closed, behind }
         this.seen.set(o, at)
       }
       if (at.closed) {
@@ -724,7 +695,7 @@ export class SceneTerrain {
       const a = src.getContext?.('2d')?.getImageData(ix, iy, 1, 1).data[3]
       over.push({ key: k, quick: c.quick, look: c.look, at: [ix, iy], size: [c.img.width, c.img.height], alpha: a, depth: c.img.depth, visible: c.img.visible })
     }
-    return { canvas: [x, y], world: [Math.round(p.x * 100) / 100, Math.round(p.y * 100) / 100], chunk: key, flatHidden: this.flatHidden.has(key), wanted: this.wanted.has(key), need: this.need.includes(key), terrain: terrain.has(Math.floor(p.x / CHUNK_PX), Math.floor(p.y / CHUNK_PX)), over }
+    return { canvas: [x, y], world: [Math.round(p.x * 100) / 100, Math.round(p.y * 100) / 100], chunk: key, wanted: this.wanted.has(key), need: this.need.includes(key), terrain: terrain.has(Math.floor(p.x / CHUNK_PX), Math.floor(p.y / CHUNK_PX)), over }
   }
 
   /** Timings afresh (the spec's steady walk). */
@@ -752,7 +723,6 @@ export class SceneTerrain {
       need: this.need,
       /** Needed chunks with terrain and no image for the look: a placeholder or a bake still on its way. */
       missing: this.need.filter((k) => { const [cx, cy] = k.split(',').map(Number) as [number, number]; return this.wanted.has(k) && terrain.has(cx, cy) && this.images.get(k)?.look !== this.look(terrainSettings()) }),
-      flatHidden: this.flatHidden.size,
       bytes: [...this.images.values()].reduce((a, c) => a + c.bytes, 0),
       quick: this.stats.quick,
       quickMs: pct(this.stats.quickMs),

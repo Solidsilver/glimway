@@ -30,6 +30,8 @@ export class TerrainStore implements StepRule {
   private asked = new Set<number>()
   /** Bumped whenever a chunk arrives or goes. */
   version = 0
+  /** Bumped only when a chunk arrives (or all go): what's worked out near the hero keeps when far chunks are let go. */
+  arrived = 0
   /** Why the last fetch failed ('' when none did): a live server has no route. */
   error = ''
   private listeners = new Set<(cx: number, cy: number) => void>()
@@ -61,6 +63,7 @@ export class TerrainStore implements StepRule {
             if (!this.asked.has(k)) continue
             this.chunks.set(k, g.surface)
             this.version++
+            this.arrived++
             this.error = ''
             for (const l of this.listeners) l(g.cx, g.cy)
           }
@@ -78,12 +81,14 @@ export class TerrainStore implements StepRule {
     this.chunks.set(key(cx, cy), s)
     this.asked.add(key(cx, cy))
     this.version++
+    this.arrived++
   }
 
   clear(): void {
     this.chunks.clear()
     this.asked.clear()
     this.version++
+    this.arrived++
   }
 
   surface(cx: number, cy: number): SlopeSurface | undefined {
