@@ -355,3 +355,16 @@ checks flat Wilds cover collision, warps only to its foot, and uses keyboard
 movement until the hero has climbed at least three levels. It captures foot
 and high-ground frames in both top-down and ¾ lift modes. Vite and Playwright
 are never run on this host.
+
+Local validation of the corrected recipe passed `go vet ./...`, full
+`go test ./...`, dev-tag server/API tests and E2E typechecking, all in the
+Nix shell. An additional finite probe of **80 more independently seeded
+owners** (range-property-16 through range-property-95, positive and negative
+coordinates) found zero stranded tiles in 37.7 seconds. Together with the
+sixteen standard owner fixtures, that checks 96 independent owners. This is
+finite evidence, rather than a claim to have proved all seeds. Reproduce the
+additional probe without extending the normal suite:
+
+```sh
+nix develop -c sh docs/planning/wide-world/lab/terrain-walkable/check-extra-owners.sh
+```

@@ -1,0 +1,27 @@
+package wilds
+
+import (
+	"context"
+	"fmt"
+	"testing"
+)
+
+func TestWalkableExtraOwners(t *testing.T) {
+	for n := 16; n < 96; n++ {
+		seed := fmt.Sprintf("range-property-%d", n)
+		ox, oy := n%5-2, n%7-3
+		p, e := NewSlopePlanRecipe(context.Background(), seed, SlopeRecipeV2, ox*576, oy*576, 576, 576)
+		if e != nil {
+			t.Fatal(e)
+		}
+		c := p.Certificate(ox*576+2, oy*576+2)
+		if c.StrandedTiles != 0 {
+			for i, g := range p.Ground {
+				if g.Kind == SlopeGround && !g.Unreachable && c.Labels[i] != c.Home {
+					t.Log("stranded", p.X+i%p.W, p.Y+i/p.W)
+				}
+			}
+			t.Fatalf("%s owner %d,%d: %d stranded tiles", seed, ox, oy, c.StrandedTiles)
+		}
+	}
+}
