@@ -2,20 +2,26 @@
  * Height terrain in the Wilds scene (dev switch on; ./settings.ts). Off,
  * none of this runs and the Wilds are as they always were.
  *
- * - **Terrain:** the chunks round the hero (the attached 3×3 and a ring) are
- *   fetched from the dev route into the store (./store.ts).
- * - **Ground:** each attached generated chunk is baked (./bake.ts, in the
- *   worker) from the window's painted ground with the terrain's materials,
- *   the one sun and edge shading, and drawn over the flat ground. The sun
- *   follows the game clock (a bake every few game minutes) or the panel's
- *   time. Textures go when chunks leave.
+ * - **Terrain:** the chunks round the hero (the attached 3×3 and a ring) and
+ *   those the view needs are fetched from the dev route into the store
+ *   (./store.ts).
+ * - **Ground:** each attached generated chunk, and each chunk the view
+ *   needs (./need.ts: in the lift, the chunks south whose high ground is
+ *   lifted into view), is baked (./bake.ts, in the worker) from the
+ *   window's painted ground with the terrain's materials, the one sun and
+ *   edge shading, and drawn over the flat ground. A chunk with no bake for
+ *   the look yet gets a quick placeholder first (its lifted shape and
+ *   materials, no sun), so nothing in view is ever empty. The sun follows
+ *   the game clock (a bake every few game minutes) or the panel's time.
+ *   Textures go when chunks leave.
  * - **Walking:** after each physics step the hero's motion is carried again
  *   over the field from the last good feet (./walk.ts sweep): walking, the
  *   roll, the dash and knockback alike, swept in 2 px steps, slower uphill,
  *   quicker downhill. Ground not loaded yet is closed.
- * - **¾ lift:** chunk images are lifted 48 px a level, north first. Just
- *   before each render every world sprite is drawn 48 px a level higher (its
- *   feet's height) and put back after, so depth, physics and the game's own
+ * - **¾ lift:** chunk images are lifted 48 px a level (tall ground
+ *   compressed past a knee if the panel says so: ./field.ts liftRows),
+ *   north first. Just before each render every world sprite is drawn lifted
+ *   the same by its feet's height and put back after, so depth, physics and the game's own
  *   positions stay in field space. What stands behind nearer, higher ground
  *   isn't drawn; the hero is, with only the covered part as the grey
  *   outline (partial see-through, ./field.ts coveredPixels). Sprites on
@@ -29,13 +35,15 @@ import { gameNow } from '../clock.ts'
 import type { Hero } from '../entities/hero.ts'
 import type { WildsWindow } from '../wilds/window.ts'
 import { GROUND_DEPTH } from '../wilds/window-chunk.ts'
-import { CHUNK_PX, CHUNK_TILES, type Baked } from './bake.ts'
+import { CHUNK_PX, CHUNK_TILES, type BakeJob, type Baked } from './bake.ts'
 import { bakeAway } from './bake-away.ts'
 import { buildWindow } from './window-field.ts'
 import { windowView } from './bake.ts'
-import { HIDE_ABOVE, coverRects, coveredPixels, type TerrainView } from './field.ts'
+import { HIDE_ABOVE, MAX_LEVEL, coverRects, coveredPixels, liftRows, liftSlope, type LiftCurve, type TerrainView } from './field.ts'
+import { neededChunks } from './need.ts'
+import type { RGB } from './material.ts'
 import { CLOSED_KINDS, terrain } from './store.ts'
-import { onTerrainSettings, terrainEdges, terrainSettings, type TerrainSettings } from './settings.ts'
+import { onTerrainSettings, terrainCurve, terrainEdges, terrainSettings, type TerrainSettings } from './settings.ts'
 import { clockSun, sunAt, type DaySun } from './sun.ts'
 import { edgeKey } from './edges.ts'
 import { nearestWalkable, standTile, sweep, type Feet } from './walk.ts'
@@ -52,14 +60,21 @@ const REACH = 46
 const HALO = 24
 /** The sun moves this often (game seconds) when it follows the clock. */
 const SUN_STEP_S = 600
-/** Bakes in flight at once. */
+/** Bakes in flight at once, and quick placeholders. */
 const IN_FLIGHT = 2
+const QUICK_IN_FLIGHT = 4
+/** Chunks the view may ask to have baked past the attached ones (the wider window's bound). */
+const NEED_BUDGET = 24
 
 interface ChunkImage {
   img: Phaser.GameObjects.Image
   tex: string
   sig: string
+  /** The look it was baked for (mode and tall ground): a different one is stale, and a placeholder goes in first. */
+  look: string
+  quick: boolean
   edges: number
+  bytes: number
 }
 
 export interface SceneTerrainDeps {
@@ -80,6 +95,13 @@ interface Moved {
 export class SceneTerrain {
   private images = new Map<string, ChunkImage>()
   private pending = new Map<string, string>()
+  private pendingQuick = new Map<string, string>()
+  /** The chunks baked now: the attached and the view's (./need.ts). */
+  private wanted = new Set<string>()
+  /** The view's chunks, and those whose flat ground the lift may hide (it and every needed chunk south of it drawn). */
+  private need: string[] = []
+  private flatHidden = new Set<string>()
+  private plain: { sig: string; rgb: RGB } | null = null
   private moved: Moved[] = []
   private last: Feet | null = null
   private active = false
@@ -102,8 +124,8 @@ export class SceneTerrain {
   /** What the pass leaves alone (its own images), and objects drawn by someone else's feet (the hero's shadow). */
   private own = new WeakSet<Phaser.GameObjects.GameObject>()
   private feetOf = new WeakMap<Phaser.GameObjects.GameObject, [number, number]>()
-  private seen = new WeakMap<Phaser.GameObjects.GameObject, { x: number; y: number; v: number; lift: boolean; z: number; closed: boolean; behind: boolean }>()
-  stats = { bakes: 0, bakeMs: [] as number[], frameMs: [] as number[], startMs: [] as number[], blocked: 0, k: 1, covered: 0, spriteTotal: 0, hidden: 0, hiddenOnClosed: 0 }
+  private seen = new WeakMap<Phaser.GameObjects.GameObject, { x: number; y: number; v: number; look: string; z: number; closed: boolean; behind: boolean }>()
+  stats = { bakes: 0, quick: 0, bakeMs: [] as number[], quickMs: [] as number[], frameMs: [] as number[], startMs: [] as number[], blocked: 0, k: 1, covered: 0, spriteTotal: 0, hidden: 0, hiddenOnClosed: 0 }
 
   constructor(private scene: Phaser.Scene, private deps: SceneTerrainDeps) {
     const step = () => this.gate()
@@ -138,6 +160,10 @@ export class SceneTerrain {
     for (const c of this.images.values()) this.drop(c)
     this.images.clear()
     this.pending.clear()
+    this.pendingQuick.clear()
+    this.wanted.clear()
+    this.need = []
+    this.flatHidden.clear()
     this.last = null
     this.shadow?.destroy()
     this.shadow = null
@@ -171,11 +197,19 @@ export class SceneTerrain {
     const hcy = Math.floor(hero.y / CHUNK_PX)
     const want: [number, number][] = []
     for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) want.push([hcx + dx, hcy + dy])
+    // The view's chunks, south as far as their lifted ground reaches into it.
+    const curve = this.curve(s)
+    const lift = s.mode === 'lift'
+    const v = this.scene.cameras.main.worldView
+    const need = neededChunks({ x: v.x, y: v.y, w: v.width, h: v.height }, (z) => (lift ? T * liftRows(z, K, curve) : 0), (cx, cy) => terrain.top(cx, cy), NEED_BUDGET)
+    this.need = need.map(([cx, cy]) => `${cx},${cy}`)
+    for (const [cx, cy] of need) if (Math.abs(cx - hcx) > 2 || Math.abs(cy - hcy) > 2) want.push([cx, cy])
     terrain.want(want)
     this.updateSun(s)
     // A bake started (its window built and posted) is the attach cost, kept apart from the steady frame.
     const tb = performance.now()
     const started = this.bakes(win, s)
+    this.coverage(s)
     const startMs = performance.now() - tb
     if (started) {
       this.stats.startMs.push(startMs)
@@ -198,42 +232,122 @@ export class SceneTerrain {
   private bakeSig(cx: number, cy: number, s: TerrainSettings, albedo: string): string {
     let around = ''
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) around += terrain.has(cx + dx, cy + dy) ? '1' : '0'
-    return `${around}|${s.mode}|${edgeKey(terrainEdges(s))}|${this.sunKey}|${s.sunStrength}|${albedo}`
+    return `${around}|${this.look(s)}|${edgeKey(terrainEdges(s))}|${this.sunKey}|${s.sunStrength}|${albedo}`
   }
 
-  /** Start the bakes due (true when one started). */
+  /** The lift's tall-ground curve (none at full height or top-down). */
+  private curve(s: TerrainSettings): LiftCurve | undefined {
+    return s.mode === 'lift' ? terrainCurve(s) : undefined
+  }
+
+  /** The look a bake's shape depends on: the mode and, lifted, the tall-ground curve. */
+  private look(s: TerrainSettings): string {
+    const c = this.curve(s)
+    return c ? `lift|${c.knee}|${c.above}` : s.mode
+  }
+
+  /** The plain ground a placeholder stands on: the mean of a painted chunk near the hero, kept per paint. */
+  private plainFrom(chunks: { rgba: Uint8ClampedArray | null; sig: string }[]): RGB | undefined {
+    const p = chunks.find((c) => c.rgba)
+    if (!p) return this.plain?.rgb
+    if (this.plain?.sig !== p.sig) {
+      const rgb: RGB = [0, 0, 0]
+      let n = 0
+      for (let o = 0; o < p.rgba!.length; o += 4 * 997) {
+        rgb[0] += p.rgba![o]!
+        rgb[1] += p.rgba![o + 1]!
+        rgb[2] += p.rgba![o + 2]!
+        n++
+      }
+      this.plain = { sig: p.sig, rgb: [rgb[0] / n, rgb[1] / n, rgb[2] / n] }
+    }
+    return this.plain!.rgb
+  }
+
+  /** Start the bakes due (true when one started): a quick placeholder where the look has none, then the real bakes. */
   private bakes(win: WildsWindow, s: TerrainSettings): boolean {
     let started = false
-    const chunks = win.terrainChunks()
-    const here = new Set(chunks.map((c) => c.key))
-    for (const [key, c] of this.images) if (!here.has(key)) { this.drop(c); this.images.delete(key) }
-    // Nearest the hero first.
+    const order = new Map(this.need.map((k, i) => [k, i]))
+    const chunks = win.terrainChunks(this.need)
+    this.wanted = new Set(chunks.map((c) => c.key))
+    for (const [key, c] of this.images) if (!this.wanted.has(key)) { this.drop(c); this.images.delete(key) }
+    // The view's chunks first (nearest its middle), then the rest nearest the hero.
     const hero = this.deps.hero().sprite
-    chunks.sort((a, b) => Math.hypot(a.cx + 0.5 - hero.x / CHUNK_PX, a.cy + 0.5 - hero.y / CHUNK_PX) - Math.hypot(b.cx + 0.5 - hero.x / CHUNK_PX, b.cy + 0.5 - hero.y / CHUNK_PX))
+    const far = (c: { cx: number; cy: number }) => Math.hypot(c.cx + 0.5 - hero.x / CHUNK_PX, c.cy + 0.5 - hero.y / CHUNK_PX)
+    chunks.sort((a, b) => (order.get(a.key) ?? 1e3 + far(a)) - (order.get(b.key) ?? 1e3 + far(b)))
+    const look = this.look(s)
+    const lift = s.mode === 'lift'
+    const curve = this.curve(s)
+    const plain = this.plainFrom(chunks)
+    const job = (cx: number, cy: number, albedo: Uint8ClampedArray | null, quick: boolean): BakeJob => {
+      const ox = cx * CHUNK_TILES - HALO
+      const oy = cy * CHUNK_TILES - HALO
+      return { win: buildWindow(terrain, ox, oy, CHUNK_TILES + 2 * HALO, CHUNK_TILES + 2 * HALO), cx, cy, albedo, lift, curve, quick, plain, sun: this.sun, sunStrength: s.sunStrength, edges: terrainEdges(s) }
+    }
     for (const c of chunks) {
-      if (this.pending.size >= IN_FLIGHT) break
-      if (!c.rgba || !terrain.has(c.cx, c.cy)) continue
+      if (!terrain.has(c.cx, c.cy)) continue
+      const had = this.images.get(c.key)
+      // A placeholder first where this look has nothing yet.
+      if ((!had || had.look !== look) && this.pendingQuick.size < QUICK_IN_FLIGHT && !this.pendingQuick.has(c.key) && this.pending.get(c.key)?.includes(`|${look}|`) !== true) {
+        const qsig = `quick|${look}`
+        this.pendingQuick.set(c.key, qsig)
+        started = true
+        void bakeAway(job(c.cx, c.cy, c.rgba, true)).then((r) => {
+          if (this.pendingQuick.get(c.key) !== qsig) return
+          this.pendingQuick.delete(c.key)
+          if (!this.active || !this.wanted.has(c.key)) return
+          // The real bake for this look got here first: keep it.
+          const now = this.images.get(c.key)
+          if (now && now.look === look && !now.quick) return
+          this.stats.quick++
+          this.stats.quickMs.push(r.ms)
+          if (this.stats.quickMs.length > 200) this.stats.quickMs.shift()
+          this.place(c.key, c.cy, qsig, look, true, r.baked)
+        })
+      }
+      // The real bake waits for the chunk's painted ground.
+      if (this.pending.size >= IN_FLIGHT || !c.rgba) continue
       const sig = this.bakeSig(c.cx, c.cy, s, c.sig)
-      if (this.images.get(c.key)?.sig === sig || this.pending.get(c.key) === sig) continue
+      if (had?.sig === sig || this.pending.get(c.key) === sig) continue
       this.pending.set(c.key, sig)
       started = true
-      const ox = c.cx * CHUNK_TILES - HALO
-      const oy = c.cy * CHUNK_TILES - HALO
-      const job = { win: buildWindow(terrain, ox, oy, CHUNK_TILES + 2 * HALO, CHUNK_TILES + 2 * HALO), cx: c.cx, cy: c.cy, albedo: c.rgba, lift: s.mode === 'lift', sun: this.sun, sunStrength: s.sunStrength, edges: terrainEdges(s) }
-      void bakeAway(job).then((r) => {
+      void bakeAway(job(c.cx, c.cy, c.rgba, false)).then((r) => {
         if (this.pending.get(c.key) !== sig) return
         this.pending.delete(c.key)
-        if (!this.active || !this.deps.window()?.terrainChunks().some((k) => k.key === c.key)) return
+        if (!this.active || !this.wanted.has(c.key)) return
         this.stats.bakes++
         this.stats.bakeMs.push(r.ms)
         if (this.stats.bakeMs.length > 200) this.stats.bakeMs.shift()
-        this.place(c.key, c.cy, sig, r.baked)
+        this.place(c.key, c.cy, sig, look, false, r.baked)
       })
     }
     return started
   }
 
-  private place(key: string, cy: number, sig: string, b: Baked): void {
+  /**
+   * Which attached chunks' flat ground the lift hides: those drawn for the
+   * look whose needed chunks south (in the same column) are drawn too.
+   * Anywhere else the flat ground stays under the lifted images, so a bake
+   * still on its way shows the plain painted ground, never the void.
+   */
+  private coverage(s: TerrainSettings): void {
+    this.flatHidden.clear()
+    if (s.mode !== 'lift') return
+    const look = this.look(s)
+    const drawn = (key: string) => this.images.get(key)?.look === look
+    const south = new Map<number, number[]>()
+    for (const k of this.need) {
+      const [cx, cy] = k.split(',').map(Number) as [number, number]
+      south.set(cx, [...(south.get(cx) ?? []), cy])
+    }
+    for (const key of this.images.keys()) {
+      if (!drawn(key)) continue
+      const [cx, cy] = key.split(',').map(Number) as [number, number]
+      if ((south.get(cx) ?? []).every((y) => y <= cy || !terrain.has(cx, y) || drawn(`${cx},${y}`))) this.flatHidden.add(key)
+    }
+  }
+
+  private place(key: string, cy: number, sig: string, look: string, quick: boolean, b: Baked): void {
     const had = this.images.get(key)
     const tex = `terrain:${key}:${had?.tex.endsWith(':a') ? 'b' : 'a'}`
     const canvas = document.createElement('canvas')
@@ -246,7 +360,7 @@ export class SceneTerrain {
     const img = this.scene.add.image(b.x, b.y, tex).setOrigin(0, 0).setDepth(GROUND_DEPTH + 0.25 + (cy + 1e5) * 1e-6)
     this.own.add(img)
     if (had) this.drop(had)
-    this.images.set(key, { img, tex, sig, edges: b.edges })
+    this.images.set(key, { img, tex, sig, look, quick, edges: b.edges, bytes: b.w * b.h * 4 })
   }
 
   // ------------------------------------------------------------ walking
@@ -331,7 +445,7 @@ export class SceneTerrain {
     const visible = nearV && !Number.isNaN(z) ? terrainVisibility(nearV.view.field, sp.x - nearV.ox * T, sp.y - 2 - nearV.oy * T, z, this.sun.direction) : 1
     // The shape is cast once per ray (quantized), light and frame; walking only moves it.
     const q = (n: number) => Math.round(n * 20) / 20
-    const v = shadowRay(gx, gy, this.sun.direction, s.mode === 'lift' ? K : 0)
+    const v = shadowRay(gx, gy, this.sun.direction, s.mode === 'lift' && !Number.isNaN(z) ? liftSlope(z, K, this.curve(s)) : 0)
     const vq: [number, number] = [q(v[0]), q(v[1])]
     const stamp = `${vq[0]},${vq[1]},${this.sunKey},${visible},${s.sunStrength},${sp.frame.name}`
     if (stamp !== this.castKey || !this.cast) {
@@ -355,27 +469,29 @@ export class SceneTerrain {
   private nearView(x: number, y: number): { view: TerrainView; ox: number; oy: number; key: string } | null {
     const tx = Math.floor(x / T)
     const ty = Math.floor(y / T)
-    const lift = terrainSettings().mode === 'lift'
-    const key = `${tx},${ty},${terrain.version},${lift}`
+    const s = terrainSettings()
+    const lift = s.mode === 'lift'
+    const key = `${tx},${ty},${terrain.version},${this.look(s)}`
     if (this.near?.key === key) return this.near
     const ox = tx - 6
     const oy = ty - 8
     const win = buildWindow(terrain, ox, oy, 13, REACH + 10)
-    this.near = { view: windowView(win, lift), ox, oy, key }
+    this.near = { view: windowView(win, lift, this.curve(s)), ox, oy, key }
     return this.near
   }
 
   // ------------------------------------------------------------ the lift pass
 
   /** Is someone at (x, y) world px, height z, behind nearer higher ground in the lift? */
-  private behind(x: number, y: number, z: number): boolean {
-    const sFoot = y / T - K * z
+  private behind(x: number, y: number, z: number, curve: LiftCurve | undefined): boolean {
+    const sFoot = y / T - liftRows(z, K, curve)
     const ty0 = Math.floor(y / T)
+    const most = liftRows(MAX_LEVEL, K, curve)
     for (let ty = ty0 + 1; ty <= ty0 + REACH; ty++) {
-      if (ty - K * 15 > sFoot) break
+      if (ty - most > sFoot) break
       const zn = terrain.zAt(x, ty * T)
       if (Number.isNaN(zn)) continue
-      if (ty - K * zn < sFoot - 0.02 && zn > z + HIDE_ABOVE) return true
+      if (ty - liftRows(zn, K, curve) < sFoot - 0.02 && zn > z + HIDE_ABOVE) return true
     }
     return false
   }
@@ -383,14 +499,17 @@ export class SceneTerrain {
   private liftPass(): void {
     if (!this.active) return
     const t0 = performance.now()
-    const lift = terrainSettings().mode === 'lift'
+    const s = terrainSettings()
+    const lift = s.mode === 'lift'
+    const curve = this.curve(s)
+    const look = this.look(s)
     const hero = this.deps.hero()
     const heroBody = this.deps.body()
     // The hero's feet in field space, before the pass lifts the sprite.
     const heroAt: [number, number] = [hero.sprite.x, hero.sprite.y]
     const view = this.scene.cameras.main.worldView
     // The lift draws ground up to 15 levels north of where it lies: sprites that far south may show.
-    const reach = lift ? K * T * 15 + 64 : 64
+    const reach = lift ? T * liftRows(MAX_LEVEL, K, curve) + 64 : 64
     let hidden = 0
     let onClosed = 0
     for (const o of this.scene.children.list) {
@@ -399,7 +518,7 @@ export class SceneTerrain {
       if (g.type !== 'Image' && g.type !== 'Sprite' && g.type !== 'Container' && g.type !== 'Text' && g.type !== 'Rectangle') continue
       // The flat ground of a chunk baked lifted: under the lifted ground, never shown between it (an unbaked one stays).
       if (g.depth <= GROUND_DEPTH) {
-        if (lift && this.images.has(`${Math.floor(g.x / CHUNK_PX)},${Math.floor(g.y / CHUNK_PX)}`)) this.move(g, 0, 0, false)
+        if (lift && this.flatHidden.has(`${Math.floor(g.x / CHUNK_PX)},${Math.floor(g.y / CHUNK_PX)}`)) this.move(g, 0, 0, false)
         continue
       }
       // The blob shadow gives way to the sun's.
@@ -413,11 +532,11 @@ export class SceneTerrain {
       const isHero = o === heroBody || o === hero.sprite
       // Still sprites keep what was worked out for them until they move or the terrain changes.
       let at = this.seen.get(o)
-      if (!at || at.x !== foot[0] || at.y !== foot[1] || at.v !== terrain.version || at.lift !== lift) {
+      if (!at || at.x !== foot[0] || at.y !== foot[1] || at.v !== terrain.version || at.look !== look) {
         const z = terrain.zAt(foot[0], foot[1] - 1)
         const closed = !isHero && CLOSED_KINDS.has(terrain.kindAt(Math.floor(foot[0] / T), Math.floor((foot[1] - 1) / T)))
-        const behind = lift && !isHero && !closed && g.depth < 1e6 && !Number.isNaN(z) && z !== 0 && this.behind(foot[0], foot[1] - 1, z)
-        at = { x: foot[0], y: foot[1], v: terrain.version, lift, z, closed, behind }
+        const behind = lift && !isHero && !closed && g.depth < 1e6 && !Number.isNaN(z) && z !== 0 && this.behind(foot[0], foot[1] - 1, z, curve)
+        at = { x: foot[0], y: foot[1], v: terrain.version, look, z, closed, behind }
         this.seen.set(o, at)
       }
       if (at.closed) {
@@ -434,7 +553,7 @@ export class SceneTerrain {
         continue
       }
       let dx = 0
-      let dy = -K * T * z
+      let dy = -T * liftRows(z, K, curve)
       if (isHero && this.gait) {
         dx += this.gait.x
         dy += this.gait.y
@@ -538,6 +657,43 @@ export class SceneTerrain {
     this.moved.push({ o: this.ghost! as Moved['o'], x: this.ghost!.x, y: this.ghost!.y, visible: false })
   }
 
+  /**
+   * The void check (dev hooks, the E2E spec): one frame drawn over a magenta
+   * background, and the magenta pixels counted (canvas px): wherever
+   * nothing was drawn. The background is put back after.
+   */
+  voidProbe(): Promise<{ void: number; total: number; at: [number, number][] }> {
+    const cam = this.scene.cameras.main
+    const c = cam.backgroundColor
+    const prev = { r: c.red, g: c.green, b: c.blue, a: c.alpha }
+    cam.setBackgroundColor(0xff00ff)
+    return new Promise((resolve) => {
+      this.scene.game.renderer.snapshot((snap) => {
+        cam.setBackgroundColor(prev)
+        const img = snap as HTMLImageElement
+        const count = () => {
+          const canvas = document.createElement('canvas')
+          canvas.width = img.width
+          canvas.height = img.height
+          const g = canvas.getContext('2d')!
+          g.drawImage(img, 0, 0)
+          const px = g.getImageData(0, 0, img.width, img.height).data
+          let n = 0
+          const at: [number, number][] = []
+          for (let i = 0; i < px.length; i += 4) {
+            if (px[i]! > 150 && px[i + 2]! > 150 && px[i + 1]! < 90) {
+              n++
+              if (at.length < 16 && n % 97 === 1) at.push([(i / 4) % img.width, Math.floor(i / 4 / img.width)])
+            }
+          }
+          resolve({ void: n, total: img.width * img.height, at })
+        }
+        if (img.complete) count()
+        else img.onload = count
+      })
+    })
+  }
+
   /** Timings afresh (the spec's steady walk). */
   resetStats(): void {
     this.stats.frameMs.length = 0
@@ -557,8 +713,16 @@ export class SceneTerrain {
       settings: terrainSettings(),
       chunks: terrain.size,
       error: terrain.error,
-      images: [...this.images.entries()].map(([k, c]) => ({ key: k, x: c.img.x, y: c.img.y, w: c.img.width, h: c.img.height, edges: c.edges })),
+      images: [...this.images.entries()].map(([k, c]) => ({ key: k, x: c.img.x, y: c.img.y, w: c.img.width, h: c.img.height, edges: c.edges, quick: c.quick, look: c.look })),
       pending: this.pending.size,
+      pendingQuick: this.pendingQuick.size,
+      need: this.need,
+      /** Needed chunks with terrain and no image for the look: a placeholder or a bake still on its way. */
+      missing: this.need.filter((k) => { const [cx, cy] = k.split(',').map(Number) as [number, number]; return this.wanted.has(k) && terrain.has(cx, cy) && this.images.get(k)?.look !== this.look(terrainSettings()) }),
+      flatHidden: this.flatHidden.size,
+      bytes: [...this.images.values()].reduce((a, c) => a + c.bytes, 0),
+      quick: this.stats.quick,
+      quickMs: pct(this.stats.quickMs),
       textures: this.scene.textures.getTextureKeys().filter((k) => k.startsWith('terrain:')).length,
       hero: { x: sp.x, y: sp.y, tile: [tx, ty], z: terrain.zAt(sp.x, sp.y - 2), kind: terrain.kindAt(tx, ty), walkable: terrain.walkable(tx, ty), gradient: terrain.gradientAt(sp.x, sp.y - 2) },
       k: this.stats.k,

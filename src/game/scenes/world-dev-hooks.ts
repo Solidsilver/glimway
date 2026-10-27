@@ -168,6 +168,7 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
   on('__fsTerrain', () => s['terrain']?.state() ?? null)
   on('__fsTerrainSet', (change) => setTerrainSettings(change))
   on('__fsTerrainReset', () => s['terrain']?.resetStats())
+  on('__fsTerrainVoid', () => s['terrain']?.voidProbe() ?? null)
   // The world lab's "go here" (src/game/dev-warp.ts), whatever the hooks grant.
   offerDevWarp((tx, ty) => s['warpWilds'](tx, ty), s)
   on('__fsDevInsets', (v) => {

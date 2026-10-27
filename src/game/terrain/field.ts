@@ -61,6 +61,8 @@ export interface TerrainView {
   field: Field
   /** Lifted: rows the view is moved down by, so the highest ground still fits (0 flat). */
   pad: number
+  /** Tall ground compressed above a knee (none: k rows a level all the way up). */
+  curve?: LiftCurve
   /** The flat look's faces (unused lifted). */
   view: FaceView
 }
@@ -109,6 +111,28 @@ export function fieldGradient(f: Field, x: number, y: number): [number, number] 
 
 // ---------------------------------------------------------------- the lifted view
 
+/** Tall ground in the lift: k rows a level up to the knee (a level), `above` rows a level past it. */
+export interface LiftCurve {
+  knee: number
+  above: number
+}
+
+/**
+ * Rows ground at height z is drawn further north: k a level up to the knee,
+ * `above` a level past it. Continuous and never falling (above ≥ 0), so a
+ * ramp over the knee stays a ramp. The one lift for bakes, sprites,
+ * see-through, shadows and the hero.
+ */
+export function liftRows(z: number, k: number, curve?: LiftCurve): number {
+  if (!curve || z <= curve.knee) return k * z
+  return k * curve.knee + curve.above * (z - curve.knee)
+}
+
+/** The lift's rows a level at height z (its slope: k below the knee, `above` past it). */
+export function liftSlope(z: number, k: number, curve?: LiftCurve): number {
+  return !curve || z < curve.knee ? k : curve.above
+}
+
 /**
  * One run of a lifted map column (screen rows s0 ≤ s < s1, in tiles):
  * ground of field tile `ty` (its north and south edges at screen rows sN, sS
@@ -133,7 +157,7 @@ export interface Span {
  * where a tile's near edge stands above the land in front, the gap is its
  * face.
  */
-export function liftColumn(f: Field, tx: number, fx: number, pad: number, k: number): Span[] {
+export function liftColumn(f: Field, tx: number, fx: number, pad: number, k: number, curve?: LiftCurve): Span[] {
   const out: Span[] = []
   let horizon = Infinity
   let nearN = 0
@@ -142,8 +166,8 @@ export function liftColumn(f: Field, tx: number, fx: number, pad: number, k: num
     const i = (ty * f.w + tx) * 4
     const zN = c[i]! + (c[i + 1]! - c[i]!) * fx
     const zS = c[i + 3]! + (c[i + 2]! - c[i + 3]!) * fx
-    const sN = ty - k * zN + pad
-    const sS = ty + 1 - k * zS + pad
+    const sN = ty - liftRows(zN, k, curve) + pad
+    const sS = ty + 1 - liftRows(zS, k, curve) + pad
     if (horizon !== Infinity && sS < horizon - 1e-4) out.push({ s0: sS, s1: horizon, face: true, ty, sN, sS, zN, zS, zBot: nearN })
     if (sN < sS && sN < horizon) out.push({ s0: sN, s1: Math.min(sS, horizon), face: false, ty, sN, sS, zN, zS, zBot: zN })
     horizon = Math.min(horizon, sN, sS)
@@ -165,10 +189,10 @@ export function spanGround(sp: Span, s: number): { fy: number; z: number } {
 }
 
 /** The margin a lifted map needs on top: the highest ground's lift (k rows a level), and a little. */
-export function liftPad(f: Field, k: number): number {
+export function liftPad(f: Field, k: number, curve?: LiftCurve): number {
   let zmax = 0
   for (const z of f.corner) zmax = Math.max(zmax, z)
-  return Math.ceil(k * zmax) + 2
+  return Math.ceil(liftRows(zmax, k, curve)) + 2
 }
 
 /** How much higher the ground drawn at a lifted point may be than the ground under it before it counts as hiding it (levels). */
@@ -186,9 +210,9 @@ export const HIDE_ABOVE = 0.25
 export function display(info: TerrainView, x: number, y: number, z: number): { x: number; y: number; hidden: boolean } {
   if (!info.lift) return { x, y, hidden: false }
   const T = TILE_PX
-  const sy = y - info.k * T * z + info.pad * T
+  const sy = y - T * liftRows(z, info.k, info.curve) + info.pad * T
   const tx = Math.min(info.field.w - 1, Math.max(0, Math.floor(x / T)))
-  const col = liftColumn(info.field, tx, x / T - tx, info.pad, info.k)
+  const col = liftColumn(info.field, tx, x / T - tx, info.pad, info.k, info.curve)
   // Sampled a hair north of the foot: the foot's own row is the boundary with what's in front.
   const sp = spanAt(col, sy / T - 0.02)
   const hidden = !sp || sp.face || spanGround(sp, sy / T - 0.02).z > z + HIDE_ABOVE
@@ -215,7 +239,7 @@ export function coveredPixels(info: TerrainView, fieldY: number, z: number, x0: 
   for (let x = 0; x < w; x++) {
     const wx = x0 + x
     if (wx < 0 || wx >= f.w * TILE_PX) continue
-    const col = liftColumn(f, wx >> 4, ((wx & 15) + 0.5) / TILE_PX, info.pad, info.k)
+    const col = liftColumn(f, wx >> 4, ((wx & 15) + 0.5) / TILE_PX, info.pad, info.k, info.curve)
     let k = col.length - 1
     for (let y = 0; y < h; y++) {
       const s = (y0 + y + 0.5) / TILE_PX

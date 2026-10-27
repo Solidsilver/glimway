@@ -171,6 +171,8 @@ export class WildsWindow {
   private paints = new Map<string, PaintedChunk>()
   /** Dev height terrain (../terrain): each generated chunk's last painted ground, kept while the switch is on, for its bake. */
   private albedos = new Map<string, { rgba: Uint8ClampedArray; sig: string }>()
+  /** Dev height terrain: chunks past the 3×3 the lift draws (south of the view), painted for their bake only. */
+  private terrainExtra = new Set<string>()
   private far = new Map<string, Phaser.GameObjects.Image[]>()
   private loading = new Set<string>()
   /** When a chunk whose fetch failed may be asked for again (ms, page clock). */
@@ -651,7 +653,7 @@ export class WildsWindow {
       if (this.pending.get(key) !== sig) return
       this.pending.delete(key)
       // Still wanted, and painted from the chunk as it is now.
-      if (this.gone || !this.plan?.fetch.includes(key) || this.sigOf(cx, cy) !== sig) return
+      if (this.gone || !(this.plan?.fetch.includes(key) || this.terrainExtra.has(key)) || this.sigOf(cx, cy) !== sig) return
       done(r)
     })
   }
@@ -663,6 +665,8 @@ export class WildsWindow {
 
   private paintedNow(key: string, sig: string, rgba: Uint8ClampedArray, ms: number, thread: PaintThread): void {
     if (terrainSettings().on && !fixedPlaceOf(...Object.values(parseChunkKey(key)) as [number, number])) this.albedos.set(key, { rgba, sig })
+    // A chunk painted only for the terrain's bake has no ground drawn of its own.
+    if (!this.plan?.fetch.includes(key) && !this.attached.has(key)) return
     const old = this.paints.get(key)
     const texture = groundTexture(this.deps.scene, `wilds-ground:${key}:${old && old.key.endsWith(':a') ? 'b' : 'a'}`, rgba)
     this.logPaint(key, ms, false, thread)
@@ -825,16 +829,35 @@ export class WildsWindow {
 
   /**
    * Dev height terrain (../terrain/scene-terrain.ts): the attached generated
-   * chunks and their painted ground (null until painted with the switch on).
-   * Kept ground of chunks no longer attached is let go.
+   * chunks and their painted ground (null until painted with the switch on),
+   * and `extra` chunks the lift draws past them: generated land is fetched
+   * and painted for its bake (once its neighbours are known), nothing else
+   * of it is built. Kept ground of chunks neither attached nor asked for is
+   * let go.
    */
-  terrainChunks(): { key: string; cx: number; cy: number; rgba: Uint8ClampedArray | null; sig: string }[] {
-    for (const k of [...this.albedos.keys()]) if (!this.attached.has(k)) this.albedos.delete(k)
-    return [...this.attached.keys()].map((key) => {
+  terrainChunks(extra: string[] = []): { key: string; cx: number; cy: number; rgba: Uint8ClampedArray | null; sig: string; attached: boolean }[] {
+    this.terrainExtra = new Set(extra.filter((k) => !this.attached.has(k) && !this.fixed.has(k)))
+    for (const k of [...this.albedos.keys()]) if (!this.attached.has(k) && !this.terrainExtra.has(k)) this.albedos.delete(k)
+    const known = (cx: number, cy: number) => this.known(cx, cy)
+    const out: { key: string; cx: number; cy: number; rgba: Uint8ClampedArray | null; sig: string; attached: boolean }[] = []
+    for (const key of this.attached.keys()) {
       const { cx, cy } = parseChunkKey(key)
       const a = this.albedos.get(key)
-      return { key, cx, cy, rgba: a?.rgba ?? null, sig: a?.sig ?? '' }
-    })
+      out.push({ key, cx, cy, rgba: a?.rgba ?? null, sig: a?.sig ?? '', attached: true })
+    }
+    for (const key of this.terrainExtra) {
+      const { cx, cy } = parseChunkKey(key)
+      if (!insideNamedBorder(cx, cy) || fixedPlaceOf(cx, cy)) continue
+      const sig = this.sigOf(cx, cy)
+      const a = this.albedos.get(key)
+      if (a?.sig !== sig && this.pending.get(key) !== sig) {
+        // Its ground, and the neighbours its paint reads; painted once they're known.
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (insideNamedBorder(cx + dx, cy + dy) && !known(cx + dx, cy + dy)) this.load(chunkKey(cx + dx, cy + dy))
+        if (effectiveChunk(cx, cy) && paintable(cx, cy, insideNamedBorder, known)) this.paint(key, sig)
+      }
+      out.push({ key, cx, cy, rgba: a?.rgba ?? null, sig: a?.sig ?? '', attached: false })
+    }
+    return out
   }
 
   /** The switch went on: chunks painted before it are painted again, so their ground is kept for the bake. */

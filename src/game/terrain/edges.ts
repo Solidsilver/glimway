@@ -73,7 +73,7 @@ export function* viewHeightsSteps(info: TerrainView, x0: number, y0: number, w: 
     for (let x = 0; x < w; x++) {
       const wx = x0 + x
       if (wx < 0 || wx >= f.w * T) continue
-      const col = liftColumn(f, wx >> 4, ((wx & 15) + 0.5) / T, info.pad, info.k)
+      const col = liftColumn(f, wx >> 4, ((wx & 15) + 0.5) / T, info.pad, info.k, info.curve)
       let k = col.length - 1
       for (let y = 0; y < h; y++) {
         const s = (y0 + y + 0.5) / T

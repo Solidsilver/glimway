@@ -31,7 +31,7 @@ export function receivingPoint(info: TerrainView, x: number, y: number): { x: nu
   const tx = Math.max(0, Math.min(f.w - 1, Math.floor(x / T)))
   const fx = Math.max(0, Math.min(1, x / T - tx))
   if (info.lift) {
-    const sp = spanAt(liftColumn(f, tx, fx, info.pad, info.k), y / T)
+    const sp = spanAt(liftColumn(f, tx, fx, info.pad, info.k, info.curve), y / T)
     if (sp) {
       if (sp.face) {
         const down = (y / T - sp.s0) / Math.max(1e-6, sp.s1 - sp.s0)

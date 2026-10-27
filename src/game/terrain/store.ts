@@ -98,6 +98,22 @@ export class TerrainStore implements StepRule {
     return this.chunks.size
   }
 
+  private tops = new WeakMap<SlopeSurface, number>()
+  /** A chunk's highest ground (levels), or NaN when it isn't known. */
+  top(cx: number, cy: number): number {
+    const s = this.chunks.get(key(cx, cy))
+    if (!s) return Number.NaN
+    let t = this.tops.get(s)
+    if (t === undefined) {
+      let most = 0
+      for (const c of s.corners) most = Math.max(most, c)
+      for (const c of s.overrideCorners) most = Math.max(most, c)
+      t = most / SLOPE_UNIT
+      this.tops.set(s, t)
+    }
+    return t
+  }
+
   // A tile's chunk and index, without allocating.
   private s: SlopeSurface | null = null
   private i = 0

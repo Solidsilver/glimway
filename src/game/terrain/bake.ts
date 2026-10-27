@@ -15,12 +15,12 @@
  * The window is the chunk and a halo round it, so seams, edges and the
  * sun's rays read across chunks; ground not loaded is flat at 0.
  */
-import { TILE_PX as T, VIEW_FACE, fieldZ, liftColumn, liftPad, spanGround, type Span, type TerrainView } from './field.ts'
+import { TILE_PX as T, VIEW_FACE, fieldZ, liftColumn, liftPad, spanGround, type LiftCurve, type Span, type TerrainView } from './field.ts'
 import { buildSunMap, sampleSunMap, sampleVisibility, type SunMap } from './sun-map.ts'
 import { EDGE_KEEP, EDGE_MAX_DARK, chunkEdges, combineShade, type EdgeSettings } from './edges.ts'
 import { dither } from './sun-shadow.ts'
 import type { DaySun } from './sun.ts'
-import { cliffMaterial, cragMaterial, heightTint, steepMaterial, type RGB } from './material.ts'
+import { cliffMaterial, cragMaterial, hash, heightTint, steepMaterial, type RGB } from './material.ts'
 
 /** Field kinds in a window (the lab's ../height-lab/levels.ts KIND values, so the shared code reads them alike). */
 export const FIELD_NONE = 0
@@ -49,12 +49,18 @@ export interface BakeJob {
   win: BakeWindow
   cx: number
   cy: number
-  /** The chunk's painted ground, CHUNK_PX², RGBA. */
-  albedo: Uint8ClampedArray
+  /** The chunk's painted ground, CHUNK_PX², RGBA (null: not painted here yet, a plain ground stands in). */
+  albedo: Uint8ClampedArray | null
   lift: boolean
+  /** Tall ground compressed in the lift (none: full height). */
+  curve?: LiftCurve
+  /** A placeholder while the real bake is on its way: the lifted shape and materials, no sun or edges. */
+  quick?: boolean
   sun: DaySun
   sunStrength: number
   edges: EdgeSettings
+  /** The plain ground's colour when there is no painted ground. */
+  plain?: RGB
 }
 
 export interface Baked {
@@ -69,14 +75,20 @@ export interface Baked {
 }
 
 /** The window as the shared drawing code takes it. */
-export function windowView(win: BakeWindow, lift: boolean): TerrainView {
+export function windowView(win: BakeWindow, lift: boolean, curve?: LiftCurve): TerrainView {
   const n = win.w * win.h
   const field = { w: win.w, h: win.h, corner: win.corner, kind: win.kind, ground: new Uint8Array(n), slope: new Float32Array(n) }
   const kind = new Uint8Array(n)
   if (!lift) for (let i = 0; i < n; i++) if (win.faceRows[i]! > 0) kind[i] = VIEW_FACE
   const k = lift ? 3 : 0
-  return { lift, k, field, pad: lift ? liftPad(field, k) : 0, view: { w: win.w, h: win.h, kind, faceTop: win.faceTop, faceRow: win.faceRow, faceRows: win.faceRows } }
+  const c = lift ? curve : undefined
+  return { lift, k, curve: c, field, pad: lift ? liftPad(field, k, c) : 0, view: { w: win.w, h: win.h, kind, faceTop: win.faceTop, faceRow: win.faceRow, faceRows: win.faceRows } }
 }
+
+/** The plain ground that stands in for a chunk not painted yet (the scene passes its neighbours' mean), a little varied, world-fixed. */
+const PLAIN: RGB = [118, 100, 62]
+/** A placeholder's even light. */
+const QUICK_LIGHT: RGB = [0.92, 0.92, 0.92]
 
 function run<R>(it: Generator<void, R>): R {
   for (;;) {
@@ -89,7 +101,7 @@ const walkableField = (k: number) => k === FIELD_SLOPE
 
 export function bakeChunk(job: BakeJob): Baked {
   const { win } = job
-  const view = windowView(win, job.lift)
+  const view = windowView(win, job.lift, job.curve)
   const f = view.field
   const tx0 = job.cx * CHUNK_TILES - win.ox
   const ty0 = job.cy * CHUNK_TILES - win.oy
@@ -105,7 +117,7 @@ export function bakeChunk(job: BakeJob): Baked {
     let smax = -Infinity
     for (let x = 0; x < W; x++) {
       const vx = X + x
-      const all = liftColumn(f, vx >> 4, ((vx & 15) + 0.5) / T, view.pad, view.k)
+      const all = liftColumn(f, vx >> 4, ((vx & 15) + 0.5) / T, view.pad, view.k, view.curve)
       const mine = all.filter((sp) => sp.ty >= ty0 && sp.ty < ty0 + CHUNK_TILES)
       for (const sp of mine) {
         smin = Math.min(smin, sp.s0)
@@ -117,18 +129,28 @@ export function bakeChunk(job: BakeJob): Baked {
     Y = Math.floor(smin * T)
     H = Math.max(1, Math.ceil(smax * T) - Y)
   }
-  const sun: SunMap = run(buildSunMap(view, X, Y, W, H, job.sun, job.sunStrength, true))
-  const on = job.edges.strength > 0
+  // A placeholder has no sun and no edges: the shape and materials only, at once.
+  const sun: SunMap | null = job.quick ? null : run(buildSunMap(view, X, Y, W, H, job.sun, job.sunStrength, true))
+  const on = !job.quick && job.edges.strength > 0
   const e = on ? chunkEdges(view, X, Y, W, H, job.edges) : null
   const lit = job.sun.daylight > 0
   const rgba = new Uint8ClampedArray(W * H * 4)
   const c: RGB = [0, 0, 0]
   const wx0 = win.ox * T + X
+  const painted = job.albedo
+  const plain = job.plain ?? PLAIN
   const albedo = (lx: number, ly: number) => {
+    if (!painted) {
+      const v = 0.94 + hash((wx0 + lx) >> 2, (win.oy * T + ty0 * T + ly) >> 2, 41) * 0.12
+      c[0] = plain[0] * v
+      c[1] = plain[1] * v
+      c[2] = plain[2] * v
+      return
+    }
     const o = (Math.min(CHUNK_PX - 1, Math.max(0, ly)) * CHUNK_PX + lx) * 4
-    c[0] = job.albedo[o]!
-    c[1] = job.albedo[o + 1]!
-    c[2] = job.albedo[o + 2]!
+    c[0] = painted[o]!
+    c[1] = painted[o + 1]!
+    c[2] = painted[o + 2]!
   }
   // The ground of field tile (tx, ty) at fractions (fx, fy): albedo, then the terrain's material.
   const ground = (x: number, tx: number, ty: number, fx: number, fy: number) => {
@@ -185,7 +207,7 @@ export function bakeChunk(job: BakeJob): Baked {
         } else ground(x, tx, ty, ((vx & 15) + 0.5) / T, fy)
       }
       // The one sun, then the edge band (weaker in terrain shade) and the rim.
-      const light = sampleSunMap(sun, vx + 0.5, vy + 0.5).rgb
+      const light = sun ? sampleSunMap(sun, vx + 0.5, vy + 0.5).rgb : QUICK_LIGHT
       let r = c[0] * light[0]
       let g = c[1] * light[1]
       let b = c[2] * light[2]
@@ -193,7 +215,7 @@ export function bakeChunk(job: BakeJob): Baked {
         const i = y * W + x
         const ed = Math.min(EDGE_MAX_DARK, e.dark[i]! * job.edges.strength)
         if (ed > 0) {
-          const vis = lit ? (sampleVisibility(sun, vx + 0.5, vy + 0.5) >= dither(wx0 + x, vy) ? 1 : 0) : 1
+          const vis = lit && sun ? (sampleVisibility(sun, vx + 0.5, vy + 0.5) >= dither(wx0 + x, vy) ? 1 : 0) : 1
           r *= combineShade(1, ed * EDGE_KEEP[0], vis)
           g *= combineShade(1, ed * EDGE_KEEP[1], vis)
           b *= combineShade(1, ed * EDGE_KEEP[2], vis)

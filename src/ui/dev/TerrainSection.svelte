@@ -19,6 +19,22 @@
       <button type="button" class="small" aria-pressed={s.mode === 'top'} onclick={() => set({ mode: 'top' })}>Top-down</button>
       <button type="button" class="small" aria-pressed={s.mode === 'lift'} onclick={() => set({ mode: 'lift' })}>True ¾ lift</button>
     </div>
+    <!-- Tall ground in the lift: 48 px a level all the way up, or compressed past the knee (src/game/terrain/field.ts liftRows). -->
+    <div class="row" role="group" aria-label="Tall ground">
+      <span class="label">Tall ground (¾ lift)</span>
+      <button type="button" class="small" aria-pressed={s.tall === 'full'} onclick={() => set({ tall: 'full' })} data-testid="dev-terrain-tall-full">Full height</button>
+      <button type="button" class="small" aria-pressed={s.tall === 'compressed'} onclick={() => set({ tall: 'compressed' })} data-testid="dev-terrain-tall-compressed">Compressed</button>
+      {#if s.tall === 'compressed'}
+        <label class="row">
+          <span class="label">48 px a level up to level {s.tallKnee}</span>
+          <input type="range" min="1" max="15" step="1" aria-label="Compression knee" value={s.tallKnee} oninput={(e) => set({ tallKnee: Number(e.currentTarget.value) })} />
+        </label>
+        <label class="row">
+          <span class="label">Then {s.tallStep} px a level</span>
+          <input type="range" min="0" max="48" step="2" aria-label="Lift above the knee" value={s.tallStep} oninput={(e) => set({ tallStep: Number(e.currentTarget.value) })} />
+        </label>
+      {/if}
+    </div>
     <div class="row" role="group" aria-label="Edge shading">
       <label class="row">
         <span class="label">Edge shading: {Math.round(s.edgeShade * 100)}%</span>

@@ -6,14 +6,21 @@
  * the live server the switch finds nothing and play stays flat.
  */
 import { EDGE_DEFAULT, type EdgeSettings } from './edges.ts'
+import { TILE_PX, type LiftCurve } from './field.ts'
 
 export type TerrainMode = 'top' | 'lift'
+export type TallGround = 'full' | 'compressed'
 
 export interface TerrainSettings {
   /** Generated height terrain in the Wilds. */
   on: boolean
   /** Top-down (shading by facing) or the true ¾ lift (48 px a level). */
   mode: TerrainMode
+  /** Tall ground in the lift: 48 px a level all the way up, or compressed past a knee. */
+  tall: TallGround
+  /** Compressed: the knee (a level) and the lift a level above it (px, 0–48). */
+  tallKnee: number
+  tallStep: number
   /** Edge shading (./edges.ts): strength 0–1 (0 off), band width px, scaled by the drop, threshold levels, a rim on the lip. */
   edgeShade: number
   edgeWidth: number
@@ -36,6 +43,9 @@ export interface TerrainSettings {
 export const TERRAIN_DEFAULT: TerrainSettings = {
   on: false,
   mode: 'top',
+  tall: 'compressed',
+  tallKnee: 4,
+  tallStep: 16,
   edgeShade: EDGE_DEFAULT.strength,
   edgeWidth: EDGE_DEFAULT.width,
   edgeScale: EDGE_DEFAULT.scale,
@@ -52,6 +62,9 @@ export const TERRAIN_DEFAULT: TerrainSettings = {
 const ALLOWED: { [K in keyof TerrainSettings]: readonly TerrainSettings[K][] | { min: number; max: number } } = {
   on: [true, false],
   mode: ['top', 'lift'],
+  tall: ['full', 'compressed'],
+  tallKnee: { min: 1, max: 15 },
+  tallStep: { min: 0, max: 48 },
   edgeShade: { min: 0, max: 1 },
   edgeWidth: { min: 1, max: 8 },
   edgeScale: [true, false],
@@ -82,6 +95,11 @@ export function readTerrainSettings(raw: unknown): TerrainSettings {
 /** The look's edge settings as ./edges.ts takes them. */
 export function terrainEdges(s: TerrainSettings): EdgeSettings {
   return { strength: s.edgeShade, width: s.edgeWidth, scale: s.edgeScale, threshold: s.edgeThreshold, rim: s.edgeRim }
+}
+
+/** The lift's curve for tall ground (./field.ts liftRows): none at full height. */
+export function terrainCurve(s: TerrainSettings): LiftCurve | undefined {
+  return s.tall === 'compressed' ? { knee: Math.round(s.tallKnee), above: Math.round(s.tallStep) / TILE_PX } : undefined
 }
 
 const KEY = 'glimway:terrain'
