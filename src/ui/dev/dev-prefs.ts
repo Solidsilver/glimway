@@ -9,7 +9,7 @@ import { readJson, stringList, writeJson } from '../../lib/local-json.ts';
 const KEY = 'fingersnap:dev-panel';
 
 /** The panel's sections, top to bottom. */
-export const DEV_SECTIONS = ['clock', 'quick', 'give', 'world-lab', 'height-lab', 'timings'] as const;
+export const DEV_SECTIONS = ['clock', 'quick', 'give', 'world-lab', 'terrain', 'height-lab', 'timings'] as const;
 export type DevSection = (typeof DEV_SECTIONS)[number];
 
 export interface DevPrefs {
@@ -22,7 +22,7 @@ export interface DevPrefs {
 }
 
 /** Unfolded at first: everything but the load timings. */
-export const DEFAULT_SECTIONS: Record<DevSection, boolean> = { clock: true, quick: true, give: true, 'world-lab': true, 'height-lab': true, timings: false };
+export const DEFAULT_SECTIONS: Record<DevSection, boolean> = { clock: true, quick: true, give: true, 'world-lab': true, terrain: true, 'height-lab': true, timings: false };
 
 /** How many recent things the panel keeps. */
 export const RECENT_MAX = 8;

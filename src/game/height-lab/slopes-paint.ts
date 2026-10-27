@@ -1,4 +1,4 @@
-/** Dev-only slope albedo: material, contours and terrace marks. Sun light lives in sun-map.ts. */
+/** Dev-only slope albedo: material and cliff faces. Sun light lives in ../terrain/sun-map.ts. */
 import { TERRAIN } from '../../lib/tile.ts'
 import { wildsGround } from '../../lib/wilds/data.ts'
 import { fnv1a32 } from '../../lib/hash.ts'
@@ -8,24 +8,13 @@ import { wildsLook } from '../wilds/wilds-looks.ts'
 import { G, GROUNDS, SURFACE, type LabArea } from './area.ts'
 import { DX, DY, KIND, TILE_PX } from './levels.ts'
 import { liftColumn, spanGround, type Field, type Span } from './slopes.ts'
+import { cliffMaterial, cragMaterial, hash, heightTint, steepMaterial } from '../terrain/material.ts'
 
-/** Sparse contours: a level apart, in accents chosen per SPARSE_CELL px world cell (a few in ten left out). */
-export const SPARSE_CONTOUR = 1
-const SPARSE_CELL = 9
 
 type RGB = [number, number, number]
 const T = TILE_PX
 
-function hash(x: number, y: number, salt: number): number {
-  let h = (x * 374761393 + y * 668265263 + salt * 1442695041) | 0
-  h = Math.imul(h ^ (h >>> 13), 1274126177)
-  return ((h ^ (h >>> 16)) >>> 0) / 4294967296
-}
 const mix = (a: number, b: number, t: number) => a + (b - a) * t
-const smoothstep = (a: number, b: number, x: number) => {
-  const t = Math.max(0, Math.min(1, (x - a) / (b - a)))
-  return t * t * (3 - 2 * t)
-}
 const hexRGB = (s: string): RGB => [parseInt(s.slice(1, 3), 16), parseInt(s.slice(3, 5), 16), parseInt(s.slice(5, 7), 16)]
 
 /** Fog bands: a level image every half level. */
@@ -33,10 +22,6 @@ export const BAND = 0.5
 export const bandOf = (z: number) => Math.floor(z / BAND + 1e-4) * BAND
 
 
-/** Contours every CONTOUR levels, stronger every CONTOUR_MAJOR of them; terraces TERRACE levels high. */
-export const CONTOUR = 0.5
-const CONTOUR_MAJOR = 4
-export const TERRACE = 0.2
 
 /** The painter's terrain for each of the slopes area's grounds (its own tints are this file's). */
 const SPECIAL: Partial<Record<string, keyof typeof TERRAIN>> = { 'tops-scree': 'stone_b', 'tops-crag': 'stone_a', 'wq-stone': 'stone_a', 'tops-path': 'path_a' }
@@ -68,12 +53,7 @@ export function paintField(area: LabArea, x0: number, y0: number, w: number, h: 
       zg[y * zw + x] = zPx(f, wx, wy)
     }
   const zAt = (x: number, y: number) => zg[(y + M) * zw + x + M]!
-  const lk = info.look
-  const dry = hexRGB('#d8c890')
-  const stone = hexRGB('#a8a296')
-  const snow = hexRGB('#eef2f8')
   const scree = hexRGB('#aa9f8e')
-  const bare = hexRGB('#96928b')
   const sand = hexRGB('#c4c2b2')
   const surface = area.stack.layers[SURFACE]!
   for (let y = 0; y < h; y++)
@@ -87,7 +67,6 @@ export function paintField(area: LabArea, x0: number, y0: number, w: number, h: 
       const talus = surface.kind[i] === KIND.face
       const kind = talus ? KIND.steep : f.kind[i]!
       const ground = f.ground[i]!
-      const open = kind === KIND.flat || kind === KIND.slope || kind === KIND.prop
       const o = (y * w + x) * 4
       let r = px[o]!
       let g = px[o + 1]!
@@ -103,50 +82,22 @@ export function paintField(area: LabArea, x0: number, y0: number, w: number, h: 
       let gx = zAt(x + 8, y) - zAt(x - 8, y)
       let gy = zAt(x, y + 8) - zAt(x, y - 8)
       if (Math.abs(gx) > 1 || Math.abs(gy) > 1) [gx, gy] = gradPx(f, Math.min(f.w * T - 1, wx), Math.min(f.h * T - 1, wy))
-      const slope = Math.hypot(gx, gy)
+      const c: RGB = [r, g, b]
       if (ground === G.bank) {
         // The sea's stand-in: pale sand flats with ripples.
         tint(sand, 0.45)
         const ripple = (wy + Math.round(Math.sin(wx / 9) * 2)) % 7
         if (ripple === 0) tint([226, 230, 226], 0.4)
         else if (ripple === 1) tint([128, 136, 140], 0.15)
-      } else {
-        tint(dry, 0.18 * smoothstep(2.5, 6.5, z))
-        tint(stone, 0.42 * smoothstep(6, 10, z))
-        if (z > 11) tint(snow, (0.35 + hash(wx >> 2, wy >> 2, 21) * 0.25) * smoothstep(11, 12.5, z))
-      }
+        c[0] = r
+        c[1] = g
+        c[2] = b
+      } else heightTint(c, z, wx, wy)
       if (kind === KIND.steep) {
-        // Scree down the fall line (broken streaks of uneven length); bare rock where it's steeper still.
-        // Its own stone, not the painter's: grey-brown grit, patchy.
-        const rock = slope > 0.55
-        const base = (rock ? bare : scree).map((ch) => ch * (0.92 + hash(wx >> 3, wy >> 3, 31) * 0.16 + (hash(wx, wy, 32) - 0.5) * 0.12)) as RGB
-        r = base[0]
-        g = base[1]
-        b = base[2]
-        const dx = gx / (slope || 1)
-        const dy = gy / (slope || 1)
-        const along = wx * dx + wy * dy
-        const across = -wx * dy + wy * dx
-        // Short dashes down the fall line, on a world grid so they don't swirl with it.
-        const lane = Math.floor(across / 2)
-        const dash = hash(lane, Math.floor(along / 5), 22)
-        if (dash < 0.1) tint([58, 54, 50], rock ? 0.35 : 0.25)
-        else if (dash > 0.93) tint([214, 208, 196], 0.18)
-        // Loose pale stones in the material.
-        if (hash(wx >> 1, wy >> 1, 23) < 0.05 && (wx & 1) === 0 && (wy & 1) === 0) tint([228, 222, 208], 0.55)
-        if (talus) {
-          // Fallen blocks at a cliff foot, varied by material.
-          const bx = Math.floor((wx + (Math.floor(wy / 3) % 2) * 2) / 4)
-          const by = Math.floor(wy / 3)
-          const blk = hash(bx, by, 33)
-          const k2 = 0.78 - blk * 0.16
-          r *= k2
-          g *= k2 * 0.98
-          b *= k2 * 0.97
-        }
         // A rim of loose stones where the walkable ground ends.
         const fx = wx & 15
         const fy = wy & 15
+        let rimOff = -1
         for (let d = 0; d < 4; d++) {
           const nx = tx + DX[d]
           const ny = ty + DY[d]
@@ -155,18 +106,15 @@ export function paintField(area: LabArea, x0: number, y0: number, w: number, h: 
           if (nk !== KIND.flat && nk !== KIND.slope && nk !== KIND.prop) continue
           if (surface.kind[ny * f.w + nx] === KIND.face) continue
           const off = d === 0 ? fy : d === 1 ? 15 - fx : d === 2 ? 15 - fy : fx
-          if (off < 2) tint([214, 204, 182], off === 0 ? 0.55 : 0.3)
+          if (rimOff < 0 || off < rimOff) rimOff = off
         }
-      } else if (kind === KIND.crag) {
-        // Broken rock: blocks with a lit edge to the north-west, cracks.
-        const cell = Math.floor((wx + (Math.floor(wy / 5) % 2) * 3) / 6) * 977 + Math.floor(wy / 5)
-        const c = 96 + hash(cell, 0, 24) * 40
-        r = c
-        g = c * 0.97
-        b = c * 0.95
-        const ex = (wx + (Math.floor(wy / 5) % 2) * 3) % 6
-        const ey = wy % 5
-        if (ey === 4 || ex === 5) tint([30, 28, 30], 0.6)
+        steepMaterial(c, wx, wy, gx, gy, talus, rimOff)
+      } else if (kind === KIND.crag) cragMaterial(c, wx, wy)
+      r = c[0]
+      g = c[1]
+      b = c[2]
+      if (kind === KIND.steep || kind === KIND.crag) {
+        // Their own stone (../terrain/material.ts).
       } else if (ground === G['tops-path']) {
         // The rocky path: flat stones of the scree's own stone, laid (scree has streaks down the fall line and loose
         // stones): each stone a jittered 9 px cell's nearest pixels, its own shade, a dark joint round it, lit on its
@@ -179,72 +127,9 @@ export function paintField(area: LabArea, x0: number, y0: number, w: number, h: 
         b = c[2]
         if (edge < 0.45) tint([95, 90, 82], 0.45)
       }
-      // The treatments: light, then lines.
-      let k = 1
-      const step = (lo: number, hi: number) => Math.abs(hi - lo) < 0.15
-      if (lk.contours === 'current' && kind !== KIND.crag) {
-        const band = Math.floor(z / CONTOUR)
-        let low = false
-        let high = false
-        let major = false
-        for (const [ax, ay] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
-          const zn = zAt(x + ax, y + ay)
-          if (!step(z, zn)) continue
-          const bn = Math.floor(zn / CONTOUR)
-          if (bn > band) {
-            low = true
-            if (bn % CONTOUR_MAJOR === 0) major = true
-          } else if (bn < band) high = true
-        }
-        if (low) k *= major ? 0.55 : 0.7
-        else if (high) k *= 1.15
-      }
-      if (lk.contours === 'sparse' && open && ground !== G.bank && slope > 0.02) {
-        // Distance (px) above the level line below, and below the level line above.
-        const gp = slope / T
-        const lv = z / SPARSE_CONTOUR
-        const above = ((lv - Math.floor(lv)) * SPARSE_CONTOUR) / gp
-        const below = ((Math.ceil(lv) - lv) * SPARSE_CONTOUR) / gp
-        // The line this pixel is by (the one below it on the high side, the one above on the low side), and the accent there.
-        const line = above < below ? Math.floor(lv) : Math.ceil(lv)
-        const cell = hash(Math.floor(wx / SPARSE_CELL), Math.floor(wy / SPARSE_CELL), 41 + line)
-        const fade = 1 - smoothstep(0.18, 0.26, slope)
-        if (cell >= 0.5 && fade > 0) {
-          if (cell < 0.78) {
-            // Grass tips: light blades of uneven height on the high side's edge, a dark shade under them.
-            if (hash(wx, line, 43) < 0.6 && above < 0.7 + 1.1 * hash(wx, line, 44)) tint([204, 228, 124], 0.42 * fade)
-            else if (below < 0.9) tint([32, 56, 26], 0.28 * fade)
-            else if (below < 1.8) tint([32, 56, 26], 0.1 * fade)
-          } else if (cell < 0.94) {
-            // A soil edge: a light rim, bare soil just below it.
-            if (above < 0.9) tint([240, 230, 186], 0.32 * fade)
-            else if (below < 0.9) tint([92, 68, 44], 0.32 * fade)
-            else if (below < 1.8) tint([92, 68, 44], 0.12 * fade)
-          } else if (below < 1.8 && hash(wx >> 1, wy >> 1, 45) < 0.45) {
-            // A few stones along the line, each lit on top, a shadow under it.
-            tint((wy & 1) === 0 ? [222, 216, 200] : [48, 44, 40], (wy & 1) === 0 ? 0.48 * fade : 0.28 * fade)
-          }
-        }
-      }
-      if (lk.terraces && kind !== KIND.crag) {
-        const tb = (zz: number) => Math.floor(zz / TERRACE)
-        const here = tb(z)
-        const n1 = zAt(x, y - 1)
-        const n2 = zAt(x, y - 2)
-        const s1 = zAt(x, y + 1)
-        if (step(z, n1) && tb(n1) > here) k *= 0.6
-        else if (step(z, n2) && step(n1, n2) && tb(n2) > here) k *= 0.8
-        else if (step(z, s1) && tb(s1) < here) k *= 1.24
-        else if (step(z, s1) && tb(s1) > here) k *= 0.78
-        else {
-          const e1 = zAt(x + 1, y)
-          const w1 = zAt(x - 1, y)
-          if ((step(z, e1) && tb(e1) > here) || (step(z, w1) && tb(w1) > here)) k *= 0.84
-        }
-      }
-      px[o] = r * k
-      px[o + 1] = g * k
-      px[o + 2] = b * k
+      px[o] = r
+      px[o + 1] = g
+      px[o + 2] = b
       px[o + 3] = 255
     }
   const zs = new Float32Array(w * h)
@@ -305,10 +190,10 @@ function gradPx(f: Field, wx: number, wy: number): [number, number] {
   return [(c[i + 1]! - c[i]!) * (1 - fy) + (c[i + 2]! - c[i + 3]!) * fy, (c[i + 3]! - c[i]!) * (1 - fx) + (c[i + 2]! - c[i + 1]!) * fx]
 }
 
-/** The paint cache's key (./slopes-art.ts) for a chunk of the area as it's drawn: every setting that paints (facing, contours, terraces, lift strength). */
+/** The paint cache's key (./slopes-art.ts) for a chunk of the area as it's drawn: every setting that paints (the lift). */
 export function chunkKey(area: LabArea, cx: number, cy: number): string {
   const l = area.slopes!.look
-  return `${l.contours}|${l.terraces ? 1 : 0}|${l.lift}|${cx},${cy}`
+  return `${l.lift}|${cx},${cy}`
 }
 
 /** A part of the map (tiles, inclusive). */
@@ -504,25 +389,3 @@ export function cutBands(part: SlopesPart, px: Uint8ClampedArray, zp: Float32Arr
   }
 }
 
-/** A lifted face's colour by the height it rises to (warm low down, greyer and cooler high up), as ./slopes-art.ts slopeFaceTint. */
-function faceTint(z: number): RGB {
-  return z < 2.5 ? [1.06, 0.98, 0.88] : z < 5 ? [1, 0.96, 0.92] : z < 9 ? [0.94, 0.95, 1] : [1.02, 1.03, 1.07]
-}
-
-/** Unlit rock strata and mineral seams, in world height coordinates. These
- * are material marks, without a lit rim or a shaded side, shared by flat
- * and lifted faces. Coarse grain keeps tall faces from becoming blank slabs. */
-function cliffMaterial(x: number, z: number, top: number): RGB {
-  const height = z * 48
-  const seamY = height + 1.8 * Math.sin(x / 23) + 0.6 * Math.sin(x / 7)
-  const band = Math.floor(seamY / 8)
-  const phase = seamY - band * 8
-  const patch = hash(Math.floor(x / 17), Math.floor(height / 13), 71)
-  let value = 152 + (hash(Math.floor(x / 3), Math.floor(height / 3), 72) - 0.5) * 15 + (patch - .5) * 22
-  // A dark mineral joint, with no directional highlight beside it.
-  if (phase < .8 && hash(Math.floor(x / 19), band, 73) < .8) value *= .77
-  const joint = (x + Math.floor(height / 19) * 3 + 100000) % 23
-  if (joint < 1 && hash(Math.floor(x / 23), Math.floor(height / 29), 74) < .6) value *= .73
-  value += (hash(x, Math.floor(height), 75) - .5) * 9
-  return faceTint(top).map(c => c * value) as RGB
-}

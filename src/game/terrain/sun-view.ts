@@ -1,10 +1,10 @@
 /** Phaser adapter for the independent, cheap sun map and alpha silhouettes. */
 import Phaser from 'phaser'
 import { buildSunMap, sampleVisibility, SUN_RES, type SunMap } from './sun-map.ts'
-import { silhouetteBounds, type DaySun } from './sun.ts'
+import type { DaySun } from './sun.ts'
 import { buildShadowLayer, casterProxy, dither, SHADOW_KEEP, type Caster, type CasterKind, type ShadowProxy } from './sun-shadow.ts'
 import { EDGE_KEEP, EDGE_MAX_DARK, chunkEdgesSteps, combineShade, edgeKey, type EdgeSettings } from './edges.ts'
-import type { SlopesInfo } from './slopes.ts'
+import type { TerrainView } from './field.ts'
 
 export class SunChunk {
   readonly image: Phaser.GameObjects.Image
@@ -57,7 +57,7 @@ export class SunChunk {
   }
   /** `casters` (still trees and rocks that can reach this chunk) is read
    * once the light is done; null draws no still shadows. */
-  start(info: SlopesInfo, sun: DaySun, strength: number, enabled: boolean, revision: string, casters: (() => readonly Caster[]) | null = null, edges: EdgeSettings | null = null): void {
+  start(info: TerrainView, sun: DaySun, strength: number, enabled: boolean, revision: string, casters: (() => readonly Caster[]) | null = null, edges: EdgeSettings | null = null): void {
     this.revision = revision
     this.cost = 0
     const { x, y, width, height } = this
@@ -163,20 +163,26 @@ export class MoverShadow {
     this.image = scene.add.image(0, 0, key).setOrigin(0).setDepth(-998_980).setBlendMode(Phaser.BlendModes.MULTIPLY).setVisible(false)
   }
   /** `multiply(wx, wy)` gives each pixel's RGB multiplier, or null for none. */
+  /** The canvas's last painted rectangle (only it is cleared and put again). */
+  private used = { w: 0, h: 0 }
   draw(stamp: string, x0: number, y0: number, w: number, h: number, multiply: (wx: number, wy: number) => readonly [number, number, number] | null): void {
-    this.image.setVisible(true)
+    // Placed every call: a stamp without a position redraws only when the shadow's shape or light changes.
+    this.image.setVisible(true).setPosition(x0, y0)
     if (stamp === this.drawn) return
     this.drawn = stamp
     const S = MoverShadow.SIZE, px = this.data.data
-    px.fill(255)
     // A body's longest (capped) shadow fits; anything past the canvas is cut.
-    for (let iy = 0; iy < Math.min(h, S); iy++) for (let ix = 0; ix < Math.min(w, S); ix++) {
+    const cw = Math.min(w, S), ch = Math.min(h, S)
+    const dw = Math.max(cw, this.used.w), dh = Math.max(ch, this.used.h)
+    for (let iy = 0; iy < dh; iy++) px.fill(255, iy * S * 4, (iy * S + dw) * 4)
+    for (let iy = 0; iy < ch; iy++) for (let ix = 0; ix < cw; ix++) {
       const m = multiply(x0 + ix, y0 + iy)
       if (!m) continue
       const i = (iy * S + ix) * 4
       px[i] = m[0] * 255; px[i + 1] = m[1] * 255; px[i + 2] = m[2] * 255
     }
-    this.texture.context.putImageData(this.data, 0, 0)
+    this.used = { w: cw, h: ch }
+    if (dw > 0 && dh > 0) this.texture.context.putImageData(this.data, 0, 0, 0, 0, dw, dh)
     this.texture.refresh(); this.texture.setFilter(Phaser.Textures.FilterMode.NEAREST)
     this.image.setPosition(x0, y0)
   }
@@ -184,57 +190,3 @@ export class MoverShadow {
   destroy(): void { this.image.destroy(); this.scene.textures.remove(this.key) }
 }
 
-/** Alpha masks are made once per atlas frame, shared by every caster and
- * across scene restarts, like the lab's other art textures. Sun scrubbing
- * only changes image transforms; no canvas work or texture uploads. */
-interface Mask { key: string; x: number; y: number; w: number; h: number; frameW: number; frameH: number }
-const maskCaches = new WeakMap<Phaser.Textures.TextureManager, Map<string, Mask>>()
-function silhouetteMask(scene: Phaser.Scene, body: Phaser.GameObjects.Image | Phaser.GameObjects.Sprite): Mask {
-  let cache = maskCaches.get(scene.textures)
-  if (!cache) { cache = new Map(); maskCaches.set(scene.textures, cache) }
-  const frame = body.frame, key = `hl-sun-mask-${body.texture.key}-${frame.name}`
-  const old = cache.get(key)
-  if (old && scene.textures.exists(key)) return old
-  const full = document.createElement('canvas'); full.width = frame.cutWidth; full.height = frame.cutHeight
-  const source = full.getContext('2d', { willReadFrequently: true })!
-  source.drawImage(frame.source.image as CanvasImageSource, frame.cutX, frame.cutY, frame.cutWidth, frame.cutHeight, 0, 0, full.width, full.height)
-  const bounds = silhouetteBounds(source.getImageData(0, 0, full.width, full.height).data, full.width, full.height)
-  const canvas = document.createElement('canvas'); canvas.width = bounds.w + 4; canvas.height = bounds.h + 4
-  const ctx = canvas.getContext('2d')!
-  ctx.drawImage(full, bounds.x, bounds.y, bounds.w, bounds.h, 2, 2, bounds.w, bounds.h)
-  ctx.globalCompositeOperation = 'source-in'
-  ctx.fillStyle = '#191b26'; ctx.fillRect(0, 0, canvas.width, canvas.height)
-  ctx.globalCompositeOperation = 'source-over'
-  const copy = document.createElement('canvas'); copy.width = canvas.width; copy.height = canvas.height
-  copy.getContext('2d')!.drawImage(canvas, 0, 0)
-  ctx.clearRect(0, 0, canvas.width, canvas.height)
-  ctx.filter = 'blur(0.6px)'; ctx.drawImage(copy, 0, 0); ctx.filter = 'none'
-  scene.textures.addCanvas(key, canvas)!.setFilter(Phaser.Textures.FilterMode.LINEAR)
-  const mask = { key, ...bounds, frameW: full.width, frameH: full.height }
-  cache.set(key, mask)
-  return mask
-}
-
-export class SilhouetteShadow {
-  readonly image: Phaser.GameObjects.Image
-  constructor(private scene: Phaser.Scene, x: number, y: number) {
-    this.image = scene.add.image(x, y, '__WHITE').setOrigin(0.5, 1)
-  }
-  project(body: Phaser.GameObjects.Image | Phaser.GameObjects.Sprite, dx: number, dy: number): void {
-    const mask = silhouetteMask(this.scene, body)
-    if (this.image.texture.key !== mask.key) this.image.setTexture(mask.key)
-    const length = Math.hypot(dx, dy)
-    // This is silhouetteTransform's affine matrix: width perpendicular to
-    // the ray, source height flattened away from the foot. The negative Y
-    // scale puts the upside-down alpha mask onto the receiving plane.
-    const sx = body.displayWidth / mask.frameW, sy = body.displayHeight / mask.frameH
-    const footY = body.y + (mask.y + mask.h - mask.frameH * body.originY) * sy
-    // Crop padding before projection and move the pivot to the visible foot.
-    // Origin X retains the source frame's centre even for asymmetric poses.
-    const originX = (mask.frameW * .5 - mask.x + 2) / (mask.w + 4)
-    this.image.setOrigin(body.flipX ? 1 - originX : originX, (mask.h + 2) / (mask.h + 4))
-      .setPosition(body.x, footY).setRotation(length ? Math.atan2(-dx, dy) : 0)
-      .setScale(sx, -Math.max(2, length) / mask.h).setFlipX(body.flipX)
-  }
-  destroy(): void { this.image.destroy() }
-}

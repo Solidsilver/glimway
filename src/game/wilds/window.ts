@@ -58,6 +58,7 @@ import { AttachedChunk, BorderVeil, BuildQueue, DriftChunk, groundTexture, paint
 import { lanes, paintAway, paintHere, paintsAway, type PaintJob } from './paint-worker.ts'
 import { paintTable } from './ground-table.ts'
 import { chunkOrigin } from './terrain.ts'
+import { terrainSettings } from '../terrain/settings.ts'
 import { fnv1a32 } from '../../lib/hash.ts'
 import { TILE } from '../../lib/tile.ts'
 import { chunkEpoch, chunkTerrain, insideNamedBorder, landRevision, loadWildsChunk, NEAR_MAX_AGE_MS, placeKey, refreshLand, refreshNear, wildsEpoch, wildsBorder, wildsView } from './store.ts'
@@ -168,6 +169,8 @@ export class WildsWindow {
   private seenBorder: unknown = null
   private reachSig = ''
   private paints = new Map<string, PaintedChunk>()
+  /** Dev height terrain (../terrain): each generated chunk's last painted ground, kept while the switch is on, for its bake. */
+  private albedos = new Map<string, { rgba: Uint8ClampedArray; sig: string }>()
   private far = new Map<string, Phaser.GameObjects.Image[]>()
   private loading = new Set<string>()
   /** When a chunk whose fetch failed may be asked for again (ms, page clock). */
@@ -659,6 +662,7 @@ export class WildsWindow {
   }
 
   private paintedNow(key: string, sig: string, rgba: Uint8ClampedArray, ms: number, thread: PaintThread): void {
+    if (terrainSettings().on && !fixedPlaceOf(...Object.values(parseChunkKey(key)) as [number, number])) this.albedos.set(key, { rgba, sig })
     const old = this.paints.get(key)
     const texture = groundTexture(this.deps.scene, `wilds-ground:${key}:${old && old.key.endsWith(':a') ? 'b' : 'a'}`, rgba)
     this.logPaint(key, ms, false, thread)
@@ -817,6 +821,25 @@ export class WildsWindow {
           return !keys.length
         })
     })
+  }
+
+  /**
+   * Dev height terrain (../terrain/scene-terrain.ts): the attached generated
+   * chunks and their painted ground (null until painted with the switch on).
+   * Kept ground of chunks no longer attached is let go.
+   */
+  terrainChunks(): { key: string; cx: number; cy: number; rgba: Uint8ClampedArray | null; sig: string }[] {
+    for (const k of [...this.albedos.keys()]) if (!this.attached.has(k)) this.albedos.delete(k)
+    return [...this.attached.keys()].map((key) => {
+      const { cx, cy } = parseChunkKey(key)
+      const a = this.albedos.get(key)
+      return { key, cx, cy, rgba: a?.rgba ?? null, sig: a?.sig ?? '' }
+    })
+  }
+
+  /** The switch went on: chunks painted before it are painted again, so their ground is kept for the bake. */
+  repaintForTerrain(): void {
+    for (const [key, c] of this.attached) if (!this.albedos.has(key) && this.pending.get(key) !== c.sig) this.paint(key, c.sig)
   }
 
   /** The ways out of the attached fixed chunks, in world tiles (the scene checks them as the hero walks). */

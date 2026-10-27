@@ -4,8 +4,8 @@ import { DEFAULT_AREA_OPTIONS } from '../src/game/height-lab/area.ts';
 import { migrateLook, SLOPE_PRESETS, slopesLook } from '../src/game/height-lab/look.ts';
 import { KIND, SURFACE, newLayer, type Walker } from '../src/game/height-lab/levels.ts';
 import { buildSlopes, fieldEdges, slopeWalk, uphillFactor, type Field } from '../src/game/height-lab/slopes.ts';
-import { slopeGait } from '../src/game/height-lab/slope-gait.ts';
-import { SUN, sunFacing, sunShadow, sunTint } from '../src/game/height-lab/sun.ts';
+import { slopeGait } from '../src/game/terrain/slope-gait.ts';
+import { SUN, sunFacing, sunShadow, sunTint } from '../src/game/terrain/sun.ts';
 import { chunkKey, paintField } from '../src/game/height-lab/slopes-paint.ts';
 
 function plane(gx: number, gy: number) {
@@ -106,7 +106,7 @@ test('sun tint is Lambert plus a bounded cool fill, preserving each sprite base 
 });
 
 test('sun controls leave ground albedo and cache identity unchanged', () => {
-  const make = (sunlight: boolean, sunStrength: number) => buildSlopes(DEFAULT_AREA_OPTIONS, { facing: 'restrained', contours: 'off', terraces: false, lift: 0, sunlight, sunStrength });
+  const make = (sunlight: boolean, sunStrength: number) => buildSlopes(DEFAULT_AREA_OPTIONS, { facing: 'restrained', lift: 0, sunlight, sunStrength });
   const off = make(false, 1), full = make(true, 2), zero = make(true, 0);
   const px = (a: typeof full) => paintField(a, 81 * 16, 87 * 16, 16, 16).px;
   assert.deepEqual(px(off), px(full)); assert.deepEqual(px(full), px(zero));

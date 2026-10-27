@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { AMBIENT, NIGHT, clockSun, lightTint, shadowOpacity, silhouetteBounds, silhouetteTransform, sunAt, sunFacing, sunShadow, surfaceLight, type SunDirection } from '../src/game/height-lab/sun.ts';
-import { SUN_REACH, buildSunMap, sampleSunMap, terrainVisibility } from '../src/game/height-lab/sun-map.ts';
+import { AMBIENT, NIGHT, clockSun, lightTint, shadowOpacity, silhouetteBounds, silhouetteTransform, sunAt, sunFacing, sunShadow, surfaceLight, type SunDirection } from '../src/game/terrain/sun.ts';
+import { SUN_REACH, buildSunMap, sampleSunMap, terrainVisibility } from '../src/game/terrain/sun-map.ts';
 import { buildSlopes, uphillFactor, type Field } from '../src/game/height-lab/slopes.ts';
 import { DEFAULT_AREA_OPTIONS } from '../src/game/height-lab/area.ts';
 import { migrateLook, slopesLook } from '../src/game/height-lab/look.ts';

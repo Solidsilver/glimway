@@ -31,7 +31,7 @@ async function painted(page: Page) {
 }
 async function setLook(page: Page, look: Look) {
   await page.evaluate((l) => (window as unknown as { __fsLab: Lab }).__fsLab.look(l), look)
-  const rebuilds = ['area', 'slopeFacing', 'slopeContours', 'slopeTerraces', 'slopeLift']
+  const rebuilds = ['area', 'slopeFacing', 'slopeLift']
   await expect.poll(async () => {
     const st = await page.evaluate(() => (window as unknown as { __fsLab?: Lab }).__fsLab?.state())
     if (!st) return false
@@ -128,7 +128,7 @@ async function fieldRuns(page: Page) {
 
 test.describe('desktop', () => {
   test.use({ viewport: { width: 1280, height: 800 } })
-  test('height lab, slopes 2a: five presets, matching frames and timing tails', async ({ page }) => {
+  test('height lab, slopes 2a: the two looks, matching frames and timing tails', async ({ page }) => {
     test.setTimeout(900_000)
     mkdirSync(OUT, { recursive: true })
     await openLab(page)
@@ -226,13 +226,13 @@ test.describe('desktop', () => {
 
 test.describe('phone', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
-  test('height lab, slopes 2a: moderate lift phone frame', async ({ page }) => {
+  test('height lab, slopes: true ¾ lift phone frame', async ({ page }) => {
     test.setTimeout(240_000)
     mkdirSync(OUT, { recursive: true })
     await openLab(page)
-    await setLook(page, { area: 'slopes', ...SLOPE_PRESETS.moderate.look, grid: false, walkOverlay: false })
+    await setLook(page, { area: 'slopes', ...SLOPE_PRESETS.full.look, grid: false, walkOverlay: false })
     const spots = new Map((await labState(page)).slopes!.spots.map((s) => [s.name, s]))
-    await shot(page, 'phone-moderate-pass-mid', spots.get('pass-mid')!)
+    await shot(page, 'phone-lift-pass-mid', spots.get('pass-mid')!)
     await expect(page.getByTestId('height-lab-hud')).toContainText('Slopes, hills and passes')
   })
 })
@@ -435,7 +435,7 @@ test.describe('slopes 2c phone', () => {
 
 // Round 2d: proxy shadows. The owner's meadow time sweep, shade, spire, phone. CI only.
 type ShadowSlopes = SunSlopes & { sunlight: SunSlopes['sunlight'] & {
-  mode: string; ray: number[]; under: number; cast: { x0: number; y0: number; w: number; h: number; foot: number[] }
+  ray: number[]; under: number; cast: { x0: number; y0: number; w: number; h: number; foot: number[] }
   casters: { x: number; y: number; kind: string; foot: number[]; height: number; v: number[]; visible: number }[] } }
 const SWEEP = [9.6, 10.6, 11.3, 11.6, 11.9, 12.2, 12.5, 13.7, 16.8]
 const hourTime = (h: number) => Math.round((h - 6) / 12 * 1000) / 1000
@@ -445,7 +445,7 @@ async function crop(page: Page, name: string) {
   const w = Math.min(560, vp.width), h = Math.min(360, vp.height)
   await page.screenshot({ path: `${OUT}/${name}-crop.png`, clip: { x: (vp.width - w) / 2, y: (vp.height - h) / 2, width: w, height: h } })
 }
-const SHADOW_LOOK: Look = { area: 'slopes', ...SLOPE_PRESETS.baseline.look, slopeUphill: 60, slopeDownhill: 6, sunlight: true, sunStrength: 1, sunTime: .5, sunClock: false, spriteShadows: 'proxy', grid: false, walkOverlay: false, fog: 'fog', fogStrength: 'medium', zoom: true, haze: true }
+const SHADOW_LOOK: Look = { area: 'slopes', ...SLOPE_PRESETS.baseline.look, slopeUphill: 60, slopeDownhill: 6, sunlight: true, sunStrength: 1, sunTime: .5, sunClock: false, grid: false, walkOverlay: false, fog: 'fog', fogStrength: 'medium', zoom: true, haze: true }
 
 test.describe('slopes 2d', () => {
   test.use({ viewport: { width: 1280, height: 800 } })
@@ -465,14 +465,6 @@ test.describe('slopes 2d', () => {
       frames[name] = ((await shot(page, name, meadow)).slopes as ShadowSlopes).sunlight
       await crop(page, name)
     }
-    // The same meadow drawn the 2c way, to compare.
-    for (const h of [11.6, 16.8]) {
-      await setLook(page, { sunTime: hourTime(h), spriteShadows: 'silhouette' })
-      const name = `2d-meadow-${h.toFixed(1)}h-2c-silhouette`
-      frames[name] = ((await shot(page, name, meadow)).slopes as ShadowSlopes).sunlight
-      await crop(page, name)
-    }
-    await setLook(page, { spriteShadows: 'proxy' })
     for (const h of [9.6, 12, 16.8]) {
       await setLook(page, { sunTime: hourTime(h) })
       const name = `2d-hills-meadow-${h.toFixed(1)}h`
@@ -516,12 +508,9 @@ test.describe('slopes 2d', () => {
     expect(len(frames['2d-meadow-12.2h']!)).toBeLessThan(.6)
     expect(len(frames['2d-meadow-16.8h']!)).toBeGreaterThan(2)
     for (const [name, s] of Object.entries(frames)) {
-      expect(s.mode, name).toBe(name.includes('2c-silhouette') ? 'silhouette' : 'proxy')
       // The hero's footprint lies inside their own cast box.
-      if (s.mode === 'proxy') {
-        expect(s.cast.foot[0]! >= s.cast.x0 && s.cast.foot[0]! <= s.cast.x0 + s.cast.w, name).toBe(true)
-        expect(s.cast.foot[1]! >= s.cast.y0 && s.cast.foot[1]! <= s.cast.y0 + s.cast.h, name).toBe(true)
-      }
+      expect(s.cast.foot[0]! >= s.cast.x0 && s.cast.foot[0]! <= s.cast.x0 + s.cast.w, name).toBe(true)
+      expect(s.cast.foot[1]! >= s.cast.y0 && s.cast.foot[1]! <= s.cast.y0 + s.cast.h, name).toBe(true)
     }
     expect(frames['2d-meadow-12.2h']!.casters.some(c => c.kind === 'rock')).toBe(true)
     expect(frames['2d-meadow-12.2h']!.casters.some(c => c.kind === 'tree')).toBe(true)
@@ -555,7 +544,7 @@ const EDGE_VARIANTS: [string, Look][] = [
   ['default-unscaled', { ...EDGE_DEFAULTS, edgeScale: false }],
   ['strong-unscaled', { ...EDGE_DEFAULTS, edgeShade: 1, edgeScale: false }]
 ]
-/** The owner's screenshot: restrained facing, contours off, 7.8 h. */
+/** The owner's screenshot: restrained facing, 7.8 h. */
 const OWNER_LOOK: Look = { ...SHADOW_LOOK, sunTime: hourTime(7.8), ...EDGE_DEFAULTS }
 
 test.describe('slopes 2e', () => {
@@ -585,19 +574,15 @@ test.describe('slopes 2e', () => {
       await keep(`2e-hills-meadow-${look}`, spots.get('hills')!)
       await keep(`2e-cliff-edge-${look}`, spots.get('outcrop-top')!)
     }
-    // Partial see-through: legs behind the plateau's rim, then fully behind it; and at 24 px a level.
+    // Partial see-through: legs behind the plateau's rim, then fully behind it.
     await setLook(page, { slopeLift: 48 })
     const legs = await keep('2e-seethrough-legs-48', spots.get('legs-behind-ridge')!)
     const full = await keep('2e-seethrough-full-48', spots.get('behind-plateau')!)
-    await setLook(page, { slopeLift: 24 })
-    const legs24 = await keep('2e-seethrough-legs-24', spots.get('behind-plateau')!)
     writeFileSync(`${OUT}/2e-evidence.json`, JSON.stringify(frames, null, 1))
     expect(legs.cover.spriteCovered, 'legs: some covered').toBeGreaterThan(0)
     expect(legs.cover.spriteCovered, 'legs: not all covered').toBeLessThan(legs.cover.spriteTotal * .8)
     expect(legs.cover.top, 'legs: covered from below the head').toBeGreaterThan(4)
     expect(full.cover.spriteCovered, 'full: all covered').toBeGreaterThanOrEqual(full.cover.spriteTotal * .95)
-    expect(legs24.cover.spriteCovered).toBeGreaterThan(0)
-    expect(legs24.cover.spriteCovered).toBeLessThan(legs24.cover.spriteTotal)
     for (const [name, f] of Object.entries(frames)) {
       if (!name.startsWith('2e-ramp')) continue
       if (name.endsWith('-off')) expect(f.edges.settings.strength, name).toBe(0)

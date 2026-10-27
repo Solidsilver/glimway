@@ -1,6 +1,5 @@
 /** Dev-only low-resolution sun layer. Never imports or calls an albedo painter. */
-import { TILE_PX as T, KIND } from './levels.ts'
-import { fieldGradient, fieldZ, liftColumn, spanAt, spanGround, type Field, type SlopesInfo } from './slopes.ts'
+import { TILE_PX as T, VIEW_FACE, fieldGradient, fieldZ, liftColumn, spanAt, spanGround, type Field, type TerrainView } from './field.ts'
 import { surfaceLight, sunFacing, type DaySun, type RGB, type SunDirection } from './sun.ts'
 
 export const SUN_RES = 8
@@ -27,7 +26,7 @@ export function terrainVisibility(f: Field, x: number, y: number, z: number, sun
 
 /** Map view points back to their receiving surface. South cliff faces use
  * their actual outward normal, not the ground underneath their footprint. */
-export function receivingPoint(info: SlopesInfo, x: number, y: number): { x: number; y: number; z: number; face: boolean } {
+export function receivingPoint(info: TerrainView, x: number, y: number): { x: number; y: number; z: number; face: boolean } {
   const f = info.field
   const tx = Math.max(0, Math.min(f.w - 1, Math.floor(x / T)))
   const fx = Math.max(0, Math.min(1, x / T - tx))
@@ -44,7 +43,7 @@ export function receivingPoint(info: SlopesInfo, x: number, y: number): { x: num
   } else {
     const ty = Math.max(0, Math.min(info.view.h - 1, Math.floor(y / T)))
     const i = ty * info.view.w + tx
-    if (info.view.kind[i] === KIND.face) {
+    if (info.view.kind[i] === VIEW_FACE) {
       const row = info.view.faceRow[i]!
       return { x, y: (ty - row) * T + 0.01, z: info.view.faceTop[i]! - (row + (y / T - ty)) / 3, face: true }
     }
@@ -59,7 +58,7 @@ export function fieldLight(f: Field, x: number, y: number, z: number, sun: DaySu
 }
 /** Texels sit at chunk boundaries with a one-texel halo. Adjacent chunks
  * compute identical samples at their seams; the ray reads the full halo. */
-export function* buildSunMap(info: SlopesInfo, x: number, y: number, width: number, height: number, sun: DaySun, strength: number, enabled = true): Generator<void, SunMap> {
+export function* buildSunMap(info: TerrainView, x: number, y: number, width: number, height: number, sun: DaySun, strength: number, enabled = true): Generator<void, SunMap> {
   const w = Math.ceil(width / SUN_RES) + 3, h = Math.ceil(height / SUN_RES) + 3
   const map: SunMap = { x: x - SUN_RES, y: y - SUN_RES, w, h, px: new Uint8ClampedArray(w * h * 4), visibility: new Float32Array(w * h) }
   for (let iy = 0; iy < h; iy++) {

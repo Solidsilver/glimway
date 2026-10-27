@@ -84,6 +84,7 @@ import { openLibrary } from '../library-open.ts'
 import { WildsEntities } from '../wilds/entities'
 import { enemiesNearForSync, setSyncSafety } from '../sync-safety'
 import { onSceneEnd } from '../scene-end'
+import { SceneTerrain } from '../terrain/scene-terrain'
 import { exposeWorldHooks } from './world-dev-hooks'
 import { playHold, runFrame, type PlayHold, type WorldFrame } from './world-frame'
 import { FadeHold } from './fade-hold'
@@ -142,6 +143,8 @@ export class WorldScene extends Phaser.Scene {
   private wilds: WildsEntities | null = null
   /** The open map's moving window (null in curated areas): src/game/wilds/window.ts. */
   private window: WildsWindow | null = null
+  /** Dev height terrain (dev builds; the switch is in the dev panel). */
+  private terrain: SceneTerrain | null = null
   /** Clearing, laying and lifting paths on the open map (null in curated areas). */
   private paths: WildsPaths | null = null
   /** Way signs, finders' names and first finds on the open map (null in curated areas). */
@@ -474,6 +477,7 @@ export class WorldScene extends Phaser.Scene {
         enter: (room) => this.goIn(room),
         hooks: () => fixedLife
       })
+      if (DEV_TOOLS) this.terrain = new SceneTerrain(this, { window: () => this.window, hero: () => this.hero, body: () => this.avatar.container ?? this.hero.sprite })
       // ?perf=1 samples the open map's display list and tweens (src/game/perf.ts).
       perfWatch(this)
       onSceneEnd(this, () => perfWatch(null))
@@ -778,6 +782,7 @@ export class WorldScene extends Phaser.Scene {
     // The shared world goes on under a menu: the open map's window, the camps'
     // rooms and claims, the Turning, and every server enemy (shared-fights.md 1.8).
     this.window?.update(dt)
+    this.terrain?.update()
     if (this.waitingFixed) {
       this.fixedWait += dt
       if (this.fixedWait >= 4) this.waitForCommons()

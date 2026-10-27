@@ -15,8 +15,7 @@
  * rim. Values here are amounts (0–1), turned into colour by ./sun-view.ts,
  * which also caps them against cast shadows.
  */
-import { KIND, TILE_PX as T } from './levels.ts'
-import { fieldZ, liftColumn, type SlopesInfo } from './slopes.ts'
+import { TILE_PX as T, VIEW_FACE, fieldZ, liftColumn, type TerrainView } from './field.ts'
 
 export interface EdgeSettings {
   /** 0–1: the band's strength (0 off). */
@@ -56,7 +55,7 @@ export function edgeBand(drop: number, s: EdgeSettings): { width: number; k: num
  * own height, a face's top (a face is the high side of its edge), NaN for
  * nothing; and which pixels are faces.
  */
-export function viewHeights(info: SlopesInfo, x0: number, y0: number, w: number, h: number): { z: Float32Array; face: Uint8Array } {
+export function viewHeights(info: TerrainView, x0: number, y0: number, w: number, h: number): { z: Float32Array; face: Uint8Array } {
   return run(viewHeightsSteps(info, x0, y0, w, h))
 }
 function run<T>(it: Generator<void, T>): T {
@@ -66,7 +65,7 @@ function run<T>(it: Generator<void, T>): T {
   }
 }
 /** viewHeights a few columns (lifted) or rows (flat) a step. */
-export function* viewHeightsSteps(info: SlopesInfo, x0: number, y0: number, w: number, h: number): Generator<void, { z: Float32Array; face: Uint8Array }> {
+export function* viewHeightsSteps(info: TerrainView, x0: number, y0: number, w: number, h: number): Generator<void, { z: Float32Array; face: Uint8Array }> {
   const f = info.field
   const z = new Float32Array(w * h).fill(Number.NaN)
   const face = new Uint8Array(w * h)
@@ -105,7 +104,7 @@ export function* viewHeightsSteps(info: SlopesInfo, x0: number, y0: number, w: n
       const tx = wx >> 4
       const i = y * w + x
       const vi = ty * v.w + tx
-      if (v.kind[vi] === KIND.face) {
+      if (v.kind[vi] === VIEW_FACE) {
         z[i] = v.faceTop[vi]!
         face[i] = 1
       } else z[i] = fieldZ(f, tx, ty, ((wx & 15) + 0.5) / T, ((wy & 15) + 0.5) / T)
@@ -182,10 +181,10 @@ export function* edgeAmountsSteps(heights: { z: Float32Array; face: Uint8Array }
 }
 
 /** A chunk's edge amounts (heights read with the margin). */
-export function chunkEdges(info: SlopesInfo, x: number, y: number, w: number, h: number, s: EdgeSettings): { dark: Float32Array; rim: Float32Array; edges: number } {
+export function chunkEdges(info: TerrainView, x: number, y: number, w: number, h: number, s: EdgeSettings): { dark: Float32Array; rim: Float32Array; edges: number } {
   return run(chunkEdgesSteps(info, x, y, w, h, s))
 }
-export function* chunkEdgesSteps(info: SlopesInfo, x: number, y: number, w: number, h: number, s: EdgeSettings): Generator<void, { dark: Float32Array; rim: Float32Array; edges: number }> {
+export function* chunkEdgesSteps(info: TerrainView, x: number, y: number, w: number, h: number, s: EdgeSettings): Generator<void, { dark: Float32Array; rim: Float32Array; edges: number }> {
   const m = EDGE_MARGIN
   const heights = yield* viewHeightsSteps(info, x - m, y - m, w + 2 * m, h + 2 * m)
   return yield* edgeAmountsSteps(heights, x, y, w, h, m, s)

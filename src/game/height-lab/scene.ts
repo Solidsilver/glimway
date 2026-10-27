@@ -44,16 +44,16 @@ import { type CaveImages, FACES_KEY, FACE_TINT, drawFaces, drawGrid, drawOverlay
 import { KIND, TILE_PX, findPath, move, sample, standTile, zAt, type Node, type Walker } from './levels'
 import { CRAG_KEY, bandImages, drawCrags, paintJob, paintedChunk, slopeDecorAtlas, type PaintJob } from './slopes-art'
 import { chunkKey } from './slopes-paint'
-import { slopeGait } from './slope-gait'
-import { clockSun, sunAt, sunShadow, lightTint, shadowOpacity, type DaySun } from './sun'
-import { fieldLight, sampleSunMap, sampleVisibility, terrainVisibility } from './sun-map'
-import { castProxy, dither, overShadow, shadeMultiply, shadowDarkness, shadowRay, type Caster, type CasterKind, type ShadowProxy } from './sun-shadow'
-import { SunChunk, SilhouetteShadow, MoverShadow, frameProxy } from './sun-view'
+import { slopeGait } from '../terrain/slope-gait'
+import { clockSun, sunAt, sunShadow, lightTint, shadowOpacity, type DaySun } from '../terrain/sun'
+import { fieldLight, sampleSunMap, sampleVisibility, terrainVisibility } from '../terrain/sun-map'
+import { castProxy, dither, overShadow, shadeMultiply, shadowDarkness, shadowRay, type Caster, type CasterKind, type ShadowProxy } from '../terrain/sun-shadow'
+import { SunChunk, MoverShadow, frameProxy } from '../terrain/sun-view'
 import { serverNow, setGameNow } from '../clock'
 import { coverRects, coveredPixels, fieldGradient, fieldZ, FOG_LEVELS, display, lookName, mapPoint, nearestWalkable, slopeWalk, uphillFactor } from './slopes'
 import { FRIEND_LIGHT, HERO_LIGHT, LIGHT_RES, wayIn } from './light'
 import { caveTint, clearLitScratch, litPixels, pixelSpans, type FillOptions, type Lighting } from './lighting'
-import { edgeKey } from './edges'
+import { edgeKey } from '../terrain/edges'
 import { SLOPE_KEYS, SLOPE_PRESETS, edgeSettings, fogFor, labLook, onLabLook, setLabLook, slopePresetOf, slopeSettings, slopesLook, styleOf, type LabLook } from './look'
 
 const T = TILE_PX
@@ -116,7 +116,7 @@ interface GeneratedState {
 /** The slopes area in the spec's state. */
 interface SlopesState {
   /** How it's drawn: the settings, the preset they are (if one), round 1's style they are (if one). */
-  look: { facing: string; contours: string; terraces: boolean; lift: number }
+  look: { facing: string; lift: number }
   preset: string | null
   style: string | null
   lift: boolean
@@ -124,7 +124,7 @@ interface SlopesState {
   gentle: boolean
   sunlight?: { tint: number; shadow: ReturnType<typeof sunShadow>; gait: ReturnType<typeof slopeGait> | null; direction: readonly number[]; time: number; daylight: number; visibility: number; opacity: number
     /** 2d: the shadow mode, the hero's ray (ground px a unit of height), the still shadow at their feet, their cast's box and footprint, and still casters nearby. */
-    mode: string; ray: readonly number[]; under: number; cast: { x0: number; y0: number; w: number; h: number; foot: number[] }
+    ray: readonly number[]; under: number; cast: { x0: number; y0: number; w: number; h: number; foot: number[] }
     casters: { x: number; y: number; kind: string; foot: number[]; height: number; v: readonly number[]; visible: number }[] }
   sunMap: { pending: number; revision: string; chunks: number; costs: number[]; albedoPaints: number }
   uphill: { gx: number; gy: number; up: number; k: number } | null
@@ -176,7 +176,7 @@ interface Thing {
   /** The slopes area's lift: behind higher ground (./slopes.ts display). The hero is drawn as a silhouette; others not at all. */
   hidden?: boolean
   silhouette?: boolean
-  sun?: { x: number; y: number; height: number; shadow: SilhouetteShadow; kind: CasterKind; cast?: MoverShadow; proxy?: ShadowProxy }
+  sun?: { x: number; y: number; height: number; kind: CasterKind; cast?: MoverShadow; proxy?: ShadowProxy }
 }
 
 /** What each lab prop stands on and casts as (slopes 2d). */
@@ -380,7 +380,7 @@ export class HeightLabScene extends Phaser.Scene {
     this.buildHud()
     onSceneEnd(this, () => {
       stopLook()
-      for (const m of this.movers) { m.thing.sun?.shadow.destroy(); m.thing.sun?.cast?.destroy() }
+      for (const m of this.movers) m.thing.sun?.cast?.destroy()
       this.scale.off('resize', onResize)
       this.hud?.remove()
       this.hud = null
@@ -481,11 +481,8 @@ export class HeightLabScene extends Phaser.Scene {
       const y = (p.ty + 1) * T
       const img = this.add.image(x, y, crag ? CRAG_KEY : decor, frame).setOrigin(0.5, 1)
       const parts: Thing['parts'] = [{ o: img, dz: 0, a: 1 }]
-      const casts = this.area.slopes
-      const shadow = casts ? new SilhouetteShadow(this, x, y) : null
-      if (shadow) parts.push({ o: shadow.image, dz: -1, a: 0 })
       made.push(this.addThing({ parts, layer: SURFACE, x, y, z: p.z ?? this.area.top[p.ty * this.area.stack.w + p.tx]!, seen: 1,
-        ...(this.area.slopes ? { sun: { x: p.fieldX ?? x, y: p.fieldY ?? y, height: img.displayHeight * 0.65, shadow: shadow!, kind: CASTER_KIND[p.kind] ?? 'plant' } } : {}) }, true))
+        ...(this.area.slopes ? { sun: { x: p.fieldX ?? x, y: p.fieldY ?? y, height: img.displayHeight * 0.65, kind: CASTER_KIND[p.kind] ?? 'plant' } } : {}) }, true))
     }
     return made
   }
@@ -503,25 +500,15 @@ export class HeightLabScene extends Phaser.Scene {
   private applySun(t: Thing): number | null {
     const sl = this.area.slopes, sun = t.sun
     if (!sl || !sun) return null
-    const part = t.parts[1]!
-    if (!this.look.sunlight) { part.a = 0; sun.cast?.hide(); return t.tint ?? 0xffffff }
+    if (!this.look.sunlight) { sun.cast?.hide(); return t.tint ?? 0xffffff }
     const at = this.sunAtFeet(t)
+    if (!sun.cast) return lightTint(at.rgb, t.tint ?? 0xffffff)
+    // Walkers: their own proxy shadow now, and the still shadows they stand in.
     const [gx, gy] = fieldGradient(sl.field, sun.x, sun.y)
-    if (this.look.spriteShadows === 'proxy') {
-      part.a = 0
-      if (!sun.cast) return lightTint(at.rgb, t.tint ?? 0xffffff)
-      // Walkers: their own capsule now, and the still shadows they stand in.
-      const under = this.stillDarkAt(t.x, t.y - 1)
-      this.castMover(t, gx, gy, at.visible)
-      const m = shadeMultiply(under)
-      return lightTint([at.rgb[0] * m[0], at.rgb[1] * m[1], at.rgb[2] * m[2]], t.tint ?? 0xffffff)
-    }
-    sun.cast?.hide()
-    const ray = sunShadow(gx, gy, sun.height, this.daySun.direction)
-    const dy = ray.dy - sl.k * (gx * ray.dx + gy * ray.dy)
-    sun.shadow.project(t.parts[0]!.o as Phaser.GameObjects.Image, ray.dx, dy)
-    part.a = shadowOpacity(at.visible, this.look.sunStrength, this.daySun.daylight)
-    return lightTint(at.rgb, t.tint ?? 0xffffff)
+    const under = this.stillDarkAt(t.x, t.y - 1)
+    this.castMover(t, gx, gy, at.visible)
+    const m = shadeMultiply(under)
+    return lightTint([at.rgb[0] * m[0], at.rgb[1] * m[1], at.rgb[2] * m[2]], t.tint ?? 0xffffff)
   }
 
   /** Still shadow darkness at a display pixel, from its chunk's layer. */
@@ -589,7 +576,7 @@ export class HeightLabScene extends Phaser.Scene {
     if (!sl) return
     const day = this.look.sunClock ? clockSun(serverNow()) : sunAt(this.look.sunTime)
     // Clock lighting updates roughly every 43 seconds; the manual slider has .01 steps.
-    const revision = `${this.look.sunlight}:${this.look.sunStrength}:${day.time.toFixed(3)}:${day.daylight.toFixed(2)}:${this.look.slopeFacing}:${this.look.spriteShadows}:${edgeKey(edgeSettings(this.look))}`
+    const revision = `${this.look.sunlight}:${this.look.sunStrength}:${day.time.toFixed(3)}:${day.daylight.toFixed(2)}:${this.look.slopeFacing}:${edgeKey(edgeSettings(this.look))}`
     this.daySun = day
     this.sunRevision = revision
     const chunks = [...this.parts.values()].filter(p => !!p.sunlight).sort((a,b) =>
@@ -599,7 +586,7 @@ export class HeightLabScene extends Phaser.Scene {
     for (const p of chunks) {
       const light = p.sunlight!
       if (light.revision !== revision) light.start(sl, day, this.look.sunStrength, this.look.sunlight && this.look.slopeFacing !== 'off', revision,
-        this.look.spriteShadows === 'proxy' ? () => this.castersNear(p.cx, p.cy, revision) : null, edgeSettings(this.look))
+        () => this.castersNear(p.cx, p.cy, revision), edgeSettings(this.look))
       while (light.pending) {
         const cost = light.step()
         if (cost !== null) { this.sunCosts.push(cost); if (this.sunCosts.length > 600) this.sunCosts.shift(); this.stillKey = '' }
@@ -858,7 +845,6 @@ export class HeightLabScene extends Phaser.Scene {
     for (const t of p.things) {
       for (const part of t.parts) part.o.destroy()
       t.twin?.destroy()
-      t.sun?.shadow.destroy()
     }
     this.things = this.things.filter((t) => !gone.has(t))
     const imgs = new Set(p.images)
@@ -922,9 +908,9 @@ export class HeightLabScene extends Phaser.Scene {
       if (this.anims.exists(frame)) sprite.play(frame)
     }
     if (tint !== null) sprite.setTint(tint)
-    const sunShadow = this.area.slopes ? new SilhouetteShadow(this, x, y) : null
-    const shadow = sunShadow ? sunShadow.image : this.add.image(x, y - 1, 'shadow')
-    const parts: Thing['parts'] = [{ o: sprite, dz: 0, a: 1 }, { o: shadow, dz: -1, a: 0.5 }]
+    const shadow = this.add.image(x, y - 1, 'shadow')
+    // The slopes area's walkers cast proxy shadows (applySun) instead of the blob.
+    const parts: Thing['parts'] = [{ o: sprite, dz: 0, a: 1 }, { o: shadow, dz: -1, a: this.area.slopes ? 0 : 0.5 }]
     if (label) {
       const text = this.add.text(x, y - 24, label, { fontFamily: '"Pixelify Sans", monospace', fontSize: '8px', color: '#fff6e0', stroke: '#2a2030', strokeThickness: 2 }).setOrigin(0.5, 1).setResolution(4)
       parts.push({ o: text, dz: 3000, a: 1 })
@@ -932,7 +918,7 @@ export class HeightLabScene extends Phaser.Scene {
     // A twin on either layer: movers cross between them.
     const cast = this.area.slopes ? new MoverShadow(this, `hl-mover-shadow-${this.movers.length}`) : undefined
     const proxy = this.area.slopes ? frameProxy(this, sprite.texture.key, sprite.frame.name, 'body', sprite.scaleY) : undefined
-    const thing = this.addThing({ parts, layer: node.layer, x, y, z: 0, seen: 1, tint: tint ?? 0xffffff, ...(this.area.slopes ? { sun: { x, y, height: sprite.displayHeight * 0.65, shadow: sunShadow!, kind: 'body' as const, cast, proxy } } : {}) }, true)
+    const thing = this.addThing({ parts, layer: node.layer, x, y, z: 0, seen: 1, tint: tint ?? 0xffffff, ...(this.area.slopes ? { sun: { x, y, height: sprite.displayHeight * 0.65, kind: 'body' as const, cast, proxy } } : {}) }, true)
     const m: Mover = { thing, walker: { x, y, layer: node.layer, hw: 5, fh: 4 }, sprite, anim, speed, path: null, wait: 0, stuck: 0, next }
     this.movers.push(m)
     return m
@@ -1638,7 +1624,7 @@ export class HeightLabScene extends Phaser.Scene {
         const casters = this.castersRevision === this.sunRevision ? [...this.castersLit.values()].filter(c => Math.hypot(c.x - t.x, c.y - t.y) < 160).map(c => ({ x: c.x, y: c.y, kind: c.proxy.kind, foot: [c.x + c.proxy.foot.x, c.y + c.proxy.foot.y], height: c.proxy.height, v: c.v, visible: c.visible })) : []
         return { tint: lightTint(at.rgb), shadow: sunShadow(gx, gy, t.sun!.height, this.daySun.direction), gait: this.hero.gait ?? null,
           direction: this.daySun.direction, time: this.daySun.time, daylight: this.daySun.daylight, visibility: at.visible, opacity: shadowOpacity(at.visible, this.look.sunStrength, this.daySun.daylight),
-          mode: this.look.spriteShadows, ray: v, under: this.stillDarkAt(t.x, t.y - 1), cast: { x0: cast.x0, y0: cast.y0, w: cast.w, h: cast.h, foot: [t.x + t.sun!.proxy!.foot.x, t.y + t.sun!.proxy!.foot.y] }, casters }
+          ray: v, under: this.stillDarkAt(t.x, t.y - 1), cast: { x0: cast.x0, y0: cast.y0, w: cast.w, h: cast.h, foot: [t.x + t.sun!.proxy!.foot.x, t.y + t.sun!.proxy!.foot.y] }, casters }
       })(),
       sunMap: { pending: [...this.parts.values()].filter(p => p.sunlight && (p.sunlight.pending || p.sunlight.revision !== this.sunRevision)).length,
         revision: this.sunRevision, chunks: this.parts.size, costs: this.sunCosts, albedoPaints: this.albedoPaints },
