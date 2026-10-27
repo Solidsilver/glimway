@@ -57,8 +57,8 @@ const matches = (file: string, patterns: string[]) =>
 
 // E2E_CHANGED="a.ts,b.ts" plans for that list instead of git (try the map).
 const given = process.env.E2E_CHANGED?.split(',').map((f) => f.trim()).filter(Boolean)
-let mergeBase = 'E2E_CHANGED'
-if (!given) {
+let mergeBase = forceFull ? 'full suite' : 'E2E_CHANGED'
+if (!given && !forceFull) {
   try {
     mergeBase = git('merge-base', 'HEAD', base)[0]
   } catch {
@@ -67,13 +67,13 @@ if (!given) {
   }
 }
 const changed = (
-  given ?? [
+  given ?? (forceFull ? [] : [
     ...new Set([
       ...git('diff', '--name-only', mergeBase),
       ...git('diff', '--name-only', '--cached'),
       ...git('ls-files', '--others', '--exclude-standard')
     ])
-  ]
+  ])
 ).sort()
 
 const specs = new Set<string>()
@@ -109,7 +109,7 @@ for (const file of changed) {
   }
 }
 
-console.log(given ? `test:changed: ${changed.length} file(s) from E2E_CHANGED` : `test:changed: ${changed.length} file(s) changed since ${base} (${mergeBase.slice(0, 8)})`)
+console.log(forceFull ? 'test:changed: explicit full suite' : given ? `test:changed: ${changed.length} file(s) from E2E_CHANGED` : `test:changed: ${changed.length} file(s) changed since ${base} (${mergeBase.slice(0, 8)})`)
 for (const r of reasons) console.log(`  ${r}`)
 if (unmapped.length) {
   console.log('  not in e2e/changed-map.json (adds the smoke tier):')
