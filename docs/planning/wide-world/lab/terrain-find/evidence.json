@@ -1,0 +1,702 @@
+{
+  "top-pass": {
+    "chosen": {
+      "kind": "pass",
+      "target": [
+        252,
+        332
+      ],
+      "stand": [
+        251,
+        332
+      ],
+      "level": 1.9169921875,
+      "owner": [
+        0,
+        0
+      ]
+    },
+    "arrival": {
+      "x": 4024,
+      "y": 5320,
+      "tile": [
+        251,
+        332
+      ],
+      "z": 1.919189453125,
+      "kind": 0,
+      "walkable": true,
+      "gradient": [
+        0.00146484375,
+        -0.017578125
+      ]
+    },
+    "camera": {
+      "scrollX": 3434,
+      "scrollY": 4820,
+      "zoom": 3.5,
+      "originX": 590,
+      "originY": 500
+    },
+    "label": "Pass, 15 chunks SE, level 1.9"
+  },
+  "top-crest": {
+    "chosen": {
+      "kind": "crest",
+      "target": [
+        -324,
+        230
+      ],
+      "stand": [
+        -347,
+        226
+      ],
+      "level": 2.353515625,
+      "owner": [
+        -1,
+        0
+      ]
+    },
+    "arrival": {
+      "x": -5544,
+      "y": 3624,
+      "tile": [
+        -347,
+        226
+      ],
+      "z": 2.3525390625,
+      "kind": 0,
+      "walkable": true,
+      "gradient": [
+        0.03515625,
+        0.0078125
+      ]
+    },
+    "camera": {
+      "scrollX": -6134,
+      "scrollY": 3124,
+      "zoom": 3.5,
+      "originX": 590,
+      "originY": 500
+    },
+    "label": "Range crest (walkable shoulder), 16 chunks SW, level 2.4"
+  },
+  "top-spire-screen": {
+    "w": 1180,
+    "h": 1000,
+    "crown": {
+      "x": 595.5,
+      "y": 505.5
+    },
+    "base": {
+      "x": 595.5,
+      "y": 787.5
+    }
+  },
+  "top-spire": {
+    "chosen": {
+      "kind": "spire",
+      "target": [
+        289,
+        501
+      ],
+      "stand": [
+        296,
+        512
+      ],
+      "level": 1.1953125,
+      "owner": [
+        0,
+        0
+      ]
+    },
+    "arrival": {
+      "x": 4744,
+      "y": 8200,
+      "tile": [
+        296,
+        512
+      ],
+      "z": 1.19580078125,
+      "kind": 0,
+      "walkable": true,
+      "gradient": [
+        -0.01953125,
+        -0.00390625
+      ]
+    },
+    "camera": {
+      "scrollX": 4034,
+      "scrollY": 7516,
+      "zoom": 0.75,
+      "originX": 590,
+      "originY": 500
+    },
+    "label": "Spire view, 22 chunks SE, level 1.2"
+  },
+  "top-outcrop-top": {
+    "chosen": {
+      "kind": "outcrop-top",
+      "target": [
+        123,
+        483
+      ],
+      "stand": [
+        123,
+        480
+      ],
+      "level": 4.3759765625,
+      "owner": [
+        0,
+        0
+      ]
+    },
+    "arrival": {
+      "x": 1976,
+      "y": 7688,
+      "tile": [
+        123,
+        480
+      ],
+      "z": 4.374267578125,
+      "kind": 0,
+      "walkable": true,
+      "gradient": [
+        -0.00537109375,
+        0.013671875
+      ]
+    },
+    "camera": {
+      "scrollX": 1386,
+      "scrollY": 7188,
+      "zoom": 3.5,
+      "originX": 590,
+      "originY": 500
+    },
+    "label": "Outcrop top, 18 chunks S, level 4.4"
+  },
+  "top-outcrop-foot": {
+    "chosen": {
+      "kind": "outcrop-foot",
+      "target": [
+        123,
+        483
+      ],
+      "stand": [
+        123,
+        491
+      ],
+      "level": 2.4169921875,
+      "owner": [
+        0,
+        0
+      ]
+    },
+    "arrival": {
+      "x": 1976,
+      "y": 7864,
+      "tile": [
+        123,
+        491
+      ],
+      "z": 2.417236328125,
+      "kind": 0,
+      "walkable": true,
+      "gradient": [
+        -0.00146484375,
+        -0.001953125
+      ]
+    },
+    "camera": {
+      "scrollX": 1386,
+      "scrollY": 7364,
+      "zoom": 3.5,
+      "originX": 590,
+      "originY": 500
+    },
+    "label": "Outcrop foot (below the cliff), 18 chunks S, level 2.4"
+  },
+  "top-hills": {
+    "chosen": {
+      "kind": "hills",
+      "target": [
+        -132,
+        60
+      ],
+      "stand": [
+        -132,
+        60
+      ],
+      "level": 0.7060546875,
+      "owner": [
+        -1,
+        0
+      ]
+    },
+    "arrival": {
+      "x": -2104,
+      "y": 968,
+      "tile": [
+        -132,
+        60
+      ],
+      "z": 0.705810546875,
+      "kind": 0,
+      "walkable": true,
+      "gradient": [
+        -0.01025390625,
+        0.001953125
+      ]
+    },
+    "camera": {
+      "scrollX": -2694,
+      "scrollY": 468,
+      "zoom": 3.5,
+      "originX": 590,
+      "originY": 500
+    },
+    "label": "Hills, 6 chunks W, level 0.7"
+  },
+  "top-tunnel": {
+    "chosen": {
+      "kind": "tunnel",
+      "target": [
+        208,
+        -292
+      ],
+      "stand": [
+        208,
+        -292
+      ],
+      "level": 2.93359375,
+      "owner": [
+        0,
+        -1
+      ]
+    },
+    "arrival": {
+      "x": 3336,
+      "y": -4664,
+      "tile": [
+        208,
+        -292
+      ],
+      "z": 2.931640625,
+      "kind": 0,
+      "walkable": true,
+      "gradient": [
+        0.0078125,
+        0.015625
+      ]
+    },
+    "camera": {
+      "scrollX": 2746,
+      "scrollY": -5164,
+      "zoom": 3.5,
+      "originX": 590,
+      "originY": 500
+    },
+    "label": "Tunnel candidate, 17 chunks NE, level 2.9"
+  },
+  "lift-pass": {
+    "chosen": {
+      "kind": "pass",
+      "target": [
+        252,
+        332
+      ],
+      "stand": [
+        251,
+        332
+      ],
+      "level": 1.9169921875,
+      "owner": [
+        0,
+        0
+      ]
+    },
+    "arrival": {
+      "x": 4024,
+      "y": 5320,
+      "tile": [
+        251,
+        332
+      ],
+      "z": 1.919189453125,
+      "kind": 0,
+      "walkable": true,
+      "gradient": [
+        0.00146484375,
+        -0.017578125
+      ]
+    },
+    "camera": {
+      "scrollX": 3434,
+      "scrollY": 4728,
+      "zoom": 3.5,
+      "originX": 590,
+      "originY": 500
+    },
+    "label": "Pass, 15 chunks SE, level 1.9"
+  },
+  "lift-crest": {
+    "chosen": {
+      "kind": "crest",
+      "target": [
+        -324,
+        230
+      ],
+      "stand": [
+        -347,
+        226
+      ],
+      "level": 2.353515625,
+      "owner": [
+        -1,
+        0
+      ]
+    },
+    "arrival": {
+      "x": -5544,
+      "y": 3624,
+      "tile": [
+        -347,
+        226
+      ],
+      "z": 2.3525390625,
+      "kind": 0,
+      "walkable": true,
+      "gradient": [
+        0.03515625,
+        0.0078125
+      ]
+    },
+    "camera": {
+      "scrollX": -6134,
+      "scrollY": 3011.1428571428573,
+      "zoom": 3.5,
+      "originX": 590,
+      "originY": 500
+    },
+    "label": "Range crest (walkable shoulder), 16 chunks SW, level 2.4"
+  },
+  "lift-spire-screen": {
+    "w": 1180,
+    "h": 1000,
+    "crown": {
+      "x": 594,
+      "y": 208
+    },
+    "base": {
+      "x": 594,
+      "y": 756
+    }
+  },
+  "lift-spire": {
+    "chosen": {
+      "kind": "spire",
+      "target": [
+        289,
+        501
+      ],
+      "stand": [
+        296,
+        512
+      ],
+      "level": 1.1953125,
+      "owner": [
+        0,
+        0
+      ]
+    },
+    "arrival": {
+      "x": 4744,
+      "y": 8200,
+      "tile": [
+        296,
+        512
+      ],
+      "z": 1.19580078125,
+      "kind": 0,
+      "walkable": true,
+      "gradient": [
+        -0.01953125,
+        -0.00390625
+      ]
+    },
+    "camera": {
+      "scrollX": 4034,
+      "scrollY": 7388,
+      "zoom": 0.5,
+      "originX": 590,
+      "originY": 500
+    },
+    "label": "Spire view, 22 chunks SE, level 1.2"
+  },
+  "lift-outcrop-top": {
+    "chosen": {
+      "kind": "outcrop-top",
+      "target": [
+        123,
+        483
+      ],
+      "stand": [
+        123,
+        480
+      ],
+      "level": 4.3759765625,
+      "owner": [
+        0,
+        0
+      ]
+    },
+    "arrival": {
+      "x": 1976,
+      "y": 7688,
+      "tile": [
+        123,
+        480
+      ],
+      "z": 4.374267578125,
+      "kind": 0,
+      "walkable": true,
+      "gradient": [
+        -0.00537109375,
+        0.013671875
+      ]
+    },
+    "camera": {
+      "scrollX": 1386,
+      "scrollY": 6978,
+      "zoom": 3.5,
+      "originX": 590,
+      "originY": 500
+    },
+    "label": "Outcrop top, 18 chunks S, level 4.4"
+  },
+  "lift-outcrop-foot": {
+    "chosen": {
+      "kind": "outcrop-foot",
+      "target": [
+        123,
+        483
+      ],
+      "stand": [
+        123,
+        491
+      ],
+      "level": 2.4169921875,
+      "owner": [
+        0,
+        0
+      ]
+    },
+    "arrival": {
+      "x": 1976,
+      "y": 7864,
+      "tile": [
+        123,
+        491
+      ],
+      "z": 2.417236328125,
+      "kind": 0,
+      "walkable": true,
+      "gradient": [
+        -0.00146484375,
+        -0.001953125
+      ]
+    },
+    "camera": {
+      "scrollX": 1386,
+      "scrollY": 7248,
+      "zoom": 3.5,
+      "originX": 590,
+      "originY": 500
+    },
+    "label": "Outcrop foot (below the cliff), 18 chunks S, level 2.4"
+  },
+  "lift-hills": {
+    "chosen": {
+      "kind": "hills",
+      "target": [
+        -132,
+        60
+      ],
+      "stand": [
+        -132,
+        60
+      ],
+      "level": 0.7060546875,
+      "owner": [
+        -1,
+        0
+      ]
+    },
+    "arrival": {
+      "x": -2104,
+      "y": 968,
+      "tile": [
+        -132,
+        60
+      ],
+      "z": 0.705810546875,
+      "kind": 0,
+      "walkable": true,
+      "gradient": [
+        -0.01025390625,
+        0.001953125
+      ]
+    },
+    "camera": {
+      "scrollX": -2694,
+      "scrollY": 434,
+      "zoom": 3.5,
+      "originX": 590,
+      "originY": 500
+    },
+    "label": "Hills, 6 chunks W, level 0.7"
+  },
+  "lift-tunnel": {
+    "chosen": {
+      "kind": "tunnel",
+      "target": [
+        208,
+        -292
+      ],
+      "stand": [
+        208,
+        -292
+      ],
+      "level": 2.93359375,
+      "owner": [
+        0,
+        -1
+      ]
+    },
+    "arrival": {
+      "x": 3336,
+      "y": -4664,
+      "tile": [
+        208,
+        -292
+      ],
+      "z": 2.931640625,
+      "kind": 0,
+      "walkable": true,
+      "gradient": [
+        0.0078125,
+        0.015625
+      ]
+    },
+    "camera": {
+      "scrollX": 2746,
+      "scrollY": -5304.857142857143,
+      "zoom": 3.5,
+      "originX": 590,
+      "originY": 500
+    },
+    "label": "Tunnel candidate, 17 chunks NE, level 2.9"
+  },
+  "map-18": {
+    "view": {
+      "scale": 3.204077602251546,
+      "cx": 251.5,
+      "cy": 332.5
+    },
+    "vp": {
+      "w": 1574,
+      "h": 870
+    },
+    "frame": {
+      "minTx": -384,
+      "minTy": -336,
+      "maxTx": 383,
+      "maxTy": 551
+    },
+    "hero": {
+      "x": 251.5,
+      "y": 332.5
+    },
+    "outside": false,
+    "loads": 1,
+    "draws": 11,
+    "cached": 1,
+    "stats": {
+      "rasters": 1,
+      "images": 1,
+      "overviews": 0,
+      "summaries": 0
+    },
+    "result": {
+      "scope": "e3407fe7252fa8a89c605319241636e2f38a514ff3f5d98253af95666554488b|d7a7e87632f88628c35e6a089fc8c36388806d34fc865241cf126e6fd1fb8c3b|afbf1ee3494f611b5f018280ab57f7b0f48ac5ce5a619877e552442a0e0ea87d",
+      "missing": null,
+      "offline": false,
+      "partial": false,
+      "ended": false,
+      "endsAt": 1793577600
+    },
+    "online": true,
+    "notes": [],
+    "chunks": 15,
+    "height": {
+      "on": true,
+      "chunks": 252,
+      "requests": 2,
+      "version": 2,
+      "error": ""
+    }
+  },
+  "map-close": {
+    "view": {
+      "scale": 9.062500000000004,
+      "cx": 251.5,
+      "cy": 332.5
+    },
+    "vp": {
+      "w": 1574,
+      "h": 870
+    },
+    "frame": {
+      "minTx": -384,
+      "minTy": -336,
+      "maxTx": 383,
+      "maxTy": 551
+    },
+    "hero": {
+      "x": 251.5,
+      "y": 332.5
+    },
+    "outside": false,
+    "loads": 1,
+    "draws": 17,
+    "cached": 1,
+    "stats": {
+      "rasters": 1,
+      "images": 1,
+      "overviews": 0,
+      "summaries": 0
+    },
+    "result": {
+      "scope": "e3407fe7252fa8a89c605319241636e2f38a514ff3f5d98253af95666554488b|d7a7e87632f88628c35e6a089fc8c36388806d34fc865241cf126e6fd1fb8c3b|afbf1ee3494f611b5f018280ab57f7b0f48ac5ce5a619877e552442a0e0ea87d",
+      "missing": null,
+      "offline": false,
+      "partial": false,
+      "ended": false,
+      "endsAt": 1793577600
+    },
+    "online": true,
+    "notes": [],
+    "chunks": 15,
+    "height": {
+      "on": true,
+      "chunks": 252,
+      "requests": 2,
+      "version": 2,
+      "error": ""
+    }
+  },
+  "mapReads": [
+    15,
+    237
+  ]
+}

@@ -275,7 +275,7 @@ jobs:
         run: |
           case "$FULL:$GITHUB_REF" in
             :refs/heads/exp/*) E2E_BASE=origin/dev nice -n 10 node scripts/e2e-changed.ts ;;
-            *) nice -n 10 npx playwright test ;;
+            *) nice -n 10 node scripts/e2e-changed.ts --full ;;
           esac
       - name: Prepare bounded E2E evidence
         if: always()

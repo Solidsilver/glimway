@@ -99,6 +99,19 @@ test('the step summary counts flaky and failed tests and names the ten slowest',
   assert.equal(readFileSync(join(f.dir, '.e2e-artifacts/summary.md'), 'utf8') + '\n', md)
 })
 
+test('the isolated terrain proof is included in the combined health and original reports', (t) => {
+  const f = fixture(t, { stats: { expected: 1, duration: 100 }, suites: [] })
+  mkdirSync(join(f.dir, 'test-results/terrain-proof'))
+  const proof = { stats: { expected: 1, unexpected: 1, duration: 50 }, suites: [{ title: 'terrain', specs: [{ title: 'arrival', file: 'terrain-find.spec.ts', tests: [{ projectName: 'chromium', status: 'unexpected', expectedStatus: 'passed', results: [{ status: 'failed', retry: 0, duration: 50, error: { message: 'arrival closed' } }] }] }] }] }
+  writeFileSync(join(f.dir, 'test-results/terrain-proof/e2e-results.json'), JSON.stringify(proof))
+  const summary = f.collect()
+  assert.equal(summary.report.passes, 2)
+  assert.equal(summary.report.stats.duration, 150)
+  assert.equal(summary.health.hard.length, 1)
+  assert.equal(summary.report.tests[0].attempts[0].error.message, 'arrival closed')
+  assert.deepEqual(summary.reportPolicy.copiedPaths, ['e2e-results.json', 'terrain-proof-e2e-results.json'])
+})
+
 test('helper retries inside passing tests are counted next to the flaky ones (review R2)', (t) => {
   const retry = (description: string) => ({ type: 'helper retry', description })
   const spec = (title: string, status: string, results: unknown[], annotations: unknown[] = []) => ({ title, file: `${title}.spec.ts`, tests: [{ projectName: 'chromium', status, expectedStatus: 'passed', annotations, results }] })
