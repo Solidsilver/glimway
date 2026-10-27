@@ -63,6 +63,8 @@ const SUN_STEP_S = 600
 /** Bakes in flight at once, and quick placeholders. */
 const IN_FLIGHT = 2
 const QUICK_IN_FLIGHT = 4
+/** Frames between looks at what to bake when nothing it depends on moved (painted ground arriving). */
+const SCHEDULE_FRAMES = 15
 /** Chunks the view may ask to have baked past the attached ones (the wider window's bound). */
 const NEED_BUDGET = 24
 
@@ -102,6 +104,10 @@ export class SceneTerrain {
   private need: string[] = []
   private flatHidden = new Set<string>()
   private plain: { sig: string; rgb: RGB } | null = null
+  /** What the bake schedule was last worked out for, frames since, and bakes landed (each one looks again). */
+  private scheduled = ''
+  private idle = 0
+  private landed = 0
   private moved: Moved[] = []
   private last: Feet | null = null
   private active = false
@@ -164,6 +170,7 @@ export class SceneTerrain {
     this.wanted.clear()
     this.need = []
     this.flatHidden.clear()
+    this.scheduled = ''
     this.last = null
     this.shadow?.destroy()
     this.shadow = null
@@ -195,22 +202,31 @@ export class SceneTerrain {
     const hero = this.deps.hero().sprite
     const hcx = Math.floor(hero.x / CHUNK_PX)
     const hcy = Math.floor(hero.y / CHUNK_PX)
-    const want: [number, number][] = []
-    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) want.push([hcx + dx, hcy + dy])
-    // The view's chunks, south as far as their lifted ground reaches into it.
-    const curve = this.curve(s)
-    const lift = s.mode === 'lift'
-    const v = this.scene.cameras.main.worldView
-    const need = neededChunks({ x: v.x, y: v.y, w: v.width, h: v.height }, (z) => (lift ? T * liftRows(z, K, curve) : 0), (cx, cy) => terrain.top(cx, cy), NEED_BUDGET)
-    this.need = need.map(([cx, cy]) => `${cx},${cy}`)
-    for (const [cx, cy] of need) if (Math.abs(cx - hcx) > 2 || Math.abs(cy - hcy) > 2) want.push([cx, cy])
-    terrain.want(want)
     this.updateSun(s)
-    // A bake started (its window built and posted) is the attach cost, kept apart from the steady frame.
-    const tb = performance.now()
-    const started = this.bakes(win, s)
-    this.coverage(s)
-    const startMs = performance.now() - tb
+    // What to bake is looked at again only when something it depends on moved (the view by 32 px, the
+    // terrain, the look, the sun, a bake landing), or every SCHEDULE_FRAMES frames for painted ground arriving.
+    const v = this.scene.cameras.main.worldView
+    const key = `${Math.floor(v.x / 32)},${Math.floor(v.y / 32)},${hcx},${hcy},${terrain.version},${this.look(s)},${this.sunKey},${edgeKey(terrainEdges(s))},${s.sunStrength},${this.landed}`
+    let started = false
+    let startMs = 0
+    if (key !== this.scheduled || ++this.idle >= SCHEDULE_FRAMES) {
+      this.scheduled = key
+      this.idle = 0
+      const want: [number, number][] = []
+      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) want.push([hcx + dx, hcy + dy])
+      // The view's chunks, south as far as their lifted ground reaches into it.
+      const curve = this.curve(s)
+      const lift = s.mode === 'lift'
+      const need = neededChunks({ x: v.x, y: v.y, w: v.width, h: v.height }, (z) => (lift ? T * liftRows(z, K, curve) : 0), (cx, cy) => terrain.top(cx, cy), NEED_BUDGET)
+      this.need = need.map(([cx, cy]) => `${cx},${cy}`)
+      for (const [cx, cy] of need) if (Math.abs(cx - hcx) > 2 || Math.abs(cy - hcy) > 2) want.push([cx, cy])
+      terrain.want(want)
+      // A bake started (its window built and posted) is the attach cost, kept apart from the steady frame.
+      const tb = performance.now()
+      started = this.bakes(win, s)
+      this.coverage(s)
+      startMs = performance.now() - tb
+    }
     if (started) {
       this.stats.startMs.push(startMs)
       if (this.stats.startMs.length > 200) this.stats.startMs.shift()
@@ -361,6 +377,7 @@ export class SceneTerrain {
     this.own.add(img)
     if (had) this.drop(had)
     this.images.set(key, { img, tex, sig, look, quick, edges: b.edges, bytes: b.w * b.h * 4 })
+    this.landed++
   }
 
   // ------------------------------------------------------------ walking
