@@ -22,7 +22,7 @@
   "rules": [
     {
       "paths": ["src/game/terrain/**", "src/ui/dev/TerrainSection.svelte", "server/internal/api/dev_terrain.go", "server/internal/wilds/slopes*.go"],
-      "specs": ["terrain-ingame.spec.ts", "height-lab-slopes.spec.ts"]
+      "specs": ["terrain-ingame.spec.ts", "terrain-lift.spec.ts", "height-lab-slopes.spec.ts"]
     },
     {
       "paths": ["src/game/height-lab/**"],
