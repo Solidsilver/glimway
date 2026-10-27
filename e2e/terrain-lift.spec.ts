@@ -236,7 +236,7 @@ test.describe('height terrain: the ¾ lift beside high ground', () => {
     }
     st = (await state(page))!
     const walked = (await probe(page))!
-    evidence.budget = { frameMs: st.frameMs, startMs: st.startMs, bakeMs: st.bakeMs, quickMs: st.quickMs, bakes: st.bakes, quick: st.quick, images: st.images.length, need: st.need.length, textures: st.textures, bytes: st.bytes, void: walked.void }
+    evidence.budget = { frameMs: st.frameMs, startMs: st.startMs, scheduleMs: st.scheduleMs, passMs: st.passMs, bakeMs: st.bakeMs, quickMs: st.quickMs, bakes: st.bakes, quick: st.quick, images: st.images.length, need: st.need.length, textures: st.textures, bytes: st.bytes, void: walked.void }
     save()
     expect.soft(walked.void, 'after walking: no void').toBeLessThanOrEqual(20)
     expect(st.frameMs.p95, 'terrain CPU p95 per frame (ms)').toBeLessThan(4)

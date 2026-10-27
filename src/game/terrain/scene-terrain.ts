@@ -64,7 +64,7 @@ const SUN_STEP_S = 600
 const IN_FLIGHT = 2
 const QUICK_IN_FLIGHT = 4
 /** Frames between looks at what to bake when nothing it depends on moved (painted ground arriving). */
-const SCHEDULE_FRAMES = 15
+const SCHEDULE_FRAMES = 60
 /** Chunks the view may ask to have baked past the attached ones (the wider window's bound). */
 const NEED_BUDGET = 24
 
@@ -104,7 +104,10 @@ export class SceneTerrain {
   private need: string[] = []
   private plain: { sig: string; rgb: RGB } | null = null
   /** What the bake schedule was last worked out for, frames since, and bakes landed (each one looks again). */
-  private scheduled = ''
+  private schedKey = [Number.NaN, 0, 0, 0, 0, 0]
+  private schedWas = ''
+  private schedSettings: TerrainSettings | null = null
+  private schedSettingsKey = ''
   private idle = 0
   private landed = 0
   private moved: Moved[] = []
@@ -130,7 +133,7 @@ export class SceneTerrain {
   private own = new WeakSet<Phaser.GameObjects.GameObject>()
   private feetOf = new WeakMap<Phaser.GameObjects.GameObject, [number, number]>()
   private seen = new WeakMap<Phaser.GameObjects.GameObject, { x: number; y: number; v: number; look: string; z: number; closed: boolean; behind: boolean }>()
-  stats = { bakes: 0, quick: 0, bakeMs: [] as number[], quickMs: [] as number[], frameMs: [] as number[], startMs: [] as number[], blocked: 0, k: 1, covered: 0, spriteTotal: 0, hidden: 0, hiddenOnClosed: 0 }
+  stats = { bakes: 0, quick: 0, bakeMs: [] as number[], quickMs: [] as number[], frameMs: [] as number[], startMs: [] as number[], scheduleMs: [] as number[], passMs: [] as number[], blocked: 0, k: 1, covered: 0, spriteTotal: 0, hidden: 0, hiddenOnClosed: 0 }
 
   constructor(private scene: Phaser.Scene, private deps: SceneTerrainDeps) {
     const step = () => this.gate()
@@ -168,7 +171,7 @@ export class SceneTerrain {
     this.pendingQuick.clear()
     this.wanted.clear()
     this.need = []
-    this.scheduled = ''
+    this.schedKey[0] = Number.NaN
     this.last = null
     this.shadow?.destroy()
     this.shadow = null
@@ -204,11 +207,26 @@ export class SceneTerrain {
     // What to bake is looked at again only when something it depends on moved (the view by 32 px, the
     // terrain, the look, the sun, a bake landing), or every SCHEDULE_FRAMES frames for painted ground arriving.
     const v = this.scene.cameras.main.worldView
-    const key = `${Math.floor(v.x / 32)},${Math.floor(v.y / 32)},${hcx},${hcy},${terrain.arrived},${this.look(s)},${this.sunKey},${edgeKey(terrainEdges(s))},${s.sunStrength},${this.landed}`
+    // The settings object is new whenever they change.
+    if (s !== this.schedSettings) {
+      this.schedSettings = s
+      this.schedSettingsKey = `${this.look(s)},${edgeKey(terrainEdges(s))},${s.sunStrength}`
+    }
+    const k = this.schedKey
+    const vx = Math.floor(v.x / 32)
+    const vy = Math.floor(v.y / 32)
+    const moved = k[0] !== vx || k[1] !== vy || k[2] !== hcx || k[3] !== hcy || k[4] !== terrain.arrived || k[5] !== this.landed || this.schedWas !== this.schedSettingsKey + this.sunKey
     let started = false
     let startMs = 0
-    if (key !== this.scheduled || ++this.idle >= SCHEDULE_FRAMES) {
-      this.scheduled = key
+    if (moved || ++this.idle >= SCHEDULE_FRAMES) {
+      k[0] = vx
+      k[1] = vy
+      k[2] = hcx
+      k[3] = hcy
+      k[4] = terrain.arrived
+      k[5] = this.landed
+      this.schedWas = this.schedSettingsKey + this.sunKey
+      const ts = performance.now()
       this.idle = 0
       const want: [number, number][] = []
       for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) want.push([hcx + dx, hcy + dy])
@@ -223,6 +241,8 @@ export class SceneTerrain {
       const tb = performance.now()
       started = this.bakes(win, s)
       startMs = performance.now() - tb
+      this.stats.scheduleMs.push(performance.now() - ts - (started ? startMs : 0))
+      if (this.stats.scheduleMs.length > 200) this.stats.scheduleMs.shift()
     }
     if (started) {
       this.stats.startMs.push(startMs)
@@ -300,8 +320,8 @@ export class SceneTerrain {
     for (const c of chunks) {
       if (!terrain.has(c.cx, c.cy)) continue
       const had = this.images.get(c.key)
-      // A placeholder first where this look has nothing yet.
-      if ((!had || had.look !== look) && this.pendingQuick.size < QUICK_IN_FLIGHT && !this.pendingQuick.has(c.key) && this.pending.get(c.key)?.includes(`|${look}|`) !== true) {
+      // A placeholder first where this look has nothing yet; an attached chunk's flat ground is its own placeholder.
+      if (!c.attached && (!had || had.look !== look) && this.pendingQuick.size < QUICK_IN_FLIGHT && !this.pendingQuick.has(c.key) && this.pending.get(c.key)?.includes(`|${look}|`) !== true) {
         const qsig = `quick|${look}`
         this.pendingQuick.set(c.key, qsig)
         started = true
@@ -552,6 +572,8 @@ export class SceneTerrain {
     this.stats.hiddenOnClosed = onClosed
     this.seeThrough(lift, heroAt)
     const ms = performance.now() - t0
+    this.stats.passMs.push(ms)
+    if (this.stats.passMs.length > 600) this.stats.passMs.shift()
     const f = this.stats.frameMs
     if (f.length) f[f.length - 1] = f[f.length - 1]! + ms
   }
@@ -701,6 +723,8 @@ export class SceneTerrain {
   /** Timings afresh (the spec's steady walk). */
   resetStats(): void {
     this.stats.frameMs.length = 0
+    this.stats.scheduleMs.length = 0
+    this.stats.passMs.length = 0
     this.stats.startMs.length = 0
   }
 
@@ -738,7 +762,10 @@ export class SceneTerrain {
       bakes: this.stats.bakes,
       bakeMs: pct(this.stats.bakeMs),
       frameMs: pct(this.stats.frameMs),
-      startMs: pct(this.stats.startMs)
+      startMs: pct(this.stats.startMs),
+      /** Of the frame: working out what to bake (when something moved), and the lift pass before the render. */
+      scheduleMs: pct(this.stats.scheduleMs),
+      passMs: pct(this.stats.passMs)
     }
   }
 }

@@ -123,6 +123,25 @@ const jitter = (x: number, y: number) => {
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296
 }
 
+const nearCache = new WeakMap<Uint8Array, Uint8Array>()
+/** Per tile: 1 when it or a neighbour (of eight) is closed. Worked out once a field. */
+function closedNear(f: Field): Uint8Array {
+  let near = nearCache.get(f.kind)
+  if (near) return near
+  near = new Uint8Array(f.w * f.h)
+  for (let y = 0; y < f.h; y++)
+    for (let x = 0; x < f.w; x++) {
+      if (!closedKind(f.kind[y * f.w + x]!)) continue
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const nx = x + dx
+        const ny = y + dy
+        if (nx >= 0 && ny >= 0 && nx < f.w && ny < f.h) near[ny * f.w + nx] = 1
+      }
+    }
+  nearCache.set(f.kind, near)
+  return near
+}
+
 /**
  * Where closed ground is drawn at field tile (tx, ty), fractions (fx, fy)
  * (world px wx, wy for a little jitter): its outline rounded off the tile
@@ -138,6 +157,8 @@ export function closedDrawn(f: Field, tx: number, ty: number, fx: number, fy: nu
   const y0 = Math.floor(py)
   const u = px - x0
   const v = py - y0
+  // Mostly walkable ground: no closed tile next to this one, nothing to blend.
+  if (!closedNear(f)[ty * f.w + tx]) return -1
   let sum = 0
   let best = -1
   let bestW = -1
@@ -150,6 +171,9 @@ export function closedDrawn(f: Field, tx: number, ty: number, fx: number, fy: nu
     sum += w
     if (w > bestW) { bestW = w; best = k }
   }
+  // The jitter (±0.08) only matters near the cut.
+  if (sum >= 0.58) return best
+  if (sum <= 0.42) return -1
   return sum + (jitter(wx >> 1, wy >> 1) - 0.5) * 0.16 > 0.5 ? best : -1
 }
 

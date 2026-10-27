@@ -275,7 +275,7 @@ test.describe('height terrain in the Wilds', () => {
       await holdKey(page, 'ArrowLeft', 900)
     }
     const last = (await state(page))!
-    frames.budget = { frameMs: last.frameMs, startMs: last.startMs, bakeMs: last.bakeMs, textures: last.textures, images: last.images.length }
+    frames.budget = { frameMs: last.frameMs, startMs: last.startMs, bakeMs: last.bakeMs, scheduleMs: last.scheduleMs, passMs: last.passMs, textures: last.textures, images: last.images.length }
     save()
     expect(last.frameMs.p95, 'terrain CPU p95 per frame (ms)').toBeLessThan(2)
     expect(last.startMs.p95, 'a chunk bake started: no big stall (ms)').toBeLessThan(16)
