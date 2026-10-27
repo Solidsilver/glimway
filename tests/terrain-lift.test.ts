@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { SLOPE, STEEP, SLOPE_UNIT, emptySurface, gradientSquared, SLOPE_WALK_LIMIT } from '../src/game/terrain/surface.ts';
+import { CRAG, SLOPE, STEEP, SLOPE_UNIT, emptySurface, gradientSquared, SLOPE_WALK_LIMIT } from '../src/game/terrain/surface.ts';
 import { TerrainStore } from '../src/game/terrain/store.ts';
 import { buildWindow } from '../src/game/terrain/window-field.ts';
 import { CHUNK_PX, bakeChunk, type Baked } from '../src/game/terrain/bake.ts';
@@ -128,4 +128,22 @@ test('the store knows each chunk\'s highest ground', () => {
   assert.equal(plateau.top(0, 0), 0);
   assert.equal(plateau.top(0, 1), 12);
   assert.ok(Number.isNaN(plateau.top(9, 9)));
+});
+
+test('closed ground: its border is marked on the walkable side even with no drop, and it is drawn as rock, not one grey', () => {
+  const flat = storeOf(() => 1);
+  // Crag over the east half of chunk (0, 0), at the same height as the ground beside it.
+  const s = flat.surface(0, 0)!;
+  for (let y = 0; y < 24; y++) for (let x = 12; x < 24; x++) s.kind[y * 24 + x] = CRAG;
+  flat.version++;
+  const win = buildWindow(flat, -HALO, -HALO, 24 + 2 * HALO, 24 + 2 * HALO);
+  const b = bakeChunk({ win, cx: 0, cy: 0, albedo, lift: false, sun: sunAt(0.5), sunStrength: 0, edges: EDGE_DEFAULT });
+  assert.ok(b.edges > 0, 'the border counts as an edge');
+  const lum = (x: number, y: number) => { const o = (y * b.w + x) * 4; return b.rgba[o]! + b.rgba[o + 1]! + b.rgba[o + 2]!; };
+  const y = 100;
+  assert.ok(lum(12 * 16 - 1, y) < lum(12 * 16 - 8, y) * 0.8, `darker beside the border (${lum(12 * 16 - 1, y)} vs ${lum(12 * 16 - 8, y)})`);
+  // Rock: ledges and blocks make many distinct tones, not a flat grey.
+  const tones = new Set<number>();
+  for (let x = 13 * 16; x < 23 * 16; x++) for (let yy = 40; yy < 340; yy += 7) tones.add(Math.round(lum(x, yy) / 6));
+  assert.ok(tones.size > 20, `${tones.size} tones on the crag`);
 });

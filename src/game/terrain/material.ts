@@ -27,6 +27,7 @@ const STONE = hexRGB('#a8a296')
 const SNOW = hexRGB('#eef2f8')
 const SCREE = hexRGB('#aa9f8e')
 const BARE = hexRGB('#96928b')
+const TILE = 16
 
 function tint(c: RGB, to: readonly number[], k: number): void {
   c[0] = mix(c[0], to[0]!, k)
@@ -41,21 +42,33 @@ export function heightTint(c: RGB, z: number, wx: number, wy: number): void {
   if (z > 11) tint(c, SNOW, (0.35 + hash(wx >> 2, wy >> 2, 21) * 0.25) * smoothstep(11, 12.5, z))
 }
 
+/** Rock ledges a level (bands along the contours: closer together where the ground is steeper). */
+const LEDGES = 2
+/** The narrowest a ledge is drawn (px): on steeper ground a band spans more levels. */
+const LEDGE_PX = 7
+
 /**
- * Too-steep ground at world px: scree down the fall line (broken streaks
- * of uneven length), bare rock where it's steeper still; at a cliff's foot
- * (talus) fallen blocks. (gx, gy): the slope there, levels a tile. `rimOff`:
- * px to the nearest walkable side within the tile (-1: none), where a rim
- * of loose stones marks where walking ends.
+ * Too-steep ground at world px, height z: rock, in ledges along the
+ * contours (a dark joint under each lip, a light lip, broken into blocks
+ * along the contour), with scree down the fall line (broken streaks of
+ * uneven length); bare rock where it's steeper still; at a cliff's foot
+ * (talus) fallen blocks. A little of the ground under it shows through, so
+ * the rock sits in the season's colours. (gx, gy): the slope there, levels
+ * a tile. `rimOff`: px to the nearest walkable side within the tile (-1:
+ * none), where a rim of loose stones marks where walking ends.
  */
-export function steepMaterial(c: RGB, wx: number, wy: number, gx: number, gy: number, talus: boolean, rimOff: number): void {
+export function steepMaterial(c: RGB, wx: number, wy: number, gx: number, gy: number, z: number, talus: boolean, rimOff: number): void {
+  const under0 = c[0]
+  const under1 = c[1]
+  const under2 = c[2]
   const slope = Math.hypot(gx, gy)
   const rock = slope > 0.55
   const base = rock ? BARE : SCREE
-  const k = 0.92 + hash(wx >> 3, wy >> 3, 31) * 0.16 + (hash(wx, wy, 32) - 0.5) * 0.12
+  const k = (0.95 + hash(wx >> 3, wy >> 3, 31) * 0.1 + (hash(wx, wy, 32) - 0.5) * 0.1) * ledges(wx, wy, gx, gy, z, rock ? 1 : 0.7)
   c[0] = base[0] * k
   c[1] = base[1] * k
   c[2] = base[2] * k
+  tint(c, [under0, under1, under2], 0.14)
   const dx = gx / (slope || 1)
   const dy = gy / (slope || 1)
   const along = wx * dx + wy * dy
@@ -78,15 +91,48 @@ export function steepMaterial(c: RGB, wx: number, wy: number, gx: number, gy: nu
   if (rimOff >= 0 && rimOff < 2) tint(c, [214, 204, 182], rimOff === 0 ? 0.55 : 0.3)
 }
 
-/** Crags: broken rock blocks with dark joints. */
-export function cragMaterial(c: RGB, wx: number, wy: number): void {
-  const cell = Math.floor((wx + (Math.floor(wy / 5) % 2) * 3) / 6) * 977 + Math.floor(wy / 5)
-  const v = 96 + hash(cell, 0, 24) * 40
+/**
+ * Rock ledges along the contours at world px, height z (levels), slope
+ * (gx, gy): a band every 1/LEDGES level (closer together where the ground is
+ * steeper), each broken into blocks along the contour (it runs east–west
+ * on a north or south face, north–south on an east or west one), a dark
+ * joint under each lip and a light lip. A brightness factor; `contrast`
+ * scales it.
+ */
+function ledges(wx: number, wy: number, gx: number, gy: number, z: number, contrast: number): number {
+  const slope = Math.max(0.2, Math.hypot(gx, gy))
+  // Levels a band: 1/LEDGES, doubled until the band is at least LEDGE_PX wide; its edges waver a little.
+  let step = 1 / LEDGES
+  while ((step * TILE) / slope < LEDGE_PX) step *= 2
+  const zb = z / step + (hash(wx >> 4, wy >> 4, 34) - 0.5) * 0.12 + (hash(wx >> 1, wy >> 1, 39) - 0.5) * 0.05
+  const band = Math.floor(zb)
+  const bandPx = (step * TILE) / slope
+  const below = (zb - band) * bandPx
+  const above = (1 - (zb - band)) * bandPx
+  const run = Math.abs(gy) >= Math.abs(gx) ? wx : wy
+  const bw = 8 + Math.floor(hash(band, 0, 35) * 9)
+  const shift = run + Math.floor(hash(band, 1, 36) * bw)
+  const block = Math.floor(shift / bw)
+  let k = 1 + (hash(band, block, 37) - 0.5) * 0.24 * contrast
+  if (above < 1) k *= 1 - 0.4 * contrast
+  else if (above < 2 && bandPx > 7) k *= 1 - 0.18 * contrast
+  else if (below < 1) k *= 1 + 0.12 * contrast
+  else if (shift - block * bw < 1 && hash(band, block, 38) < 0.45) k *= 1 - 0.22 * contrast
+  return Math.max(0.3, k)
+}
+
+/**
+ * Crags at world px, height z, slope (gx, gy): broken rock, darker and
+ * rougher than steep ground, in ledges along the contours, mottled in
+ * small patches; a little of the ground under it shows through.
+ */
+export function cragMaterial(c: RGB, wx: number, wy: number, gx: number, gy: number, z: number): void {
+  const under: RGB = [c[0], c[1], c[2]]
+  const v = (106 + hash(wx >> 2, wy >> 2, 24) * 14 + hash(wx >> 3, (wy + 4) >> 3, 26) * 12 + (hash(wx, wy, 27) - 0.5) * 8) * ledges(wx, wy, gx, gy, z, 1.25)
   c[0] = v
   c[1] = v * 0.97
   c[2] = v * 0.95
-  const ex = (wx + (Math.floor(wy / 5) % 2) * 3) % 6
-  if (wy % 5 === 4 || ex === 5) tint(c, [30, 28, 30], 0.6)
+  tint(c, under, 0.12)
 }
 
 /** A face's colour by the height it rises to (warm low down, greyer and cooler high up). */

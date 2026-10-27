@@ -160,7 +160,8 @@ export function bakeChunk(job: BakeJob): Baked {
     const wy = (win.oy + ty) * T + Math.min(15, Math.floor(fy * T))
     const i = ty * f.w + tx
     const kind = f.kind[i]!
-    heightTint(c, fieldZ(f, tx, ty, fx, fy), wx, wy)
+    const z = fieldZ(f, tx, ty, fx, fy)
+    heightTint(c, z, wx, wy)
     if (kind === FIELD_STEEP) {
       const o = i * 4
       const gx = (f.corner[o + 1]! - f.corner[o]!) * (1 - fy) + (f.corner[o + 2]! - f.corner[o + 3]!) * fy
@@ -174,8 +175,13 @@ export function bakeChunk(job: BakeJob): Baked {
         if (!walkableField(f.kind[j]!) || win.faceRows[j]! > 0) continue
         if (rim < 0 || d < rim) rim = d
       }
-      steepMaterial(c, wx, wy, gx, gy, win.faceRows[i]! > 0, rim)
-    } else if (kind === FIELD_CRAG) cragMaterial(c, wx, wy)
+      steepMaterial(c, wx, wy, gx, gy, z, win.faceRows[i]! > 0, rim)
+    } else if (kind === FIELD_CRAG) {
+      const o = i * 4
+      const gx = (f.corner[o + 1]! - f.corner[o]!) * (1 - fy) + (f.corner[o + 2]! - f.corner[o + 3]!) * fy
+      const gy = (f.corner[o + 3]! - f.corner[o]!) * (1 - fx) + (f.corner[o + 2]! - f.corner[o + 1]!) * fx
+      cragMaterial(c, wx, wy, gx, gy, z)
+    }
   }
   let edges = 0
   for (let y = 0; y < H; y++) {

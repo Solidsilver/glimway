@@ -12,7 +12,9 @@
  *
  * The low side gets a hard band, one dark tone near the edge and a
  * dithered lighter tone past it; the high lip optionally a one-pixel light
- * rim. Values here are amounts (0–1), turned into colour by ./sun-view.ts,
+ * rim. Where walkable ground meets ground nobody walks (steep, crag), the
+ * walkable side gets a narrower, lighter band whatever the heights, so a
+ * range's border reads even where its foot rises gently. Values here are amounts (0–1), turned into colour by ./sun-view.ts,
  * which also caps them against cast shadows.
  */
 import { TILE_PX as T, VIEW_FACE, fieldZ, liftColumn, type TerrainView } from './field.ts'
@@ -35,6 +37,10 @@ export const EDGE_DEFAULT: EdgeSettings = { strength: 0.6, width: 4, scale: true
 
 /** At 100% strength: the inner tone's darkening, the outer dithered tone's, and the rim's lightening, before scaling. */
 export const EDGE_TONE = { inner: 0.75, outer: 0.4, rim: 0.12 } as const
+/** The closed border's band, of the drop band's tones. */
+export const BORDER_TONE = 0.9
+/** Field kinds nobody walks (the lab's KIND.steep and KIND.crag; ./bake.ts FIELD_STEEP, FIELD_CRAG). */
+const closedKind = (k: number) => k === 8 || k === 9
 /** The most an edge darkens one pixel (strong, a big drop): dark, never black. */
 export const EDGE_MAX_DARK = 0.7
 
@@ -55,7 +61,7 @@ export function edgeBand(drop: number, s: EdgeSettings): { width: number; k: num
  * own height, a face's top (a face is the high side of its edge), NaN for
  * nothing; and which pixels are faces.
  */
-export function viewHeights(info: TerrainView, x0: number, y0: number, w: number, h: number): { z: Float32Array; face: Uint8Array } {
+export function viewHeights(info: TerrainView, x0: number, y0: number, w: number, h: number): { z: Float32Array; face: Uint8Array; closed?: Uint8Array } {
   return run(viewHeightsSteps(info, x0, y0, w, h))
 }
 function run<T>(it: Generator<void, T>): T {
@@ -65,10 +71,11 @@ function run<T>(it: Generator<void, T>): T {
   }
 }
 /** viewHeights a few columns (lifted) or rows (flat) a step. */
-export function* viewHeightsSteps(info: TerrainView, x0: number, y0: number, w: number, h: number): Generator<void, { z: Float32Array; face: Uint8Array }> {
+export function* viewHeightsSteps(info: TerrainView, x0: number, y0: number, w: number, h: number): Generator<void, { z: Float32Array; face: Uint8Array; closed?: Uint8Array }> {
   const f = info.field
   const z = new Float32Array(w * h).fill(Number.NaN)
   const face = new Uint8Array(w * h)
+  const closed = new Uint8Array(w * h)
   if (info.lift) {
     for (let x = 0; x < w; x++) {
       const wx = x0 + x
@@ -87,11 +94,12 @@ export function* viewHeightsSteps(info: TerrainView, x0: number, y0: number, w: 
         } else {
           const fy = Math.max(0, Math.min(1, (s - sp.sN) / (sp.sS - sp.sN)))
           z[i] = sp.zN + (sp.zS - sp.zN) * fy
+          if (closedKind(f.kind[sp.ty * f.w + (wx >> 4)]!)) closed[i] = 1
         }
       }
       if ((x + 1) % 48 === 0) yield
     }
-    return { z, face }
+    return { z, face, closed }
   }
   const v = info.view
   for (let y = 0; y < h; y++) {
@@ -107,11 +115,14 @@ export function* viewHeightsSteps(info: TerrainView, x0: number, y0: number, w: 
       if (v.kind[vi] === VIEW_FACE) {
         z[i] = v.faceTop[vi]!
         face[i] = 1
-      } else z[i] = fieldZ(f, tx, ty, ((wx & 15) + 0.5) / T, ((wy & 15) + 0.5) / T)
+      } else {
+        z[i] = fieldZ(f, tx, ty, ((wx & 15) + 0.5) / T, ((wy & 15) + 0.5) / T)
+        if (closedKind(f.kind[ty * f.w + tx]!)) closed[i] = 1
+      }
     }
     if ((y + 1) % 96 === 0) yield
   }
-  return { z, face }
+  return { z, face, closed }
 }
 
 /**
@@ -121,14 +132,15 @@ export function* viewHeightsSteps(info: TerrainView, x0: number, y0: number, w: 
  * the lip's lightening. Pixel-art: two hard tones, the outer one on a world
  * checkerboard.
  */
-export function edgeAmounts(heights: { z: Float32Array; face: Uint8Array }, x0: number, y0: number, w: number, h: number, m: number, s: EdgeSettings): { dark: Float32Array; rim: Float32Array; edges: number } {
+export function edgeAmounts(heights: { z: Float32Array; face: Uint8Array; closed?: Uint8Array }, x0: number, y0: number, w: number, h: number, m: number, s: EdgeSettings): { dark: Float32Array; rim: Float32Array; edges: number } {
   return run(edgeAmountsSteps(heights, x0, y0, w, h, m, s))
 }
 /** edgeAmounts a few rows a step. */
-export function* edgeAmountsSteps(heights: { z: Float32Array; face: Uint8Array }, x0: number, y0: number, w: number, h: number, m: number, s: EdgeSettings): Generator<void, { dark: Float32Array; rim: Float32Array; edges: number }> {
+export function* edgeAmountsSteps(heights: { z: Float32Array; face: Uint8Array; closed?: Uint8Array }, x0: number, y0: number, w: number, h: number, m: number, s: EdgeSettings): Generator<void, { dark: Float32Array; rim: Float32Array; edges: number }> {
   const W = w + 2 * m
   const H = h + 2 * m
   const { z, face } = heights
+  const closed = heights.closed
   const dark = new Float32Array(w * h)
   const rim = new Float32Array(w * h)
   let edges = 0
@@ -141,11 +153,28 @@ export function* edgeAmountsSteps(heights: { z: Float32Array; face: Uint8Array }
     const i = y * w + x
     if (amount > into[i]!) into[i] = amount
   }
+  // Walkable ground beside closed ground: a band on the walkable side (from (lx, ly), away from (cx, cy)).
+  const border = (lx: number, ly: number, cx: number, cy: number) => {
+    edges++
+    const width = Math.max(3, Math.round(s.width * 0.75))
+    const dx = lx - cx
+    const dy = ly - cy
+    for (let k = 0; k < width; k++) {
+      const X = lx + dx * k
+      const Y = ly + dy * k
+      if (X < 0 || Y < 0 || X >= W || Y >= H) break
+      const j = Y * W + X
+      if (face[j] || closed![j] || Number.isNaN(z[j]!)) break
+      if (k < 2) put(X, Y, EDGE_TONE.inner * BORDER_TONE, dark)
+      else if (((x0 - m + X + y0 - m + Y) & 1) === 0) put(X, Y, EDGE_TONE.outer * BORDER_TONE, dark)
+    }
+  }
   // Each neighbouring pair, across and down: a step up from `lo` to `hi` of at least the threshold is an edge.
   const pair = (a: number, b: number, ax: number, ay: number, bx: number, by: number) => {
     const za = z[a]!
     const zb = z[b]!
     if (Number.isNaN(za) || Number.isNaN(zb)) return
+    if (closed && closed[a] !== closed[b] && !face[a] && !face[b]) border(...(closed[a] ? [bx, by, ax, ay] : [ax, ay, bx, by]) as [number, number, number, number])
     const d = zb - za
     if (Math.abs(d) < thr) return
     const [lo, lx, ly, hi, hx, hy] = d > 0 ? [a, ax, ay, b, bx, by] : [b, bx, by, a, ax, ay]

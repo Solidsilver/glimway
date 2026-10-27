@@ -108,8 +108,8 @@ export function paintField(area: LabArea, x0: number, y0: number, w: number, h: 
           const off = d === 0 ? fy : d === 1 ? 15 - fx : d === 2 ? 15 - fy : fx
           if (rimOff < 0 || off < rimOff) rimOff = off
         }
-        steepMaterial(c, wx, wy, gx, gy, talus, rimOff)
-      } else if (kind === KIND.crag) cragMaterial(c, wx, wy)
+        steepMaterial(c, wx, wy, gx, gy, z, talus, rimOff)
+      } else if (kind === KIND.crag) cragMaterial(c, wx, wy, gx, gy, z)
       r = c[0]
       g = c[1]
       b = c[2]
