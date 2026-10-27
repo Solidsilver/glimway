@@ -161,3 +161,15 @@ height.
     edge shading, sun) moved to the main dev panel.
 - **Dev servers only.** A dev-mode switch turns height terrain on. The live server and
   playtesters keep today's Wilds until the owner signs it off.
+
+## First walk on generated terrain (owner, 2026-10-26)
+
+- **The ranges couldn't be walked at all.** In-game, the north-east range is a wide grey
+  staircase of closed rock. Its sides should be walkable slopes that rise gradually, the way the
+  owner first described: "semi-smooth sides on the way up", with passes. Crag and cliff belong at
+  crests, spires and on purpose, not over whole ranges.
+- **¾ lift showed a void** beside high ground. That's a bug: lifted land is drawn from chunks
+  further south than the game had baked.
+- **Tall mountains in ¾ lift:** at 48 px a level, a level-15 peak would be about a screen tall. The
+  owner wants to see both a literal full height and compressed high levels (48 px a level low down,
+  less above), with a switch in the Terrain section.
