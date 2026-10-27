@@ -1,0 +1,12 @@
+RANGE map range:-1:-1 n=64447 kinds=78.43/1.70/19.46/0.40 walk=78.27 high3/6/9=[13100 0 0] home8=0 shoulder-p95=0.3534
+RANGE map range:0:-1 n=64187 kinds=75.82/1.62/22.51/0.04 walk=75.66 high3/6/9=[3174 0 0] home8=0 shoulder-p95=0.3192
+RANGE map range:-1:0 n=68192 kinds=78.83/1.61/19.18/0.39 walk=78.67 high3/6/9=[1169 0 0] home8=0 shoulder-p95=0.2912
+RANGE map range:0:0 n=64369 kinds=76.86/1.69/21.05/0.41 walk=76.70 high3/6/9=[4742 0 0] home8=0 shoulder-p95=0.3826
+RANGE slopes-17 range:-1:-1 n=64386 kinds=73.95/1.68/23.96/0.41 walk=73.77 high3/6/9=[21798 0 0] home8=0 shoulder-p95=0.4793
+RANGE slopes-17 range:0:-1 n=68424 kinds=77.38/1.52/21.04/0.06 walk=77.22 high3/6/9=[18287 0 0] home8=0 shoulder-p95=0.4239
+RANGE slopes-17 range:-1:0 n=74923 kinds=79.04/1.44/19.16/0.35 walk=78.88 high3/6/9=[22757 0 0] home8=0 shoulder-p95=0.3771
+RANGE slopes-17 range:0:0 n=66090 kinds=78.16/1.66/19.78/0.40 walk=78.01 high3/6/9=[4704 0 0] home8=0 shoulder-p95=0.3331
+RANGE slopes-991 range:-1:-1 n=65532 kinds=77.23/1.65/20.72/0.40 walk=77.05 high3/6/9=[9247 0 0] home8=0 shoulder-p95=0.3587
+RANGE slopes-991 range:0:-1 n=64115 kinds=76.51/1.60/21.82/0.07 walk=76.31 high3/6/9=[18256 0 0] home8=0 shoulder-p95=0.4399
+RANGE slopes-991 range:-1:0 n=73122 kinds=78.84/1.49/19.30/0.36 walk=78.68 high3/6/9=[22788 0 0] home8=0 shoulder-p95=0.3984
+RANGE slopes-991 range:0:0 n=65714 kinds=82.60/1.64/15.37/0.40 walk=82.41 high3/6/9=[10936 0 0] home8=0 shoulder-p95=0.2988

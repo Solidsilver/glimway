@@ -191,3 +191,180 @@ morphology adjustments. The retained script passes `sh -n`, and all fifteen
 sidecars were checked for consistent digests, zero stranded tiles, level-15
 bounds, four tunnel candidates and meaningful detours. No JS dependencies,
 Vite or Playwright were needed on this host; browser checks run in CI.
+
+## Walkable high shoulders: revision of @2 (2026-10-26)
+
+This section supersedes the @2 morphology and measurements above. The owner’s
+screenshots showed a real access failure: the old recipe had walkable skirts,
+but **zero ordinary walkable tiles above level 6 in all twelve measured ranges**.
+The guess that most of the *whole footprint* was closed was too strong:
+73.77–82.41% was walkable. Almost all that usable area was low ground. Upper
+ribs compressed the remaining rise into 12–24 tiles and then explicitly marked
+that entire rib as crag. Merely relaxing the crag mask would have left steep
+unwalkable slopes. The walk limit and four-corner collision contract stay fixed.
+
+The new profile distributes the full climb across a smooth 76–124-tile
+half-width, with seeded 92–111-tile end tapers and an 82-tile saddle support. Taller
+owners widen the half-width to at least 8.5 times their target rise and the
+end taper to at least 9 times the rise. This leaves headroom for the base
+field and quantization: the first height-varied revision exposed eight
+stranded tiles in slopes-17 where gradients fluctuated around the exact limit.
+Lengthening the approaches removes those steep rings before classification. Bend
+amplitude, target height and tributary height vary independently per owner;
+a quarter of owners omit the tributary, and the others use differing lower
+spurs. A radial envelope vanishes by radius 250. Peak amplitude reserves
+headroom below level 14 before sampling, while the independent spires retain
+level-15 crowns. The base field, protected apron, outcrop scarp and spire
+construction are unchanged. No codec, client or contract changes are involved.
+
+Closed ground is deliberately sparse: 2–5-tile winding crest half-widths,
+interrupted crag bands on one flank, outcrop south scarps and the separate
+pinnacles. The measured closed share is **3.72–4.98%** of the footprint, well
+under the requested 25% ceiling. Crag masks use continuous ridge coordinates
+and curved outlines, never whole-level contour thresholds. They do not create
+the broad staircase of closed upper sides. The analytic bands are crag; explicit
+discontinuous cliff faces remain on the outcrops. No connectivity-driven
+relabeling, stranded-component exemption or increased walking limit is used.
+
+Pass endpoints now sit 88 tiles either side of the saddle, on its approaches.
+At 112 tiles, the axis-aligned rectangle between diagonal endpoints could also
+contain a route around the fading near-home end, with exactly the same Manhattan
+length. The shorter endpoint pair measures a pass against a genuinely longer
+alternative; the clearance and narrow-corridor tests remain unchanged. The
+new regression also closes the pass neck and routes from home to each range’s
+highest ordinary walkable tile: every measured range can reach level 8+ without
+using its pass.
+
+### Per-range measurements
+
+The footprint is the union of the analytic main shoulder support, active
+tributary support, a 29-tile-radius pinnacle envelope and the outcrop approach
+plus face (76 by 70 tiles). Main/tributary support is bounded by radius 250 in
+the revised recipe. It includes zero-height outer fringes and home-envelope
+fades, but excludes the unrelated remainder of the 576-square owner. The old
+recipe had a tributary in every owner. Counts exclude deliberately unreachable
+spire ground from walkable area. Heights use the mean of the four exact
+Uint16 corners. The p95 gradient uses the conservative maximum of the four
+bilinear corner gradients across the footprint, excluding the separate spire
+and explicit cliff faces; it includes the old closed upper shoulders. This
+measures the shape, independently of the crag label.
+
+Kinds are percentages in **slope / steep / crag / cliff** order. High areas
+are absolute tile counts (and percentages of the full footprint) strictly
+above levels 3, 6 and 9. The final column counts home-connected ordinary tiles
+at level 8 or higher. Raw rows are retained beside the images.
+
+Before (86c9eb2b):
+
+| Seed | Owner | Footprint tiles | Kinds % | Walkable % | Above 3 / 6 / 9 tiles (% footprint) | p95 level/tile | Home ≥8 tiles |
+|---|---|---:|---|---:|---|---:|---:|
+| map | -1:-1 | 64447 | 78.43 / 1.70 / 19.46 / 0.40 | 78.27 | 13100 (20.33%) / 0 (0.00%) / 0 (0.00%) | 0.3534 | 0 |
+| map | 0:-1 | 64187 | 75.82 / 1.62 / 22.51 / 0.04 | 75.66 | 3174 (4.94%) / 0 (0.00%) / 0 (0.00%) | 0.3192 | 0 |
+| map | -1:0 | 68192 | 78.83 / 1.61 / 19.18 / 0.39 | 78.67 | 1169 (1.71%) / 0 (0.00%) / 0 (0.00%) | 0.2912 | 0 |
+| map | 0:0 | 64369 | 76.86 / 1.69 / 21.05 / 0.41 | 76.70 | 4742 (7.37%) / 0 (0.00%) / 0 (0.00%) | 0.3826 | 0 |
+| slopes-17 | -1:-1 | 64386 | 73.95 / 1.68 / 23.96 / 0.41 | 73.77 | 21798 (33.86%) / 0 (0.00%) / 0 (0.00%) | 0.4793 | 0 |
+| slopes-17 | 0:-1 | 68424 | 77.38 / 1.52 / 21.04 / 0.06 | 77.22 | 18287 (26.73%) / 0 (0.00%) / 0 (0.00%) | 0.4239 | 0 |
+| slopes-17 | -1:0 | 74923 | 79.04 / 1.44 / 19.16 / 0.35 | 78.88 | 22757 (30.37%) / 0 (0.00%) / 0 (0.00%) | 0.3771 | 0 |
+| slopes-17 | 0:0 | 66090 | 78.16 / 1.66 / 19.78 / 0.40 | 78.01 | 4704 (7.12%) / 0 (0.00%) / 0 (0.00%) | 0.3331 | 0 |
+| slopes-991 | -1:-1 | 65532 | 77.23 / 1.65 / 20.72 / 0.40 | 77.05 | 9247 (14.11%) / 0 (0.00%) / 0 (0.00%) | 0.3587 | 0 |
+| slopes-991 | 0:-1 | 64115 | 76.51 / 1.60 / 21.82 / 0.07 | 76.31 | 18256 (28.47%) / 0 (0.00%) / 0 (0.00%) | 0.4399 | 0 |
+| slopes-991 | -1:0 | 73122 | 78.84 / 1.49 / 19.30 / 0.36 | 78.68 | 22788 (31.16%) / 0 (0.00%) / 0 (0.00%) | 0.3984 | 0 |
+| slopes-991 | 0:0 | 65714 | 82.60 / 1.64 / 15.37 / 0.40 | 82.41 | 10936 (16.64%) / 0 (0.00%) / 0 (0.00%) | 0.2988 | 0 |
+
+After:
+
+| Seed | Owner | Footprint tiles | Kinds % | Walkable % | Above 3 / 6 / 9 tiles (% footprint) | p95 level/tile | Home ≥8 tiles |
+|---|---|---:|---|---:|---|---:|---:|
+| map | -1:-1 | 76406 | 95.64 / 1.43 / 2.60 / 0.34 | 95.50 | 35867 (46.94%) / 14193 (18.58%) / 4760 (6.23%) | 0.1719 | 7327 |
+| map | 0:-1 | 84832 | 95.98 / 1.23 / 2.76 / 0.03 | 95.86 | 31299 (36.90%) / 13539 (15.96%) / 4094 (4.83%) | 0.1617 | 6770 |
+| map | -1:0 | 84604 | 95.84 / 1.30 / 2.55 / 0.31 | 95.71 | 25103 (29.67%) / 9700 (11.47%) / 2369 (2.80%) | 0.1799 | 4306 |
+| map | 0:0 | 83972 | 96.28 / 1.30 / 2.11 / 0.31 | 96.16 | 30112 (35.86%) / 12721 (15.15%) / 3637 (4.33%) | 0.1615 | 6196 |
+| slopes-17 | -1:-1 | 83755 | 95.47 / 1.29 / 2.92 / 0.31 | 95.34 | 52807 (63.05%) / 21069 (25.16%) / 8752 (10.45%) | 0.1632 | 12149 |
+| slopes-17 | 0:-1 | 84932 | 95.80 / 1.22 / 2.93 / 0.05 | 95.67 | 46649 (54.93%) / 19695 (23.19%) / 8721 (10.27%) | 0.1744 | 11779 |
+| slopes-17 | -1:0 | 80728 | 95.02 / 1.33 / 3.32 / 0.33 | 94.87 | 46339 (57.40%) / 18783 (23.27%) / 8471 (10.49%) | 0.1881 | 11322 |
+| slopes-17 | 0:0 | 84555 | 95.82 / 1.30 / 2.57 / 0.31 | 95.70 | 35860 (42.41%) / 15021 (17.76%) / 5127 (6.06%) | 0.1740 | 7866 |
+| slopes-991 | -1:-1 | 76325 | 95.14 / 1.41 / 3.11 / 0.34 | 94.98 | 36633 (48.00%) / 15028 (19.69%) / 5810 (7.61%) | 0.1804 | 8350 |
+| slopes-991 | 0:-1 | 82877 | 95.82 / 1.22 / 2.92 / 0.05 | 95.66 | 49343 (59.54%) / 20427 (24.65%) / 8804 (10.62%) | 0.1744 | 12043 |
+| slopes-991 | -1:0 | 81435 | 95.20 / 1.33 / 3.15 / 0.32 | 95.06 | 45479 (55.85%) / 18070 (22.19%) / 7639 (9.38%) | 0.1895 | 10513 |
+| slopes-991 | 0:0 | 76074 | 96.20 / 1.41 / 2.04 / 0.34 | 96.04 | 30373 (39.93%) / 9655 (12.69%) / 3138 (4.12%) | 0.1602 | 4539 |
+
+All twelve ranges now have **4,306–12,149** home-connected tiles at level 8+.
+Typical upper shoulder gradients (p95) are **0.1602–0.1895** levels/tile,
+64–76% of the 0.25 limit. All ordinary tiles still obey the exact limit.
+The original three full 48×48-chunk certificates and sixteen independent
+positive/negative owners keep zero unintended stranded tiles and isolated
+spires. The new high-ground gate additionally requires at least 75% walkable
+footprint, at least 50 home-connected level-8 tiles per range, pass-independent
+access and p95 gradient at most 90% of the walk limit.
+
+### Inspected evidence and budgets
+
+All twelve world-lab PNGs below were opened and inspected. Both sets use seed
+`map`, the same world coordinates and scale. The atlas is a full-resolution
+region render over chunks −24,−24..23,23 (1 px/tile), rather than the sparse
+chunk-centre atlas mode. The range crop is 3,5..20,22 (2 px/tile). Cropping
+retains the full-domain certificate. Hillshade inspection confirms broad
+high shoulders in place of thin upper ribs; kinds and reach show thin rock
+ribbons, open high sides and the same separate pinnacles.
+
+| View | Before atlas / range | After atlas / range |
+|---|---|---|
+| Kinds | [atlas](lab/terrain-walkable/before-atlas-kinds.png), [range](lab/terrain-walkable/before-range-kinds.png) | [atlas](lab/terrain-walkable/after-atlas-kinds.png), [range](lab/terrain-walkable/after-range-kinds.png) |
+| Walkable reach | [atlas](lab/terrain-walkable/before-atlas-reach.png), [range](lab/terrain-walkable/before-range-reach.png) | [atlas](lab/terrain-walkable/after-atlas-reach.png), [range](lab/terrain-walkable/after-range-reach.png) |
+| Height + hillshade | [atlas](lab/terrain-walkable/before-atlas-height.png), [range](lab/terrain-walkable/before-range-height.png) | [atlas](lab/terrain-walkable/after-atlas-height.png), [range](lab/terrain-walkable/after-range-height.png) |
+
+The map certificate’s home-connected area grows from **1,268,192 to 1,313,560**
+tiles. It retains four isolated summit components / 162 walkable summit tiles,
+zero stranded tiles, four tunnel candidates and the level 0–15 bounds.
+Pass/end-route steps for the four owners are now **242/376, 218/462, 224/430,
+238/386**. Endpoint distances changed, so these are not speed comparisons.
+
+Paired map atlas workers, Nix shell, nice 10, GOMAXPROCS=2, 80 warm samples:
+
+| Fixture | Before warm p95 ms | After warm p95 ms | After bare whole B |
+|---|---:|---:|---:|
+| flat | 0.146 | 0.149 | 591 |
+| hills | 0.694 | 0.804 | 1841 |
+| mountainside | 0.840 | 0.641 | 1841 |
+| outcrop | 0.833 | 0.797 | 2879 |
+| override-probe | 0.175 | 0.183 | 961 |
+| pass | 0.689 | 0.663 | 1841 |
+| spire | 0.828 | 0.708 | 1913 |
+
+Largest bare whole payload stays **2,879 B**; p50/p95 stays **1,841/1,841 B**,
+and generated overrides stay zero. Cold full-field assembly was 1.410 seconds
+before / 1.277 seconds after. These shared-host timings include scheduler
+noise; the same coordinates and budgets remain near the previous recipe and
+under the existing 5 ms warm gate. They do not measure client rendering or
+future dressed production chunks. Every retained after sidecar has geometry
+digest `7370a631b780a6a9bc4cd02bbf4fe38632d07ce134e8bd4fd44d3fbcb077199c`.
+
+Reproduce after renders and per-range measurements:
+
+```sh
+nix develop -c sh docs/planning/wide-world/lab/terrain-walkable/render.sh
+nix develop -c go test -run TestSlopeRangesWalkability -v ./server/internal/wilds
+```
+
+For before renders, build worldlab at 86c9eb2b and pass that binary as the second
+argument to `render.sh before /tmp/worldlab-before`.
+
+The CI-only E2E test reads the actual dev terrain route for its player’s seed,
+finds a continuous 36-tile shoulder rising at least 3.6 levels to level 8+,
+checks flat Wilds cover collision, warps only to its foot, and uses keyboard
+movement until the hero has climbed at least three levels. It captures foot
+and high-ground frames in both top-down and ¾ lift modes. Vite and Playwright
+are never run on this host.
+
+Local validation of the corrected recipe passed `go vet ./...`, full
+`go test ./...`, dev-tag server/API tests and E2E typechecking, all in the
+Nix shell. An additional finite probe of **80 more independently seeded
+owners** (range-property-16 through range-property-95, positive and negative
+coordinates) found zero stranded tiles in 37.7 seconds. Together with the
+sixteen standard owner fixtures, that checks 96 independent owners. This is
+finite evidence, rather than a claim to have proved all seeds. Reproduce the
+additional probe without extending the normal suite:
+
+```sh
+nix develop -c sh docs/planning/wide-world/lab/terrain-walkable/check-extra-owners.sh
+```

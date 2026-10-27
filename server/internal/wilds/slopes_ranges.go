@@ -26,6 +26,7 @@ func NewSlopeSamplerRecipe(seed, recipe string) (*SlopeSampler, error) {
 type slopeRangeV2 struct {
 	SlopeRange
 	cos, sin, phase, notch, branchSide float64
+	branchHeight, taper, bend          float64
 }
 
 func (r *slopeRangeV2) world(u, v float64) [2]int {
@@ -36,7 +37,7 @@ func (r *slopeRangeV2) local(x, y int) (float64, float64) {
 	return dx*r.cos + dy*r.sin, -dx*r.sin + dy*r.cos
 }
 func (r *slopeRangeV2) axis(u float64) float64 {
-	return 25*math.Sin(u/72+r.phase) + 12*math.Sin(u/35-r.phase) + 5*math.Sin(u/13+r.phase)
+	return r.bend*math.Sin(u/92+r.phase) + 7*math.Sin(u/47-r.phase)
 }
 func (r *slopeRangeV2) fork(u float64) float64 {
 	return r.axis(u) + r.branchSide*(u-24)*0.72
@@ -59,14 +60,23 @@ func (s *SlopeSampler) rangeV2(x, y int) *slopeRangeV2 {
 		r.branchSide = -1
 	}
 	r.HalfLength = 158 + int(h>>24%29)
-	r.Width = 74 + float64(h>>10%17)
+	r.Width = 76 + float64(h>>10%49)
+	character := landformV2Hash(s.Seed, "slopes-gen@2:character", key[0], key[1])
+	r.taper = 92 + float64(character%20)
+	r.bend = 12 + float64(character>>5%25)
+	r.branchHeight = float64(character>>10%4) * 1.8
 	// Lane B's continuous upland and relief choose mountain character. No
 	// categorical biome multiplier can create a wall at a region boundary.
 	u, relief := s.fields(r.X, r.Y)
-	r.Height = 7 + 3*u + relief
+	r.Height = 9 + 1.5*u + relief + float64(character>>12%3)*0.6
+	// Tall, narrow owners need proportionally longer approaches. Leave
+	// headroom for base-field gradients and corner quantization; otherwise
+	// threshold-sized steep rings can trap a few apparently walkable tiles.
+	r.Width = math.Max(r.Width, r.Height*8.5)
+	r.taper = math.Max(r.taper, r.Height*9)
 	pass := r.world(r.notch, r.axis(r.notch))
 	r.PassX = pass[0] // retained for old diagnostic readers; V2 uses PassEnds
-	r.PassEnds = [2][2]int{r.world(r.notch, r.axis(r.notch)-112), r.world(r.notch, r.axis(r.notch)+112)}
+	r.PassEnds = [2][2]int{r.world(r.notch, r.axis(r.notch)-88), r.world(r.notch, r.axis(r.notch)+88)}
 	r.TunnelEnds = [2][2]int{r.world(-88, r.axis(-88)-32), r.world(-88, r.axis(-88)+32)}
 	r.Outcrop = [2]int{r.X - 142, r.Y + 166}
 	best := math.Inf(-1)
@@ -84,7 +94,7 @@ func (s *SlopeSampler) rangeV2(x, y int) *slopeRangeV2 {
 	for t := -r.HalfLength; t <= r.HalfLength; t += 8 {
 		r.Crest = append(r.Crest, r.world(float64(t), r.axis(float64(t))))
 	}
-	for t := 24; t <= 140; t += 8 {
+	for t := 24; r.branchHeight > 0 && t <= 140; t += 8 {
 		r.Branch = append(r.Branch, r.world(float64(t), r.fork(float64(t))))
 	}
 	s.rangesV2[key] = r
@@ -106,27 +116,26 @@ func (s *SlopeSampler) shapeV2(x, y int) (float64, bool, bool) {
 	r := s.rangeV2(x, y)
 	a, b := r.local(x, y)
 	dy := b - r.axis(a)
-	end := slopeEase((float64(r.HalfLength) - math.Abs(a)) / 58)
-	notch := 1 - 0.985*slopeTent(a-r.notch, 66)
+	end := slopeEase((float64(r.HalfLength) - math.Abs(a)) / r.taper)
+	notch := 1 - 0.985*slopeTent(a-r.notch, 82)
 	width := r.Width + 9*math.Sin(a/63+r.phase)
-	crownWidth := 17 + 5*math.Sin(a/49+r.phase) + 2*math.Sin(a/11-r.phase)
-	peak := 0.72 + 0.18*math.Sin(a/29+r.phase) + 0.10*math.Sin(a/13-r.phase)
-	lower := 3.1 * (0.82 + 0.18*math.Sin(a/31+r.phase)) * slopeTent(dy, width) * end * (0.32 + 0.68*notch)
-	upper := (r.Height - 3.1) * slopeTent(dy, crownWidth) * end * notch * peak
-	// A tapering tributary spur splits from the main ridge. Max, rather than
-	// addition, leaves a sheltered bowl between the two without over-tall joins.
-	branchEnd := slopeEase((a-24)/40) * slopeEase((146-a)/50)
+	// One broad profile carries the climb all the way to high ground. The
+	// previous 3-level skirt + 17-tile upper rib closed every level-6 approach.
+	peak := 0.94 + 0.06*math.Sin(a/87+r.phase)
+	// Reserve height headroom in the profile rather than clipping corners.
+	lift := math.Min(r.Height, 14-base) * slopeTent(dy, width) * end * notch * peak
+	branchEnd := slopeEase((a-24)/48) * slopeEase((146-a)/64)
 	branchDY := b - r.fork(a)
-	lower = math.Max(lower, 2.7*slopeTent(branchDY, 58)*branchEnd)
-	upper = math.Max(upper, (r.Height-3.8)*slopeTent(branchDY, 16)*branchEnd*0.72)
-	z := base + (lower+upper)*far
-	z += 0.24 * relief * math.Sin(a/6+r.phase) * math.Sin(a/13) * slopeTent(dy, crownWidth) * end * notch * far
-	// Crag follows only the narrow upper ridges. It overlaps their steep
-	// shoulders, avoiding incidental walkable slivers on the serrated crest.
-	crest := far > 0.2 && ((math.Abs(dy) < crownWidth+3 && end*notch > 0.20) || (math.Abs(branchDY) < 19 && branchEnd > 0.20))
-	// Join the fork headwall until the bowl has eight tiles of clearance.
-	// Two almost-touching ribbons otherwise leave isolated quantized slivers.
-	if far > 0.2 && end*notch > 0.20 && branchEnd > 0.20 && math.Abs(r.fork(a)-r.axis(a)) < crownWidth+30 && b > math.Min(r.axis(a), r.fork(a)) && b < math.Max(r.axis(a), r.fork(a)) {
+	lift = math.Max(lift, r.branchHeight*slopeTent(branchDY, 58)*branchEnd)
+	lift *= slopeEase((250 - math.Hypot(a, b)) / 24)
+	z := base + lift*far
+	// Narrow, winding knife edges plus an interrupted band on one flank.
+	// The mask is analytic in ridge coordinates, independent of tile height
+	// thresholds, so whole-level contours cannot make grid-sized crag steps.
+	crown := 3.5 + 1.5*math.Sin(a/17+r.phase)
+	crest := far > 0.2 && end*notch > 0.12 && math.Abs(dy) < crown
+	band := r.branchSide*dy - (18 + 5*math.Sin(a/23+r.phase))
+	if far > 0.2 && end*notch > 0.55 && math.Sin(a/27-r.phase) > 0.15 && math.Abs(band) < 2.5 {
 		crest = true
 	}
 	// A faceted, asymmetrical pinnacle: warped diamond sections, not a round
