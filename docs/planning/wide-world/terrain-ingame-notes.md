@@ -79,7 +79,8 @@ to climb, a cliff face and ground rising south (to stand behind); its
 - **Fog by height** and the lab's climbing haze/zoom are not in the game.
 - **Fixed places** (the Commons, the lots) stay flat images; the generator
   keeps them flat, so they meet the terrain at level 0.
-- Only the attached 3×3 chunks are baked. On a wide screen the view can reach
+- Only the attached chunks (the 3×3 plus chunks kept near a seam) are baked.
+  On a wide screen the view can reach
   a little past them: there the flat painted ground shows, without light or
   materials, until you walk closer.
 - Turning the switch on mid-walk re-paints the attached chunks once (to keep
@@ -87,7 +88,63 @@ to climb, a cliff face and ground rising south (to stand behind); its
 
 ## Numbers
 
-See the CI evidence (`evidence.json`, `budget`) and the frames under
-[lab/terrain-ingame/](lab/terrain-ingame/): terrain CPU per frame (p95,
-the gate checks ≤ 2 ms on the CI runner), bake time per chunk in the worker,
-and the textures held (one per attached chunk).
+Measured on the self-hosted GPU CI runner in
+[run 40416490519](https://github.com/Solidsilver/glimway/actions/runs/40416490519),
+revision `d803f1332695a76b22d1053a80a7431991d3bb11`. Raw values are in
+[evidence.json](lab/terrain-ingame/evidence.json), `budget`:
+
+| Measurement | Samples | p50 | p95 | Maximum |
+| --- | ---: | ---: | ---: | ---: |
+| Terrain update + lift pass, ms/frame | 396 | 0.8 | 1.5 | 3.7 |
+| Main-thread bake-start work, ms | 30 | 0.8 | 1.7 | 2.0 |
+| Worker bake, ms/chunk | 45 | 31.5 | 40.7 | 75.1 |
+
+Frame and bake-start timings cover three east/west walking pairs in the
+lift, after a warp and settling; bake-start work is timed separately from
+the frame budget. Worker bake timings span the test, including earlier
+arrivals and mode changes. These are terrain timings, not total browser
+frame times or end-to-end chunk-attach latency.
+
+The final sample holds **12 terrain textures for 12 chunk images** (the
+window keeps extra attached chunks near seams). The passing test also
+checks **zero terrain textures after switching off**. The retry meets the
+spec's frame p95 < 2 ms and bake-start p95 < 16 ms gates. The run is green,
+but the full-suite report is **156 passed, 1 flaky, 0 failed**: this terrain
+test first failed at **3.1 ms frame p95**, then passed on retry. The saved
+frames and budget are from that passing retry; the frame budget still
+shows variability between attempts.
+
+In equal 700 ms key holds, uphill/downhill travel was **69.84/84.04 px**
+top-down and **69.84/82.17 px** lifted (ratios 0.831 and 0.850). Both modes
+crossed the seam at tile x=24, y=177 and stopped at tile (-127, 459), below
+the cliff row y=458. The lifted ridge cover mask is **150/345 pixels**;
+top-down cover is zero. The run's chosen climb is (-173, 273) south toward
+y=281; its ridge is (213, 274). These coordinates depend on the run's seed.
+
+## Frame review
+
+Personally viewed all **25 PNGs** from a fresh download of this run's
+`e2e-full-evidence` artifact: twelve full frames, their twelve crops, and
+the switch-off frame. No new visual fix was needed. The sampled raised
+chunk joins have no visible cracks, gaps or dark seam; the cliff has an
+exposed face and a readable shaded lip. Bare cliff/crag strips have no
+visible trees standing inside them. The top-down facing shade and edge
+treatment agree with the same run's lab 2e cliff reference. The lifted
+ridge keeps the covered lower part of the hero as a dark silhouette while
+the upper part remains visible. The faint avatar body also appears in
+top-down and switch-off frames, so it is not the terrain cover effect.
+The previously listed limits, including flat blitter decals and the bake
+window's extent, remain.
+
+Each pair below links the full frame and its 400×280 crop:
+
+| View | Top-down | ¾ lift |
+| --- | --- | --- |
+| Seam approach | [Full](lab/terrain-ingame/top-seam.png), [crop](lab/terrain-ingame/top-seam-crop.png) | [Full](lab/terrain-ingame/lift-seam.png), [crop](lab/terrain-ingame/lift-seam-crop.png) |
+| Seam crossed | [Full](lab/terrain-ingame/top-seam-crossed.png), [crop](lab/terrain-ingame/top-seam-crossed-crop.png) | [Full](lab/terrain-ingame/lift-seam-crossed.png), [crop](lab/terrain-ingame/lift-seam-crossed-crop.png) |
+| Climb foot | [Full](lab/terrain-ingame/top-climb-foot.png), [crop](lab/terrain-ingame/top-climb-foot-crop.png) | [Full](lab/terrain-ingame/lift-climb-foot.png), [crop](lab/terrain-ingame/lift-climb-foot-crop.png) |
+| After downhill measurement | [Full](lab/terrain-ingame/top-climb-after.png), [crop](lab/terrain-ingame/top-climb-after-crop.png) | [Full](lab/terrain-ingame/lift-climb-after.png), [crop](lab/terrain-ingame/lift-climb-after-crop.png) |
+| Cliff stop | [Full](lab/terrain-ingame/top-cliff.png), [crop](lab/terrain-ingame/top-cliff-crop.png) | [Full](lab/terrain-ingame/lift-cliff.png), [crop](lab/terrain-ingame/lift-cliff-crop.png) |
+| Behind ridge | [Full](lab/terrain-ingame/top-ridge.png), [crop](lab/terrain-ingame/top-ridge-crop.png) | [Full](lab/terrain-ingame/lift-ridge.png), [crop](lab/terrain-ingame/lift-ridge-crop.png) |
+
+[Terrain switched off](lab/terrain-ingame/off.png).
