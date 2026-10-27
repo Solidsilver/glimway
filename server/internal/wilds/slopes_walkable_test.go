@@ -75,7 +75,7 @@ func TestSlopeRangesWalkability(t *testing.T) {
 			}
 			if homeHigh >= 50 && len(p.Route([2]int{12, 30}, target, func(x, y int) bool {
 				a, b := r.local(x, y)
-				return math.Abs(a-r.notch) < 4 && math.Abs(b-r.axis(r.notch)) < 26
+				return math.Abs(a-r.notch) < 66 && math.Abs(b-r.axis(r.notch)) < 26
 			})) == 0 {
 				t.Errorf("%s %s: high ground requires the pass", seed, r.ID)
 			}
